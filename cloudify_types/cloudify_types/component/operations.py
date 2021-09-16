@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import os
+import time
 from cloudify import manager, ctx
 from cloudify.decorators import operation
 from cloudify.constants import COMPONENT
@@ -267,7 +268,7 @@ def create(ctx, timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL,
            **kwargs):
     client = _get_client(kwargs)
     secrets = _get_desired_operation_input('secrets', kwargs)
-    _set_secrets(client, secrets, )
+    _set_secrets(client, secrets)
     plugins = _get_desired_operation_input('plugins', kwargs)
     _upload_plugins(client, plugins)
 
@@ -376,10 +377,122 @@ def create(ctx, timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL,
                                   interval)
 
 
+def _try_to_remove_plugin(client, plugin_id):
+    try:
+        client.plugins.delete(plugin_id=plugin_id)
+    except CloudifyClientError as ex:
+        if 'currently in use in blueprints' in str(ex):
+            ctx.logger.warn('Could not remove plugin "{0}", it '
+                            'is currently in use...'.format(plugin_id))
+        else:
+            raise NonRecoverableError('Failed to remove plugin '
+                                      '"{0}"....'.format(plugin_id))
+
+
+def _delete_plugins(client):
+    plugins = ctx.instance.runtime_properties.get('plugins', [])
+
+    for plugin_id in plugins:
+        _try_to_remove_plugin(client, plugin_id)
+        ctx.logger.info('Removed plugin "{0}".'.format(plugin_id))
+
+
+def _delete_secrets(client, secrets):
+    if not secrets:
+        return
+
+    for secret_name in secrets:
+        _http_client_wrapper(client, 'secrets', 'delete', {
+            'key': secret_name,
+        })
+        ctx.logger.info('Removed secret "{}"'.format(repr(secret_name)))
+
+
+def _delete_runtime_properties():
+    for property_name in ['deployment', 'blueprint', 'plugins']:
+        if property_name in ctx.instance.runtime_properties:
+            del ctx.instance.runtime_properties[property_name]
+
+
 @operation(resumable=True)
-@proxy_operation('delete_deployment')
-def delete(operation, **_):
-    return getattr(Component(_), operation)()
+def delete(ctx, timeout=EXECUTIONS_TIMEOUT, **kwargs):
+    client = _get_client(kwargs)
+    ctx.logger.info("Wait for component's stop deployment operation "
+                    "related executions.")
+    config = _get_desired_operation_input('resource_config', kwargs)
+    runtime_deployment_prop = ctx.instance.runtime_properties.get(
+            'deployment', {})
+    runtime_deployment_id = runtime_deployment_prop.get('id')
+
+    deployment = config.get('deployment', {})
+    deployment_id = (runtime_deployment_id or
+                     deployment.get('id') or
+                     ctx.instance.id)
+    blueprint = config.get('blueprint', {})
+    blueprint_id = blueprint.get('id') or ctx.instance.id
+
+    _inter_deployment_dependency = create_deployment_dependency(
+        dependency_creator_generator(COMPONENT, ctx.instance.id),
+        ctx.deployment.id)
+
+    poll_with_timeout(
+        lambda:
+        is_all_executions_finished(client, deployment_id),
+        timeout=timeout,
+        expected_result=True)
+
+    ctx.logger.info('Delete component\'s "{0}" deployment'
+                    .format(deployment_id))
+
+    poll_result = True
+    if not deployment_id_exists(client, deployment_id):
+        # Could happen in case that deployment failed to install
+        ctx.logger.warn('Didn\'t find component\'s "{0}" deployment,'
+                        'so nothing to do and moving on.'
+                        .format(deployment_id))
+    else:
+        _http_client_wrapper(
+            client,
+            'deployments',
+            'delete',
+            dict(deployment_id=deployment_id))
+
+        ctx.logger.info("Waiting for component's deployment delete.")
+        poll_result = poll_with_timeout(
+            lambda: deployment_id_exists(client, deployment_id),
+            timeout=timeout,
+            expected_result=False)
+
+    ctx.logger.debug("Internal services cleanup.")
+    time.sleep(POLLING_INTERVAL)
+
+    ctx.logger.debug("Waiting for all system workflows to stop/finish.")
+    poll_with_timeout(
+        lambda: is_all_executions_finished(client),
+        timeout=timeout,
+        expected_result=True)
+
+    if not blueprint.get(EXTERNAL_RESOURCE):
+        ctx.logger.info('Delete component\'s blueprint "{0}".'
+                        .format(blueprint_id))
+        _http_client_wrapper(
+            client, 'blueprints', 'delete',
+            dict(blueprint_id=blueprint_id))
+
+    ctx.logger.info('Removing inter-deployment dependency between this '
+                    'deployment ("{0}") and "{1}" the Component\'s '
+                    'creator deployment...'.format(deployment_id,
+                                                   ctx.deployment.id))
+    _inter_deployment_dependency['target_deployment'] = \
+        deployment_id
+    _inter_deployment_dependency['is_component_deletion'] = True
+    client.inter_deployment_dependencies.delete(**_inter_deployment_dependency)
+
+    _delete_plugins(client)
+    _delete_secrets(client, _get_desired_operation_input('secrets', kwargs))
+    _delete_runtime_properties()
+
+    return poll_result
 
 
 @operation(resumable=True)
