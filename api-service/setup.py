@@ -15,7 +15,7 @@ setup(
         'async-generator',
         'SQLAlchemy',
         'asyncpg',
-        'uvicorn',
+        'uvicorn[standard]',
         'cloudify-rest-service',
         ],
     test_requires=[
