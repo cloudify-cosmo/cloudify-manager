@@ -71,9 +71,11 @@ def upgrade():
     _create_functions_write_audit_log()
     _create_audit_triggers()
     _add_config_manager_service_log()
+    _add_audit_log_indexes()
 
 
 def downgrade():
+    _drop_audit_log_indexes()
     _drop_config_manager_service_log()
     _drop_audit_triggers()
     _drop_functions_write_audit_log()
@@ -241,3 +243,19 @@ def _drop_config_manager_service_log():
             (config_table.c.scope == op.inline_literal('rest'))
         )
     )
+
+
+def _add_audit_log_indexes():
+    op.create_index(
+        op.f('audit_log_creator_name_idx'),
+        'audit_log', ['creator_name'],
+        unique=False)
+    op.create_index(
+        op.f('audit_log_execution_id_idx'),
+        'audit_log', ['execution_id'],
+        unique=False)
+
+
+def _drop_audit_log_indexes():
+    op.drop_index(op.f('audit_log_creator_name_idx'), table_name='audit_log')
+    op.drop_index(op.f('audit_log_execution_id_idx'), table_name='audit_log')
