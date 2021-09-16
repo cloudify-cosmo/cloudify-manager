@@ -75,7 +75,7 @@ class TestPolling(ComponentTestBase):
 
         self.cfy_mock_client.executions.list = mock_return
 
-        with self.assertRaisesRegex(NonRecoverableError, 'failed'):
+        with self.assertRaisesRegex(CloudifyClientError, 'Mistake'):
             is_all_executions_finished(self.cfy_mock_client)
 
     def test_dep_workflow_in_state_pollster_no_execution_given(self):
@@ -146,7 +146,7 @@ class TestPolling(ComponentTestBase):
             raise CloudifyClientError('Mistake')
 
         self.cfy_mock_client.executions.get = mock_return
-        with self.assertRaisesRegex(NonRecoverableError, 'failed'):
+        with self.assertRaisesRegex(CloudifyClientError, 'Mistake'):
             is_deployment_execution_at_state(
                 self.cfy_mock_client,
                 'dep_name',

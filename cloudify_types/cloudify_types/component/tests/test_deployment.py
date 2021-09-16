@@ -52,7 +52,7 @@ class TestDeployment(TestDeploymentBase):
                 self.cfy_mock_client.deployments.delete = REST_CLIENT_EXCEPTION
                 mock_client.return_value = self.cfy_mock_client
                 with self.assertRaisesRegex(NonRecoverableError,
-                                             'action "delete" failed'):
+                                             'Error in delete'):
                     delete(deployment_id=deployment_name, timeout=MOCK_TIMEOUT)
 
     def test_delete_deployment_delete_not_existing_deployment(self):
@@ -116,7 +116,7 @@ class TestDeployment(TestDeploymentBase):
             self.cfy_mock_client.deployments.create = REST_CLIENT_EXCEPTION
             mock_client.return_value = self.cfy_mock_client
             with self.assertRaisesRegex(NonRecoverableError,
-                                         'action "create" failed'):
+                                         'Error in create'):
                 create(
                     deployment_id='test_deployments_create',
                     blueprint_id='test_deployments_create',

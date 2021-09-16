@@ -64,7 +64,7 @@ class TestExecute(ComponentTestBase):
             self.cfy_mock_client.executions.start = REST_CLIENT_EXCEPTION
             mock_client.return_value = self.cfy_mock_client
             with self.assertRaisesRegex(
-                    NonRecoverableError, 'action "start" failed'):
+                    NonRecoverableError, 'Error in execute_start'):
                 execute_start(deployment_id='dep_name', workflow_id='install')
 
     def test_execute_start_timeout(self):

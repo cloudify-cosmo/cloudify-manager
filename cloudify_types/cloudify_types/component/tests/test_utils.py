@@ -75,7 +75,7 @@ class TestUtils(ComponentTestBase):
 
         self.cfy_mock_client.blueprints.list = mock_return
         with self.assertRaisesRegex(
-                NonRecoverableError, 'Blueprint search failed'):
+                CloudifyClientError, 'Mistake'):
             utils.blueprint_id_exists(self.cfy_mock_client, 'blu_name')
 
     def test_find_deployment_handle_client_error(self):
@@ -85,5 +85,5 @@ class TestUtils(ComponentTestBase):
 
         self.cfy_mock_client.deployments.list = mock_return
         with self.assertRaisesRegex(
-                NonRecoverableError, 'Deployment search failed'):
+                CloudifyClientError, 'Mistake'):
             utils.deployment_id_exists(self.cfy_mock_client, 'dep_name')
