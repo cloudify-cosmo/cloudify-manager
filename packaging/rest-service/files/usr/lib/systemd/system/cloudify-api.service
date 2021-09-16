@@ -13,9 +13,9 @@ EnvironmentFile=-/etc/sysconfig/cloudify-api
 ExecStart=/bin/sh -c '/opt/manager/env/bin/gunicorn \
     -k uvicorn.workers.UvicornWorker \
     --pid /run/cloudify-api/pid \
-    -w ${UVICORN_WORKER_COUNT} \
-    --max-requests ${UVICORN_MAX_REQUESTS} \
-    -b 127.0.0.1:${UVICORN_PORT} \
+    -w ${GUNICORN_WORKER_COUNT} \
+    --max-requests ${GUNICORN_MAX_REQUESTS} \
+    -b 127.0.0.1:${GUNICORN_PORT} \
     --timeout 300 cloudify_api.main:app \
     --log-file /var/log/cloudify/rest/api-gunicorn.log \
     --access-logfile /var/log/cloudify/rest/api-audit.log \
