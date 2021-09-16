@@ -47,13 +47,6 @@ class TestUtils(ComponentTestBase):
         self.assertTrue(copy_file)
         self.cleaning_up_files([copy_file, test_file])
 
-    def test_get_local_path_https(self):
-        copy_file = utils.get_local_path(
-            "http://www.getcloudify.org/spec/cloudify/4.5/types.yaml",
-            create_temp=True)
-        self.assertTrue(copy_file)
-        self.cleaning_up_files([copy_file])
-
     def test_blueprint_id_exists_no_blueprint(self):
         output = utils.blueprint_id_exists(self.cfy_mock_client, 'blu_name')
         self.assertFalse(output)
