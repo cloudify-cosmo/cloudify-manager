@@ -41,11 +41,10 @@ def errors_nonrecoverable(f):
             response = generate_traceback_exception()
 
             ctx.logger.error(
-                'Error traceback {0} with message {1}'.format(
-                    response['traceback'], response['message']))
+                'Error traceback %s with message %s',
+                response['traceback'], response['message'])
 
-            raise NonRecoverableError(
-                'Error in {0}: {1}.'.format(f.__name__, ex))
+            raise NonRecoverableError(f'Error in {f.__name__}: {ex}')
     return wrapper
 
 

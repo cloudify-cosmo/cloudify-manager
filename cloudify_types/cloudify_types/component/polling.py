@@ -31,7 +31,7 @@ def poll_with_timeout(pollster,
     timeout = float('infinity') if timeout == -1 else timeout
     current_time = time.time()
 
-    ctx.logger.debug('Pooling with timeout of {0} seconds'.format(timeout))
+    ctx.logger.debug('Polling with timeout of %s seconds', timeout)
 
     while time.time() <= current_time + timeout:
         if pollster() != expected_result:
@@ -76,8 +76,7 @@ def redirect_logs(client, execution_id, instance_ctx=None):
         events, full_count = _fetch_events(client, execution_id, last_event)
 
         for event in events:
-            ctx.logger.debug(
-                'Event {0} for execution_id {1}'.format(event, execution_id))
+            ctx.logger.debug('Event %s for execution %s', event, execution_id)
             instance_prompt = event.get('node_instance_id', "")
             if instance_prompt:
                 event_operation = event.get('operation')
@@ -89,11 +88,6 @@ def redirect_logs(client, execution_id, instance_ctx=None):
             if instance_prompt:
                 instance_prompt = "[" + instance_prompt + "] "
 
-            message = "%s %s%s" % (
-                event.get('reported_timestamp', ""),
-                instance_prompt if instance_prompt else "",
-                event.get('message', "")
-            )
             level = event.get('level')
 
             # If the event dict had a 'level' key, then the value is
@@ -108,7 +102,10 @@ def redirect_logs(client, execution_id, instance_ctx=None):
             if not isinstance(level, int):
                 level = logging.INFO
 
-            ctx.logger.log(level, message)
+            ctx.logger.log(level, "%s %s%s",
+                           event.get('reported_timestamp', ""),
+                           instance_prompt if instance_prompt else "",
+                           event.get('message', ""))
 
         last_event += len(events)
 
@@ -191,8 +188,7 @@ def is_deployment_execution_at_state(client,
             'The status for execution "%s" is %s', execution_id, state)
         return True
     elif execution_status in (ExecutionState.FAILED, ExecutionState.CANCELLED):
-        raise NonRecoverableError(
-            'Execution {0} {1}.'.format(str(execution), execution_status))
+        raise NonRecoverableError(f'Execution {execution} {execution_status}.')
 
     return False
 
@@ -224,7 +220,7 @@ def verify_execution_state(client,
 
     if not result:
         raise NonRecoverableError(
-            'Execution timed out after: {0} seconds.'.format(timeout))
+            f'Execution timed out after: {timeout} seconds.')
     return True
 
 
@@ -241,6 +237,5 @@ def wait_for_blueprint_to_upload(
         interval=POLLING_INTERVAL)
     if not result:
         raise NonRecoverableError(
-            'Blueprint upload timed out after: {0} seconds.'.format(
-                timeout_seconds))
+            f'Blueprint upload timed out after: {timeout_seconds} seconds.')
     return True

@@ -108,16 +108,12 @@ def upload_blueprint(**kwargs):
         return True
     elif blueprint_exists:
         ctx.logger.info(
-            'Blueprint ID "{0}" exists, '
-            'but {1} is {2}, will use the existing one.'.format(
-                blueprint_id,
-                EXTERNAL_RESOURCE,
-                blueprint.get(EXTERNAL_RESOURCE)))
+            'Blueprint "%s" exists, but %s is %s, will use the existing one.',
+            blueprint_id, EXTERNAL_RESOURCE, blueprint.get(EXTERNAL_RESOURCE))
         return True
     if not blueprint_archive:
         raise NonRecoverableError(
-            'No blueprint_archive supplied, '
-            'but {0} is False'.format(EXTERNAL_RESOURCE))
+            f'No blueprint_archive supplied, but {EXTERNAL_RESOURCE} is False')
 
     # Check if the ``blueprint_archive`` is not a URL then we need to
     # download it and pass the binaries to the client_args
@@ -133,7 +129,7 @@ def upload_blueprint(**kwargs):
     except CloudifyClientError as ex:
         if 'already exists' not in str(ex):
             raise NonRecoverableError(
-                'Client action "_upload" failed: {0}.'.format(ex))
+                f'Client action "_upload" failed: {ex}.')
     return True
 
 
@@ -145,24 +141,21 @@ def _verify_secrets_clash(client, secrets):
     duplicate_secrets = set(secrets).intersection(existing_secrets)
 
     if duplicate_secrets:
-        raise NonRecoverableError('The secrets: {0} already exist, '
-                                  'not updating...'.format(
-                                    '"' + '", "'.join(duplicate_secrets)
-                                    + '"'))
+        raise NonRecoverableError(
+            f'The secrets: "{ ", ".join(duplicate_secrets) }" already exist, '
+            f'not updating...')
 
 
 def _set_secrets(client, secrets):
     if not secrets:
         return
-
     _verify_secrets_clash(client, secrets)
-
     for secret_name in secrets:
         client.secrets.create(
             key=secret_name,
             value=u'{0}'.format(secrets[secret_name]),
         )
-        ctx.logger.info('Created secret {}'.format(repr(secret_name)))
+        ctx.logger.info('Created secret %r', secret_name)
 
 
 
@@ -181,10 +174,10 @@ def _upload_plugins(client, plugins):
             if (not plugin.get('wagon_path') or
                     not plugin.get('plugin_yaml_path')):
                 raise NonRecoverableError(
-                    'You should provide both values wagon_path: {}'
-                    ' and plugin_yaml_path: {}'
-                    .format(repr(plugin.get('wagon_path')),
-                            repr(plugin.get('plugin_yaml_path'))))
+                    f'Provide wagon_path (got { plugin.get("wagon_path") }) '
+                    f'and plugin_yaml_path (got '
+                    f'{ plugin.get("plugin_yaml_path") })'
+                )
             wagon_path = get_local_path(plugin['wagon_path'],
                                         create_temp=True)
             yaml_path = get_local_path(plugin['plugin_yaml_path'],
@@ -195,19 +188,18 @@ def _upload_plugins(client, plugins):
                                            create_temp=True)
                 zip_list.append(icon_path)
             if not should_upload_plugin(yaml_path, existing_plugins):
-                ctx.logger.warning('Plugin "{0}" was already '
-                                   'uploaded...'.format(plugin_name))
+                ctx.logger.warning('Plugin "%s" was already uploaded...',
+                                   plugin_name)
                 continue
 
-            ctx.logger.info('Creating plugin "{0}" zip '
-                            'archive...'.format(plugin_name))
+            ctx.logger.info('Creating plugin "%s" zip archive...', plugin_name)
             zip_path = zip_files(zip_list)
 
             # upload plugin
             plugin = client.plugins.upload(plugin_path=zip_path)
             ctx.instance.runtime_properties['plugins'].append(
                 plugin.id)
-            ctx.logger.info('Uploaded {}'.format(repr(plugin.id)))
+            ctx.logger.info('Uploaded %r', plugin.id)
         finally:
             for f in zip_list:
                 os.remove(f)
@@ -283,8 +275,7 @@ def create(timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL,
             deployment_id
 
         update_runtime_properties('deployment', 'id', deployment_id)
-        ctx.logger.info('Creating "{0}" component deployment.'
-                        .format(deployment_id))
+        ctx.logger.info('Creating "%s" component deployment.', deployment_id)
         try:
             client.deployments.create(
                 blueprint_id=blueprint_id,
@@ -296,9 +287,9 @@ def create(timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL,
             if ex.error_code == 'conflict_error' \
                     and deployment_auto_suffix and retries > 0:
                 ctx.logger.info(
-                    f'Component\'s deployment ID "{deployment_id}" '
+                    'Component\'s deployment ID "%s" '
                     'already exists, will try to automatically create an '
-                    'ID with a new suffix.')
+                    'ID with a new suffix.', deployment_id)
                 retries -= 1
             else:
                 raise ex
@@ -324,9 +315,8 @@ def create(timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL,
 
     # If a match was found there can only be one, so we will extract it.
     execution_id = execution_id[0]
-    ctx.logger.info('Found execution id "{0}" for deployment id "{1}"'
-                    .format(execution_id,
-                            deployment_id))
+    ctx.logger.info('Found execution id "%s" for deployment id "%s"',
+                    execution_id, deployment_id)
     return verify_execution_state(client,
                                   execution_id,
                                   deployment_id,
@@ -341,11 +331,11 @@ def _try_to_remove_plugin(client, plugin_id):
         client.plugins.delete(plugin_id=plugin_id)
     except CloudifyClientError as ex:
         if 'currently in use in blueprints' in str(ex):
-            ctx.logger.warning('Could not remove plugin "{0}", it '
-                               'is currently in use...'.format(plugin_id))
+            ctx.logger.warning('Could not remove plugin "%s", it '
+                               'is currently in use...', plugin_id)
         else:
-            raise NonRecoverableError('Failed to remove plugin '
-                                      '"{0}"....'.format(plugin_id))
+            raise NonRecoverableError(
+                f'Failed to remove plugin {plugin_id}: {ex}')
 
 
 def _delete_plugins(client):
@@ -353,7 +343,7 @@ def _delete_plugins(client):
 
     for plugin_id in plugins:
         _try_to_remove_plugin(client, plugin_id)
-        ctx.logger.info('Removed plugin "{0}".'.format(plugin_id))
+        ctx.logger.info('Removed plugin "%s".', plugin_id)
 
 
 def _delete_secrets(client, secrets):
@@ -362,7 +352,7 @@ def _delete_secrets(client, secrets):
 
     for secret_name in secrets:
         client.secrets.delete(key=secret_name)
-        ctx.logger.info('Removed secret "{}"'.format(repr(secret_name)))
+        ctx.logger.info('Removed secret "%r"', secret_name)
 
 
 def _delete_runtime_properties():
@@ -399,15 +389,13 @@ def delete(timeout=EXECUTIONS_TIMEOUT, **kwargs):
         timeout=timeout,
         expected_result=True)
 
-    ctx.logger.info('Delete component\'s "{0}" deployment'
-                    .format(deployment_id))
+    ctx.logger.info('Delete component\'s "%s" deployment', deployment_id)
 
     poll_result = True
     if not deployment_id_exists(client, deployment_id):
         # Could happen in case that deployment failed to install
-        ctx.logger.warning('Didn\'t find component\'s "{0}" deployment,'
-                           'so nothing to do and moving on.'
-                           .format(deployment_id))
+        ctx.logger.warning('Didn\'t find component\'s "%s" deployment,'
+                           'so nothing to do and moving on.', deployment_id)
     else:
         client.deployments.delete(deployment_id=deployment_id)
 
@@ -427,14 +415,13 @@ def delete(timeout=EXECUTIONS_TIMEOUT, **kwargs):
         expected_result=True)
 
     if not blueprint.get(EXTERNAL_RESOURCE):
-        ctx.logger.info('Delete component\'s blueprint "{0}".'
-                        .format(blueprint_id))
+        ctx.logger.info('Delete component\'s blueprint "%s".', blueprint_id)
         client.blueprints.delete(blueprint_id=blueprint_id)
 
     ctx.logger.info('Removing inter-deployment dependency between this '
-                    'deployment ("{0}") and "{1}" the Component\'s '
-                    'creator deployment...'.format(deployment_id,
-                                                   ctx.deployment.id))
+                    'deployment ("%s") and "%s" the Component\'s '
+                    'creator deployment...',
+                    deployment_id, ctx.deployment.id)
     _inter_deployment_dependency['target_deployment'] = \
         deployment_id
     _inter_deployment_dependency['is_component_deletion'] = True
@@ -483,11 +470,10 @@ def execute_start(timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL,
     if workflow_id == ctx.workflow_id:
         request_args.update(dict(parameters=ctx.workflow_parameters))
 
-    ctx.logger.info('Starting execution for "{0}" deployment'.format(
-        deployment_id))
+    ctx.logger.info('Starting execution for "%s" deployment', deployment_id)
     execution = client.executions.start(**request_args)
 
-    ctx.logger.debug('Execution start response: "{0}".'.format(execution))
+    ctx.logger.debug('Execution start response: "%s".', execution)
 
     execution_id = execution['id']
     if not verify_execution_state(
@@ -498,11 +484,9 @@ def execute_start(timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL,
             kwargs.get('workflow_state', 'terminated'),
             timeout,
             interval):
-        ctx.logger.error('Execution {0} failed for "{1}" '
-                         'deployment'.format(execution_id,
-                                             deployment_id))
+        ctx.logger.error('Execution %s failed for "%s" deployment',
+                         execution_id, deployment_id)
 
-    ctx.logger.info('Execution succeeded for "{0}" deployment'.format(
-        deployment_id))
+    ctx.logger.info('Execution succeeded for "%s" deployment', deployment_id)
     populate_runtime_with_wf_results(client, deployment_id)
     return True

@@ -99,8 +99,8 @@ def connect_deployment(**kwargs):
     _inter_deployment_dependency, _local_dependency_params = \
         _get_idd(deployment_id, is_external_host, kwargs)
 
-    ctx.logger.info('Validating that "{0}" SharedResource\'s deployment '
-                    'exists...'.format(deployment_id))
+    ctx.logger.info('Validating that "%s" SharedResource\'s deployment '
+                    'exists...', deployment_id)
     if is_external_host:
         manager.get_rest_client().inter_deployment_dependencies.create(
             **_local_dependency_params)
@@ -108,9 +108,8 @@ def connect_deployment(**kwargs):
     deployment = get_deployment_by_id(client, deployment_id)
     if not deployment:
         raise NonRecoverableError(
-            'SharedResource\'s deployment ID "{0}" does not exist, '
-            'please verify the given ID.'.format(
-                deployment_id))
+            f'SharedResource\'s deployment ID "{deployment_id}" does '
+            f'not exist, please verify the given ID.')
     _mark_verified_shared_resource_node(deployment_id)
     populate_runtime_with_wf_results(client, deployment_id)
 
@@ -132,10 +131,8 @@ def disconnect_deployment(**kwargs):
         _get_idd(deployment_id, is_external_host, kwargs)
     target_deployment = runtime_deployment_id or deployment_id
     ctx.logger.info('Removing inter-deployment dependency between this '
-                    'deployment ("{0}") and "{1}" SharedResource\'s '
-                    'deployment...'
-                    ''.format(ctx.deployment.id,
-                              target_deployment))
+                    'deployment ("%s") and "%s" SharedResource\'s '
+                    'deployment...', ctx.deployment.id, target_deployment)
     _inter_deployment_dependency['target_deployment'] = target_deployment
 
     if is_external_host:

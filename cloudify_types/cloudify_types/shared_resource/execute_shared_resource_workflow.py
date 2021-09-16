@@ -38,9 +38,9 @@ def execute_shared_resource_workflow(workflow_id,
                                      wf_timeout,
                                      redirect_logs):
     if not _verify_shared_resource_node():
-        raise NonRecoverableError('Tried to execute "{0}" workflow on a non '
-                                  'SharedResource node "{1}"'.format(
-                                    workflow_id, ctx.target.node.id))
+        raise NonRecoverableError(
+          f'Tried to execute "{workflow_id}" workflow on a non '
+          f'SharedResource node "{ctx.target.node.id}"')
 
     ctx.logger.info("Setting up required input for executing workflow on"
                     "a SharedResource.")
@@ -56,30 +56,27 @@ def execute_shared_resource_workflow(workflow_id,
                             ['deployment']['id'])
 
     # Wait for the deployment to finish any executions
-    ctx.logger.info('Waiting until all currently running executions on "{0}" '
-                    'SharedResource deployment finish.'.format(
-                        target_deployment_id))
+    ctx.logger.info('Waiting until all currently running executions on "%s" '
+                    'SharedResource deployment finish.', target_deployment_id)
     if not poll_with_timeout(lambda:
                              is_all_executions_finished(
                                  http_client, target_deployment_id),
                              timeout=wf_timeout,
                              expected_result=True):
         return ctx.operation.retry(
-            'The "{0}" deployment is not ready for '
-            'workflow execution.'.format(target_deployment_id))
+            f'The "{target_deployment_id}" deployment is not ready for '
+            f'workflow execution.')
 
-    ctx.logger.info('Starting execution of "{0}" workflow for "{1}" '
-                    'SharedResource deployment'.format(
-                        workflow_id, target_deployment_id))
+    ctx.logger.info('Starting execution of "%s" workflow for "%s" '
+                    'SharedResource deployment',
+                    workflow_id, target_deployment_id)
     execution = http_client.executions.start(
         deployment_id=target_deployment_id,
         workflow_id=workflow_id,
         parameters=parameters,
         allow_custom_parameters=True)
-    ctx.logger.debug('Execution for "{0}" on "{1}" deployment response is:'
-                     ' {2}.'.format(workflow_id,
-                                    target_deployment_id,
-                                    execution))
+    ctx.logger.debug('Execution for "%s" on "%s" deployment response is: %s',
+                     workflow_id, target_deployment_id, execution)
 
     execution_id = execution['id']
     if not verify_execution_state(http_client,
@@ -88,13 +85,13 @@ def execute_shared_resource_workflow(workflow_id,
                                   redirect_logs,
                                   workflow_state='terminated',
                                   instance_ctx=ctx.target.instance):
-        raise NonRecoverableError('Execution "{0}" failed for "{1}" '
-                                  'deployment.'.format(execution_id,
-                                                       target_deployment_id))
+        raise NonRecoverableError(
+            f'Execution "{execution_id}" failed for '
+            f'"{target_deployment_id}" deployment.')
 
-    ctx.logger.info('Execution succeeded for "{0}" SharedResource '
-                    'deployment of "{1}" workflow'.format(
-                        target_deployment_id, workflow_id))
+    ctx.logger.info('Execution succeeded for "%s" SharedResource '
+                    'deployment of "%s" workflow',
+                    target_deployment_id, workflow_id)
     populate_runtime_with_wf_results(http_client,
                                      target_deployment_id,
                                      ctx.target.instance)

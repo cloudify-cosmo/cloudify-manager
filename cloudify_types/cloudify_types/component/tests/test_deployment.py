@@ -356,7 +356,7 @@ class TestComponentPlugins(TestDeploymentBase):
 
                 with self.assertRaisesRegex(
                         NonRecoverableError,
-                        'Failed to remove plugin "plugin_id"'):
+                        'Failed to remove plugin plugin_id'):
                     delete(
                         operation='delete_deployment',
                         deployment_id='dep_name',
