@@ -9,7 +9,7 @@ class CloudifyManagerServiceTest(unittest.TestCase):
     def test_server_init(self):
         app = CloudifyAPI()
         assert app.settings.cloudify_rest_config_file
-        assert app.settings.sqlalchemy_database_dsn is not None
+        assert app.settings.sqlalchemy_dsn is not None
         assert app.logger
 
     def test_server_load_config_raises(self):
