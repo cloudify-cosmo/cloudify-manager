@@ -28,7 +28,7 @@ class Listener:
         self.channels = {}
 
     def listen_on_channel(self, channel: str):
-        if channel in self.channels.keys():
+        if channel in self.channels:
             raise TaskAlreadyExists(channel)
         self.channels[channel] = {
             'task': self.loop.create_task(self._listener(channel)),
@@ -37,12 +37,12 @@ class Listener:
         self.logger.debug("Started listening for notification on %s", channel)
 
     def attach_queue(self, channel: str, queue: asyncio.Queue):
-        if channel not in self.channels.keys():
+        if channel not in self.channels:
             raise TaskNotDefined(channel)
         self.channels[channel]['queues'].add(queue)
 
     def remove_queue(self, channel: str, queue: asyncio.Queue):
-        if channel not in self.channels.keys():
+        if channel not in self.channels:
             raise TaskNotDefined(channel)
         try:
             self.channels[channel]['queues'].remove(queue)
@@ -66,6 +66,6 @@ class Listener:
                        channel: str,
                        data: str):
         record = json.loads(data)
-        if channel in self.channels.keys():
+        if channel in self.channels:
             for q in self.channels[channel].get('queues', []):
                 q.put_nowait(record)
