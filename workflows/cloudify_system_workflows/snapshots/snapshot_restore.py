@@ -204,7 +204,6 @@ class SnapshotRestore(object):
             'cloudify-amqp-postgres',
             'cloudify-execution-scheduler',
             'cloudify-restservice',
-            'cloudify-api:*',
         ]
         for service in to_pause:
             utils.run_service(self._service_management, 'stop', service)
