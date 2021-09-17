@@ -32,14 +32,14 @@ class Listener:
             raise TaskAlreadyExists(channel)
         self.channels[channel] = {
             'task': self.loop.create_task(self._listener(channel)),
-            'queues': [],
+            'queues': set(),
         }
         self.logger.debug(f"Started listening for notification on {channel}")
 
     def attach_queue(self, channel: str, queue: asyncio.Queue):
         if channel not in self.channels.keys():
             raise TaskNotDefined(channel)
-        self.channels[channel]['queues'].append(queue)
+        self.channels[channel]['queues'].add(queue)
 
     def remove_queue(self, channel: str, queue: asyncio.Queue):
         if channel not in self.channels.keys():
@@ -47,7 +47,7 @@ class Listener:
         try:
             self.channels[channel]['queues'].remove(queue)
             self.logger.debug(f"Queue {queue} removed from channel {channel}.")
-        except ValueError:
+        except KeyError:
             self.logger.info(f"Queue removal unnecessary: {queue} has "
                              f"been already removed from channel {channel}.")
 
