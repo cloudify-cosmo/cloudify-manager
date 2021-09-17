@@ -70,7 +70,8 @@ async def stream_audit_log(app=Depends(get_app)):
     app.logger.debug("stream_audit_log")
     queue = asyncio.Queue()
     app.listener.attach_queue(NOTIFICATION_CHANNEL, queue)
-    return StreamingResponse(_audit_log_streamer(queue, app))
+    headers = {"Content-Type": "text/event-stream"}
+    return StreamingResponse(_audit_log_streamer(queue, app), headers=headers)
 
 
 @router.delete("",
