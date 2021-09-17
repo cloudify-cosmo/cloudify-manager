@@ -263,9 +263,9 @@ def _drop_audit_log_indexes():
     op.drop_index(op.f('audit_log_execution_id_idx'), table_name='audit_log')
 
 
-# flake8: noqa
 def _add_audit_log_notify():
-    op.execute("""CREATE OR REPLACE FUNCTION notify_new_audit_log() RETURNS TRIGGER AS $$
+    op.execute("""CREATE OR REPLACE FUNCTION notify_new_audit_log()
+        RETURNS TRIGGER AS $$
         BEGIN
             PERFORM pg_notify(
                 'audit_log_inserted'::text,
