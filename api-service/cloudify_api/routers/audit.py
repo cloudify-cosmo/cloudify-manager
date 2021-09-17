@@ -1,7 +1,10 @@
+import asyncio
+import json
 from datetime import datetime
 from typing import List, Optional
 
 from fastapi import Depends, APIRouter
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import delete
 from sqlalchemy.future import select
@@ -56,6 +59,26 @@ async def list_audit_log(
     if execution_id:
         stmt = stmt.where(models.AuditLog.execution_id == execution_id)
     return await PaginatedAuditLog.paginated(session, stmt, p)
+
+
+@router.get("/stream",
+            tags=["Audit Log"])
+async def stream_audit_log(app=Depends(get_app)):
+    app.logger.debug("stream_audit_log")
+    queue = asyncio.Queue()
+    app.listener.attach_queue('audit_log_inserted', queue)
+    app.logger.warning("stream_audit_log queue=%s", queue)
+    return StreamingResponse(audit_log_streamer(queue, app))
+
+
+async def audit_log_streamer(queue: asyncio.Queue, app):
+    app.logger.warning("audit_log_streamer queue=%s", queue)
+    while True:
+        record = await queue.get()
+        app.logger.warning("audit_log_streamer record=%s", record)
+        response = f"{json.dumps(record)}\n\n".encode('utf-8', errors='ignore')
+        app.logger.warning("audit_log_streamer response=%s", response)
+        yield response
 
 
 @router.delete("",
