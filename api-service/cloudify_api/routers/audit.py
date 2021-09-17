@@ -14,6 +14,9 @@ from cloudify_api.common import common_parameters, get_app, make_db_session
 from cloudify_api.results import DeletedResult, Paginated
 
 
+NOTIFICATION_CHANNEL = 'audit_log_inserted'
+
+
 class AuditLog(BaseModel):
     _storage_id: int
     ref_table: str
@@ -66,19 +69,8 @@ async def list_audit_log(
 async def stream_audit_log(app=Depends(get_app)):
     app.logger.debug("stream_audit_log")
     queue = asyncio.Queue()
-    app.listener.attach_queue('audit_log_inserted', queue)
-    app.logger.warning("stream_audit_log queue=%s", queue)
-    return StreamingResponse(audit_log_streamer(queue, app))
-
-
-async def audit_log_streamer(queue: asyncio.Queue, app):
-    app.logger.warning("audit_log_streamer queue=%s", queue)
-    while True:
-        record = await queue.get()
-        app.logger.warning("audit_log_streamer record=%s", record)
-        response = f"{json.dumps(record)}\n\n".encode('utf-8', errors='ignore')
-        app.logger.warning("audit_log_streamer response=%s", response)
-        yield response
+    app.listener.attach_queue(NOTIFICATION_CHANNEL, queue)
+    return StreamingResponse(_audit_log_streamer(queue, app))
 
 
 @router.delete("",
@@ -97,3 +89,14 @@ async def truncate_audit_log(
     if p.execution_id:
         stmt = stmt.where(models.AuditLog.execution_id == p.execution_id)
     return await DeletedResult.executed(session, stmt)
+
+
+async def _audit_log_streamer(queue: asyncio.Queue, app):
+    while True:
+        try:
+            record = await queue.get()
+        except asyncio.CancelledError:
+            app.listener.remove_queue(NOTIFICATION_CHANNEL, queue)
+            break
+        response = f"{json.dumps(record)}\n\n".encode('utf-8', errors='ignore')
+        yield response
