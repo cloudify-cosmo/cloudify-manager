@@ -121,7 +121,7 @@ class BlueprintUploadTest(AgentlessTestCase):
         blueprint_id = 're-bp'
         # this should fail due to cloudmock plugin not uploaded
         self.assertRaisesRegexp(CloudifyClientError,
-                                'Plugin cloudmock .* not found',
+                                'Couldn\'t find plugin "cloudmock"',
                                 self.client.blueprints.upload,
                                 resource('dsl/basic.yaml'),
                                 entity_id=blueprint_id)
