@@ -19,8 +19,8 @@ async def make_db_session(request: Request) -> AsyncSession:
 class CommonParameters(BaseModel):
     order_by: Optional[str] = None
     desc: bool = False
-    offset: int = 0
-    size: int = 100
+    offset: Optional[int] = 0
+    size: Optional[int] = 100
 
 
 def common_parameters(order_by: Optional[str] = None,

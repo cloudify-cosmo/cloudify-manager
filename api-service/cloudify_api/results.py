@@ -37,13 +37,16 @@ class Paginated(PaginatedBase):
             if params.desc:
                 order_by = [desc(f) for f in order_by]
             query = query.order_by(*order_by)
-        query = query.offset(params.offset).limit(params.size)
+        if params.offset:
+            query = query.offset(params.offset)
+        if params.size:
+            query = query.limit(params.size)
         result = await session.execute(query)
         return cls(items=result.scalars().all(),
                    metadata=Metadata(
                        pagination=Pagination(
-                           offset=params.offset,
-                           size=params.size,
+                           offset=params.offset or 0,
+                           size=params.size or total_result,
                            total=total_result)
                    ))
 
