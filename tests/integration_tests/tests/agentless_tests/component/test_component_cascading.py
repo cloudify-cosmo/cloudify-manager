@@ -116,7 +116,6 @@ class ComponentCascadingCancelAndResume(AgentlessTestCase):
 
         if wait_for_component:
             self._wait_for_component_install('component')
-
         execution = self.client.executions.cancel(execution.id,
                                                   force,
                                                   kill=kill_cancel)
@@ -129,8 +128,7 @@ class ComponentCascadingCancelAndResume(AgentlessTestCase):
 
     def _resume_and_verify_executions_end(
             self, main_execution, expected_number_executions):
-        main_execution = self.client.executions.resume(main_execution.id,
-                                                       force=True)
+        main_execution = self.client.executions.resume(main_execution.id)
         main_execution = self.wait_for_execution_to_end(main_execution)
         self.assertEqual(Execution.TERMINATED, main_execution.status)
         executions = self.client.executions.list(workflow_id='install')
