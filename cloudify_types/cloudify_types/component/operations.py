@@ -243,6 +243,7 @@ def _do_create_deployment(client, deployment_id, deployment_kwargs,
         try:
             client.deployments.create(
                 deployment_id=deployment_id,
+                async_create=True,
                 **deployment_kwargs)
             break
         except CloudifyClientError as ex:
