@@ -18,14 +18,11 @@ from cloudify import manager, ctx
 from cloudify.decorators import operation
 from cloudify.constants import COMPONENT
 from cloudify._compat import urlparse
-from cloudify.exceptions import NonRecoverableError, OperationRetry
+from cloudify.exceptions import NonRecoverableError
 from cloudify.deployment_dependencies import (dependency_creator_generator,
                                               create_deployment_dependency)
 from cloudify_rest_client.client import CloudifyClient
-from cloudify_rest_client.exceptions import (
-    CloudifyClientError,
-    ForbiddenWhileCancelling,
-)
+from cloudify_rest_client.exceptions import CloudifyClientError
 
 from cloudify_types.utils import errors_nonrecoverable
 

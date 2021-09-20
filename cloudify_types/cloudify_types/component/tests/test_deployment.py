@@ -52,7 +52,7 @@ class TestDeployment(TestDeploymentBase):
                 self.cfy_mock_client.deployments.delete = REST_CLIENT_EXCEPTION
                 mock_client.return_value = self.cfy_mock_client
                 with self.assertRaisesRegex(NonRecoverableError,
-                                             'Error in delete'):
+                                            'Error in delete'):
                     delete(deployment_id=deployment_name, timeout=MOCK_TIMEOUT)
 
     def test_delete_deployment_delete_not_existing_deployment(self):
@@ -116,7 +116,7 @@ class TestDeployment(TestDeploymentBase):
             self.cfy_mock_client.deployments.create = REST_CLIENT_EXCEPTION
             mock_client.return_value = self.cfy_mock_client
             with self.assertRaisesRegex(NonRecoverableError,
-                                         'Error in create'):
+                                        'Error in create'):
                 create(
                     deployment_id='test_deployments_create',
                     blueprint_id='test_deployments_create',
@@ -139,7 +139,7 @@ class TestDeployment(TestDeploymentBase):
             with mock.patch(poll_with_timeout_test) as poll:
                 poll.return_value = False
                 with self.assertRaisesRegex(NonRecoverableError,
-                                             'Execution timed out'):
+                                            'Execution timed out'):
                     create(
                         deployment_id='test_create_deployment_timeout',
                         blueprint_id='test',
@@ -221,10 +221,11 @@ class TestComponentPlugins(TestDeploymentBase):
                         _upload_plugins(
                             self.cfy_mock_client,
                             plugins={
-                        'base_plugin': {
-                            'wagon_path': '_wagon_path',
-                            'plugin_yaml_path': '_plugin_yaml_path'}}
-                        )
+                                'base_plugin': {
+                                    'wagon_path': '_wagon_path',
+                                    'plugin_yaml_path': '_plugin_yaml_path'
+                                }
+                            })
                     zip_files.assert_called_with(["some_path",
                                                   "some_path"])
                     get_local_path.assert_has_calls([

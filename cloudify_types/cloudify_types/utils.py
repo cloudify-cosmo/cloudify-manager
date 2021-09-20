@@ -17,10 +17,7 @@ import functools
 
 from cloudify import ctx
 from cloudify.utils import exception_to_error_cause
-from cloudify_rest_client.exceptions import (
-    CloudifyClientError,
-    ForbiddenWhileCancelling
-)
+from cloudify_rest_client.exceptions import ForbiddenWhileCancelling
 from cloudify.exceptions import NonRecoverableError, OperationRetry
 
 

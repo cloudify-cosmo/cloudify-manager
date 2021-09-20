@@ -15,7 +15,6 @@
 import os
 import tempfile
 
-from cloudify.exceptions import NonRecoverableError
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from cloudify_types.component import utils
