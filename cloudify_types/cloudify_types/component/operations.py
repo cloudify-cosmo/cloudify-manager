@@ -130,7 +130,8 @@ def upload_blueprint(**kwargs):
     return True
 
 
-def _verify_secrets_clash(client, secrets):
+def _abort_if_secrets_clash(client, secrets):
+    """Check that new secret names aren't already in use"""
     existing_secrets = {
         secret.key: secret.value for secret in client.secrets.list()
     }
@@ -146,7 +147,7 @@ def _verify_secrets_clash(client, secrets):
 def _set_secrets(client, secrets):
     if not secrets:
         return
-    _verify_secrets_clash(client, secrets)
+    _abort_if_secrets_clash(client, secrets)
     for secret_name in secrets:
         client.secrets.create(
             key=secret_name,
