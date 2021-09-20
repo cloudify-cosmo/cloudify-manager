@@ -1,7 +1,6 @@
 import asyncio
-import json
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Type
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
@@ -9,7 +8,7 @@ from pydantic import BaseModel
 from sqlalchemy import delete
 from sqlalchemy.future import select
 
-from cloudify_api import models
+from cloudify_api import CloudifyAPI, models
 from cloudify_api.common import common_parameters, get_app, make_db_session
 from cloudify_api.results import DeletedResult, Paginated
 
@@ -28,6 +27,20 @@ class AuditLog(BaseModel):
 
     class Config:
         orm_mode = True
+
+    @classmethod
+    def from_dict(cls: Type['AuditLog'],
+                  d: dict):
+        if '_storage_id' not in d \
+                or 'ref_table' not in d \
+                or 'ref_id' not in d \
+                or 'operation' not in d \
+                or 'created_at' not in d:
+            raise ValueError("Missing mandatory field(s), unable to create "
+                             f"AuditLog from dict: {d}")
+        obj = cls.__new__(cls)
+        object.__setattr__(obj, '__dict__', d)
+        return obj
 
 
 class PaginatedAuditLog(Paginated):
@@ -72,8 +85,27 @@ async def stream_audit_log(creator_name: str = '',
     app.listener.attach_queue(NOTIFICATION_CHANNEL, queue)
     headers = {"Content-Type": "text/event-stream"}
     return StreamingResponse(
-        _audit_log_streamer(queue, app, creator_name, execution_id),
+        _audit_log_streamer(queue, creator_name, execution_id, app),
         headers=headers)
+
+
+async def _audit_log_streamer(queue: asyncio.Queue,
+                              creator_name: str,
+                              execution_id: str,
+                              app: Type['CloudifyAPI']):
+    while True:
+        try:
+            data = await queue.get()
+            record = AuditLog.from_dict(data)
+            if creator_name and record.creator_name != creator_name:
+                continue
+            if execution_id and record.execution_id != execution_id:
+                continue
+        except asyncio.CancelledError:
+            app.listener.remove_queue(NOTIFICATION_CHANNEL, queue)
+            break
+        response = f"{record.json()}\n\n".encode('utf-8', errors='ignore')
+        yield response
 
 
 @router.delete("",
@@ -90,14 +122,3 @@ async def truncate_audit_log(p=Depends(TruncateParams),
     if p.execution_id:
         stmt = stmt.where(models.AuditLog.execution_id == p.execution_id)
     return await DeletedResult.executed(session, stmt)
-
-
-async def _audit_log_streamer(queue: asyncio.Queue, app):
-    while True:
-        try:
-            record = await queue.get()
-        except asyncio.CancelledError:
-            app.listener.remove_queue(NOTIFICATION_CHANNEL, queue)
-            break
-        response = f"{json.dumps(record)}\n\n".encode('utf-8', errors='ignore')
-        yield response
