@@ -12,7 +12,7 @@ from manager_rest.constants import DEFAULT_TENANT_ROLE
 
 pytestmark = pytest.mark.group_rest
 
-TSFMT = "%Y-%m-%dT%H:%M:%S.%fZ"
+TSFMT = "%Y-%m-%dT%H:%M:%S.%f"
 
 
 class AuditLogTest(AgentlessTestCase):
