@@ -930,12 +930,9 @@ class ResourceManager(object):
                 'Cannot resume execution: `{0}` in state: `{1}`'
                 .format(execution.id, execution.status))
 
-        execution.status = ExecutionState.STARTED
+        execution.status = ExecutionState.PENDING
         execution.ended_at = None
         execution.resume = True
-        self.sm.update(execution,
-                       modified_attrs=('status', 'ended_at', 'resume'))
-
         message = execution.render_message(bypass_maintenance=False)
         db.session.commit()
         workflow_executor.execute_workflow([message])
