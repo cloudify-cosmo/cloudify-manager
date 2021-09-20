@@ -26,12 +26,10 @@ class PaginatedBase(BaseModel):
 
 class Paginated(PaginatedBase):
     @classmethod
-    async def paginated(
-        cls,
-        session: AsyncSession,
-        query: Select,
-        params: CommonParameters,
-    ):
+    async def paginated(cls,
+                        session: AsyncSession,
+                        query: Select,
+                        params: CommonParameters):
         count = await session.execute(select(func.count()).select_from(query))
         total_result = count.scalars().one()
         if params.order_by:
@@ -57,11 +55,9 @@ class DeletedResultBase(BaseModel):
 
 class DeletedResult(DeletedResultBase):
     @classmethod
-    async def executed(
-                cls,
-                session: AsyncSession,
-                stmt: Executable,
-            ) -> DeletedResultBase:
+    async def executed(cls,
+                       session: AsyncSession,
+                       stmt: Executable) -> DeletedResultBase:
         result = await session.execute(stmt)
         await session.commit()
         return cls(deleted=result.rowcount)

@@ -3,7 +3,7 @@ import json
 from datetime import datetime
 from typing import List, Optional
 
-from fastapi import Depends, APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import delete
@@ -47,13 +47,11 @@ router = APIRouter(prefix="/audit")
 @router.get("",
             response_model=PaginatedAuditLog,
             tags=["Audit Log"])
-async def list_audit_log(
-            creator_name: str = '',
-            execution_id: str = '',
-            session=Depends(make_db_session),
-            app=Depends(get_app),
-            p=Depends(common_parameters)
-        ) -> PaginatedAuditLog:
+async def list_audit_log(creator_name: str = '',
+                         execution_id: str = '',
+                         session=Depends(make_db_session),
+                         app=Depends(get_app),
+                         p=Depends(common_parameters)) -> PaginatedAuditLog:
     app.logger.debug("list_audit_log, creator_name=%s, execution_id=%s",
                      creator_name, execution_id)
     stmt = select(models.AuditLog)
@@ -66,22 +64,24 @@ async def list_audit_log(
 
 @router.get("/stream",
             tags=["Audit Log"])
-async def stream_audit_log(app=Depends(get_app)):
+async def stream_audit_log(creator_name: str = '',
+                           execution_id: str = '',
+                           app=Depends(get_app)) -> StreamingResponse:
     app.logger.debug("stream_audit_log")
     queue = asyncio.Queue()
     app.listener.attach_queue(NOTIFICATION_CHANNEL, queue)
     headers = {"Content-Type": "text/event-stream"}
-    return StreamingResponse(_audit_log_streamer(queue, app), headers=headers)
+    return StreamingResponse(
+        _audit_log_streamer(queue, app, creator_name, execution_id),
+        headers=headers)
 
 
 @router.delete("",
                response_model=DeletedResult,
                tags=["Audit Log"])
-async def truncate_audit_log(
-            p=Depends(TruncateParams),
-            session=Depends(make_db_session),
-            app=Depends(get_app),
-        ):
+async def truncate_audit_log(p=Depends(TruncateParams),
+                             session=Depends(make_db_session),
+                             app=Depends(get_app)):
     app.logger.debug("truncate_audit_log, params=(%s)", p)
     stmt = delete(models.AuditLog)\
         .where(models.AuditLog.created_at <= p.before)

@@ -15,10 +15,7 @@ def get_settings():
 
 
 class CloudifyAPI(FastAPI):
-    def __init__(
-            self,
-            *args,
-            **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.settings = get_settings()
         self.logger = logging.getLogger('cloudify_api')

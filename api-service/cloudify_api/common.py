@@ -23,11 +23,10 @@ class CommonParameters(BaseModel):
     size: int = 100
 
 
-def common_parameters(
-        order_by: Optional[str] = None,
-        desc: bool = False,
-        offset: int = 0,
-        size: int = 100) -> CommonParameters:
+def common_parameters(order_by: Optional[str] = None,
+                      desc: bool = False,
+                      offset: int = 0,
+                      size: int = 100) -> CommonParameters:
     return CommonParameters(
         order_by=order_by,
         desc=desc,
