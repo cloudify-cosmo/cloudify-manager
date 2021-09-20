@@ -158,7 +158,6 @@ def _set_secrets(client, secrets):
         ctx.logger.info('Created secret %r', secret_name)
 
 
-
 def _upload_plugins(client, plugins):
     if (not plugins or 'plugins' in ctx.instance.runtime_properties):
         # No plugins to install or already uploaded them.
@@ -223,10 +222,45 @@ def _generate_suffix_deployment_id(client, deployment_id):
     return inc_deployment_id
 
 
+def _do_create_deployment(client, deployment_id, deployment_kwargs,
+                          auto_inc_suffix):
+    if auto_inc_suffix:
+        base_deployment_id = deployment_id
+    elif deployment_id_exists(client, deployment_id):
+        raise NonRecoverableError(
+            'Component\'s deployment ID "{0}" already exists, '
+            'please verify the chosen name.'.format(
+                deployment_id))
+
+    retries = DEPLOYMENTS_CREATE_RETRIES
+    while True:
+        if auto_inc_suffix:
+            deployment_id = _generate_suffix_deployment_id(
+                client, base_deployment_id)
+
+        update_runtime_properties('deployment', 'id', deployment_id)
+        ctx.logger.info('Creating "%s" component deployment.', deployment_id)
+        try:
+            client.deployments.create(
+                deployment_id=deployment_id,
+                **deployment_kwargs)
+            break
+        except CloudifyClientError as ex:
+            if ex.error_code == 'conflict_error' \
+                    and auto_inc_suffix and retries > 0:
+                ctx.logger.info(
+                    'Component\'s deployment ID "%s" '
+                    'already exists, will try to automatically create an '
+                    'ID with a new suffix.', deployment_id)
+                retries -= 1
+            else:
+                raise ex
+    return deployment_id
+
+
 @operation(resumable=True)
 @errors_nonrecoverable
-def create(timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL,
-           **kwargs):
+def create(timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL, **kwargs):
     client = _get_client(kwargs)
     secrets = _get_desired_operation_input('secrets', kwargs)
     _set_secrets(client, secrets)
@@ -247,7 +281,8 @@ def create(timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL,
                      deployment.get('id') or
                      ctx.instance.id)
     deployment_inputs = deployment.get('inputs', {})
-    deployment_capabilities = deployment.get('capabilities')
+    # TODO capabilities are unused?
+    # deployment_capabilities = deployment.get('capabilities')
     deployment_log_redirect = deployment.get('logs', True)
     deployment_auto_suffix = deployment.get('auto_inc_suffix', False)
 
@@ -258,42 +293,12 @@ def create(timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL,
         dependency_creator_generator(COMPONENT, ctx.instance.id),
         ctx.deployment.id)
 
-    if deployment_auto_suffix:
-        base_deployment_id = deployment_id
-    elif deployment_id_exists(client, deployment_id):
-        raise NonRecoverableError(
-            'Component\'s deployment ID "{0}" already exists, '
-            'please verify the chosen name.'.format(
-                deployment_id))
-
-    retries = DEPLOYMENTS_CREATE_RETRIES
-    while True:
-        if deployment_auto_suffix:
-            deployment_id = _generate_suffix_deployment_id(
-                client, base_deployment_id)
-        _inter_deployment_dependency['target_deployment'] = \
-            deployment_id
-
-        update_runtime_properties('deployment', 'id', deployment_id)
-        ctx.logger.info('Creating "%s" component deployment.', deployment_id)
-        try:
-            client.deployments.create(
-                blueprint_id=blueprint_id,
-                deployment_id=deployment_id,
-                inputs=deployment_inputs
-            )
-            break
-        except CloudifyClientError as ex:
-            if ex.error_code == 'conflict_error' \
-                    and deployment_auto_suffix and retries > 0:
-                ctx.logger.info(
-                    'Component\'s deployment ID "%s" '
-                    'already exists, will try to automatically create an '
-                    'ID with a new suffix.', deployment_id)
-                retries -= 1
-            else:
-                raise ex
-
+    deployment_id = _do_create_deployment(
+        client,
+        deployment_id,
+        {'blueprint_id': blueprint_id, 'inputs': deployment_inputs},
+        auto_inc_suffix=deployment_auto_suffix)
+    _inter_deployment_dependency['target_deployment'] = deployment_id
     client.inter_deployment_dependencies.create(**_inter_deployment_dependency)
 
     executions = client.executions.list(
@@ -384,8 +389,7 @@ def delete(timeout=EXECUTIONS_TIMEOUT, **kwargs):
         ctx.deployment.id)
 
     poll_with_timeout(
-        lambda:
-        is_all_executions_finished(client, deployment_id),
+        lambda: is_all_executions_finished(client, deployment_id),
         timeout=timeout,
         expected_result=True)
 
