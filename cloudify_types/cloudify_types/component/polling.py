@@ -174,7 +174,7 @@ def is_deployment_execution_at_state(client,
                                       _include=execution_get_args)
     ctx.logger.debug(
         'Execution "%s" of component "%s" state is %s',
-        execution_id, dep_id, execution.status_display)
+        execution_id, dep_id, execution.get('status_display', '<unknown>'))
 
     if log_redirect:
         redirect_logs(client, execution_id, instance_ctx)
