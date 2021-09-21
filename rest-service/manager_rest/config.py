@@ -380,9 +380,17 @@ class Config(object):
         return db_url
 
     @property
-    def async_dsn(self):
+    def sqlalchemy_async_dsn(self):
+        dsn = self.asyncpg_dsn
+        if not dsn.startswith(SQL_DIALECT):
+            return dsn
+        _, _, dsn = dsn.partition(SQL_DIALECT)
+        return f'{SQL_ASYNC_DIALECT}{dsn}'
+
+    @property
+    def asyncpg_dsn(self):
         host = ipv6_url_compat(self._find_db_host(self.postgresql_host))
-        dsn = f'{SQL_ASYNC_DIALECT}://'\
+        dsn = f'{SQL_DIALECT}://'\
               f'{self.postgresql_username}:'\
               f'{self.postgresql_password}@'\
               f'{host}/'\

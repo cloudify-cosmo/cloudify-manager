@@ -2087,4 +2087,8 @@ class AuditLog(CreatedAtMixin, SQLModelBase):
                           nullable=False)
     creator_name = db.Column(db.Text, nullable=True, index=True)
     execution_id = db.Column(db.Text, nullable=True, index=True)
+
+    @property
+    def id(self):
+        return self._storage_id
 # endregion
