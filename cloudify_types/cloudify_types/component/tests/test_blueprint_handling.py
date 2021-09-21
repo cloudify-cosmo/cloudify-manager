@@ -45,12 +45,11 @@ class TestBlueprint(ComponentTestBase):
             blueprint_params['blueprint']['blueprint_archive'] = self.archive
             self.resource_config['resource_config'] = blueprint_params
 
-            with self.assertRaisesRegexp(
+            with self.assertRaisesRegex(
                 NonRecoverableError,
                 'action "_upload" failed'
             ):
-                upload_blueprint(
-                    operation='upload_blueprint', **self.resource_config)
+                upload_blueprint(**self.resource_config)
 
     def test_successful_upload_existing_blueprint(self):
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
@@ -65,8 +64,7 @@ class TestBlueprint(ComponentTestBase):
             blueprint_params['blueprint']['blueprint_archive'] = self.archive
             self.resource_config['resource_config'] = blueprint_params
 
-            output = upload_blueprint(operation='upload_blueprint',
-                                      **self.resource_config)
+            output = upload_blueprint(**self.resource_config)
             self.assertTrue(output)
 
     def test_upload_blueprint_success(self):
@@ -79,8 +77,7 @@ class TestBlueprint(ComponentTestBase):
             blueprint_params['blueprint']['blueprint_archive'] = self.archive
             self.resource_config['resource_config'] = blueprint_params
 
-            output = upload_blueprint(operation='upload_blueprint',
-                                      **self.resource_config)
+            output = upload_blueprint(**self.resource_config)
             self.assertTrue(output)
 
     def test_upload_blueprint_fail_missing_archive(self):
@@ -92,13 +89,12 @@ class TestBlueprint(ComponentTestBase):
             blueprint_params['blueprint']['id'] = 'blu_name'
             self.resource_config['resource_config'] = blueprint_params
 
-            with self.assertRaisesRegexp(
+            with self.assertRaisesRegex(
                 NonRecoverableError,
                 'No blueprint_archive supplied, but '
                 'external_resource is False'
             ):
-                upload_blueprint(
-                    operation='upload_blueprint', **self.resource_config)
+                upload_blueprint(**self.resource_config)
 
     def test_uploading_existing_blueprint_id_when_using_external(self):
         blueprint_id = 'blu_name'
@@ -114,8 +110,7 @@ class TestBlueprint(ComponentTestBase):
             self.resource_config['resource_config'] = blueprint_params
 
             mock_client.return_value = self.cfy_mock_client
-            output = upload_blueprint(operation='upload_blueprint',
-                                      **self.resource_config)
+            output = upload_blueprint(**self.resource_config)
             self.assertTrue(output)
 
     def test_upload_blueprint_use_not_existing_external(self):
@@ -128,9 +123,8 @@ class TestBlueprint(ComponentTestBase):
 
             mock_client.return_value = self.cfy_mock_client
 
-            with self.assertRaisesRegexp(
+            with self.assertRaisesRegex(
                 NonRecoverableError,
                 'Blueprint ID "test" does not exist'
             ):
-                upload_blueprint(
-                    operation='upload_blueprint', **self.resource_config)
+                upload_blueprint(**self.resource_config)

@@ -26,7 +26,7 @@ from cloudify import ctx
 from cloudify._compat import urlparse
 from cloudify.exceptions import NonRecoverableError
 
-from cloudify_types.utils import handle_client_exception, get_deployment_by_id
+from cloudify_types.utils import get_deployment_by_id
 
 from .constants import CAPABILITIES
 
@@ -56,25 +56,23 @@ def download_file(url, destination=None, keep_name=False):
             fd, destination = tempfile.mkstemp()
             os.close(fd)
 
-    ctx.logger.info('Downloading {0} to {1}...'.format(url, destination))
+    ctx.logger.info('Downloading %s to %s...', url, destination)
 
     try:
         response = requests.get(url, stream=True)
     except requests.exceptions.RequestException as ex:
-        raise NonRecoverableError(
-            'Failed to download {0}. ({1})'.format(url, str(ex)))
+        raise NonRecoverableError(f'Failed to download {url}. ({ex})')
 
     final_url = response.url
     if final_url != url:
-        ctx.logger.info('Redirected to {0}'.format(final_url))
+        ctx.logger.info('Redirected to %s', final_url)
 
     try:
         with open(destination, 'wb') as destination_file:
             for chunk in response.iter_content(None):
                 destination_file.write(chunk)
     except IOError as ex:
-        raise NonRecoverableError(
-            'Failed to download {0}. ({1})'.format(url, str(ex)))
+        raise NonRecoverableError(f'Failed to download {url}. ({ex})')
 
     return destination
 
@@ -95,12 +93,12 @@ def get_local_path(source, destination=None, create_temp=False):
             return source
     else:
         raise NonRecoverableError(
-            'You must provide either a path to a local file, or a remote URL '
-            'using one of the allowed schemes: {0}'.format(allowed_schemes))
+            f'Provide either a path to a local file, or a remote URL '
+            f'using one of the allowed schemes: {allowed_schemes}')
 
 
 def _zipping(source, destination, include_folder=True):
-    ctx.logger.debug('Creating zip archive: {0}...'.format(destination))
+    ctx.logger.debug('Creating zip archive: %s...', destination)
     with zipfile.ZipFile(destination, 'w') as zip_file:
         for root, _, files in os.walk(source):
             for filename in files:
@@ -123,7 +121,6 @@ def zip_files(files_paths):
     return destination_zip
 
 
-@handle_client_exception('Blueprint search failed')
 def blueprint_id_exists(client, blueprint_id):
     """
     Searching for blueprint_id in all blueprints in order to differentiate
@@ -156,21 +153,19 @@ def should_upload_plugin(plugin_yaml_path, existing_plugins):
     return True
 
 
-@handle_client_exception('Failed fetching workflow results')
 def populate_runtime_with_wf_results(client,
                                      deployment_id,
                                      node_instance=None):
     if not node_instance:
         node_instance = ctx.instance
-    ctx.logger.info('Fetching "{0}" deployment capabilities..'.format(
-        deployment_id))
+    ctx.logger.info('Fetching "%s" deployment capabilities..', deployment_id)
 
     if CAPABILITIES not in node_instance.runtime_properties:
         node_instance.runtime_properties[CAPABILITIES] = dict()
 
-    ctx.logger.debug('Deployment ID is {0}'.format(deployment_id))
+    ctx.logger.debug('Deployment ID is %s', deployment_id)
     response = client.deployments.capabilities.get(deployment_id)
     dep_capabilities = response.get(CAPABILITIES)
     node_instance.runtime_properties[CAPABILITIES] = dep_capabilities
-    ctx.logger.info('Fetched capabilities:\n{0}'.format(json.dumps(
-        dep_capabilities, indent=1)))
+    ctx.logger.info('Fetched capabilities:\n%s',
+                    json.dumps(dep_capabilities, indent=1))

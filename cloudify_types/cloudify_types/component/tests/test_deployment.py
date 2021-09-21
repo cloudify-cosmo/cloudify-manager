@@ -16,9 +16,9 @@ import mock
 from collections import namedtuple
 
 from cloudify.exceptions import NonRecoverableError
+from cloudify_rest_client.exceptions import CloudifyClientError
 
-from ..operations import create, delete
-from cloudify_types.component.component import Component, CloudifyClientError
+from ..operations import create, delete, _upload_plugins
 from .base_test_suite import (ComponentTestBase,
                               REST_CLIENT_EXCEPTION,
                               MOCK_TIMEOUT)
@@ -43,7 +43,7 @@ class TestDeployment(TestDeploymentBase):
         self._ctx.instance.runtime_properties['deployment']['id'] =\
             deployment_name
 
-        deployment_id_exists = 'cloudify_types.component.component' \
+        deployment_id_exists = 'cloudify_types.component.operations' \
                                '.deployment_id_exists'
         with mock.patch(deployment_id_exists) as exists:
             exists.return_value = True
@@ -51,8 +51,8 @@ class TestDeployment(TestDeploymentBase):
             with mock.patch('cloudify.manager.get_rest_client') as mock_client:
                 self.cfy_mock_client.deployments.delete = REST_CLIENT_EXCEPTION
                 mock_client.return_value = self.cfy_mock_client
-                with self.assertRaisesRegexp(NonRecoverableError,
-                                             'action "delete" failed'):
+                with self.assertRaisesRegex(NonRecoverableError,
+                                            'Error in delete'):
                     delete(deployment_id=deployment_name, timeout=MOCK_TIMEOUT)
 
     def test_delete_deployment_delete_not_existing_deployment(self):
@@ -60,7 +60,7 @@ class TestDeployment(TestDeploymentBase):
         self._ctx.instance.runtime_properties['deployment']['id'] =\
             deployment_name
 
-        deployment_id_exists = 'cloudify_types.component.component' \
+        deployment_id_exists = 'cloudify_types.component.operations' \
                                '.deployment_id_exists'
         with mock.patch(deployment_id_exists) as exists:
             exists.return_value = False
@@ -115,8 +115,8 @@ class TestDeployment(TestDeploymentBase):
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             self.cfy_mock_client.deployments.create = REST_CLIENT_EXCEPTION
             mock_client.return_value = self.cfy_mock_client
-            with self.assertRaisesRegexp(NonRecoverableError,
-                                         'action "create" failed'):
+            with self.assertRaisesRegex(NonRecoverableError,
+                                        'Error in create'):
                 create(
                     deployment_id='test_deployments_create',
                     blueprint_id='test_deployments_create',
@@ -138,8 +138,8 @@ class TestDeployment(TestDeploymentBase):
                 'cloudify_types.component.polling.poll_with_timeout'
             with mock.patch(poll_with_timeout_test) as poll:
                 poll.return_value = False
-                with self.assertRaisesRegexp(NonRecoverableError,
-                                             'Execution timed out'):
+                with self.assertRaisesRegex(NonRecoverableError,
+                                            'Execution timed out'):
                     create(
                         deployment_id='test_create_deployment_timeout',
                         blueprint_id='test',
@@ -179,7 +179,7 @@ class TestDeployment(TestDeploymentBase):
             with mock.patch(poll_with_timeout_test) as poll:
                 poll.return_value = True
 
-                with self.assertRaisesRegexp(
+                with self.assertRaisesRegex(
                         NonRecoverableError,
                         'No execution Found for component "test" deployment'):
                     create(operation='create_deployment', timeout=MOCK_TIMEOUT)
@@ -197,7 +197,7 @@ class TestDeployment(TestDeploymentBase):
 
 class TestComponentPlugins(TestDeploymentBase):
 
-    @mock.patch('cloudify_types.component.component.should_upload_plugin',
+    @mock.patch('cloudify_types.component.operations.should_upload_plugin',
                 return_value=True)
     def test_upload_plugins(self, _):
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
@@ -208,21 +208,24 @@ class TestComponentPlugins(TestDeploymentBase):
 
             mock_client.return_value = self.cfy_mock_client
             with mock.patch(
-                'cloudify_types.component.component.get_local_path',
+                'cloudify_types.component.operations.get_local_path',
                 return_value='some_path'
             ) as get_local_path:
                 with mock.patch(
-                    'cloudify_types.component.component.zip_files',
+                    'cloudify_types.component.operations.zip_files',
                     return_value="_zip"
                 )as zip_files:
-                    component = Component({'plugins': {
-                        'base_plugin': {
-                            'wagon_path': '_wagon_path',
-                            'plugin_yaml_path': '_plugin_yaml_path'}}})
                     with mock.patch(
-                            'cloudify_types.component.component.os')\
+                            'cloudify_types.component.operations.os')\
                             as os_mock:
-                        component._upload_plugins()
+                        _upload_plugins(
+                            self.cfy_mock_client,
+                            plugins={
+                                'base_plugin': {
+                                    'wagon_path': '_wagon_path',
+                                    'plugin_yaml_path': '_plugin_yaml_path'
+                                }
+                            })
                     zip_files.assert_called_with(["some_path",
                                                   "some_path"])
                     get_local_path.assert_has_calls([
@@ -239,41 +242,44 @@ class TestComponentPlugins(TestDeploymentBase):
         with mock.patch('cloudify.manager.get_rest_client'):
             zip_files = mock.Mock(return_value="_zip")
             with mock.patch(
-                'cloudify_types.component.component.zip_files',
+                'cloudify_types.component.operations.zip_files',
                 zip_files
             ):
-                # empty plugins
-                component = Component({'plugins': {}})
-                component._upload_plugins()
+                _upload_plugins(
+                    self.cfy_mock_client,
+                    plugins={}
+                )
                 zip_files.assert_not_called()
                 get_local_path.assert_not_called()
 
-    @mock.patch('cloudify_types.component.component.should_upload_plugin',
+    @mock.patch('cloudify_types.component.operations.should_upload_plugin',
                 return_value=True)
     @mock.patch('cloudify.manager.get_rest_client')
     def test_upload_plugins_with_icon(self, *_mocks):
         plugin = mock.Mock()
         plugin.id = "CustomPlugin"
-        component = Component({'plugins': {
-            'base_plugin': {
-                'wagon_path': '_wagon_path',
-                'plugin_yaml_path': '_plugin_yaml_path',
-                'icon_png_path': '_icon_png_path',
-            }
-        }})
         get_local_path = mock.patch(
-            'cloudify_types.component.component.get_local_path',
+            'cloudify_types.component.operations.get_local_path',
             side_effect=lambda filename, create_temp=True: filename
         )
         zip_files = mock.patch(
-            'cloudify_types.component.component.zip_files',
+            'cloudify_types.component.operations.zip_files',
             return_value='_zip'
         )
-        component_os = mock.patch('cloudify_types.component.component.os')
+        component_os = mock.patch('cloudify_types.component.operations.os')
         with get_local_path as local_path_mock, \
                 zip_files as zip_mock, \
                 component_os as os_mock:
-            component._upload_plugins()
+            _upload_plugins(
+                self.cfy_mock_client,
+                plugins={
+                    'base_plugin': {
+                        'wagon_path': '_wagon_path',
+                        'plugin_yaml_path': '_plugin_yaml_path',
+                        'icon_png_path': '_icon_png_path',
+                    }
+                })
+
         zip_mock.assert_called_with([
             '_wagon_path',
             '_plugin_yaml_path',
@@ -299,7 +305,7 @@ class TestComponentPlugins(TestDeploymentBase):
             mock_client.return_value = self.cfy_mock_client
 
             poll_with_timeout_test = \
-                'cloudify_types.component.component.poll_with_timeout'
+                'cloudify_types.component.operations.poll_with_timeout'
             with mock.patch(poll_with_timeout_test) as poll:
                 poll.return_value = True
                 output = delete(
@@ -323,7 +329,7 @@ class TestComponentPlugins(TestDeploymentBase):
             mock_client.return_value = self.cfy_mock_client
 
             poll_with_timeout_test = \
-                'cloudify_types.component.component.poll_with_timeout'
+                'cloudify_types.component.operations.poll_with_timeout'
             with mock.patch(poll_with_timeout_test) as poll:
                 poll.return_value = True
                 output = delete(
@@ -345,13 +351,13 @@ class TestComponentPlugins(TestDeploymentBase):
             mock_client.return_value = self.cfy_mock_client
 
             poll_with_timeout_test = \
-                'cloudify_types.component.component.poll_with_timeout'
+                'cloudify_types.component.operations.poll_with_timeout'
             with mock.patch(poll_with_timeout_test) as poll:
                 poll.return_value = True
 
-                with self.assertRaisesRegexp(
+                with self.assertRaisesRegex(
                         NonRecoverableError,
-                        'Failed to remove plugin "plugin_id"'):
+                        'Failed to remove plugin plugin_id'):
                     delete(
                         operation='delete_deployment',
                         deployment_id='dep_name',
@@ -405,7 +411,7 @@ class TestComponentSecrets(TestDeploymentBase):
             ])
             mock_client.return_value = self.cfy_mock_client
 
-            with self.assertRaisesRegexp(
+            with self.assertRaisesRegex(
                     NonRecoverableError,
                     'The secrets: "a" already exist, not updating...'):
                 create(operation='create_deployment', timeout=MOCK_TIMEOUT)
@@ -421,7 +427,7 @@ class TestComponentSecrets(TestDeploymentBase):
             mock_client.return_value = self.cfy_mock_client
 
             poll_with_timeout_test = \
-                'cloudify_types.component.component.poll_with_timeout'
+                'cloudify_types.component.operations.poll_with_timeout'
             with mock.patch(poll_with_timeout_test) as poll:
                 poll.return_value = True
                 output = delete(

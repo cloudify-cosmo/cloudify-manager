@@ -36,7 +36,7 @@ class TestSharedResource(TestSharedResourceBase):
             mock_client.return_value = self.cfy_mock_client
             poll_with_timeout_test = (
                 'cloudify_types.shared_resource.'
-                'shared_resource.get_deployment_by_id')
+                'operations.get_deployment_by_id')
             with mock.patch(poll_with_timeout_test) as poll:
                 poll.return_value = True
                 connect_deployment(operation_inputs={
@@ -54,20 +54,20 @@ class TestSharedResource(TestSharedResourceBase):
                     {'test': 1},
                     (self._ctx.instance.runtime_properties[CAPABILITIES]))
 
-    @mock.patch('cloudify_types.shared_resource.shared_resource'
+    @mock.patch('cloudify_types.shared_resource.operations'
                 '.get_deployment_by_id',
                 return_value=False)
     def test_validate_deployment_fails_when_deployment_doesnt_exist(self, _):
-        self.assertRaisesRegexp(NonRecoverableError,
-                                r'SharedResource\'s deployment ID '
-                                r'"test_deployment" does not exist.',
-                                connect_deployment)
+        self.assertRaisesRegex(NonRecoverableError,
+                               r'SharedResource\'s deployment ID '
+                               r'"test_deployment" does not exist.',
+                               connect_deployment)
         self.assertNotIn('deployment',
                          self._ctx.instance.runtime_properties)
         self.cfy_mock_client.inter_deployment_dependencies.create \
             .assert_not_called()
 
-    @mock.patch('cloudify_types.shared_resource.shared_resource'
+    @mock.patch('cloudify_types.shared_resource.operations'
                 '.get_deployment_by_id',
                 return_value=True)
     def test_disconnecting_deployment_removes_deployment_dependency(self, _):

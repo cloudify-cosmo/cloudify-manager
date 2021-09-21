@@ -19,8 +19,6 @@ from cloudify import ctx
 from cloudify.exceptions import NonRecoverableError
 from cloudify.models_states import ExecutionState, BlueprintUploadState
 
-from cloudify_types.utils import handle_client_exception
-
 from .constants import POLLING_INTERVAL, PAGINATION_SIZE, EXECUTIONS_TIMEOUT
 
 
@@ -33,7 +31,7 @@ def poll_with_timeout(pollster,
     timeout = float('infinity') if timeout == -1 else timeout
     current_time = time.time()
 
-    ctx.logger.debug('Pooling with timeout of {0} seconds'.format(timeout))
+    ctx.logger.debug('Polling with timeout of %s seconds', timeout)
 
     while time.time() <= current_time + timeout:
         if pollster() != expected_result:
@@ -63,7 +61,6 @@ def _get_ctx(instance_ctx):
     return instance_ctx if instance_ctx else ctx.instance
 
 
-@handle_client_exception('Redirecting logs from the deployment failed')
 def redirect_logs(client, execution_id, instance_ctx=None):
     instance_ctx = _get_ctx(instance_ctx)
     count_events = "received_events"
@@ -79,8 +76,6 @@ def redirect_logs(client, execution_id, instance_ctx=None):
         events, full_count = _fetch_events(client, execution_id, last_event)
 
         for event in events:
-            ctx.logger.debug(
-                'Event {0} for execution_id {1}'.format(event, execution_id))
             instance_prompt = event.get('node_instance_id', "")
             if instance_prompt:
                 event_operation = event.get('operation')
@@ -92,11 +87,6 @@ def redirect_logs(client, execution_id, instance_ctx=None):
             if instance_prompt:
                 instance_prompt = "[" + instance_prompt + "] "
 
-            message = "%s %s%s" % (
-                event.get('reported_timestamp', ""),
-                instance_prompt if instance_prompt else "",
-                event.get('message', "")
-            )
             level = event.get('level')
 
             # If the event dict had a 'level' key, then the value is
@@ -111,7 +101,10 @@ def redirect_logs(client, execution_id, instance_ctx=None):
             if not isinstance(level, int):
                 level = logging.INFO
 
-            ctx.logger.log(level, message)
+            ctx.logger.log(level, "%s %s%s",
+                           event.get('reported_timestamp', ""),
+                           instance_prompt if instance_prompt else "",
+                           event.get('message', ""))
 
         last_event += len(events)
 
@@ -127,7 +120,6 @@ def _is_execution_not_ended(execution_status):
     return execution_status not in ('terminated', 'failed', 'cancelled')
 
 
-@handle_client_exception('Checking all executions had failed')
 def is_all_executions_finished(client, deployment_id=None):
     """
     Checks if all system workflows or given deployment id are finished
@@ -162,8 +154,6 @@ def is_all_executions_finished(client, deployment_id=None):
     return True
 
 
-@handle_client_exception('Checking deployment\'s latest execution state '
-                         'had failed')
 def is_deployment_execution_at_state(client,
                                      dep_id,
                                      state,
@@ -184,11 +174,9 @@ def is_deployment_execution_at_state(client,
                                       _include=execution_get_args)
     ctx.logger.debug(
         'Execution "%s" of component "%s" state is %s',
-        execution_id, dep_id, execution)
+        execution_id, dep_id, execution.get('status_display', '<unknown>'))
 
     if log_redirect:
-        ctx.logger.debug(
-            'Execution info with log_redirect is %s', execution)
         redirect_logs(client, execution_id, instance_ctx)
 
     execution_status = execution.get('status')
@@ -197,8 +185,7 @@ def is_deployment_execution_at_state(client,
             'The status for execution "%s" is %s', execution_id, state)
         return True
     elif execution_status in (ExecutionState.FAILED, ExecutionState.CANCELLED):
-        raise NonRecoverableError(
-            'Execution {0} {1}.'.format(str(execution), execution_status))
+        raise NonRecoverableError(f'Execution {execution} {execution_status}.')
 
     return False
 
@@ -230,7 +217,7 @@ def verify_execution_state(client,
 
     if not result:
         raise NonRecoverableError(
-            'Execution timed out after: {0} seconds.'.format(timeout))
+            f'Execution timed out after: {timeout} seconds.')
     return True
 
 
@@ -247,6 +234,5 @@ def wait_for_blueprint_to_upload(
         interval=POLLING_INTERVAL)
     if not result:
         raise NonRecoverableError(
-            'Blueprint upload timed out after: {0} seconds.'.format(
-                timeout_seconds))
+            f'Blueprint upload timed out after: {timeout_seconds} seconds.')
     return True

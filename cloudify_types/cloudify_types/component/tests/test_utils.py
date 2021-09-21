@@ -15,7 +15,6 @@
 import os
 import tempfile
 
-from cloudify.exceptions import NonRecoverableError
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from cloudify_types.component import utils
@@ -47,13 +46,6 @@ class TestUtils(ComponentTestBase):
         self.assertTrue(copy_file)
         self.cleaning_up_files([copy_file, test_file])
 
-    def test_get_local_path_https(self):
-        copy_file = utils.get_local_path(
-            "http://www.getcloudify.org/spec/cloudify/4.5/types.yaml",
-            create_temp=True)
-        self.assertTrue(copy_file)
-        self.cleaning_up_files([copy_file])
-
     def test_blueprint_id_exists_no_blueprint(self):
         output = utils.blueprint_id_exists(self.cfy_mock_client, 'blu_name')
         self.assertFalse(output)
@@ -81,8 +73,8 @@ class TestUtils(ComponentTestBase):
             raise CloudifyClientError('Mistake')
 
         self.cfy_mock_client.blueprints.list = mock_return
-        with self.assertRaisesRegexp(
-                NonRecoverableError, 'Blueprint search failed'):
+        with self.assertRaisesRegex(
+                CloudifyClientError, 'Mistake'):
             utils.blueprint_id_exists(self.cfy_mock_client, 'blu_name')
 
     def test_find_deployment_handle_client_error(self):
@@ -91,6 +83,6 @@ class TestUtils(ComponentTestBase):
             raise CloudifyClientError('Mistake')
 
         self.cfy_mock_client.deployments.list = mock_return
-        with self.assertRaisesRegexp(
-                NonRecoverableError, 'Deployment search failed'):
+        with self.assertRaisesRegex(
+                CloudifyClientError, 'Mistake'):
             utils.deployment_id_exists(self.cfy_mock_client, 'dep_name')
