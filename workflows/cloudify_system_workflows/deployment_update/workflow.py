@@ -325,6 +325,27 @@ def _establish_relationships(ctx, graph, extended_and_related, **kwargs):
     )
 
 
+def _execute_deployment_update(ctx, client, update_id, **kwargs):
+    """Do all the non-preview, destructive, update operations."""
+    graph = ctx.graph_mode()
+
+    _clear_graph(graph)
+    graph = _perform_update_graph(ctx, update_id)
+    graph.execute()
+    ctx.refresh_node_instances()
+
+    dep_up = client.deployment_updates.get(update_id)
+    update_instances = dep_up['deployment_update_node_instances']
+    if update_instances.get('added_and_related'):
+        _clear_graph(graph)
+        _install_new_nodes(
+            ctx, graph, update_instances['added_and_related'], **kwargs)
+    if update_instances.get('extended_and_related'):
+        _clear_graph(graph)
+        _establish_relationships(
+            ctx, graph, update_instances['extended_and_related'], **kwargs)
+
+
 @workflow
 def update_deployment(ctx, *, preview=False, **kwargs):
     client = get_rest_client()
@@ -333,22 +354,7 @@ def update_deployment(ctx, *, preview=False, **kwargs):
     graph.execute()
 
     if not preview:
-        _clear_graph(graph)
-        graph = _perform_update_graph(ctx, update_id)
-        graph.execute()
-        ctx.refresh_node_instances()
-
-        graph = ctx.graph_mode()
-        dep_up = client.deployment_updates.get(update_id)
-        update_instances = dep_up['deployment_update_node_instances']
-        if update_instances.get('added_and_related'):
-            _clear_graph(graph)
-            _install_new_nodes(
-                ctx, graph, update_instances['added_and_related'], **kwargs)
-        if update_instances.get('extended_and_related'):
-            _clear_graph(graph)
-            _establish_relationships(
-                ctx, graph, update_instances['extended_and_related'], **kwargs)
+        _execute_deployment_update(ctx, client, update_id, **kwargs)
 
     client.deployment_updates.set_attributes(
         update_id,
