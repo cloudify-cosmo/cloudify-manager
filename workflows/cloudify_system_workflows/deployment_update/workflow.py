@@ -287,24 +287,6 @@ def _clear_graph(graph):
         graph.remove_task(task)
 
 
-def _install_new_nodes(ctx, graph, added_and_related, **kwargs):
-    added_instances = [
-        ctx.get_node_instance(ni['id'])
-        for ni in added_and_related
-        if ni.get('modification') == 'added'
-    ]
-    related_instances = [
-        ctx.get_node_instance(ni['id'])
-        for ni in added_and_related
-        if ni.get('modification') != 'added'
-    ]
-    lifecycle.install_node_instances(
-        graph=graph,
-        node_instances=added_instances,
-        related_nodes=related_instances
-    )
-
-
 def _establish_relationships(ctx, graph, extended_and_related, **kwargs):
     node_instances = [
         ctx.get_node_instance(ni['id'])
@@ -336,10 +318,29 @@ def _execute_deployment_update(ctx, client, update_id, **kwargs):
 
     dep_up = client.deployment_updates.get(update_id)
     update_instances = dep_up['deployment_update_node_instances']
+
+    install_instances = []
+    install_related_instances = []
+
     if update_instances.get('added_and_related'):
+        added_and_related = update_instances['added_and_related']
+        install_instances += [
+            ctx.get_node_instance(ni['id'])
+            for ni in added_and_related
+            if ni.get('modification') == 'added'
+        ]
+        install_related_instances += [
+            ctx.get_node_instance(ni['id'])
+            for ni in added_and_related
+            if ni.get('modification') != 'added'
+        ]
+    if install_instances:
         _clear_graph(graph)
-        _install_new_nodes(
-            ctx, graph, update_instances['added_and_related'], **kwargs)
+        lifecycle.install_node_instances(
+            graph=graph,
+            node_instances=install_instances,
+            related_nodes=install_related_instances,
+        )
     if update_instances.get('extended_and_related'):
         _clear_graph(graph)
         _establish_relationships(
