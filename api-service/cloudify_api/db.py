@@ -10,5 +10,5 @@ def engine(database_dsn: str, connect_args: Dict) -> AsyncEngine:
     return create_async_engine(database_dsn, **connect_args)
 
 
-def session_maker(engine: AsyncEngine) -> sessionmaker:
-    return sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+def session_maker(e: AsyncEngine) -> sessionmaker:
+    return sessionmaker(e, class_=AsyncSession, expire_on_commit=False)
