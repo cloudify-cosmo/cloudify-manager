@@ -30,7 +30,7 @@ class AuditLogTest(AgentlessTestCase):
             ref_table='blueprints')
         assert blueprint_upload_audit_logs != []
 
-        all_audit_logs = self.client.auditlog.list()
+        all_audit_logs = self.client.auditlog.list(get_all=True)
         assert len(all_audit_logs) > len(blueprint_upload_audit_logs)
         blueprint_create_audit_logs = filter_logs(all_audit_logs,
                                                   ref_table='blueprints',
@@ -57,7 +57,7 @@ class AuditLogTest(AgentlessTestCase):
 
         result = self.client.auditlog.delete(before=timestamp_zero.isoformat())
         assert result.deleted > 0
-        audit_logs = filter_logs(self.client.auditlog.list(),
+        audit_logs = filter_logs(self.client.auditlog.list(get_all=True),
                                  ref_table='blueprints',
                                  operation='create')
         assert len(audit_logs) == 1
@@ -67,10 +67,10 @@ class AuditLogTest(AgentlessTestCase):
         result = self.client.auditlog.delete(
             before=timestamp_after_upload.isoformat())
         assert result.deleted > 0
-        assert len(filter_logs(self.client.auditlog.list(),
+        assert len(filter_logs(self.client.auditlog.list(get_all=True),
                                ref_table='blueprints',
                                operation='create')) == 0
-        audit_logs = filter_logs(self.client.auditlog.list(),
+        audit_logs = filter_logs(self.client.auditlog.list(get_all=True),
                                  ref_table='blueprints',
                                  operation='delete')
         assert len(audit_logs) == 1
@@ -80,7 +80,7 @@ class AuditLogTest(AgentlessTestCase):
         result = self.client.auditlog.delete(
             before=timestamp_after_delete.isoformat())
         assert result.deleted > 0
-        audit_logs = filter_logs(self.client.auditlog.list(),
+        audit_logs = filter_logs(self.client.auditlog.list(get_all=True),
                                  ref_table='blueprints')
         assert len(audit_logs) == 0
 
@@ -121,7 +121,7 @@ class AuditLogMultiTenantTest(AgentlessTestCase):
         self.users[0].client.blueprints.delete(self.users[0].blueprint_id)
         self.users[1].client.blueprints.delete(self.users[1].blueprint_id)
 
-        all_audit_logs = self.client.auditlog.list().items
+        all_audit_logs = self.client.auditlog.list(get_all=True).items
         user_0_audit_logs = self.client.auditlog.list(
             creator_name=self.users[0].name).items
         user_1_audit_logs = self.client.auditlog.list(
