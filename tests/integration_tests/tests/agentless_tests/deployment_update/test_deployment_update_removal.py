@@ -88,7 +88,6 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
                 keys=['remove_related', 'removed'],
                 excluded_items=['runtime_properties']
         )
-
         self._assert_equal_entity_dicts(
                 base_node_instances,
                 modified_node_instances,
@@ -389,12 +388,9 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
             self._deploy_and_get_modified_bp_path('remove_output')
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
         wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
-        self._wait_for_update(dep_update)
+        self._do_update(deployment.id, BLUEPRINT_ID)
 
-        deployment = self.client.deployments.get(dep_update.deployment_id)
+        deployment = self.client.deployments.get(deployment.id)
         self.assertNotIn('custom_output', deployment.outputs)
 
     @mark.skip
@@ -404,7 +400,24 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
         wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
-        dep_update = self._do_update(deployment.id, BLUEPRINT_ID)
+        self._do_update(deployment.id, BLUEPRINT_ID)
 
-        deployment = self.client.deployments.get(dep_update.deployment_id)
+        deployment = self.client.deployments.get(deployment.id)
         self.assertFalse(deployment.get('description'))
+
+
+class NewTestDeploymentUpdateRemoval(DeploymentUpdateBase):
+    test_uninstall_execution_order = \
+        TestDeploymentUpdateRemoval.test_uninstall_execution_order
+    test_remove_node = TestDeploymentUpdateRemoval.test_remove_node
+
+    def _do_update(self, deployment_id, blueprint_id=None,
+                   preview=False, **kwargs):
+        params = {
+            'blueprint_id': blueprint_id,
+        }
+        if preview:
+            params['preview'] = preview
+        exc = self.client.executions.start(
+            deployment_id, 'csys_new_deployment_update', parameters=params)
+        self.wait_for_execution_to_end(exc)
