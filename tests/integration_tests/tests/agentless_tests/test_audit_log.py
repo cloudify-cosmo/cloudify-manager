@@ -10,7 +10,7 @@ from integration_tests.tests.constants import USER_ROLE
 from integration_tests.tests.utils import get_resource as resource
 from manager_rest.constants import DEFAULT_TENANT_ROLE
 
-pytestmark = pytest.mark.group_rest
+pytestmark = pytest.mark.group_api
 
 TSFMT = "%Y-%m-%dT%H:%M:%S.%f"
 

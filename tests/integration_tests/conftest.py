@@ -23,7 +23,7 @@ test_groups = [
     'group_snapshots', 'group_premium', 'group_agents', 'group_rest',
     'group_plugins', 'group_workflows', 'group_environments', 'group_dsl',
     'group_events_logs', 'group_usage_collector', 'group_general',
-    'group_deployments_large_scale'
+    'group_deployments_large_scale', 'group_api'
 ]
 
 
