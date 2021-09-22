@@ -24,6 +24,7 @@ setup(
     description='Cloudify Integration Tests',
     zip_safe=False,
     install_requires=[
+        'dataclasses',
         'fasteners==0.16',
         'requests>=2.18,<3.0.0',
         'pytest'
