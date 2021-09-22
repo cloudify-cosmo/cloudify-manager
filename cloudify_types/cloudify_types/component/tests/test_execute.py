@@ -63,14 +63,14 @@ class TestExecute(ComponentTestBase):
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             self.cfy_mock_client.executions.start = REST_CLIENT_EXCEPTION
             mock_client.return_value = self.cfy_mock_client
-            with self.assertRaisesRegexp(
-                    NonRecoverableError, 'action "start" failed'):
+            with self.assertRaisesRegex(
+                    NonRecoverableError, 'Error in execute_start'):
                 execute_start(deployment_id='dep_name', workflow_id='install')
 
     def test_execute_start_timeout(self):
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             mock_client.return_value = self.cfy_mock_client
-            with self.assertRaisesRegexp(
+            with self.assertRaisesRegex(
                     NonRecoverableError, 'Execution timed out'):
                 execute_start(
                     deployment_id='dep_name',
@@ -103,8 +103,8 @@ class TestExecute(ComponentTestBase):
             self.cfy_mock_client.deployments.capabilities.get = \
                 mock.MagicMock(return_value={'capabilities': {}})
             poll_with_timeout_test = \
-                'cloudify_types.component.component.Component.' \
-                'verify_execution_successful'
+                'cloudify_types.component.operations.' \
+                'verify_execution_state'
             with mock.patch(poll_with_timeout_test) as poll:
                 poll.return_value = False
                 output = execute_start(operation='execute_workflow',

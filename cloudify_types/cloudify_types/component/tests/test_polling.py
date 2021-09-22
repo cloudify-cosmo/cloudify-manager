@@ -75,7 +75,7 @@ class TestPolling(ComponentTestBase):
 
         self.cfy_mock_client.executions.list = mock_return
 
-        with self.assertRaisesRegexp(NonRecoverableError, 'failed'):
+        with self.assertRaisesRegex(CloudifyClientError, 'Mistake'):
             is_all_executions_finished(self.cfy_mock_client)
 
     def test_dep_workflow_in_state_pollster_no_execution_given(self):
@@ -146,7 +146,7 @@ class TestPolling(ComponentTestBase):
             raise CloudifyClientError('Mistake')
 
         self.cfy_mock_client.executions.get = mock_return
-        with self.assertRaisesRegexp(NonRecoverableError, 'failed'):
+        with self.assertRaisesRegex(CloudifyClientError, 'Mistake'):
             is_deployment_execution_at_state(
                 self.cfy_mock_client,
                 'dep_name',
@@ -172,9 +172,9 @@ class TestPolling(ComponentTestBase):
 
         redirect_logs(self.cfy_mock_client, 'some_execution_id')
         self._ctx.logger.log.assert_called_with(
-            40,
-            '2017-03-22T11:41:59.169Z [vm_ke9e2d.create] Successfully '
-            'configured cfy-agent')
+            40, '%s %s%s',
+            '2017-03-22T11:41:59.169Z', '[vm_ke9e2d.create] ',
+            'Successfully configured cfy-agent')
 
     def test_component_logs_redirect_unknown_level(self):
         self.cfy_mock_client.events.set_existing_objects([{
@@ -197,9 +197,9 @@ class TestPolling(ComponentTestBase):
 
         redirect_logs(self.cfy_mock_client, 'some_execution_id')
         self._ctx.logger.log.assert_called_with(
-            20,
-            "2017-03-22T11:42:00.083Z [vm_ke9e2d.create] Task succeeded "
-            "'cloudify_agent.installer.operations.create'")
+            20, '%s %s%s',
+            "2017-03-22T11:42:00.083Z", "[vm_ke9e2d.create] ",
+            "Task succeeded 'cloudify_agent.installer.operations.create'")
 
     def test_component_logs_empty_infinity(self):
         redirect_logs(self.cfy_mock_client, 'some_execution_id')
