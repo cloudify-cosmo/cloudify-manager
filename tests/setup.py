@@ -27,6 +27,8 @@ setup(
         'dataclasses',
         'fasteners==0.16',
         'requests>=2.18,<3.0.0',
-        'pytest'
+        'aiohttp',
+        'pytest',
+        'pytest-asyncio',
     ]
 )
