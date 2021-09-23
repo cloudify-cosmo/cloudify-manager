@@ -105,7 +105,8 @@ def update(ctx, update_id, temp_blueprint_id, deployments_to_update, force,
                      'status',
                      lambda x: x in ExecutionState.END_STATES,
                      RuntimeError,
-                     get_wait_for_execution_message(execution_id))
+                     get_wait_for_execution_message(execution_id),
+                     timeout=3600)
             execution_status = client.executions.get(execution_id).status
 
         msg = f'Deployment update of deployment {dep} {execution_status}. ' \
