@@ -147,7 +147,15 @@ class ResourceManager(object):
                 plugin_update.state = PluginsUpdateStates.FAILED
                 self.sm.update(plugin_update)
                 # Delete a temporary blueprint
-                self.sm.delete(plugin_update.temp_blueprint)
+                for dep_id in plugin_update.deployments_to_update:
+                    dep = self.sm.get(models.Deployment, dep_id)
+                    dep.blueprint = plugin_update.blueprint  # original bp
+                    self.sm.update(dep)
+                if not plugin_update.temp_blueprint.deployments:
+                    self.sm.delete(plugin_update.temp_blueprint)
+                else:
+                    plugin_update.temp_blueprint.is_hidden = False
+                    self.sm.update(plugin_update.temp_blueprint)
 
         if execution.workflow_id == 'delete_deployment_environment' and \
                 status == ExecutionState.TERMINATED:
