@@ -59,12 +59,14 @@ router = APIRouter(prefix="/audit")
             tags=["Audit Log"])
 async def list_audit_log(creator_name: Optional[str] = None,
                          execution_id: Optional[str] = None,
+                         since: Optional[datetime] = None,
                          session=Depends(make_db_session),
                          app=Depends(get_app),
                          p=Depends(common_parameters)) -> PaginatedAuditLog:
-    app.logger.debug("list_audit_log, creator_name=%s, execution_id=%s",
-                     creator_name, execution_id)
-    query = _list_audit_log(creator_name, execution_id, None)
+    app.logger.debug("list_audit_log, creator_name=%s, "
+                     "execution_id=%s, since=%s",
+                     creator_name, execution_id, since)
+    query = _list_audit_log(creator_name, execution_id, since)
     return await PaginatedAuditLog.paginated(session, query, p)
 
 

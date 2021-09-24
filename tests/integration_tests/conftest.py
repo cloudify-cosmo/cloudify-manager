@@ -23,7 +23,7 @@ test_groups = [
     'group_snapshots', 'group_premium', 'group_agents', 'group_rest',
     'group_plugins', 'group_workflows', 'group_environments', 'group_dsl',
     'group_events_logs', 'group_usage_collector', 'group_general',
-    'group_deployments_large_scale'
+    'group_deployments_large_scale', 'group_api'
 ]
 
 
@@ -73,7 +73,8 @@ sources = [
                                   '/opt/cfy']),
     ('cloudify-common/cloudify_rest_client', [
         '/opt/manager/env', '/opt/mgmtworker/env', '/opt/cfy']),
-    ('cloudify-common/cloudify_rest_client', ['/opt/mgmtworker/env']),
+    ('cloudify-common/cloudify_async_client', [
+        '/opt/manager/env', '/opt/mgmtworker/env', '/opt/cfy']),
     ('cloudify-common/dsl_parser', ['/opt/manager/env',
                                     '/opt/mgmtworker/env']),
     ('cloudify-common/script_runner', ['/opt/mgmtworker/env']),
