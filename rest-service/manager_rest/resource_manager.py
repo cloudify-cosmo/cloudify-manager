@@ -146,11 +146,13 @@ class ResourceManager(object):
             if plugin_update:
                 plugin_update.state = PluginsUpdateStates.FAILED
                 self.sm.update(plugin_update)
-                # Delete a temporary blueprint
+            if plugin_update.blueprint:
                 for dep_id in plugin_update.deployments_to_update:
                     dep = self.sm.get(models.Deployment, dep_id)
                     dep.blueprint = plugin_update.blueprint  # original bp
                     self.sm.update(dep)
+            if plugin_update.temp_blueprint:
+                # Delete the temporary blueprint
                 if not plugin_update.temp_blueprint.deployments:
                     self.sm.delete(plugin_update.temp_blueprint)
                 else:
