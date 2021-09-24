@@ -297,17 +297,6 @@ def workdir(request, tmpdir):
     request.cls.workdir = tmpdir
 
 
-@pytest.fixture(scope='function')
-async def async_client(manager_container, ca_cert):
-    client = test_utils.create_api_client(
-        host=manager_container.container_ip,
-        rest_port=443,
-        rest_protocol='https',
-        cert_path=ca_cert
-    )
-    yield client
-
-
 def _make_wagon_fixture(plugin_name):
     """Prepare a session-scoped fixture that creates a plugin wagon."""
     @pytest.fixture(scope='session')

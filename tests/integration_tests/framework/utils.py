@@ -6,9 +6,7 @@ import shutil
 import zipfile
 import tempfile
 
-import aiohttp
 import requests
-import ssl
 
 from functools import wraps
 from multiprocessing import Process
@@ -25,34 +23,6 @@ from . import docker
 
 
 logger = setup_logger('testenv.utils')
-
-
-class CloudifyAsyncClient:
-    host: str
-    port: int
-    protocol: str
-    headers: dict
-    trust_all: bool
-    cert: str
-
-    def __init__(self, **kwargs):
-        self.host = kwargs.pop('host', 'localhost')
-        self.port = kwargs.pop('port', 443)
-        self.protocol = kwargs.pop('protocol', 'https')
-        self.headers = kwargs.pop('headers', {})
-        self.trust_all = kwargs.pop('trust_all', False)
-        self.cert = kwargs.pop('cert')
-        self.ssl = ssl.create_default_context(cafile=self.cert)
-        self.api_version = 'v3.1'
-        self.session = aiohttp.ClientSession(headers=self.headers)
-
-    @property
-    def url(self):
-        return '{0}://{1}:{2}/api/{3}'.format(self.protocol, self.host,
-                                              self.port, self.api_version)
-
-    def get(self, url, **kwargs):
-        return self.session.get(f"{self.url}/{url}", ssl=self.ssl, **kwargs)
 
 
 def _write(stream, s):
@@ -111,29 +81,6 @@ def create_rest_client(host, **kwargs):
         headers=headers,
         trust_all=trust_all,
         cert=cert_path)
-
-
-def create_api_client(host, **kwargs):
-    """Create an async HTTP client for cloudify-api"""
-    username = kwargs.get('username', 'admin')
-    password = kwargs.get('password', 'admin')
-    tenant = kwargs.get('tenant', 'default_tenant')
-    token = kwargs.get('token')
-    rest_port = kwargs.get('rest_port', 443)
-    rest_protocol = kwargs.get('rest_protocol',
-                               'https' if rest_port == 443 else 'http')
-    cert_path = kwargs.get('cert_path')
-    trust_all = kwargs.get('trust_all', False)
-    headers = create_auth_header(username, password, token, tenant)
-
-    return CloudifyAsyncClient(
-        host=host,
-        port=rest_port,
-        protocol=rest_protocol,
-        headers=headers,
-        trust_all=trust_all,
-        cert=cert_path,
-    )
 
 
 def timeout(seconds=60):

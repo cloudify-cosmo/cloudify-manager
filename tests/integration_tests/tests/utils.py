@@ -97,10 +97,6 @@ def create_rest_client(**kwargs):
     return utils.create_rest_client(**kwargs)
 
 
-def create_api_client(**kwargs):
-    return utils.create_api_client(**kwargs)
-
-
 def wait_for_deployment_creation_to_complete(
         container_id, deployment_id, client, timeout_seconds=120):
     do_retries(func=verify_deployment_env_created,

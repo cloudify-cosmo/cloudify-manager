@@ -12,46 +12,9 @@ pytestmark = pytest.mark.group_api
 
 
 @pytest.mark.asyncio
-async def test_audit_log_stream_async_client(
-        async_client: aiohttp.ClientSession,
-        rest_client: CloudifyClient):
-    response = await async_client.get('audit/stream',
-                                      timeout=aiohttp.ClientTimeout(total=30))
-    await _test_stream_blueprint_upload_successful(rest_client, response)
-
-
-@pytest.mark.asyncio
 async def test_audit_log_stream_rest_client(
         rest_client: CloudifyClient):
     response = await rest_client.auditlog.stream(timeout=30)
-    await _test_stream_blueprint_upload_successful(rest_client, response)
-
-
-@pytest.mark.asyncio
-async def test_audit_log_stream_timeout(
-        rest_client: CloudifyClient):
-    response = await rest_client.auditlog.stream(timeout=1)
-
-    blueprint = _upload_blueprint(rest_client)
-    rest_client.blueprints.delete(blueprint.id)
-
-    audit_logs = []
-    try:
-        async for data, _ in response.content.iter_chunks():
-            for audit_log in _streamed_audit_log(data):
-                audit_logs.append(audit_log)
-                if audit_log['ref_table'] == 'blueprints' \
-                        and audit_log['operation'] == 'delete':
-                    response.close()
-                    break
-    except Exception as ex:
-        assert type(ex) == asyncio.TimeoutError
-    else:
-        assert False
-
-
-async def _test_stream_blueprint_upload_successful(
-        rest_client: CloudifyClient, response: aiohttp.ClientResponse):
     assert response.status == 200
     assert response.headers.get('Content-Type') == 'text/event-stream'
 
@@ -76,6 +39,29 @@ async def _test_stream_blueprint_upload_successful(
         audit_logs, ref_table='blueprints', operation='delete')) == 1
     assert len(_filter_logs(
         audit_logs, execution_id=blueprint.upload_execution['id'])) >= 1
+
+
+@pytest.mark.asyncio
+async def test_audit_log_stream_timeout(
+        rest_client: CloudifyClient):
+    response = await rest_client.auditlog.stream(timeout=1)
+
+    blueprint = _upload_blueprint(rest_client)
+    rest_client.blueprints.delete(blueprint.id)
+
+    audit_logs = []
+    try:
+        async for data, _ in response.content.iter_chunks():
+            for audit_log in _streamed_audit_log(data):
+                audit_logs.append(audit_log)
+                if audit_log['ref_table'] == 'blueprints' \
+                        and audit_log['operation'] == 'delete':
+                    response.close()
+                    break
+    except Exception as ex:
+        assert type(ex) == asyncio.TimeoutError
+    else:
+        assert False
 
 
 def _upload_blueprint(rest_client: CloudifyClient):
