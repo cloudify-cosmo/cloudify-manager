@@ -31,10 +31,6 @@ from cloudify_types.utils import get_deployment_by_id
 from .constants import CAPABILITIES
 
 
-def update_runtime_properties(_type, _key, _value):
-    ctx.instance.runtime_properties[_type][_key] = _value
-
-
 def download_file(url, destination=None, keep_name=False):
     """
     :param url: Location of the file to download

@@ -41,7 +41,6 @@ from .constants import (
 from .utils import (
     blueprint_id_exists,
     deployment_id_exists,
-    update_runtime_properties,
     get_local_path,
     zip_files,
     should_upload_plugin,
@@ -85,12 +84,11 @@ def upload_blueprint(**kwargs):
     if 'blueprint' not in ctx.instance.runtime_properties:
         ctx.instance.runtime_properties['blueprint'] = dict()
 
-    update_runtime_properties('blueprint', 'id', blueprint_id)
-    update_runtime_properties(
-        'blueprint', 'blueprint_archive', blueprint_archive)
-    update_runtime_properties(
-        'blueprint', 'application_file_name', blueprint_file_name)
-
+    ctx.instance.runtime_properties['blueprint']['id'] = blueprint_id
+    ctx.instance.runtime_properties['blueprint']['blueprint_archive'] = \
+        blueprint_archive
+    ctx.instance.runtime_properties['blueprint']['application_file_name'] = \
+        blueprint_file_name
     blueprint_exists = blueprint_id_exists(client, blueprint_id)
 
     if blueprint.get(EXTERNAL_RESOURCE) and not blueprint_exists:
@@ -231,7 +229,7 @@ def _create_deployment_id(base_deployment_id, auto_inc_suffix):
 def _do_create_deployment(client, deployment_ids, deployment_kwargs):
     create_error = NonRecoverableError('Unknown error creating deployment')
     for deployment_id in deployment_ids:
-        update_runtime_properties('deployment', 'id', deployment_id)
+        ctx.instance.runtime_properties['deployment']['id'] = deployment_id
         try:
             client.deployments.create(
                 deployment_id=deployment_id,
