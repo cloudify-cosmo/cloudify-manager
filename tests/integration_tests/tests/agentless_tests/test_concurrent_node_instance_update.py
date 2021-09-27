@@ -30,34 +30,34 @@ class TestConcurrentUpdate(AgentlessTestCase):
 
         # testing set property
         deployment, _ = self.deploy_application(dsl_path)
-        self.execute_workflow(
+        execution1 = self.execute_workflow(
             workflow_name='increment_counter_workflow',
             deployment_id=deployment.id,
             wait_for_execution=False
         )
-        execution = self.execute_workflow(
+        execution2 = self.execute_workflow(
             workflow_name='increment_counter_workflow',
             deployment_id=deployment.id,
             wait_for_execution=True,
             force=True
         )
+        self.wait_for_execution_to_end(execution1)
         node_id = self.client.node_instances.list(
             deployment_id=deployment.id)[0].id
         node_runtime_props = self.client.node_instances.get(
             node_id).runtime_properties
         self.assertEqual(2, node_runtime_props['counter'])
-        self._assert_operation_retried(execution)
+        self._assert_operation_retried(execution1, execution2)
 
-    def _assert_operation_retried(self, execution):
+    def _assert_operation_retried(self, *executions):
         found = False
-        events, _ = self.client.events.get(
-            execution_id=execution.id,
-            include_logs=True
-        )
-        for message in [e['message'] for e in events]:
-            if '[try number 2]' in message:
+        for execution in executions:
+            events, _ = self.client.events.get(
+                execution_id=execution.id,
+                include_logs=True
+            )
+            if any('[try number 2]' in e['message'] for e in events):
                 found = True
                 break
-
         self.assertTrue(found, 'Expecting to see multiple retries, '
                                'but only one found')
