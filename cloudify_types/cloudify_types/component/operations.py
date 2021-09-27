@@ -44,7 +44,8 @@ from .utils import (
     get_local_path,
     zip_files,
     should_upload_plugin,
-    populate_runtime_with_wf_results
+    populate_runtime_with_wf_results,
+    no_rerun_on_resume,
 )
 
 
@@ -210,11 +211,8 @@ def _create_deployment_id(base_deployment_id, auto_inc_suffix):
             yield f'{base_deployment_id}-{ix}'
 
 
+@no_rerun_on_resume('_component_create_deployment_id')
 def _do_create_deployment(client, deployment_ids, deployment_kwargs):
-    already_created_id = ctx.instance.runtime_properties.get(
-        '_component_create_deployment_id')
-    if already_created_id:
-        return already_created_id
     create_error = NonRecoverableError('Unknown error creating deployment')
     for deployment_id in deployment_ids:
         ctx.instance.runtime_properties['deployment']['id'] = deployment_id
@@ -228,9 +226,6 @@ def _do_create_deployment(client, deployment_ids, deployment_kwargs):
             create_error = ex
     else:
         raise create_error
-    ctx.instance.runtime_properties['_component_create_deployment_id'] = \
-        deployment_id
-    ctx.instance.update()
     ctx.logger.info('Creating "%s" component deployment', deployment_id)
     return deployment_id
 
@@ -269,18 +264,13 @@ def _wait_for_deployment_create(client, deployment_id,
                                   interval)
 
 
+@no_rerun_on_resume('_component_create_idd')
 def _create_inter_deployment_dependency(client, deployment_id):
-    already_created = ctx.instance.runtime_properties.get(
-        '_component_create_idd')
-    if already_created:
-        return
     client.inter_deployment_dependencies.create(**create_deployment_dependency(
         dependency_creator_generator(COMPONENT, ctx.instance.id),
         source_deployment=ctx.deployment.id,
         target_deployment=deployment_id
     ))
-    ctx.instance.runtime_properties['_component_create_idd'] = True
-    ctx.instance.update()
 
 
 @operation(resumable=True)

@@ -17,6 +17,7 @@ import json
 import shutil
 import zipfile
 import tempfile
+import functools
 from shutil import copy
 
 import yaml
@@ -29,6 +30,27 @@ from cloudify.exceptions import NonRecoverableError
 from cloudify_types.utils import get_deployment_by_id
 
 from .constants import CAPABILITIES
+
+
+def no_rerun_on_resume(property_name):
+    """Functions decorated with this, won't rerun when resumed
+
+    When the function first returns, store its return value in runtime
+    properties, under the given property_name. When it runs again, directly
+    return that value, instead of running the function again.
+    """
+
+    def _deco(f):
+        @functools.wraps(f)
+        def _inner(*args, **kwargs):
+            if property_name in ctx.instance.runtime_properties:
+                return ctx.instance.runtime_properties[property_name]
+            rv = f(*args, **kwargs)
+            ctx.instance.runtime_properties[property_name] = rv
+            ctx.instance.update()
+            return rv
+        return _inner
+    return _deco
 
 
 def download_file(url, destination=None, keep_name=False):
