@@ -533,7 +533,8 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             dep_dict['latest_execution_finished_operations'] = \
                 self.latest_execution_finished_operations
         if 'create_execution' in include:
-            dep_dict['create_execution'] = self.create_execution.id
+            dep_dict['create_execution'] = \
+                self.create_execution.id if self.create_execution else None
         return dep_dict
 
     @staticmethod
