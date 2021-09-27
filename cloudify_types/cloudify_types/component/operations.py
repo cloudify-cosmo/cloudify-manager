@@ -220,24 +220,18 @@ def _generate_suffix_deployment_id(client, deployment_id):
     return inc_deployment_id
 
 
-def _do_create_deployment(client, deployment_id, deployment_kwargs,
-                          auto_inc_suffix):
-    if auto_inc_suffix:
-        base_deployment_id = deployment_id
-    elif deployment_id_exists(client, deployment_id):
-        raise NonRecoverableError(
-            'Component\'s deployment ID "{0}" already exists, '
-            'please verify the chosen name.'.format(
-                deployment_id))
+def _create_deployment_id(base_deployment_id, auto_inc_suffix):
+    if not auto_inc_suffix:
+        yield base_deployment_id
+    else:
+        for ix in range(DEPLOYMENTS_CREATE_RETRIES):
+            yield f'{base_deployment_id}-{ix}'
 
-    retries = DEPLOYMENTS_CREATE_RETRIES
-    while True:
-        if auto_inc_suffix:
-            deployment_id = _generate_suffix_deployment_id(
-                client, base_deployment_id)
 
+def _do_create_deployment(client, deployment_ids, deployment_kwargs):
+    create_error = NonRecoverableError('Unknown error creating deployment')
+    for deployment_id in deployment_ids:
         update_runtime_properties('deployment', 'id', deployment_id)
-        ctx.logger.info('Creating "%s" component deployment.', deployment_id)
         try:
             client.deployments.create(
                 deployment_id=deployment_id,
@@ -245,15 +239,11 @@ def _do_create_deployment(client, deployment_id, deployment_kwargs,
                 **deployment_kwargs)
             break
         except CloudifyClientError as ex:
-            if ex.error_code == 'conflict_error' \
-                    and auto_inc_suffix and retries > 0:
-                ctx.logger.info(
-                    'Component\'s deployment ID "%s" '
-                    'already exists, will try to automatically create an '
-                    'ID with a new suffix.', deployment_id)
-                retries -= 1
-            else:
-                raise ex
+            create_error = ex
+    else:
+        raise create_error
+
+    ctx.logger.info('Creating "%s" component deployment', deployment_id)
     return deployment_id
 
 
@@ -331,9 +321,9 @@ def create(timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL, **kwargs):
 
     deployment_id = _do_create_deployment(
         client,
-        deployment_id,
+        _create_deployment_id(deployment_id, deployment_auto_suffix),
         {'blueprint_id': blueprint_id, 'inputs': deployment_inputs},
-        auto_inc_suffix=deployment_auto_suffix)
+    )
     _create_inter_deployment_dependency(client, deployment_id)
 
     return _wait_for_deployment_create(
