@@ -41,11 +41,11 @@ from .constants import (
 from .utils import (
     blueprint_id_exists,
     deployment_id_exists,
-    update_runtime_properties,
     get_local_path,
     zip_files,
     should_upload_plugin,
-    populate_runtime_with_wf_results
+    populate_runtime_with_wf_results,
+    no_rerun_on_resume,
 )
 
 
@@ -85,12 +85,11 @@ def upload_blueprint(**kwargs):
     if 'blueprint' not in ctx.instance.runtime_properties:
         ctx.instance.runtime_properties['blueprint'] = dict()
 
-    update_runtime_properties('blueprint', 'id', blueprint_id)
-    update_runtime_properties(
-        'blueprint', 'blueprint_archive', blueprint_archive)
-    update_runtime_properties(
-        'blueprint', 'application_file_name', blueprint_file_name)
-
+    ctx.instance.runtime_properties['blueprint']['id'] = blueprint_id
+    ctx.instance.runtime_properties['blueprint']['blueprint_archive'] = \
+        blueprint_archive
+    ctx.instance.runtime_properties['blueprint']['application_file_name'] = \
+        blueprint_file_name
     blueprint_exists = blueprint_id_exists(client, blueprint_id)
 
     if blueprint.get(EXTERNAL_RESOURCE) and not blueprint_exists:
@@ -204,57 +203,57 @@ def _upload_plugins(client, plugins):
                 os.remove(zip_path)
 
 
-def _generate_suffix_deployment_id(client, deployment_id):
-    dep_exists = True
-    suffix_index = ctx.instance.runtime_properties['deployment'].get(
-        'current_suffix_index', 0)
-
-    while dep_exists:
-        suffix_index += 1
-        inc_deployment_id = '{0}-{1}'.format(deployment_id, suffix_index)
-        dep_exists = deployment_id_exists(client, inc_deployment_id)
-
-    update_runtime_properties('deployment',
-                              'current_suffix_index',
-                              suffix_index)
-    return inc_deployment_id
+def _create_deployment_id(base_deployment_id, auto_inc_suffix):
+    if not auto_inc_suffix:
+        yield base_deployment_id
+    else:
+        for ix in range(DEPLOYMENTS_CREATE_RETRIES):
+            yield f'{base_deployment_id}-{ix}'
 
 
-def _do_create_deployment(client, deployment_id, deployment_kwargs,
-                          auto_inc_suffix):
-    if auto_inc_suffix:
-        base_deployment_id = deployment_id
-    elif deployment_id_exists(client, deployment_id):
-        raise NonRecoverableError(
-            'Component\'s deployment ID "{0}" already exists, '
-            'please verify the chosen name.'.format(
-                deployment_id))
-
-    retries = DEPLOYMENTS_CREATE_RETRIES
-    while True:
-        if auto_inc_suffix:
-            deployment_id = _generate_suffix_deployment_id(
-                client, base_deployment_id)
-
-        update_runtime_properties('deployment', 'id', deployment_id)
-        ctx.logger.info('Creating "%s" component deployment.', deployment_id)
+@no_rerun_on_resume('_component_create_deployment_id')
+def _do_create_deployment(client, deployment_ids, deployment_kwargs):
+    create_error = NonRecoverableError('Unknown error creating deployment')
+    for deployment_id in deployment_ids:
+        ctx.instance.runtime_properties['deployment']['id'] = deployment_id
         try:
             client.deployments.create(
                 deployment_id=deployment_id,
                 async_create=True,
                 **deployment_kwargs)
-            break
+            return deployment_id
         except CloudifyClientError as ex:
-            if ex.error_code == 'conflict_error' \
-                    and auto_inc_suffix and retries > 0:
-                ctx.logger.info(
-                    'Component\'s deployment ID "%s" '
-                    'already exists, will try to automatically create an '
-                    'ID with a new suffix.', deployment_id)
-                retries -= 1
-            else:
-                raise ex
-    return deployment_id
+            create_error = ex
+    raise create_error
+
+
+def _wait_for_deployment_create(client, deployment_id,
+                                deployment_log_redirect, timeout, interval,
+                                workflow_end_state):
+    """Wait for deployment's create_dep_env to finish"""
+    create_execution = client.deployments.get(
+        deployment_id,
+        _include=['id', 'create_execution'],
+    )['create_execution']
+    if not create_execution:
+        raise NonRecoverableError(
+            f'No create execution found for deployment "{deployment_id}"')
+    return verify_execution_state(client,
+                                  create_execution,
+                                  deployment_id,
+                                  deployment_log_redirect,
+                                  workflow_end_state,
+                                  timeout,
+                                  interval)
+
+
+@no_rerun_on_resume('_component_create_idd')
+def _create_inter_deployment_dependency(client, deployment_id):
+    client.inter_deployment_dependencies.create(**create_deployment_dependency(
+        dependency_creator_generator(COMPONENT, ctx.instance.id),
+        source_deployment=ctx.deployment.id,
+        target_deployment=deployment_id
+    ))
 
 
 @operation(resumable=True)
@@ -282,52 +281,27 @@ def create(timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL, **kwargs):
     deployment_inputs = deployment.get('inputs', {})
     # TODO capabilities are unused?
     # deployment_capabilities = deployment.get('capabilities')
-    deployment_log_redirect = deployment.get('logs', True)
     deployment_auto_suffix = deployment.get('auto_inc_suffix', False)
 
     blueprint = config.get('blueprint', {})
     blueprint_id = blueprint.get('id') or ctx.instance.id
 
-    _inter_deployment_dependency = create_deployment_dependency(
-        dependency_creator_generator(COMPONENT, ctx.instance.id),
-        ctx.deployment.id)
-
     deployment_id = _do_create_deployment(
         client,
-        deployment_id,
+        _create_deployment_id(deployment_id, deployment_auto_suffix),
         {'blueprint_id': blueprint_id, 'inputs': deployment_inputs},
-        auto_inc_suffix=deployment_auto_suffix)
-    _inter_deployment_dependency['target_deployment'] = deployment_id
-    client.inter_deployment_dependencies.create(**_inter_deployment_dependency)
-
-    executions = client.executions.list(
-        deployment_id=deployment_id,
-        _include=['workflow_id', 'id']
     )
+    ctx.logger.info('Creating "%s" component deployment', deployment_id)
+    _create_inter_deployment_dependency(client, deployment_id)
 
-    # Retrieve the ``execution_id`` associated with the current deployment
-    execution_id = [execution.get('id') for execution in executions
-                    if (execution.get('workflow_id') ==
-                        'create_deployment_environment')]
-
-    # If the ``execution_id`` cannot be found raise error
-    if not execution_id:
-        raise NonRecoverableError(
-            'No execution Found for component "{}"'
-            ' deployment'.format(deployment_id)
-        )
-
-    # If a match was found there can only be one, so we will extract it.
-    execution_id = execution_id[0]
-    ctx.logger.info('Found execution id "%s" for deployment id "%s"',
-                    execution_id, deployment_id)
-    return verify_execution_state(client,
-                                  execution_id,
-                                  deployment_id,
-                                  deployment_log_redirect,
-                                  kwargs.get('workflow_state', 'terminated'),
-                                  timeout,
-                                  interval)
+    return _wait_for_deployment_create(
+        client,
+        deployment_id,
+        deployment_log_redirect=deployment.get('logs', True),
+        timeout=timeout,
+        interval=interval,
+        workflow_end_state=kwargs.get('workflow_state', 'terminated'),
+    )
 
 
 def _try_to_remove_plugin(client, plugin_id):

@@ -499,8 +499,8 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                 flask_fields.Integer()
             fields['latest_execution_finished_operations'] = \
                 flask_fields.Integer()
-            fields['has_sub_deployments'] = \
-                flask_fields.Boolean()
+            fields['has_sub_deployments'] = flask_fields.Boolean()
+            fields['create_execution'] = flask_fields.String()
             cls._cached_deployment_fields = fields
         return cls._cached_deployment_fields
 
@@ -532,6 +532,9 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         if 'latest_execution_finished_operations' in include:
             dep_dict['latest_execution_finished_operations'] = \
                 self.latest_execution_finished_operations
+        if 'create_execution' in include:
+            dep_dict['create_execution'] = \
+                self.create_execution.id if self.create_execution else None
         return dep_dict
 
     @staticmethod
