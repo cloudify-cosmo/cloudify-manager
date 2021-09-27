@@ -257,49 +257,10 @@ def _do_create_deployment(client, deployment_id, deployment_kwargs,
     return deployment_id
 
 
-@operation(resumable=True)
-@errors_nonrecoverable
-def create(timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL, **kwargs):
-    client = _get_client(kwargs)
-    secrets = _get_desired_operation_input('secrets', kwargs)
-    _set_secrets(client, secrets)
-    plugins = _get_desired_operation_input('plugins', kwargs)
-    _upload_plugins(client, plugins)
-
-    if 'deployment' not in ctx.instance.runtime_properties:
-        ctx.instance.runtime_properties['deployment'] = dict()
-
-    config = _get_desired_operation_input('resource_config', kwargs)
-
-    runtime_deployment_prop = ctx.instance.runtime_properties.get(
-            'deployment', {})
-    runtime_deployment_id = runtime_deployment_prop.get('id')
-
-    deployment = config.get('deployment', {})
-    deployment_id = (runtime_deployment_id or
-                     deployment.get('id') or
-                     ctx.instance.id)
-    deployment_inputs = deployment.get('inputs', {})
-    # TODO capabilities are unused?
-    # deployment_capabilities = deployment.get('capabilities')
-    deployment_log_redirect = deployment.get('logs', True)
-    deployment_auto_suffix = deployment.get('auto_inc_suffix', False)
-
-    blueprint = config.get('blueprint', {})
-    blueprint_id = blueprint.get('id') or ctx.instance.id
-
-    _inter_deployment_dependency = create_deployment_dependency(
-        dependency_creator_generator(COMPONENT, ctx.instance.id),
-        ctx.deployment.id)
-
-    deployment_id = _do_create_deployment(
-        client,
-        deployment_id,
-        {'blueprint_id': blueprint_id, 'inputs': deployment_inputs},
-        auto_inc_suffix=deployment_auto_suffix)
-    _inter_deployment_dependency['target_deployment'] = deployment_id
-    client.inter_deployment_dependencies.create(**_inter_deployment_dependency)
-
+def _wait_for_deployment_create(client, deployment_id,
+                                deployment_log_redirect, timeout, interval,
+                                workflow_end_state):
+    """Wait for deployment's create_dep_env to finish"""
     executions = client.executions.list(
         deployment_id=deployment_id,
         _include=['workflow_id', 'id']
@@ -325,9 +286,61 @@ def create(timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL, **kwargs):
                                   execution_id,
                                   deployment_id,
                                   deployment_log_redirect,
-                                  kwargs.get('workflow_state', 'terminated'),
+                                  workflow_end_state,
                                   timeout,
                                   interval)
+
+
+@operation(resumable=True)
+@errors_nonrecoverable
+def create(timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL, **kwargs):
+    client = _get_client(kwargs)
+    secrets = _get_desired_operation_input('secrets', kwargs)
+    _set_secrets(client, secrets)
+    plugins = _get_desired_operation_input('plugins', kwargs)
+    _upload_plugins(client, plugins)
+
+    if 'deployment' not in ctx.instance.runtime_properties:
+        ctx.instance.runtime_properties['deployment'] = dict()
+
+    config = _get_desired_operation_input('resource_config', kwargs)
+
+    runtime_deployment_prop = ctx.instance.runtime_properties.get(
+            'deployment', {})
+    runtime_deployment_id = runtime_deployment_prop.get('id')
+
+    deployment = config.get('deployment', {})
+    deployment_id = (runtime_deployment_id or
+                     deployment.get('id') or
+                     ctx.instance.id)
+    deployment_inputs = deployment.get('inputs', {})
+    # TODO capabilities are unused?
+    # deployment_capabilities = deployment.get('capabilities')
+    deployment_auto_suffix = deployment.get('auto_inc_suffix', False)
+
+    blueprint = config.get('blueprint', {})
+    blueprint_id = blueprint.get('id') or ctx.instance.id
+
+    _inter_deployment_dependency = create_deployment_dependency(
+        dependency_creator_generator(COMPONENT, ctx.instance.id),
+        ctx.deployment.id)
+
+    deployment_id = _do_create_deployment(
+        client,
+        deployment_id,
+        {'blueprint_id': blueprint_id, 'inputs': deployment_inputs},
+        auto_inc_suffix=deployment_auto_suffix)
+    _inter_deployment_dependency['target_deployment'] = deployment_id
+    client.inter_deployment_dependencies.create(**_inter_deployment_dependency)
+
+    return _wait_for_deployment_create(
+        client,
+        deployment_id,
+        deployment_log_redirect=deployment.get('logs', True),
+        timeout=timeout,
+        interval=interval,
+        workflow_end_state=kwargs.get('workflow_state', 'terminated'),
+    )
 
 
 def _try_to_remove_plugin(client, plugin_id):
