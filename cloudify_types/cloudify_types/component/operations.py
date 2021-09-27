@@ -221,13 +221,10 @@ def _do_create_deployment(client, deployment_ids, deployment_kwargs):
                 deployment_id=deployment_id,
                 async_create=True,
                 **deployment_kwargs)
-            break
+            return deployment_id
         except CloudifyClientError as ex:
             create_error = ex
-    else:
-        raise create_error
-    ctx.logger.info('Creating "%s" component deployment', deployment_id)
-    return deployment_id
+    raise create_error
 
 
 def _wait_for_deployment_create(client, deployment_id,
@@ -308,6 +305,7 @@ def create(timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL, **kwargs):
         _create_deployment_id(deployment_id, deployment_auto_suffix),
         {'blueprint_id': blueprint_id, 'inputs': deployment_inputs},
     )
+    ctx.logger.info('Creating "%s" component deployment', deployment_id)
     _create_inter_deployment_dependency(client, deployment_id)
 
     return _wait_for_deployment_create(
