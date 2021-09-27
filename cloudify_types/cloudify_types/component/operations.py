@@ -292,11 +292,11 @@ def _wait_for_deployment_create(client, deployment_id,
 
 
 def _create_inter_deployment_dependency(client, deployment_id):
-    _inter_deployment_dependency = create_deployment_dependency(
+    client.inter_deployment_dependencies.create(**create_deployment_dependency(
         dependency_creator_generator(COMPONENT, ctx.instance.id),
-        ctx.deployment.id)
-    _inter_deployment_dependency['target_deployment'] = deployment_id
-    client.inter_deployment_dependencies.create(**_inter_deployment_dependency)
+        source_deployment=ctx.deployment.id,
+        target_deployment=deployment_id
+    ))
 
 
 @operation(resumable=True)
