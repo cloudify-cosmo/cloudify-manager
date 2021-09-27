@@ -231,29 +231,15 @@ def _wait_for_deployment_create(client, deployment_id,
                                 deployment_log_redirect, timeout, interval,
                                 workflow_end_state):
     """Wait for deployment's create_dep_env to finish"""
-    executions = client.executions.list(
-        deployment_id=deployment_id,
-        _include=['workflow_id', 'id']
-    )
-
-    # Retrieve the ``execution_id`` associated with the current deployment
-    execution_id = [execution.get('id') for execution in executions
-                    if (execution.get('workflow_id') ==
-                        'create_deployment_environment')]
-
-    # If the ``execution_id`` cannot be found raise error
-    if not execution_id:
+    create_execution = client.deployments.get(
+        deployment_id,
+        _include=['id', 'create_execution'],
+    )['create_execution']
+    if not create_execution:
         raise NonRecoverableError(
-            'No execution Found for component "{}"'
-            ' deployment'.format(deployment_id)
-        )
-
-    # If a match was found there can only be one, so we will extract it.
-    execution_id = execution_id[0]
-    ctx.logger.info('Found execution id "%s" for deployment id "%s"',
-                    execution_id, deployment_id)
+            f'No create execution found for deployment "{deployment_id}"')
     return verify_execution_state(client,
-                                  execution_id,
+                                  create_execution,
                                   deployment_id,
                                   deployment_log_redirect,
                                   workflow_end_state,
