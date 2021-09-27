@@ -291,6 +291,14 @@ def _wait_for_deployment_create(client, deployment_id,
                                   interval)
 
 
+def _create_inter_deployment_dependency(client, deployment_id):
+    _inter_deployment_dependency = create_deployment_dependency(
+        dependency_creator_generator(COMPONENT, ctx.instance.id),
+        ctx.deployment.id)
+    _inter_deployment_dependency['target_deployment'] = deployment_id
+    client.inter_deployment_dependencies.create(**_inter_deployment_dependency)
+
+
 @operation(resumable=True)
 @errors_nonrecoverable
 def create(timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL, **kwargs):
@@ -321,17 +329,12 @@ def create(timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL, **kwargs):
     blueprint = config.get('blueprint', {})
     blueprint_id = blueprint.get('id') or ctx.instance.id
 
-    _inter_deployment_dependency = create_deployment_dependency(
-        dependency_creator_generator(COMPONENT, ctx.instance.id),
-        ctx.deployment.id)
-
     deployment_id = _do_create_deployment(
         client,
         deployment_id,
         {'blueprint_id': blueprint_id, 'inputs': deployment_inputs},
         auto_inc_suffix=deployment_auto_suffix)
-    _inter_deployment_dependency['target_deployment'] = deployment_id
-    client.inter_deployment_dependencies.create(**_inter_deployment_dependency)
+    _create_inter_deployment_dependency(client, deployment_id)
 
     return _wait_for_deployment_create(
         client,
