@@ -202,22 +202,6 @@ def _upload_plugins(client, plugins):
                 os.remove(zip_path)
 
 
-def _generate_suffix_deployment_id(client, deployment_id):
-    dep_exists = True
-    suffix_index = ctx.instance.runtime_properties['deployment'].get(
-        'current_suffix_index', 0)
-
-    while dep_exists:
-        suffix_index += 1
-        inc_deployment_id = '{0}-{1}'.format(deployment_id, suffix_index)
-        dep_exists = deployment_id_exists(client, inc_deployment_id)
-
-    update_runtime_properties('deployment',
-                              'current_suffix_index',
-                              suffix_index)
-    return inc_deployment_id
-
-
 def _create_deployment_id(base_deployment_id, auto_inc_suffix):
     if not auto_inc_suffix:
         yield base_deployment_id
