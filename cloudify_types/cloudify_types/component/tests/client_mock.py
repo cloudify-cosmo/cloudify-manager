@@ -35,6 +35,11 @@ class BaseMockClient(object):
                                 })
         return response
 
+    def get(self, object_id, **kwargs):
+        for obj in self.existing_objects:
+            if obj['id'] == object_id:
+                return obj
+
     def delete(self, *_, **__):
         return None
 

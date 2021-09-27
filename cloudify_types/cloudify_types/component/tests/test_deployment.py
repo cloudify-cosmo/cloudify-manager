@@ -126,6 +126,11 @@ class TestDeployment(TestDeploymentBase):
         self._ctx.instance.runtime_properties['deployment']['id'] = 'dep_name'
 
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
+            self.cfy_mock_client.deployments.set_existing_objects(
+                [{
+                    'id': 'dep_name',
+                    'create_execution': 'exec_id',
+                }])
             self.cfy_mock_client.executions.set_existing_objects(
                 [{
                     'id': 'exec_id',
@@ -147,6 +152,11 @@ class TestDeployment(TestDeploymentBase):
 
     def test_create_deployment_success(self):
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
+            self.cfy_mock_client.deployments.set_existing_objects(
+                [{
+                    'id': 'test',
+                    'create_execution': 'exec_id',
+                }])
             self.cfy_mock_client.executions.set_existing_objects(
                 [{
                     'id': 'exec_id',
@@ -166,11 +176,10 @@ class TestDeployment(TestDeploymentBase):
 
     def test_create_deployment_failed(self):
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
-            self.cfy_mock_client.executions.set_existing_objects(
+            self.cfy_mock_client.deployments.set_existing_objects(
                 [{
-                    'id': 'exec_id',
-                    'workflow_id': 'test',
-                    'deployment_id': 'dep'
+                    'id': 'test',
+                    'create_execution': None,
                 }])
             mock_client.return_value = self.cfy_mock_client
 
@@ -180,8 +189,7 @@ class TestDeployment(TestDeploymentBase):
                 poll.return_value = True
 
                 with self.assertRaisesRegex(
-                        NonRecoverableError,
-                        'No execution Found for component "test" deployment'):
+                        NonRecoverableError, 'No create execution found'):
                     create(operation='create_deployment', timeout=MOCK_TIMEOUT)
 
     def test_create_deployment_exists(self):
@@ -373,6 +381,11 @@ class TestComponentSecrets(TestDeploymentBase):
     def test_create_deployment_success_with_secrets(self):
         self._ctx.node.properties['secrets'] = {'a': 'b'}
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
+            self.cfy_mock_client.deployments.set_existing_objects(
+                [{
+                    'id': 'test',
+                    'create_execution': 'exec_id',
+                }])
             self.cfy_mock_client.executions.set_existing_objects(
                 [{
                     'id': 'exec_id',
