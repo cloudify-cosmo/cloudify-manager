@@ -280,5 +280,5 @@ def _add_audit_log_notify():
 
 
 def _drop_audit_log_notify():
-    op.execute("""DROP FUNCTION notify_new_audit_log();""")
     op.execute("""DROP TRIGGER audit_log_inserted ON audit_log;""")
+    op.execute("""DROP FUNCTION notify_new_audit_log();""")
