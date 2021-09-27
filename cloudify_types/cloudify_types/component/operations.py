@@ -211,6 +211,10 @@ def _create_deployment_id(base_deployment_id, auto_inc_suffix):
 
 
 def _do_create_deployment(client, deployment_ids, deployment_kwargs):
+    already_created_id = ctx.instance.runtime_properties.get(
+        '_component_create_deployment_id')
+    if already_created_id:
+        return already_created_id
     create_error = NonRecoverableError('Unknown error creating deployment')
     for deployment_id in deployment_ids:
         ctx.instance.runtime_properties['deployment']['id'] = deployment_id
@@ -224,7 +228,9 @@ def _do_create_deployment(client, deployment_ids, deployment_kwargs):
             create_error = ex
     else:
         raise create_error
-
+    ctx.instance.runtime_properties['_component_create_deployment_id'] = \
+        deployment_id
+    ctx.instance.update()
     ctx.logger.info('Creating "%s" component deployment', deployment_id)
     return deployment_id
 
