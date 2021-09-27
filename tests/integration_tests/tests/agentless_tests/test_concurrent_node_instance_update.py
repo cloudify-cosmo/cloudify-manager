@@ -52,7 +52,7 @@ class TestConcurrentUpdate(AgentlessTestCase):
     def _assert_operation_retried(self, *executions):
         found = False
         for execution in executions:
-            events, _ = self.client.events.get(
+            events = self.client.events.list(
                 execution_id=execution.id,
                 include_logs=True
             )
