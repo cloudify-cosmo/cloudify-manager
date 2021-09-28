@@ -334,7 +334,10 @@ def _delete_secrets(client, secrets):
 
 
 def _delete_runtime_properties():
-    for property_name in ['deployment', 'blueprint', 'plugins']:
+    for property_name in [
+        'deployment', 'blueprint', 'plugins', '_component_create_idd',
+        '_component_create_deployment_id',
+    ]:
         if property_name in ctx.instance.runtime_properties:
             del ctx.instance.runtime_properties[property_name]
 
