@@ -13,7 +13,7 @@ from manager_rest.deployment_update.step_extractor import (
     DEPLOYMENT_PLUGINS_TO_INSTALL, PLUGINS_TO_INSTALL, DESCRIPTION,
     extract_steps,
     _update_topology_order_of_add_node_steps,
-    _get_matching_relationship
+    _find_relationship
 )
 from manager_rest.deployment_update.step_extractor import DeploymentUpdateStep
 from manager_rest.test.utils import get_resource
@@ -760,6 +760,20 @@ class StepExtractorTestCase(unittest.TestCase):
                           'source_operations:full.operation1')
         ]
 
+    def test_duplicate_relationship(self):
+        rel = {
+                'type': 'relationship_type',
+                'type_hierarchy': ['rel_hierarchy'],
+                'target_id': 'relationship_target',
+            }
+        nodes = [self._get_node_scheme(relationships=[rel, rel])]
+
+        self.deployment_plan[NODES] = [
+            self._get_node_scheme(relationships=[rel, rel])]
+
+        steps, _ = extract_steps(nodes, self.deployment, self.deployment_plan)
+        assert steps == []
+
     def test_relationships_modify_source_operation(self):
         nodes = [self._get_node_scheme(relationships=[
             {
@@ -901,18 +915,12 @@ class StepExtractorTestCase(unittest.TestCase):
             {'type': 'typeA', 'target_id': 'id_2'}
         ]
 
-        relationship = {
-            'type': 'typeA',
-            'target_id': 'id_1',
-            'field2': 'value2'
-        }
-
-        assert _get_matching_relationship(
-            relationship, relationships_with_match
+        assert _find_relationship(
+            relationships_with_match, 'typeA', 'id_1'
         ) == ({'type': 'typeA', 'target_id': 'id_1', 'field2': 'value2'}, 0)
 
-        assert _get_matching_relationship(
-            relationship, relationships_with_no_match
+        assert _find_relationship(
+            relationships_with_no_match, 'typeA', 'id_1'
         ) == (None, None)
 
     def test_sort_steps_compare_action(self):

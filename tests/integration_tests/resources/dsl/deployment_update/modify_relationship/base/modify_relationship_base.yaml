@@ -12,6 +12,12 @@ node_templates:
 
   site2:
     type: cloudify.nodes.Root
+    relationships:
+      # two identical relationships, but otherwise unchanged
+      - type: cloudify.relationships.connected_to
+        target: site1
+      - type: cloudify.relationships.connected_to
+        target: site1
 
   site3:
     type: cloudify.nodes.Root

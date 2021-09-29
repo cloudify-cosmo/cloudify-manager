@@ -15,6 +15,7 @@
 
 import operator
 
+from collections import Counter
 from functools import total_ordering
 from contextlib import contextmanager
 
@@ -217,9 +218,7 @@ def _find_matching_plugin(new_plugin, old_plugins):
 
 
 def _diff_nodes(new_nodes, old_nodes):
-    # with self.entity_id_builder.extend_id(NODES):
     for node_name, node in new_nodes.items():
-        # with self.entity_id_builder.extend_id(node_name):
         if node_name not in old_nodes:
             yield DeploymentUpdateStep(
                 action='add',
@@ -252,6 +251,15 @@ def _diff_nodes(new_nodes, old_nodes):
             )
 
 
+def _relationship_key(rel):
+    """A comparable key for a relationship, to check for identical rels.
+
+    Relationships will be considered identical, if they have the same key
+    (ie. same type, and target).
+    """
+    return rel[TYPE], rel[TARGET_ID]
+
+
 def _diff_node(node_name, new_node, old_node):
     for action, key in _diff_dicts(new_node[OPERATIONS], old_node[OPERATIONS]):
         yield DeploymentUpdateStep(
@@ -260,10 +268,17 @@ def _diff_node(node_name, new_node, old_node):
             entity_id=f'{NODES}:{node_name}:{OPERATIONS}:{key}'
         )
 
+    seen_relationships = Counter()
     for rel_index, relationship in enumerate(new_node[RELATIONSHIPS]):
         entity_id_base = f'{NODES}:{node_name}:{RELATIONSHIPS}'
+        rel_key = _relationship_key(relationship)
         old_relationship, old_rel_index = \
-            _get_matching_relationship(relationship, old_node[RELATIONSHIPS])
+            _find_relationship(
+                old_node[RELATIONSHIPS],
+                relationship[TYPE],
+                relationship[TARGET_ID],
+                seen_relationships[rel_key])
+        seen_relationships[rel_key] += 1
         if old_relationship is None:
             yield DeploymentUpdateStep(
                 action='add',
@@ -297,10 +312,18 @@ def _diff_node(node_name, new_node, old_node):
                 entity_id=f'{entity_id_base}:[{rel_index}]:{PROPERTIES}:{key}',
                 supported=False,
             )
+
+    seen_relationships = Counter()
     for rel_index, relationship in enumerate(old_node[RELATIONSHIPS]):
         entity_id_base = f'{NODES}:{node_name}:{RELATIONSHIPS}'
+        rel_key = _relationship_key(relationship)
         matching_relationship, _ = \
-            _get_matching_relationship(relationship, new_node[RELATIONSHIPS])
+            _find_relationship(
+                new_node[RELATIONSHIPS],
+                relationship[TYPE],
+                relationship[TARGET_ID],
+                seen_relationships[rel_key])
+        seen_relationships[rel_key] += 1
         if matching_relationship is None:
             yield DeploymentUpdateStep(
                 action='remove',
@@ -355,71 +378,23 @@ def _compare_groups(new, old):
     return old_members == new_members and old_clone == new_clone
 
 
-def _extract_steps_from_operations(operations_type_name,
-                                   operations,
-                                   old_operations):
-    # with self.entity_id_builder.extend_id(operations_type_name):
-    for operation_name in operations:
-        # with self.entity_id_builder.extend_id(operation_name):
-        if operation_name in old_operations:
-            old_operation = old_operations[operation_name]
-            if old_operation != operations[operation_name]:
-                self._create_step(
-                    OPERATION, modify=True)
-        else:
-            self._create_step(OPERATION)
+def _find_relationship(relationships, rel_type, target_id, skip=0):
+    """Find an entry in relationships that matches the type and target.
 
-
-def _get_matching_relationship(relationship, relationships):
-    r_type = relationship[TYPE]
-    target_id = relationship[TARGET_ID]
+    :param relationships: the list of relationships in which to find one
+    :param rel_type: type of the relationship to find
+    :param target_id: target of the relationship to find
+    :param skip: return the Nth relationship that matches the type and target
+    :return: the relationship and its index, or a pair of (None, None)
+    """
     for rel_index, other_relationship in enumerate(relationships):
         other_r_type = other_relationship[TYPE]
         other_target_id = other_relationship[TARGET_ID]
-        if r_type == other_r_type and other_target_id == target_id:
-            return other_relationship, rel_index
+        if rel_type == other_r_type and other_target_id == target_id:
+            if skip == 0:
+                return other_relationship, rel_index
+            skip -= 1
     return None, None
-
-
-def _extract_steps_from_relationships(self,
-                                      relationships,
-                                      old_relationships):
-    with self.entity_id_builder.extend_id(RELATIONSHIPS):
-        for relationship_index, relationship in enumerate(relationships):
-            with self.entity_id_builder.extend_id(
-                    '[{0}]'.format(relationship_index)):
-                matching_relationship, old_rel_index = \
-                    self._get_matching_relationship(relationship,
-                                                    old_relationships)
-                if matching_relationship:
-                    # relationship has been reordered to a different index
-                    if old_rel_index != relationship_index:
-                        with self.entity_id_builder.\
-                                prepend_id_last_element(
-                                '[{0}]'.format(old_rel_index)):
-                            self._create_step(RELATIONSHIP,
-                                              modify=True)
-                    for field_name in relationship:
-                        if field_name in [SOURCE_OPERATIONS,
-                                          TARGET_OPERATIONS]:
-                            self._extract_steps_from_operations(
-                                operations_type_name=field_name,
-                                operations=relationship[field_name],
-                                old_operations=matching_relationship[
-                                    field_name]
-                            )
-                        elif field_name == PROPERTIES:
-                            # modifying relationship properties is not
-                            # supported yet
-                            self._extract_steps_from_entities(
-                                entities_name=PROPERTIES,
-                                new_entities=relationship[PROPERTIES],
-                                old_entities=matching_relationship[
-                                    PROPERTIES],
-                                supported=False
-                            )
-                else:
-                    self._create_step(RELATIONSHIP)
 
 
 def _extract_added_nodes_names(supported_steps):
