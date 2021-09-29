@@ -760,6 +760,20 @@ class StepExtractorTestCase(unittest.TestCase):
                           'source_operations:full.operation1')
         ]
 
+    def test_duplicate_relationship(self):
+        rel = {
+                'type': 'relationship_type',
+                'type_hierarchy': ['rel_hierarchy'],
+                'target_id': 'relationship_target',
+            }
+        nodes = [self._get_node_scheme(relationships=[rel, rel])]
+
+        self.deployment_plan[NODES] = [
+            self._get_node_scheme(relationships=[rel, rel])]
+
+        steps, _ = extract_steps(nodes, self.deployment, self.deployment_plan)
+        assert steps == []
+
     def test_relationships_modify_source_operation(self):
         nodes = [self._get_node_scheme(relationships=[
             {
