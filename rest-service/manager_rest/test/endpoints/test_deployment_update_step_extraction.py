@@ -1392,6 +1392,27 @@ class StepExtractorTestCase(unittest.TestCase):
 
         self.assertEqual(expected_steps, steps)
 
+    def test_duplicate_relationship(self):
+        rel = {
+            'type': 'relationship_type',
+            'type_hierarchy': ['rel_hierarchy'],
+            'target_id': 'relationship_target',
+        }
+        node_old = self._get_node_scheme()
+        node_old.update({RELATIONSHIPS: [rel, rel]})
+        nodes_old = {'node1': node_old}
+
+        node_new = self._get_node_scheme()
+        node_new.update({RELATIONSHIPS: [rel, rel]})
+        nodes_new = {'node1': node_new}
+
+        self.step_extractor.old_deployment_plan[NODES].update(nodes_old)
+        self.step_extractor.new_deployment_plan[NODES].update(nodes_new)
+
+        steps, _ = self.step_extractor.extract_steps()
+
+        self.assertEqual(steps, [])
+
     def test_get_matching_relationship(self):
         relationships_with_match = [
             {'type': 'typeA', 'target_id': 'id_1', 'field2': 'value2'},
@@ -1405,21 +1426,14 @@ class StepExtractorTestCase(unittest.TestCase):
             {'type': 'typeA', 'target_id': 'id_2'}
         ]
 
-        relationship = {
-            'type': 'typeA',
-            'target_id': 'id_1',
-            'field2': 'value2'
-        }
+        _find_relationship = self.step_extractor._find_relationship
+        assert _find_relationship(
+            relationships_with_match, 'typeA', 'id_1'
+        ) == ({'type': 'typeA', 'target_id': 'id_1', 'field2': 'value2'}, 0)
 
-        _get_matching_relationship = \
-            self.step_extractor._get_matching_relationship
-
-        self.assertEqual(
-            ({'type': 'typeA', 'target_id': 'id_1', 'field2': 'value2'}, 0),
-            _get_matching_relationship(relationship, relationships_with_match))
-
-        self.assertEqual((None, None), _get_matching_relationship(
-            relationship, relationships_with_no_match))
+        assert _find_relationship(
+            relationships_with_no_match, 'typeA', 'id_1'
+        ) == (None, None)
 
     def test_sort_steps_compare_action(self):
 

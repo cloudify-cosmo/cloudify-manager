@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from collections import Counter
 from functools import total_ordering
 from contextlib import contextmanager
 
@@ -408,26 +409,47 @@ class StepExtractor(object):
         return None
 
     @staticmethod
-    def _get_matching_relationship(relationship, relationships):
-        r_type = relationship[TYPE]
-        target_id = relationship[TARGET_ID]
+    def _find_relationship(relationships, rel_type, target_id, skip=0):
+        """Find an entry in relationships that matches the type and target.
+        :param relationships: the list of relationships in which to find one
+        :param rel_type: type of the relationship to find
+        :param target_id: target of the relationship to find
+        :param skip: return the Nth relationship that matches the type and target
+        :return: the relationship and its index, or a pair of (None, None)
+        """
         for rel_index, other_relationship in enumerate(relationships):
             other_r_type = other_relationship[TYPE]
             other_target_id = other_relationship[TARGET_ID]
-            if r_type == other_r_type and other_target_id == target_id:
-                return other_relationship, rel_index
+            if rel_type == other_r_type and other_target_id == target_id:
+                if skip == 0:
+                    return other_relationship, rel_index
+                skip -= 1
         return None, None
+
+    @staticmethod
+    def _relationship_key(rel):
+        """A comparable key for a relationship, to check for identical rels.
+        Relationships will be considered identical, if they have the same key
+        (ie. same type, and target).
+        """
+        return rel[TYPE], rel[TARGET_ID]
 
     def _extract_steps_from_relationships(self,
                                           relationships,
                                           old_relationships):
         with self.entity_id_builder.extend_id(RELATIONSHIPS):
+            seen_relationships = Counter()
             for relationship_index, relationship in enumerate(relationships):
                 with self.entity_id_builder.extend_id(
                         '[{0}]'.format(relationship_index)):
+                    rel_key = self._relationship_key(relationship)
                     matching_relationship, old_rel_index = \
-                        self._get_matching_relationship(relationship,
-                                                        old_relationships)
+                        self._find_relationship(
+                            old_relationships,
+                            relationship[TYPE],
+                            relationship[TARGET_ID],
+                            seen_relationships[rel_key])
+                    seen_relationships[rel_key] += 1
                     if matching_relationship:
                         # relationship has been reordered to a different index
                         if old_rel_index != relationship_index:
