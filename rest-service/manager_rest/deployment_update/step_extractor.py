@@ -273,7 +273,7 @@ def _diff_node(node_name, new_node, old_node):
         entity_id_base = f'{NODES}:{node_name}:{RELATIONSHIPS}'
         rel_key = _relationship_key(relationship)
         old_relationship, old_rel_index = \
-            _get_matching_relationship(
+            _find_relationship(
                 old_node[RELATIONSHIPS],
                 relationship[TYPE],
                 relationship[TARGET_ID],
@@ -318,7 +318,7 @@ def _diff_node(node_name, new_node, old_node):
         entity_id_base = f'{NODES}:{node_name}:{RELATIONSHIPS}'
         rel_key = _relationship_key(relationship)
         matching_relationship, _ = \
-            _get_matching_relationship(
+            _find_relationship(
                 new_node[RELATIONSHIPS],
                 relationship[TYPE],
                 relationship[TARGET_ID],
@@ -378,7 +378,15 @@ def _compare_groups(new, old):
     return old_members == new_members and old_clone == new_clone
 
 
-def _get_matching_relationship(relationships, rel_type, target_id, skip=0):
+def _find_relationship(relationships, rel_type, target_id, skip=0):
+    """Find an entry in relationships that matches the type and target.
+
+    :param relationships: the list of relationships in which to find one
+    :param rel_type: type of the relationship to find
+    :param target_id: target of the relationship to find
+    :param skip: return the Nth relationship that matches the type and target
+    :return: the relationship and its index, or a pair of (None, None)
+    """
     for rel_index, other_relationship in enumerate(relationships):
         other_r_type = other_relationship[TYPE]
         other_target_id = other_relationship[TARGET_ID]
