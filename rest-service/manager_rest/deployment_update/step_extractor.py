@@ -261,7 +261,10 @@ def _diff_node(node_name, new_node, old_node):
     for rel_index, relationship in enumerate(new_node[RELATIONSHIPS]):
         entity_id_base = f'{NODES}:{node_name}:{RELATIONSHIPS}'
         old_relationship, old_rel_index = \
-            _get_matching_relationship(relationship, old_node[RELATIONSHIPS])
+            _get_matching_relationship(
+                old_node[RELATIONSHIPS],
+                relationship[TYPE],
+                relationship[TARGET_ID])
         if old_relationship is None:
             yield DeploymentUpdateStep(
                 action='add',
@@ -298,7 +301,10 @@ def _diff_node(node_name, new_node, old_node):
     for rel_index, relationship in enumerate(old_node[RELATIONSHIPS]):
         entity_id_base = f'{NODES}:{node_name}:{RELATIONSHIPS}'
         matching_relationship, _ = \
-            _get_matching_relationship(relationship, new_node[RELATIONSHIPS])
+            _get_matching_relationship(
+                new_node[RELATIONSHIPS],
+                relationship[TYPE],
+                relationship[TARGET_ID])
         if matching_relationship is None:
             yield DeploymentUpdateStep(
                 action='remove',
@@ -353,13 +359,11 @@ def _compare_groups(new, old):
     return old_members == new_members and old_clone == new_clone
 
 
-def _get_matching_relationship(relationship, relationships):
-    r_type = relationship[TYPE]
-    target_id = relationship[TARGET_ID]
+def _get_matching_relationship(relationships, rel_type, target_id):
     for rel_index, other_relationship in enumerate(relationships):
         other_r_type = other_relationship[TYPE]
         other_target_id = other_relationship[TARGET_ID]
-        if r_type == other_r_type and other_target_id == target_id:
+        if rel_type == other_r_type and other_target_id == target_id:
             return other_relationship, rel_index
     return None, None
 
