@@ -1,7 +1,7 @@
 tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
-  - http://www.getcloudify.org/spec/cloudify/4.4.1/types.yaml
+  - http://www.getcloudify.org/spec/cloudify/4.4.1.2.dev1/types.yaml
 
 inputs:
   server_ip:

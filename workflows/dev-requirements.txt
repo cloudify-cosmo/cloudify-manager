@@ -1,1 +1,1 @@
-https://github.com/cloudify-cosmo/cloudify-common/archive/4.4.1.zip
+https://github.com/cloudify-cosmo/cloudify-common/archive/4.4.1.2-build.zip

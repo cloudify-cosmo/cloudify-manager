@@ -1,7 +1,7 @@
-https://github.com/cloudify-cosmo/cloudify-common/archive/4.4.1.zip
-https://github.com/cloudify-cosmo/cloudify-cli/archive/4.4.1.zip
+https://github.com/cloudify-cosmo/cloudify-common/archive/4.4.1.2-build.zip
+https://github.com/cloudify-cosmo/cloudify-cli/archive/4.4.1.2-build.zip
 https://github.com/cloudify-cosmo/cloudify-diamond-plugin/archive/master.zip
-https://github.com/cloudify-cosmo/cloudify-agent/archive/4.4.1.zip
+https://github.com/cloudify-cosmo/cloudify-agent/archive/4.4.1.2-build.zip
 
 pyzmq==15.1.0
 

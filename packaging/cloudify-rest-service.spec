@@ -74,7 +74,7 @@ visudo -cf %{buildroot}/etc/sudoers.d/cloudify-restservice
 
 # Install local copies of specs for URL resolver
 specs="%{buildroot}/opt/manager/resources/spec"
-types_yaml="${specs}/cloudify/4.4.1/types.yaml"
+types_yaml="${specs}/cloudify/4.4.1.2.dev1/types.yaml"
 mkdir -p $(dirname "$types_yaml")
 cp "${RPM_SOURCE_DIR}/resources/rest-service/cloudify/types/types.yaml" "$types_yaml"
 
