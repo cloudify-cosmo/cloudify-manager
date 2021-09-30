@@ -99,11 +99,19 @@ def _modified_attr_nodes(steps):
 
 
 def _added_nodes(steps):
-    """Based on the steps, find node ids that were added.
-    """
+    """Based on the steps, find node ids that were added."""
     added = set()
     for step in steps:
         if step['entity_type'] == 'node' and step['action'] == 'add':
+            added.add(step['entity_id'])
+    return list(added)
+
+
+def _removed_nodes(steps):
+    """Based on the steps, find node ids that were removed."""
+    added = set()
+    for step in steps:
+        if step['entity_type'] == 'node' and step['action'] == 'remove':
             added.add(step['entity_id'])
     return list(added)
 
@@ -126,6 +134,7 @@ def prepare_update_nodes(*, update_id):
     node_changes = {
         'modify_attributes': _modified_attr_nodes(dep_up.steps),
         'add': _added_nodes(dep_up.steps),
+        'remove': _removed_nodes(dep_up.steps),
     }
     client.deployment_updates.set_attributes(
         update_id,
@@ -282,27 +291,35 @@ def _perform_update_graph(ctx, update_id, **kwargs):
     return graph
 
 
+def delete_removed_nodes(*, update_id):
+    client = get_rest_client()
+    dep_up = client.deployment_updates.get(update_id)
+
+    update_nodes = dep_up['deployment_update_nodes'] or {}
+    for node_path in update_nodes.get('remove', []):
+        node_name = node_path.split(':')[-1]
+        client.nodes.delete(dep_up.deployment_id, node_name)
+
+
+def _post_update_graph(ctx, update_id, **kwargs):
+    """The update part that runs after the interface operations.
+
+    This runs the finalizing changes which need to happen after the
+    install/uninstall phase of the dep-update.
+    """
+    graph = ctx.graph_mode()
+    seq = graph.sequence()
+    seq.add(
+        ctx.local_task(delete_removed_nodes, kwargs={
+            'update_id': update_id,
+        }, total_retries=0),
+    )
+    return graph
+
+
 def _clear_graph(graph):
     for task in graph.tasks:
         graph.remove_task(task)
-
-
-def _install_new_nodes(ctx, graph, added_and_related, **kwargs):
-    added_instances = [
-        ctx.get_node_instance(ni['id'])
-        for ni in added_and_related
-        if ni.get('modification') == 'added'
-    ]
-    related_instances = [
-        ctx.get_node_instance(ni['id'])
-        for ni in added_and_related
-        if ni.get('modification') != 'added'
-    ]
-    lifecycle.install_node_instances(
-        graph=graph,
-        node_instances=added_instances,
-        related_nodes=related_instances
-    )
 
 
 def _establish_relationships(ctx, graph, extended_and_related, **kwargs):
@@ -325,6 +342,73 @@ def _establish_relationships(ctx, graph, extended_and_related, **kwargs):
     )
 
 
+def _execute_deployment_update(ctx, client, update_id, **kwargs):
+    """Do all the non-preview, destructive, update operations."""
+    graph = ctx.graph_mode()
+
+    _clear_graph(graph)
+    graph = _perform_update_graph(ctx, update_id)
+    graph.execute()
+    ctx.refresh_node_instances()
+
+    dep_up = client.deployment_updates.get(update_id)
+    update_instances = dep_up['deployment_update_node_instances']
+
+    install_instances = []
+    install_related_instances = []
+
+    uninstall_instances = []
+    uninstall_related_instances = []
+
+    if update_instances.get('added_and_related'):
+        added_and_related = update_instances['added_and_related']
+        install_instances += [
+            ctx.get_node_instance(ni['id'])
+            for ni in added_and_related
+            if ni.get('modification') == 'added'
+        ]
+        install_related_instances += [
+            ctx.get_node_instance(ni['id'])
+            for ni in added_and_related
+            if ni.get('modification') != 'added'
+        ]
+    if update_instances.get('removed_and_related'):
+        removed_and_related = update_instances['removed_and_related']
+        uninstall_instances += [
+            ctx.get_node_instance(ni['id'])
+            for ni in removed_and_related
+            if ni.get('modification') == 'removed'
+        ]
+        uninstall_related_instances += [
+            ctx.get_node_instance(ni['id'])
+            for ni in removed_and_related
+            if ni.get('modification') != 'removed'
+        ]
+    if uninstall_instances:
+        _clear_graph(graph)
+        lifecycle.uninstall_node_instances(
+            graph=graph,
+            ignore_failure=kwargs.get('ignore_failure', False),
+            node_instances=uninstall_instances,
+            related_nodes=uninstall_related_instances,
+        )
+    if install_instances:
+        _clear_graph(graph)
+        lifecycle.install_node_instances(
+            graph=graph,
+            node_instances=install_instances,
+            related_nodes=install_related_instances,
+        )
+    if update_instances.get('extended_and_related'):
+        _clear_graph(graph)
+        _establish_relationships(
+            ctx, graph, update_instances['extended_and_related'], **kwargs)
+
+    _clear_graph(graph)
+    graph = _post_update_graph(ctx, update_id)
+    graph.execute()
+
+
 @workflow
 def update_deployment(ctx, *, preview=False, **kwargs):
     client = get_rest_client()
@@ -333,22 +417,7 @@ def update_deployment(ctx, *, preview=False, **kwargs):
     graph.execute()
 
     if not preview:
-        _clear_graph(graph)
-        graph = _perform_update_graph(ctx, update_id)
-        graph.execute()
-        ctx.refresh_node_instances()
-
-        graph = ctx.graph_mode()
-        dep_up = client.deployment_updates.get(update_id)
-        update_instances = dep_up['deployment_update_node_instances']
-        if update_instances.get('added_and_related'):
-            _clear_graph(graph)
-            _install_new_nodes(
-                ctx, graph, update_instances['added_and_related'], **kwargs)
-        if update_instances.get('extended_and_related'):
-            _clear_graph(graph)
-            _establish_relationships(
-                ctx, graph, update_instances['extended_and_related'], **kwargs)
+        _execute_deployment_update(ctx, client, update_id, **kwargs)
 
     client.deployment_updates.set_attributes(
         update_id,

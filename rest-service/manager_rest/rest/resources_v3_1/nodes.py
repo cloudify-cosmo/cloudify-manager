@@ -105,6 +105,17 @@ class NodesId(SecuredResource):
             sm.update(node)
         return None, 204
 
+    @authorize('node_delete')
+    @only_deployment_update
+    def delete(self, deployment_id, node_id):
+        sm = get_storage_manager()
+        with sm.transaction():
+            deployment = sm.get(models.Deployment, deployment_id)
+            node = sm.get(models.Node, None,
+                          filters={'id': node_id, 'deployment': deployment})
+            sm.delete(node)
+        return None, 204
+
 
 class NodeInstances(v2_NodeInstances):
     @authorize('node_list')
