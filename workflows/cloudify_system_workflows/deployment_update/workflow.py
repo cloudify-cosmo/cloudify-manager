@@ -99,11 +99,19 @@ def _modified_attr_nodes(steps):
 
 
 def _added_nodes(steps):
-    """Based on the steps, find node ids that were added.
-    """
+    """Based on the steps, find node ids that were added."""
     added = set()
     for step in steps:
         if step['entity_type'] == 'node' and step['action'] == 'add':
+            added.add(step['entity_id'])
+    return list(added)
+
+
+def _removed_nodes(steps):
+    """Based on the steps, find node ids that were removed."""
+    added = set()
+    for step in steps:
+        if step['entity_type'] == 'node' and step['action'] == 'remove':
             added.add(step['entity_id'])
     return list(added)
 
@@ -126,6 +134,7 @@ def prepare_update_nodes(*, update_id):
     node_changes = {
         'modify_attributes': _modified_attr_nodes(dep_up.steps),
         'add': _added_nodes(dep_up.steps),
+        'remove':_removed_nodes(dep_up.steps),
     }
     client.deployment_updates.set_attributes(
         update_id,
@@ -281,6 +290,31 @@ def _perform_update_graph(ctx, update_id, **kwargs):
     )
     return graph
 
+def delete_removed_nodes(*, update_id):
+    client = get_rest_client()
+    dep_up = client.deployment_updates.get(update_id)
+
+    update_nodes = dep_up['deployment_update_nodes'] or {}
+    for node_path in update_nodes.get('remove', []):
+        node_name = node_path.split(':')[-1]
+        client.nodes.delete(dep_up.deployment_id, node_name)
+
+
+def _post_update_graph(ctx, update_id, **kwargs):
+    """The update part that runs after the interface operations.
+
+    This runs the finalizing changes which need to happen after the
+    install/uninstall phase of the dep-update.
+    """
+    graph = ctx.graph_mode()
+    seq = graph.sequence()
+    seq.add(
+        ctx.local_task(delete_removed_nodes, kwargs={
+            'update_id': update_id,
+        }, total_retries=0),
+    )
+    return graph
+
 
 def _clear_graph(graph):
     for task in graph.tasks:
@@ -345,6 +379,10 @@ def _execute_deployment_update(ctx, client, update_id, **kwargs):
         _clear_graph(graph)
         _establish_relationships(
             ctx, graph, update_instances['extended_and_related'], **kwargs)
+
+    _clear_graph(graph)
+    graph = _post_update_graph(ctx, update_id)
+    graph.execute()
 
 
 @workflow
