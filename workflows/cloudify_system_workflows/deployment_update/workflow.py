@@ -29,7 +29,11 @@ def prepare_plan(*, update_id):
     """Prepare the new deployment plan for a deployment update"""
     client = get_rest_client()
     dep_up = client.deployment_updates.get(update_id)
-    bp = client.blueprints.get(dep_up.new_blueprint_id)
+    if dep_up.new_blueprint_id:
+        bp = client.blueprints.get(dep_up.new_blueprint_id)
+    else:
+        dep = client.deployments.get(dep_up.deployment_id)
+        bp = client.blueprints.get(dep.blueprint_id)
 
     deployment_plan = tasks.prepare_deployment_plan(
         bp.plan,
@@ -256,17 +260,24 @@ def update_deployment_node_instances(*, update_id):
 def set_deployment_attributes(*, update_id):
     client = get_rest_client()
     dep_up = client.deployment_updates.get(update_id)
+    new_attributes = {
+        'workflows': dep_up.deployment_plan['workflows'],
+        'outputs': dep_up.deployment_plan['outputs'],
+        'description': dep_up.deployment_plan['description'],
+    }
+    workflow_ctx.logger.info('NEW INPOS %s', dep_up.new_inputs)
+    if dep_up.new_inputs:
+        new_attributes['inputs'] = dep_up.new_inputs
+    if dep_up.new_blueprint_id:
+        new_attributes['blueprint_id'] = dep_up.new_blueprint_id
+        # in the currently-running execution, update the current context as
+        # well, so that later graphs downlod scripts from the new blueprint.
+        # Unfortunate, but no public method for this just yet
+        workflow_ctx._context['blueprint_id'] = dep_up.new_blueprint_id
     client.deployments.set_attributes(
         dep_up.deployment_id,
-        blueprint_id=dep_up.new_blueprint_id,
-        workflows=dep_up.deployment_plan['workflows'],
-        outputs=dep_up.deployment_plan['outputs'],
-        description=dep_up.deployment_plan['description'],
+        **new_attributes
     )
-    # in the currently-running execution, update the current context as well,
-    # so that later graphs downlod scripts from the new blueprint. Unfortunate,
-    # but no public method for this just yet
-    workflow_ctx._context['blueprint_id'] = dep_up.new_blueprint_id
 
 
 def _perform_update_graph(ctx, update_id, **kwargs):
