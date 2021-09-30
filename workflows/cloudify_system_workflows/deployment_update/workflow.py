@@ -356,6 +356,9 @@ def _execute_deployment_update(ctx, client, update_id, **kwargs):
     install_instances = []
     install_related_instances = []
 
+    uninstall_instances = []
+    uninstall_related_instances = []
+
     if update_instances.get('added_and_related'):
         added_and_related = update_instances['added_and_related']
         install_instances += [
@@ -368,6 +371,26 @@ def _execute_deployment_update(ctx, client, update_id, **kwargs):
             for ni in added_and_related
             if ni.get('modification') != 'added'
         ]
+    if update_instances.get('removed_and_related'):
+        removed_and_related = update_instances['removed_and_related']
+        uninstall_instances += [
+            ctx.get_node_instance(ni['id'])
+            for ni in removed_and_related
+            if ni.get('modification') == 'removed'
+        ]
+        uninstall_related_instances += [
+            ctx.get_node_instance(ni['id'])
+            for ni in removed_and_related
+            if ni.get('modification') != 'removed'
+        ]
+    if uninstall_instances:
+        _clear_graph(graph)
+        lifecycle.uninstall_node_instances(
+            graph=graph,
+            ignore_failure=kwargs.get('ignore_failure', False),
+            node_instances=uninstall_instances,
+            related_nodes=uninstall_related_instances,
+        )
     if install_instances:
         _clear_graph(graph)
         lifecycle.install_node_instances(
