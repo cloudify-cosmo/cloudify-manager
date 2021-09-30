@@ -134,7 +134,7 @@ def prepare_update_nodes(*, update_id):
     node_changes = {
         'modify_attributes': _modified_attr_nodes(dep_up.steps),
         'add': _added_nodes(dep_up.steps),
-        'remove':_removed_nodes(dep_up.steps),
+        'remove': _removed_nodes(dep_up.steps),
     }
     client.deployment_updates.set_attributes(
         update_id,
@@ -289,6 +289,7 @@ def _perform_update_graph(ctx, update_id, **kwargs):
         }, total_retries=0),
     )
     return graph
+
 
 def delete_removed_nodes(*, update_id):
     client = get_rest_client()
