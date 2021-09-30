@@ -270,9 +270,9 @@ def set_deployment_attributes(*, update_id):
         new_attributes['inputs'] = dep_up.new_inputs
     if dep_up.new_blueprint_id:
         new_attributes['blueprint_id'] = dep_up.new_blueprint_id
-        # in the currently-running execution, update the current context as well,
-        # so that later graphs downlod scripts from the new blueprint. Unfortunate,
-        # but no public method for this just yet
+        # in the currently-running execution, update the current context as
+        # well, so that later graphs downlod scripts from the new blueprint.
+        # Unfortunate, but no public method for this just yet
         workflow_ctx._context['blueprint_id'] = dep_up.new_blueprint_id
     client.deployments.set_attributes(
         dep_up.deployment_id,
