@@ -23,6 +23,7 @@ class CloudifyAPI(FastAPI):
         super().__init__(*args, **kwargs)
         self.settings = get_settings()
         self.logger = logging.getLogger('cloudify_api')
+        config.logger = self.logger
 
     def configure(self):
         if config.instance.postgresql_host is None:
