@@ -1243,7 +1243,7 @@ class ResourceManager(object):
         return self._retrieve_all_component_executions(
             components_deployment_ids)
 
-    def cancel_execution(self, execution_id, force=False, kill=False):
+    def cancel_execution(self, execution_ids, force=False, kill=False):
         """
         Cancel an execution by its id
 
@@ -1281,11 +1281,22 @@ class ResourceManager(object):
         else:
             new_status = ExecutionState.CANCELLING
 
-        # Prepare a dict of execution storage_id:kill_execution pairs for
-        # executions to be cancelled.
+        if not isinstance(execution_ids, list):
+            execution_ids = [execution_ids]
+
+        # Prepare a dict of execution storage_id:(kill_execution, execution_id)
+        # int-tuple pairs for executions to be cancelled.
         execution_storage_id_kill = {}
         with self.sm.transaction():
-            executions = [self.sm.get(models.Execution, execution_id)]
+            executions = self.sm.list(models.Execution,
+                                      filters={'id': lambda col:
+                                               col.in_(execution_ids)})
+            if len(executions) > 0:
+                executions = executions.items
+            else:
+                raise manager_exceptions.NotFoundError(
+                    f"Requested `Execution` {execution_ids} was not found")
+            result = None
             while executions:
                 execution = executions.pop()
                 kill_execution, force_execution = kill, force
@@ -1306,9 +1317,9 @@ class ResourceManager(object):
                         "status {2}".format('kill-' if kill_execution
                                             else 'force-' if force_execution
                                             else '',
-                                            execution_id, execution.status))
+                                            execution.id, execution.status))
                 execution_storage_id_kill[execution._storage_id] = \
-                    kill_execution
+                    kill_execution, execution.id
 
                 # Dealing with the inner Components' deployments
                 components_executions = self._find_all_components_executions(
@@ -1319,6 +1330,7 @@ class ResourceManager(object):
                     if component_execution.status not in \
                             ExecutionState.END_STATES:
                         executions.append(component_execution)
+                result = execution
 
         # Do the cancelling for a list of DB-transaction-locked executions.
         with self.sm.transaction():
@@ -1335,18 +1347,12 @@ class ResourceManager(object):
                     dep.deployment_status = \
                         dep.evaluate_deployment_status()
                     self.sm.update(dep)
-
-        result = execution
+                result = execution
 
         # Kill workflow executors if kill-cancelling
-        for execution in self.sm.list(
-                models.Execution,
-                filters={'_storage_id': lambda col:
-                         col.in_(storage_id for storage_id, kill_execution
-                                 in execution_storage_id_kill.items()
-                                 if kill_execution)},
-                ):
-            workflow_executor.cancel_execution(execution)
+        workflow_executor.cancel_execution(
+            [execution_id for storage_id, (kill_execution, execution_id)
+             in execution_storage_id_kill.items() if kill_execution])
 
         return result
 

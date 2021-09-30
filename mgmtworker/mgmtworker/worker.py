@@ -241,9 +241,9 @@ class MgmtworkerServiceTaskConsumer(ServiceTaskConsumer):
                                tenant_name, deployment_id)
         shutil.rmtree(dep_dir, ignore_errors=True)
 
-    def cancel_workflow_task(self, execution_id, rest_token, tenant,
+    def cancel_workflow_task(self, execution_ids, rest_token, tenant,
                              rest_host):
-        logger.info('Cancelling workflow {0}'.format(execution_id))
+        logger.info('Cancelling workflows {0}'.format(execution_ids))
 
         class CancelCloudifyContext(object):
             """A CloudifyContext that has just enough data to cancel workflows
@@ -257,15 +257,16 @@ class MgmtworkerServiceTaskConsumer(ServiceTaskConsumer):
                 self.bypass_maintenance = True
 
         with current_workflow_ctx.push(CancelCloudifyContext()):
-            self._workflow_registry.cancel(execution_id)
-            self._cancel_agent_operations(execution_id)
-            try:
-                update_execution_status(execution_id, Execution.CANCELLED)
-            except InvalidExecutionUpdateStatus:
-                # the workflow process might have cleaned up, and marked the
-                # workflow failed or cancelled already
-                logger.info('Failed to update execution status: {0}'
-                            .format(execution_id))
+            for execution_id in execution_ids:
+                self._workflow_registry.cancel(execution_id)
+                self._cancel_agent_operations(execution_id)
+                try:
+                    update_execution_status(execution_id, Execution.CANCELLED)
+                except InvalidExecutionUpdateStatus:
+                    # the workflow process might have cleaned up, and marked
+                    # the workflow failed or cancelled already
+                    logger.info('Failed to update execution status: {0}'
+                                .format(execution_id))
 
     def _cancel_agent_operations(self, execution_id):
         """Send a cancel-operation task to all agents for this deployment"""
