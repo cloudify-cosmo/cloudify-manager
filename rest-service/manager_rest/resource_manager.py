@@ -1243,7 +1243,7 @@ class ResourceManager(object):
         return self._retrieve_all_component_executions(
             components_deployment_ids)
 
-    def cancel_execution(self, execution_id, force=False, kill=False):
+    def cancel_execution(self, execution_ids, force=False, kill=False):
         """
         Cancel an execution by its id
 
@@ -1281,51 +1281,80 @@ class ResourceManager(object):
         else:
             new_status = ExecutionState.CANCELLING
 
-        executions = [self.sm.get(models.Execution, execution_id)]
-        while executions:
-            execution = executions.pop()
-            kill_execution, force_execution = kill, force
-            # When a user cancels queued execution automatically
-            # use the kill flag
-            if execution.status in (ExecutionState.QUEUED,
-                                    ExecutionState.SCHEDULED):
-                kill_execution = True
-                force_execution = True
-            if execution.status not in (ExecutionState.PENDING,
-                                        ExecutionState.STARTED,
-                                        ExecutionState.SCHEDULED) and \
-                    (not force_execution
-                     or execution.status != ExecutionState.CANCELLING)\
-                    and not kill_execution:
-                raise manager_exceptions.IllegalActionError(
-                    "Can't {0} cancel execution {1} because it's in status {2}"
-                    .format(
-                        'kill-' if kill_execution
-                        else 'force-' if force_execution else '',
-                        execution_id,
-                        execution.status))
+        if not isinstance(execution_ids, list):
+            execution_ids = [execution_ids]
 
-            execution.status = new_status
-            execution.error = ''
-            if kill_execution:
-                workflow_executor.cancel_execution(execution)
+        # Prepare a dict of execution storage_id:(kill_execution, execution_id)
+        # int-tuple pairs for executions to be cancelled.
+        execution_storage_id_kill = {}
+        with self.sm.transaction():
+            executions = self.sm.list(models.Execution,
+                                      filters={'id': lambda col:
+                                               col.in_(execution_ids)})
+            if len(executions) > 0:
+                executions = executions.items
+            else:
+                raise manager_exceptions.NotFoundError(
+                    f"Requested `Execution` {execution_ids} was not found")
+            result = None
+            while executions:
+                execution = executions.pop()
+                kill_execution, force_execution = kill, force
+                # When a user cancels queued execution automatically
+                # use the kill flag
+                if execution.status in (ExecutionState.QUEUED,
+                                        ExecutionState.SCHEDULED):
+                    kill_execution = True
+                    force_execution = True
+                if execution.status not in (ExecutionState.PENDING,
+                                            ExecutionState.STARTED,
+                                            ExecutionState.SCHEDULED) and \
+                        (not force_execution
+                         or execution.status != ExecutionState.CANCELLING)\
+                        and not kill_execution:
+                    raise manager_exceptions.IllegalActionError(
+                        "Can't {0} cancel execution {1} because it's in "
+                        "status {2}".format('kill-' if kill_execution
+                                            else 'force-' if force_execution
+                                            else '',
+                                            execution.id, execution.status))
+                execution_storage_id_kill[execution._storage_id] = \
+                    kill_execution, execution.id
 
-            execution = self.sm.update(execution)
-            if execution.deployment_id:
-                dep = execution.deployment
-                dep.latest_execution = execution
-                dep.deployment_status = dep.evaluate_deployment_status()
-                self.sm.update(dep)
+                # Dealing with the inner Components' deployments
+                components_executions = self._find_all_components_executions(
+                    execution.deployment_id)
+                for exec_id in components_executions:
+                    component_execution = self.sm.get(models.Execution,
+                                                      exec_id)
+                    if component_execution.status not in \
+                            ExecutionState.END_STATES:
+                        executions.append(component_execution)
+                result = execution
 
-            # Dealing with the inner Components' deployments
-            components_executions = self._find_all_components_executions(
-                execution.deployment_id)
-            for exec_id in components_executions:
-                component_execution = self.sm.get(models.Execution, exec_id)
-                if component_execution.status not in ExecutionState.END_STATES:
-                    executions.append(component_execution)
+        # Do the cancelling for a list of DB-transaction-locked executions.
+        with self.sm.transaction():
+            for execution in self.sm.list(
+                    models.Execution, locking=True,
+                    filters={'_storage_id': lambda col:
+                             col.in_(execution_storage_id_kill.keys())}):
+                execution.status = new_status
+                execution.error = ''
+                execution = self.sm.update(execution)
+                if execution.deployment_id:
+                    dep = execution.deployment
+                    dep.latest_execution = execution
+                    dep.deployment_status = \
+                        dep.evaluate_deployment_status()
+                    self.sm.update(dep)
+                result = execution
 
-        return execution
+        # Kill workflow executors if kill-cancelling
+        workflow_executor.cancel_execution(
+            [execution_id for storage_id, (kill_execution, execution_id)
+             in execution_storage_id_kill.items() if kill_execution])
+
+        return result
 
     @staticmethod
     def prepare_deployment_for_storage(deployment_id, deployment_plan):

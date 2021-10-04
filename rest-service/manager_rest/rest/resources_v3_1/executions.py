@@ -264,13 +264,11 @@ class ExecutionGroupsId(SecuredResource):
                 elif exc.status in ExecutionState.END_STATES:
                     continue
                 else:
-                    to_cancel.append(exc)
-            for exc in to_cancel:
-                rm.cancel_execution(
-                    exc.id,
-                    force=action == 'force-cancel',
-                    kill=action == 'kill',
-                )
+                    to_cancel.append(exc.id)
+
+        rm.cancel_execution(to_cancel,
+                            force=action == 'force-cancel',
+                            kill=action == 'kill')
 
     def _resume_group(self, sm, group, action):
         rm = get_resource_manager()
