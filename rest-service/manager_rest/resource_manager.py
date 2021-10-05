@@ -1272,14 +1272,34 @@ class ResourceManager(object):
         :rtype: models.Execution
         :raises manager_exceptions.IllegalActionError
         """
-        if kill:
-            force = True
-        if kill:
-            new_status = ExecutionState.KILL_CANCELLING
-        elif force:
-            new_status = ExecutionState.FORCE_CANCELLING
-        else:
-            new_status = ExecutionState.CANCELLING
+        def _new_status_force(_force: bool, _kill: bool) -> (str, bool):
+            if _kill:
+                return ExecutionState.KILL_CANCELLING, True
+            if _force:
+                return ExecutionState.FORCE_CANCELLING, _force
+            return ExecutionState.CANCELLING, _force
+
+        def _validate_cancel_execution(_execution: models.Execution,
+                                       _kill_execution: bool,
+                                       _force_execution: bool):
+            if _kill_execution:
+                return
+
+            if _force_execution and \
+                    _execution.status == ExecutionState.CANCELLING:
+                return
+
+            if _execution.status in (ExecutionState.PENDING,
+                                     ExecutionState.STARTED,
+                                     ExecutionState.SCHEDULED):
+                return
+
+            raise manager_exceptions.IllegalActionError(
+                "Can't {0}cancel execution {1} because it's in "
+                "status {2}".format('force-' if _force_execution else '',
+                                    _execution.id, _execution.status))
+
+        new_status, force = _new_status_force(force, kill)
 
         if not isinstance(execution_ids, list):
             execution_ids = [execution_ids]
@@ -1304,20 +1324,9 @@ class ResourceManager(object):
                 # use the kill flag
                 if execution.status in (ExecutionState.QUEUED,
                                         ExecutionState.SCHEDULED):
-                    kill_execution = True
-                    force_execution = True
-                if execution.status not in (ExecutionState.PENDING,
-                                            ExecutionState.STARTED,
-                                            ExecutionState.SCHEDULED) and \
-                        (not force_execution
-                         or execution.status != ExecutionState.CANCELLING)\
-                        and not kill_execution:
-                    raise manager_exceptions.IllegalActionError(
-                        "Can't {0} cancel execution {1} because it's in "
-                        "status {2}".format('kill-' if kill_execution
-                                            else 'force-' if force_execution
-                                            else '',
-                                            execution.id, execution.status))
+                    kill_execution, force_execution = True, True
+                _validate_cancel_execution(execution,
+                                           kill_execution, force_execution)
                 execution_storage_id_kill[execution._storage_id] = \
                     kill_execution, execution.id
 
