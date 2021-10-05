@@ -992,20 +992,28 @@ class ResourceManager(object):
         while executions:
             exc = executions.pop()
             exc.ensure_defaults()
-            if exc.deployment:
-                try:
+            try:
+                if exc.is_system_workflow:
+                    if self._system_workflow_modifies_db(exc.workflow_id):
+                        self.assert_no_snapshot_creation_running_or_queued(exc)
+                elif exc.deployment:
                     self._check_allow_global_execution(exc.deployment)
                     self._verify_dependencies_not_affected(
                         exc.workflow_id, exc.deployment, force)
-                except Exception as e:
-                    errors.append(e)
-                    exc.status = ExecutionState.FAILED
-                    exc.error = str(e)
-                    self.sm.update(exc)
-                    continue
+            except Exception as e:
+                errors.append(e)
+                exc.status = ExecutionState.FAILED
+                exc.error = str(e)
+                self.sm.update(exc)
+                continue
 
             should_queue = queue
-            if not allow_overlapping_running_wf:
+            if exc.is_system_workflow \
+                    and exc.deployment is None \
+                    and not allow_overlapping_running_wf:
+                should_queue = self._check_for_any_active_executions(
+                    exc, queue)
+            elif not allow_overlapping_running_wf:
                 should_queue = self.check_for_executions(
                     exc, force, queue)
             if should_queue:
