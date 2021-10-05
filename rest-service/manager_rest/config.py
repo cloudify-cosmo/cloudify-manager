@@ -165,11 +165,17 @@ class Config(object):
 
     warnings = Setting('warnings', default=[])
 
+    logger = None
+
     def load_configuration(self, from_db=True):
         for env_var_name, namespace in CONFIG_TYPES:
             if env_var_name in os.environ:
                 self.load_from_file(os.environ[env_var_name], namespace)
         if from_db:
+            if not self.logger:
+                # This has to be set here so that we don't try to use
+                # current_app when we're not in an app context.
+                self.logger = current_app.logger
             self.load_from_db()
 
     def load_from_file(self, filename, namespace=''):
@@ -430,17 +436,17 @@ class Config(object):
                     timeout=5,
                 )
             except Exception as err:
-                current_app.logger.error(
+                self.logger.error(
                     'Error trying to get state of DB %s: %s', candidate, err)
                 continue
 
-            current_app.logger.debug(
+            self.logger.debug(
                 'Checking DB for leader selection. %s has status %s',
                 candidate,
                 result.status_code,
             )
             if result.status_code == 200:
-                current_app.logger.debug('Selected %s as DB leader', candidate)
+                self.logger.debug('Selected %s as DB leader', candidate)
                 return candidate
 
             if i and i % len(postgresql_host) == 0:
