@@ -1272,13 +1272,6 @@ class ResourceManager(object):
         :rtype: models.Execution
         :raises manager_exceptions.IllegalActionError
         """
-        def _new_status_force(_force: bool, _kill: bool) -> (str, bool):
-            if _kill:
-                return ExecutionState.KILL_CANCELLING, True
-            if _force:
-                return ExecutionState.FORCE_CANCELLING, _force
-            return ExecutionState.CANCELLING, _force
-
         def _validate_cancel_execution(_execution: models.Execution,
                                        _kill_execution: bool,
                                        _force_execution: bool):
@@ -1299,7 +1292,13 @@ class ResourceManager(object):
                 "status {2}".format('force-' if _force_execution else '',
                                     _execution.id, _execution.status))
 
-        new_status, force = _new_status_force(force, kill)
+        if kill:
+            new_status = ExecutionState.KILL_CANCELLING
+            force = True
+        elif force:
+            new_status = ExecutionState.FORCE_CANCELLING
+        else:
+            new_status = ExecutionState.CANCELLING
 
         if not isinstance(execution_ids, list):
             execution_ids = [execution_ids]
