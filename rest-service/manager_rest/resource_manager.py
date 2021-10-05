@@ -236,12 +236,9 @@ class ResourceManager(object):
                 for execution in dequeued:
                     if self._refresh_execution(execution):
                         try:
-                            if execution.is_system_workflow:
-                                _, messages = self._execute_system_workflow(
-                                    execution, queue=True)
-                            else:
-                                messages = self.prepare_executions(
-                                    [execution], queue=True)
+                            messages = self.prepare_executions(
+                                [execution],
+                                queue=True)
                             to_run.extend(messages)
                         except Exception as e:
                             current_app.logger.warning(
@@ -448,11 +445,10 @@ class ResourceManager(object):
                 status=ExecutionState.PENDING,
             )
             self.sm.put(execution)
-            return self._execute_system_workflow(
-                execution,
-                bypass_maintenance=bypass_maintenance,
+            return execution, self.prepare_executions(
+                [execution],
                 queue=queue,
-            )
+                bypass_maintenance=bypass_maintenance)
         except manager_exceptions.ExistingRunningExecutionError:
             snapshot = self.sm.get(models.Snapshot, snapshot_id)
             self.sm.delete(snapshot)
@@ -489,10 +485,9 @@ class ResourceManager(object):
             status=ExecutionState.PENDING,
         )
         self.sm.put(execution)
-        return self._execute_system_workflow(
-            execution,
-            bypass_maintenance=bypass_maintenance
-        )
+        return execution, self.prepare_executions(
+            [execution],
+            bypass_maintenance=bypass_maintenance)
 
     def _validate_plugin_yaml(self, plugin):
         """Is the plugin YAML file valid?"""
@@ -546,9 +541,9 @@ class ResourceManager(object):
             return execution, []
         else:
             self.sm.put(execution)
-            return self._execute_system_workflow(
-                execution,
-                verify_no_executions=False)
+            return execution, self.prepare_executions(
+                [execution],
+                allow_overlapping_running_wf=True)
 
     def remove_plugin(self, plugin_id, force):
         # Verify plugin exists and can be removed
