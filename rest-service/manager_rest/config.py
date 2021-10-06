@@ -172,7 +172,7 @@ class Config(object):
             if env_var_name in os.environ:
                 self.load_from_file(os.environ[env_var_name], namespace)
         if from_db:
-            if not self.logger:
+            if not self.logger and current_app:
                 # This has to be set here so that we don't try to use
                 # current_app when we're not in an app context.
                 self.logger = current_app.logger
