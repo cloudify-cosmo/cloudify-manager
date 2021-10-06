@@ -19,7 +19,6 @@ import yaml
 import json
 import shutil
 import itertools
-import typing
 from copy import deepcopy
 from datetime import datetime
 from collections import defaultdict
@@ -76,9 +75,6 @@ from . import config
 from . import app_context
 from . import workflow_executor
 from . import manager_exceptions
-
-if typing.TYPE_CHECKING:
-    from cloudify.amqp_client import SendHandler
 
 
 class ResourceManager(object):
@@ -236,12 +232,9 @@ class ResourceManager(object):
                 for execution in dequeued:
                     if self._refresh_execution(execution):
                         try:
-                            if execution.is_system_workflow:
-                                _, messages = self._execute_system_workflow(
-                                    execution, queue=True)
-                            else:
-                                messages = self.prepare_executions(
-                                    [execution], queue=True)
+                            messages = self.prepare_executions(
+                                [execution],
+                                queue=True)
                             to_run.extend(messages)
                         except Exception as e:
                             current_app.logger.warning(
@@ -448,11 +441,10 @@ class ResourceManager(object):
                 status=ExecutionState.PENDING,
             )
             self.sm.put(execution)
-            return self._execute_system_workflow(
-                execution,
-                bypass_maintenance=bypass_maintenance,
+            return execution, self.prepare_executions(
+                [execution],
                 queue=queue,
-            )
+                bypass_maintenance=bypass_maintenance)
         except manager_exceptions.ExistingRunningExecutionError:
             snapshot = self.sm.get(models.Snapshot, snapshot_id)
             self.sm.delete(snapshot)
@@ -489,10 +481,9 @@ class ResourceManager(object):
             status=ExecutionState.PENDING,
         )
         self.sm.put(execution)
-        return self._execute_system_workflow(
-            execution,
-            bypass_maintenance=bypass_maintenance
-        )
+        return execution, self.prepare_executions(
+            [execution],
+            bypass_maintenance=bypass_maintenance)
 
     def _validate_plugin_yaml(self, plugin):
         """Is the plugin YAML file valid?"""
@@ -546,9 +537,9 @@ class ResourceManager(object):
             return execution, []
         else:
             self.sm.put(execution)
-            return self._execute_system_workflow(
-                execution,
-                verify_no_executions=False)
+            return execution, self.prepare_executions(
+                [execution],
+                allow_overlapping_running_wf=True)
 
     def remove_plugin(self, plugin_id, force):
         # Verify plugin exists and can be removed
@@ -992,20 +983,28 @@ class ResourceManager(object):
         while executions:
             exc = executions.pop()
             exc.ensure_defaults()
-            if exc.deployment:
-                try:
+            try:
+                if exc.is_system_workflow:
+                    if self._system_workflow_modifies_db(exc.workflow_id):
+                        self.assert_no_snapshot_creation_running_or_queued(exc)
+                elif exc.deployment:
                     self._check_allow_global_execution(exc.deployment)
                     self._verify_dependencies_not_affected(
                         exc.workflow_id, exc.deployment, force)
-                except Exception as e:
-                    errors.append(e)
-                    exc.status = ExecutionState.FAILED
-                    exc.error = str(e)
-                    self.sm.update(exc)
-                    continue
+            except Exception as e:
+                errors.append(e)
+                exc.status = ExecutionState.FAILED
+                exc.error = str(e)
+                self.sm.update(exc)
+                continue
 
             should_queue = queue
-            if not allow_overlapping_running_wf:
+            if exc.is_system_workflow \
+                    and exc.deployment is None \
+                    and not allow_overlapping_running_wf:
+                should_queue = self._check_for_any_active_executions(
+                    exc, queue)
+            elif not allow_overlapping_running_wf:
                 should_queue = self.check_for_executions(
                     exc, force, queue)
             if should_queue:
@@ -1137,48 +1136,6 @@ class ResourceManager(object):
             is running or queued.
         """
         return wf_id == 'uninstall_plugin'
-
-    def _execute_system_workflow(self,
-                                 execution,
-                                 *,
-                                 verify_no_executions=True,
-                                 bypass_maintenance=None,
-                                 queue=False,
-                                 send_handler: 'SendHandler' = None):
-        """
-        :param deployment: deployment for workflow execution
-        :param wf_id: workflow id
-        :param execution_parameters: parameters for the system workflow
-        :param created_at: creation time for the workflow execution object.
-         if omitted, a value will be generated by this method.
-        :param bypass_maintenance: allows running the workflow despite having
-        the manager maintenance mode activated.
-        :param queue: If set, in case the execution is blocked it will be
-        queued and automatically run when the blocking workflows are finished
-        :param execution: an execution DB object. If it was passed it means
-        this execution was queued and now trying to run again. If the execution
-        can currently run it will, if not it will be queued again.
-        :param send_handler: the amqp handler to use for sending the workflow
-        :return: (async task object, execution object)
-        """
-
-        should_queue = False
-        if self._system_workflow_modifies_db(execution.workflow_id):
-            self.assert_no_snapshot_creation_running_or_queued(execution)
-
-        if execution.deployment is None and verify_no_executions:
-            should_queue = self._check_for_any_active_executions(
-                execution, queue)
-
-        # Execution can't currently run, it's queued and will run later
-        if should_queue:
-            self.sm.put(execution)
-            self._workflow_queued(execution)
-            return execution, []
-        message = execution.render_message(
-            bypass_maintenance=bypass_maintenance)
-        db.session.commit()
-        return execution, [message]
 
     def _retrieve_components_from_deployment(self, deployment_id_filter):
         return [node.id for node in
