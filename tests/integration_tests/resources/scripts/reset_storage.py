@@ -14,6 +14,7 @@
 #    * limitations under the License.
 
 import json
+import logging
 import os
 import shutil
 
@@ -135,6 +136,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
     with args.config as f:
         script_config = json.load(f)
+
+    config.instance.logger = logging.getLogger('integration_tests')
     config.instance.load_from_file('/opt/manager/cloudify-rest.conf')
     config.instance.load_from_file('/opt/manager/rest-security.conf',
                                    namespace='security')
