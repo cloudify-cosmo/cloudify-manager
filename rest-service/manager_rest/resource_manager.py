@@ -230,30 +230,21 @@ class ResourceManager(object):
                 dequeued = self._get_queued_executions(deployment_storage_id)
                 all_started = True
                 for execution in dequeued:
-                    if self._refresh_execution(execution):
-                        try:
-                            messages = self.prepare_executions(
-                                [execution],
-                                queue=True)
-                            to_run.extend(messages)
-                        except Exception as e:
-                            current_app.logger.warning(
-                                'Could not dequeue execution %s: %s',
-                                execution, e)
-                    else:
-                        all_started = False
+                    refreshed, messages = self._refresh_execution(execution)
+                    to_run.extend(messages)
+                    all_started &= refreshed
                 if all_started:
                     break
         workflow_executor.execute_workflow(to_run)
 
-    def _refresh_execution(self, execution: models.Execution) -> bool:
+    def _refresh_execution(self, execution: models.Execution) -> (bool, list):
         """Prepare the execution to be started.
 
         Re-evaluate parameters, and return if the execution can run.
         """
         execution.status = ExecutionState.PENDING
         if not execution.deployment:
-            return True
+            return True, self._prepare_execution_or_log(execution)
         self.sm.refresh(execution.deployment)
         try:
             if execution and execution.deployment and \
@@ -273,13 +264,22 @@ class ResourceManager(object):
         except Exception as e:
             execution.status = ExecutionState.FAILED
             execution.error = str(e)
-            return False
+            return False, []
         else:
             flag_modified(execution, 'parameters')
-            return True
         finally:
             self.sm.update(execution)
             db.session.flush([execution])
+        return True, self._prepare_execution_or_log(execution)
+
+    def _prepare_execution_or_log(self, execution: models.Execution) -> list:
+        try:
+            return self.prepare_executions([execution], queue=True)
+        except Exception as e:
+            current_app.logger.warning(
+                'Could not dequeue execution %s: %s',
+                execution, e)
+            return []
 
     def _get_queued_executions(self, deployment_storage_id):
         sort_by = {'created_at': 'asc'}
