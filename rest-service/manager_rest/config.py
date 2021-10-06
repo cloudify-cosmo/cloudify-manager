@@ -165,17 +165,13 @@ class Config(object):
 
     warnings = Setting('warnings', default=[])
 
-    logger = None
+    _logger = None
 
     def load_configuration(self, from_db=True):
         for env_var_name, namespace in CONFIG_TYPES:
             if env_var_name in os.environ:
                 self.load_from_file(os.environ[env_var_name], namespace)
         if from_db:
-            if not self.logger:
-                # This has to be set here so that we don't try to use
-                # current_app when we're not in an app context.
-                self.logger = current_app.logger
             self.load_from_db()
 
     def load_from_file(self, filename, namespace=''):
@@ -190,6 +186,16 @@ class Config(object):
                 self.warnings.append(
                     "Ignoring unknown key '{0}' in configuration file "
                     "'{1}'".format(key, filename))
+
+    @property
+    def logger(self):
+        if not self._logger:
+            self._logger = current_app.logger
+        return self._logger
+
+    @logger.setter
+    def logger(self, logger):
+        self._logger = logger
 
     def load_from_db(self):
         from manager_rest.storage import models
