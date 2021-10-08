@@ -545,7 +545,8 @@ class ResourceManager(object):
         # Verify plugin exists and can be removed
         plugin = self.sm.get(models.Plugin, plugin_id)
         validate_global_modification(plugin)
-        self._check_for_active_system_wide_execution(queue=False)
+        self._check_for_running_executions(
+            self._active_system_wide_execution_filter(), queue=False)
 
         if not force:
             affected_blueprint_ids = []
@@ -1002,8 +1003,8 @@ class ResourceManager(object):
             if exc.is_system_workflow \
                     and exc.deployment is None \
                     and not allow_overlapping_running_wf:
-                should_queue = self._check_for_any_active_executions(
-                    exc, queue)
+                should_queue = self._check_for_running_executions(
+                    self._any_active_executions_filter(exc), queue)
             elif not allow_overlapping_running_wf:
                 should_queue = self.check_for_executions(
                     exc, force, queue)
@@ -1043,8 +1044,8 @@ class ResourceManager(object):
         :param queue: if the execution can't be run in parallel with others,
             and this is set, queue the execution. Otherwise, throw.
         """
-        system_exec_running = self._check_for_active_system_wide_execution(
-            queue)
+        system_exec_running = self._check_for_running_executions(
+            self._active_system_wide_execution_filter(), queue)
         if system_exec_running:
             return True
         if force:
@@ -1052,6 +1053,18 @@ class ResourceManager(object):
         if not execution.deployment or not execution.deployment._storage_id:
             return system_exec_running
         return self._check_for_active_executions(execution, queue)
+
+    def _active_system_wide_execution_filter(self, *_):
+        return {
+            'is_system_workflow': [True],
+            'status': ExecutionState.ACTIVE_STATES + [ExecutionState.QUEUED],
+        }
+
+    def _any_active_executions_filter(self, execution):
+        return {
+            'status': ExecutionState.ACTIVE_STATES,
+            'id': lambda col: col != execution.id,
+        }
 
     def _check_for_active_executions(self, execution, queue):
         def status_filter(col):
@@ -1087,45 +1100,21 @@ class ResourceManager(object):
                 f'deployment: {running}. To execute this workflow anyway, '
                 f'pass "force=true" as a query parameter to this request')
 
-    def _check_for_active_system_wide_execution(self, queue):
-        executions = self.sm.list(models.Execution, filters={
-            'is_system_workflow': True,
-            'status': ExecutionState.ACTIVE_STATES + [ExecutionState.QUEUED],
-        }, get_all_results=True, all_tenants=True).items
-        if executions and queue:
-            return True
-        elif executions:
-            raise manager_exceptions.ExistingRunningExecutionError(
-                f'Cannot start an execution if there are running '
-                f'system-wide executions ('
-                f'{ ", ".join(e.id for e in executions) })'
-            )
-        else:
-            return False
-
-    def _check_for_any_active_executions(self, execution, queue):
-        filters = {
-            'status': ExecutionState.ACTIVE_STATES,
-            'id': lambda col: col != execution.id,
-        }
-        executions = [
+    def _check_for_running_executions(self, filters, queue):
+        execution_ids = [
             e.id
             for e in self.list_executions(is_include_system_workflows=True,
                                           filters=filters,
                                           all_tenants=True,
                                           get_all_results=True).items
         ]
-        # Execution can't currently run because other executions are running,
-        # since `queue` flag is on - we will queue the execution and it will
-        # run when possible
-        if executions and queue:
+        if execution_ids and queue:
             return True
-        elif executions:
+        elif execution_ids:
             raise manager_exceptions.ExistingRunningExecutionError(
-                'You cannot start a system-wide execution if there are '
-                'other executions running. '
-                'Currently running executions: {0}'
-                .format(executions))
+                f'Cannot start execution because there are other executions '
+                f'running: { ", ".join(execution_ids) }'
+            )
         else:
             return False
 
