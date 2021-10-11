@@ -18,7 +18,6 @@ import uuid
 import pytest
 
 from integration_tests import AgentTestCase
-from cloudify.models_states import AgentState
 from integration_tests.tests.utils import get_resource as resource
 
 pytestmark = pytest.mark.group_snapshots
@@ -101,7 +100,7 @@ class TestSnapshots(AgentTestCase):
                          {'default_tenant', 'mike'})
 
     def test_snapshot_with_agents(self):
-        states = [AgentState.STARTED, AgentState.CREATING]
+        states = ['started', 'creating']
         deployments = self._deploy_with_agents(states)
         self.assertEqual(len(self.client.agents.list().items), 1)
         snapshot_id = self._create_snapshot()
@@ -110,7 +109,7 @@ class TestSnapshots(AgentTestCase):
         self.assertEqual(len(self.client.agents.list().items), 1)
 
     def test_snapshot_with_failed_agents(self):
-        states = [AgentState.STOPPED, AgentState.DELETED, AgentState.FAILED]
+        states = ['stopped', 'deleted', 'failed']
         deployments = self._deploy_with_agents(states)
         snapshot_id = self._create_snapshot()
         self._undeploy(states, deployments)

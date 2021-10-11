@@ -13,10 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from importlib.util import find_spec
+
 import pytest
-from manager_rest import premium_enabled
+
 from integration_tests import AgentTestCase
 from integration_tests.tests.utils import get_resource as resource
+
+premium_enabled = find_spec('cloudify_premium') is not None
 
 pytestmark = pytest.mark.group_agents
 
