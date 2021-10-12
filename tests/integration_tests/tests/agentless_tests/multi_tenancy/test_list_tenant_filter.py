@@ -4,8 +4,6 @@ from integration_tests import AgentlessTestCase
 from integration_tests.tests.constants import USER_ROLE
 from integration_tests.tests.utils import get_resource as resource
 
-from manager_rest.constants import DEFAULT_TENANT_NAME, DEFAULT_TENANT_ROLE
-
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 pytestmark = pytest.mark.group_premium
@@ -20,21 +18,21 @@ class ListResourcesTest(AgentlessTestCase):
 
         # Alice belongs to both tenants
         self.client.tenants.add_user('alice',
-                                     DEFAULT_TENANT_NAME,
-                                     DEFAULT_TENANT_ROLE)
+                                     'default_tenant',
+                                     'user')
         self.client.tenants.add_user('alice',
                                      'TEST_TENANT',
-                                     DEFAULT_TENANT_ROLE)
+                                     'user')
         # Fred only belongs to 'TEST_TENANT'
         self.client.tenants.add_user('fred',
                                      'TEST_TENANT',
-                                     DEFAULT_TENANT_ROLE)
+                                     'user')
 
         # Create clients for each user
         self.alice_client = self.create_rest_client(
             username='alice',
             password='alice_password',
-            tenant=DEFAULT_TENANT_NAME,
+            tenant='default_tenant',
         )
         self.fred_client = self.create_rest_client(
             username='fred',
@@ -57,7 +55,7 @@ class ListResourcesTest(AgentlessTestCase):
         self.assertEqual(len(result), 1)
 
         with self.client_using_tenant(self.alice_client,
-                                      tenant_name=DEFAULT_TENANT_NAME):
+                                      tenant_name='default_tenant'):
             result = self.alice_client.blueprints.list()
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0].id, 'alice_bp')
@@ -70,7 +68,7 @@ class ListResourcesTest(AgentlessTestCase):
 
     def test_list_blueprints_not_authorized(self):
         error_msg = '403.*blueprint_list.*default_tenant'
-        with self.client_using_tenant(self.fred_client, DEFAULT_TENANT_NAME):
+        with self.client_using_tenant(self.fred_client, 'default_tenant'):
             self.assertRaisesRegex(CloudifyClientError, error_msg,
                                    self.fred_client.blueprints.list)
 
