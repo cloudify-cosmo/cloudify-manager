@@ -5,6 +5,7 @@ import json
 import shutil
 import zipfile
 import tempfile
+from base64 import b64encode
 
 import requests
 
@@ -14,7 +15,6 @@ from contextlib import contextmanager
 
 from cloudify.utils import setup_logger
 from cloudify_rest_client import CloudifyClient
-from manager_rest.utils import create_auth_header
 
 from cloudify_cli import env as cli_env
 from cloudify_cli.constants import CLOUDIFY_BASE_DIRECTORY_NAME
@@ -23,6 +23,26 @@ from . import docker
 
 
 logger = setup_logger('testenv.utils')
+
+
+def create_auth_header(username=None, password=None, token=None, tenant=None):
+    """Create a valid authentication header either from username/password or
+    a token if any were provided; return an empty dict otherwise
+    """
+    headers = {}
+    if username and password:
+        credentials = b64encode(
+            '{0}:{1}'.format(username, password).encode('utf-8')
+        ).decode('ascii')
+        headers = {
+            'Authorization':
+            'Basic ' + credentials
+        }
+    elif token:
+        headers = {'Authentication-Token': token}
+    if tenant:
+        headers['Tenant'] = tenant
+    return headers
 
 
 def _write(stream, s):

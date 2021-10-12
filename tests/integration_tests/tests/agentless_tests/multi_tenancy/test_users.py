@@ -1,7 +1,6 @@
 import pytest
 
 from cloudify_rest_client.exceptions import CloudifyClientError
-from manager_rest.constants import DEFAULT_TENANT_NAME
 
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.constants import ADMIN_ROLE, USER_ROLE
@@ -68,7 +67,7 @@ class UsersTest(AgentlessTestCase):
             self._get_user_dict(
                 'admin',
                 role=ADMIN_ROLE,
-                tenants=[DEFAULT_TENANT_NAME]
+                tenants=['default_tenant']
             ),
             users[0]
         )
