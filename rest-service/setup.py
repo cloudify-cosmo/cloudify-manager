@@ -43,6 +43,7 @@ install_requires = [
     'email-validator>1.0.0,<2.0.0',
     'werkzeug>1,<2',
     'itsdangerous>1,<2',
+    'alembic<1.7.0',
 ]
 
 
