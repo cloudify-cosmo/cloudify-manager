@@ -33,6 +33,7 @@ install_requires = [
     'python-dateutil>=2.8.1,<3',
     'voluptuous>=0.9.3,<0.10',
     'pika>=1.1.0,<1.2.0',
+    'cffi>=1.14,<1.15',
     'cryptography>=3.3,<3.4',
     'psycopg2',
     'pytz',

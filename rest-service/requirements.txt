@@ -14,7 +14,7 @@ blinker==1.4              # via flask-mail, flask-principal
 bottle==0.12.18           # via cloudify-common
 cachetools==3.1.1         # via cloudify-rest-service (setup.py)
 certifi==2021.10.8        # via requests
-cffi==1.15.0              # via cryptography
+cffi==1.14.6              # via cloudify-rest-service (setup.py), cryptography
 chardet==4.0.0            # via aiohttp
 charset-normalizer==2.0.7  # via requests
 click==7.1.2              # via flask
