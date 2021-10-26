@@ -15,12 +15,13 @@
 
 from flask_security import current_user
 
-from manager_rest import constants
+from manager_rest import constants, config
 from manager_rest.storage import models, user_datastore
-from manager_rest.security.authorization import authorize
+from manager_rest.security.authorization import (authorize,
+                                                 is_user_action_allowed)
 from manager_rest.security import (SecuredResource,
                                    MissingPremiumFeatureResource)
-from manager_rest.manager_exceptions import BadParametersError
+from manager_rest.manager_exceptions import BadParametersError, ForbiddenError
 
 from .. import rest_decorators, rest_utils
 from ..responses_v3 import UserResponse
@@ -99,7 +100,6 @@ class Users(SecuredMultiTenancyResource):
 
 
 class UsersId(SecuredMultiTenancyResource):
-    @authorize('user_update')
     @rest_decorators.marshal_with(UserResponse)
     def post(self, username, multi_tenancy):
         """
@@ -113,9 +113,13 @@ class UsersId(SecuredMultiTenancyResource):
         if password:
             if role_name:
                 raise BadParametersError('Both `password` and `role` provided')
+            if username != current_user.username:
+                self.authorize_update()
             password = rest_utils.validate_and_decode_password(password)
             return multi_tenancy.set_user_password(username, password)
-        elif role_name:
+
+        self.authorize_update()
+        if role_name:
             rest_utils.verify_role(role_name, is_system_role=True)
             return multi_tenancy.set_user_role(username, role_name)
         if show_getting_started is not None:
@@ -146,6 +150,16 @@ class UsersId(SecuredMultiTenancyResource):
         rest_utils.validate_inputs({'username': username})
         multi_tenancy.delete_user(username)
         return None, 204
+
+    def authorize_update(self):
+        # when running unittests, there is no authorization
+        if config.instance.test_mode:
+            return
+
+        if not is_user_action_allowed('user_update'):
+            error_message = 'User `{0}` is not permitted to perform the ' \
+                            'action user_update'.format(current_user.username)
+            raise ForbiddenError(error_message)
 
 
 class UsersActive(SecuredMultiTenancyResource):
