@@ -76,6 +76,18 @@ class BlueprintsSetVisibility(SecuredResource):
                                                      visibility)
 
 
+class BlueprintsIcon(SecuredResource):
+
+    @authorize('blueprint_upload')
+    @rest_decorators.marshal_with(models.Blueprint)
+    def patch(self, blueprint_id):
+        """
+        Set the blueprint's icon
+        """
+        UploadedBlueprintsManager().upgrade_icon_file(blueprint_id)
+        return get_storage_manager().get(models.Blueprint, blueprint_id)
+
+
 class BlueprintsId(resources_v2.BlueprintsId):
     @authorize('blueprint_upload')
     @rest_decorators.marshal_with(models.Blueprint)

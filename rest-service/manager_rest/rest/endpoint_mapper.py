@@ -17,6 +17,7 @@ def setup_resources(api):
         'BlueprintsSetGlobal': 'blueprints/<string:blueprint_id>/set-global',
         'BlueprintsSetVisibility': 'blueprints/<string:blueprint_id>/'
                                    'set-visibility',
+        'BlueprintsIcon': 'blueprints/<string:blueprint_id>/icon',
         'Snapshots': 'snapshots',
         'SnapshotsId': 'snapshots/<string:snapshot_id>',
         'SnapshotsIdArchive': 'snapshots/<string:snapshot_id>/archive',
