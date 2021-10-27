@@ -47,7 +47,7 @@ class Postgres(object):
     _CONFIG_TABLES = ['config', 'rabbitmq_brokers', 'db_nodes',
                       'maintenance_mode', 'usage_collector', 'plugins_states']
     _TABLES_TO_EXCLUDE_ON_DUMP = _TABLES_TO_KEEP + \
-        ['audit_log__storage_id_seq', 'snapshots'] + \
+        ['audit_log', 'audit_log__storage_id_seq', 'snapshots'] + \
         _CONFIG_TABLES
     _TABLES_TO_RESTORE = ['users', 'tenants']
     _STAGE_TABLES_TO_EXCLUDE = ['"SequelizeMeta"']
