@@ -503,6 +503,10 @@ class UploadedBlueprintsManager(UploadedDataManager):
         remove(icon_tmp_path)
         self._upgrade_blueprint_archive(tenant_name, blueprint_id)
 
+    def remove_icon_file(self, tenant_name, blueprint_id):
+        self._set_blueprints_icon(tenant_name, blueprint_id)
+        self._upgrade_blueprint_archive(tenant_name, blueprint_id)
+
     @staticmethod
     def cleanup_blueprint_archive_from_file_server(blueprint_id, tenant):
         remove(os.path.join(config.instance.file_server_root,
