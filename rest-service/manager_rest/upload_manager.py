@@ -496,12 +496,12 @@ class UploadedBlueprintsManager(UploadedDataManager):
             raise manager_exceptions.ConflictError(str(e))
         self._process_plugins(file_server_root, blueprint_id)
 
-    def upgrade_icon_file(self, blueprint_id):
+    def upgrade_icon_file(self, tenant_name, blueprint_id):
         icon_tmp_path = tempfile.mktemp()
         self._save_file_content(icon_tmp_path, 'blueprint_icon')
-        self._set_blueprints_icon(blueprint_id, icon_tmp_path)
+        self._set_blueprints_icon(tenant_name, blueprint_id, icon_tmp_path)
         remove(icon_tmp_path)
-        self._upgrade_blueprint_archive(blueprint_id)
+        self._upgrade_blueprint_archive(tenant_name, blueprint_id)
 
     @staticmethod
     def cleanup_blueprint_archive_from_file_server(blueprint_id, tenant):
@@ -523,28 +523,28 @@ class UploadedBlueprintsManager(UploadedDataManager):
     def _get_archive_type(self, archive_path):
         return get_archive_type(archive_path)
 
-    def _set_blueprints_icon(self, blueprint_id, icon_tmp_path=None):
+    def _set_blueprints_icon(self, tenant_name, blueprint_id, icon_path=None):
         blueprint_icon_path = os.path.join(config.instance.file_server_root,
                                            FILE_SERVER_BLUEPRINTS_FOLDER,
-                                           current_tenant.name,
+                                           tenant_name,
                                            blueprint_id,
                                            BLUEPRINT_ICON_FILENAME)
-        if icon_tmp_path:
-            shutil.move(icon_tmp_path, blueprint_icon_path)
+        if icon_path:
+            shutil.move(icon_path, blueprint_icon_path)
         else:
             os.remove(blueprint_icon_path)
 
-    def _upgrade_blueprint_archive(self, blueprint_id):
+    def _upgrade_blueprint_archive(self, tenant_name, blueprint_id):
         file_server_root = config.instance.file_server_root
         blueprint_dir = os.path.join(
             file_server_root,
             FILE_SERVER_BLUEPRINTS_FOLDER,
-            current_tenant.name,
+            tenant_name,
             blueprint_id)
         archive_dir = os.path.join(
             file_server_root,
             FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
-            current_tenant.name,
+            tenant_name,
             blueprint_id)
         # Filename will be like [BLUEPRINT_ID].tar.gz or [BLUEPRINT_ID].zip
         archive_filename = [fn for fn in os.listdir(archive_dir)

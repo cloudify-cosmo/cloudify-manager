@@ -84,8 +84,11 @@ class BlueprintsIcon(SecuredResource):
         """
         Set the blueprint's icon
         """
-        UploadedBlueprintsManager().upgrade_icon_file(blueprint_id)
-        return get_storage_manager().get(models.Blueprint, blueprint_id)
+        # Get the blueprint to verify if it exists (in the current context)
+        blueprint = get_storage_manager().get(models.Blueprint, blueprint_id)
+        UploadedBlueprintsManager().upgrade_icon_file(blueprint.tenant_name,
+                                                      blueprint_id)
+        return blueprint
 
 
 class BlueprintsId(resources_v2.BlueprintsId):
