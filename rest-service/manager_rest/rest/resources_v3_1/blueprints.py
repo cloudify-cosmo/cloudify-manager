@@ -87,7 +87,7 @@ class BlueprintsIcon(SecuredResource):
         # Get the blueprint to verify if it exists (in the current context)
         blueprint = get_storage_manager().get(models.Blueprint, blueprint_id)
         if request.data:
-            UploadedBlueprintsManager().upgrade_icon_file(
+            UploadedBlueprintsManager().update_icon_file(
                 blueprint.tenant_name, blueprint_id)
         else:
             UploadedBlueprintsManager().remove_icon_file(
