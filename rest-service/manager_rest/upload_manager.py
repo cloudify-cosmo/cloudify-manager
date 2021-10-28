@@ -561,7 +561,10 @@ class UploadedBlueprintsManager(UploadedDataManager):
             for filename in os.listdir(blueprint_dir):
                 srcname = os.path.join(blueprint_dir, filename)
                 dstname = os.path.join(tmpdir, self._get_kind(), filename)
-                shutil.copy2(srcname, dstname)
+                if os.path.isdir(srcname):
+                    shutil.copytree(srcname, dstname)
+                else:
+                    shutil.copy2(srcname, dstname)
             # Create a new archive and substitute the old one
             with tempfile.NamedTemporaryFile(dir=file_server_root) as fh:
                 with tarfile.open(fh.name, "w:gz") as tar_handle:
