@@ -146,8 +146,11 @@ class DeploymentUpdateManager(object):
                          'state': [STATES.UPDATING,
                                    STATES.EXECUTING_WORKFLOW,
                                    STATES.FINALIZING]}):
-            reevaluated_state = _map_execution_to_deployment_update_status(
-                active_update.execution.status)
+            reevaluated_state = \
+                _map_execution_to_deployment_update_status(
+                    active_update.execution.status) \
+                if active_update.execution \
+                else STATES.FAILED
             if reevaluated_state and active_update.state != reevaluated_state:
                 current_app.logger.info("Deployment update %s status "
                                         "reevaluation: `%s` -> `%s`",
