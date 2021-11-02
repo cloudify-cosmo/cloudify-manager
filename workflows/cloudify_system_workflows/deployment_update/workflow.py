@@ -392,6 +392,26 @@ def _clear_graph(graph):
         graph.remove_task(task)
 
 
+def _unlink_relationships(ctx, graph, reduced_and_related, **kwargs):
+    node_instances = [
+        ctx.get_node_instance(ni['id'])
+        for ni in reduced_and_related
+    ]
+
+    modified_relationship_ids = defaultdict(list)
+    for ni in reduced_and_related:
+        if ni.get('modification') != 'reduced':
+            continue
+        node_id = ni['node_id']
+        for new_rel in ni['relationships']:
+            modified_relationship_ids[node_id].append(new_rel['target_name'])
+    lifecycle.execute_unlink_relationships(
+        graph=graph,
+        node_instances=set(node_instances),
+        modified_relationship_ids=dict(modified_relationship_ids)
+    )
+
+
 def _establish_relationships(ctx, graph, extended_and_related, **kwargs):
     node_instances = [
         ctx.get_node_instance(ni['id'])
@@ -454,6 +474,12 @@ def _execute_deployment_update(ctx, client, update_id, **kwargs):
             for ni in removed_and_related
             if ni.get('modification') != 'removed'
         ]
+
+    if update_instances.get('reduced_and_related'):
+        _clear_graph(graph)
+        _unlink_relationships(
+            ctx, graph, update_instances['reduced_and_related'], **kwargs)
+
     if uninstall_instances:
         _clear_graph(graph)
         lifecycle.uninstall_node_instances(
