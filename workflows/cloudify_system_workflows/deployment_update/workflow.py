@@ -299,6 +299,8 @@ def delete_removed_relationships(*, update_id):
             old_rels = _format_old_relationships(
                 workflow_ctx.get_node_instance(ni['id']))
             new_rels = []
+            # yes, in this, .relationships is the list of relationships
+            # to be deleted!
             delete_rels = ni['relationships']
             for old_rel in old_rels:
                 if not any(
