@@ -1,18 +1,3 @@
-#########
-# Copyright (c) 2015 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 import pytz
 
 from functools import wraps
@@ -39,7 +24,9 @@ from cloudify.models_states import ExecutionState
 from ..security.authentication import authenticator
 from manager_rest import config, manager_exceptions
 from manager_rest.utils import current_tenant
+from manager_rest.security.authorization import is_user_action_allowed
 from manager_rest.storage.models_base import SQLModelBase, db
+from manager_rest.storage.management_models import User
 from manager_rest.execution_token import current_execution
 from manager_rest.rest.rest_utils import (
     normalize_value,
@@ -157,9 +144,13 @@ class marshal_with(object):
                 for item in data
             ]
         elif isinstance(data, SQLModelBase):
-            return data.to_response(
-                get_data=self._get_data() or self.force_get_data,
-                include=fields_to_include)
+            kwargs = {
+                'get_data': self._get_data() or self.force_get_data,
+                'include': fields_to_include,
+            }
+            if isinstance(data, User):
+                kwargs['include_hash'] = self._include_hash()
+            return data.to_response(**kwargs)
         raise RuntimeError('Unexpected response data (type {0}) {1}'.format(
             type(data), data))
 
@@ -171,6 +162,14 @@ class marshal_with(object):
     def _get_data():
         get_data = request.args.get('_get_data', False)
         return verify_and_convert_bool('get_data', get_data)
+
+    @staticmethod
+    def _include_hash():
+        include_hash = request.args.get('_include_hash', False)
+        if include_hash and is_user_action_allowed(
+                'get_password_hash', None, True):
+            return verify_and_convert_bool('include_hash', include_hash)
+        return False
 
     def _get_fields_to_include(self):
         skipped_fields = self._get_skipped_fields()
