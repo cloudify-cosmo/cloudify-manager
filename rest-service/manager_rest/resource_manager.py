@@ -670,7 +670,9 @@ class ResourceManager(object):
             blueprints_location,
             utils.current_tenant.name,
             folder_name.id)
-        shutil.rmtree(blueprint_folder)
+        # Don't cry if the blueprint folder never got created
+        if os.path.exists(blueprint_folder):
+            shutil.rmtree(blueprint_folder)
 
     def delete_blueprint(self, blueprint_id, force, remove_files=True):
         blueprint = self.sm.get(models.Blueprint, blueprint_id)
