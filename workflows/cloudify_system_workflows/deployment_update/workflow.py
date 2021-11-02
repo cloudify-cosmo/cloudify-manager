@@ -265,7 +265,6 @@ def set_deployment_attributes(*, update_id):
         'outputs': dep_up.deployment_plan['outputs'],
         'description': dep_up.deployment_plan['description'],
     }
-    workflow_ctx.logger.info('NEW INPOS %s', dep_up.new_inputs)
     if dep_up.new_inputs:
         new_attributes['inputs'] = dep_up.new_inputs
     if dep_up.new_blueprint_id:
