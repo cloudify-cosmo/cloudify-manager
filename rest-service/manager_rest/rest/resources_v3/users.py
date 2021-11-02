@@ -85,6 +85,8 @@ class Users(SecuredMultiTenancyResource):
                 },
             }
         )
+        is_prehashed = rest_utils.verify_and_convert_bool(
+            'is_prehashed', request_dict.pop('is_prehashed', False))
 
         # The password shouldn't be validated here
         password = request_dict.pop('password')
@@ -92,10 +94,12 @@ class Users(SecuredMultiTenancyResource):
         rest_utils.validate_inputs(request_dict)
         role = request_dict.get('role', constants.DEFAULT_SYSTEM_ROLE)
         rest_utils.verify_role(role, is_system_role=True)
+
         return multi_tenancy.create_user(
             request_dict['username'],
             password,
             role,
+            is_prehashed=is_prehashed,
         )
 
 
