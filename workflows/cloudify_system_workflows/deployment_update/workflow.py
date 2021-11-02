@@ -200,6 +200,21 @@ def update_deployment_nodes(*, update_id):
         new_attributes = {
             attr_name: plan_node[attr_name] for attr_name in changed_attrs
         }
+        if 'relationships' in new_attributes:
+            # if we're to remove a relationship, make sure to keep it for now,
+            # so that unlink operations can run; we'll actually remove it in
+            # the post-graph
+            old_node = workflow_ctx.get_node(node_name)
+            new_rel_keys = {
+                (r['target_id'], r['type'])
+                for r in new_attributes['relationships']
+            }
+            for old_rel in old_node.relationships:
+                old_rel_key = (old_rel.target_id, old_rel.type)
+                if old_rel_key not in new_rel_keys:
+                    new_attributes['relationships'].append(
+                        old_rel._relationship)
+
         client.nodes.update(
             dep_up.deployment_id, node_name,
             **new_attributes
@@ -257,6 +272,50 @@ def update_deployment_node_instances(*, update_id):
             )
 
 
+def delete_removed_relationships(*, update_id):
+    client = get_rest_client()
+    dep_up = client.deployment_updates.get(update_id)
+    update_nodes = dep_up['deployment_update_nodes'] or {}
+    plan_nodes = dep_up.deployment_plan['nodes']
+    update_instances = dep_up['deployment_update_node_instances']
+
+    for node_name, changed_attrs in update_nodes.get(
+            'modify_attributes', {}).items():
+        for plan_node in plan_nodes:
+            if plan_node['name'] == node_name:
+                break
+        else:
+            raise RuntimeError(f'Node {node_name} not found in the plan')
+        if 'relationships' in changed_attrs:
+            client.nodes.update(
+                dep_up.deployment_id, node_name,
+                relationships=plan_node['relationships']
+            )
+
+    if update_instances.get('reduced_and_related'):
+        for ni in update_instances['reduced_and_related']:
+            if ni.get('modification') != 'reduced':
+                continue
+            old_rels = _format_old_relationships(
+                workflow_ctx.get_node_instance(ni['id']))
+            new_rels = []
+            # yes, in this, .relationships is the list of relationships
+            # to be deleted!
+            delete_rels = ni['relationships']
+            for old_rel in old_rels:
+                if not any(
+                    old_rel.get('target_id') == to_delete['target_name']
+                    and old_rel['type'] == to_delete['type']
+                    for to_delete in delete_rels
+                ):
+                    new_rels.append(old_rel)
+            client.node_instances.update(
+                ni['id'],
+                relationships=new_rels,
+                force=True
+            )
+
+
 def set_deployment_attributes(*, update_id):
     client = get_rest_client()
     dep_up = client.deployment_updates.get(update_id)
@@ -265,7 +324,6 @@ def set_deployment_attributes(*, update_id):
         'outputs': dep_up.deployment_plan['outputs'],
         'description': dep_up.deployment_plan['description'],
     }
-    workflow_ctx.logger.info('NEW INPOS %s', dep_up.new_inputs)
     if dep_up.new_inputs:
         new_attributes['inputs'] = dep_up.new_inputs
     if dep_up.new_blueprint_id:
@@ -324,6 +382,9 @@ def _post_update_graph(ctx, update_id, **kwargs):
         ctx.local_task(delete_removed_nodes, kwargs={
             'update_id': update_id,
         }, total_retries=0),
+        ctx.local_task(delete_removed_relationships, kwargs={
+            'update_id': update_id,
+        }, total_retries=0),
     )
     return graph
 
@@ -331,6 +392,26 @@ def _post_update_graph(ctx, update_id, **kwargs):
 def _clear_graph(graph):
     for task in graph.tasks:
         graph.remove_task(task)
+
+
+def _unlink_relationships(ctx, graph, reduced_and_related, **kwargs):
+    node_instances = [
+        ctx.get_node_instance(ni['id'])
+        for ni in reduced_and_related
+    ]
+
+    modified_relationship_ids = defaultdict(list)
+    for ni in reduced_and_related:
+        if ni.get('modification') != 'reduced':
+            continue
+        node_id = ni['node_id']
+        for new_rel in ni['relationships']:
+            modified_relationship_ids[node_id].append(new_rel['target_name'])
+    lifecycle.execute_unlink_relationships(
+        graph=graph,
+        node_instances=set(node_instances),
+        modified_relationship_ids=dict(modified_relationship_ids)
+    )
 
 
 def _establish_relationships(ctx, graph, extended_and_related, **kwargs):
@@ -395,6 +476,12 @@ def _execute_deployment_update(ctx, client, update_id, **kwargs):
             for ni in removed_and_related
             if ni.get('modification') != 'removed'
         ]
+
+    if update_instances.get('reduced_and_related'):
+        _clear_graph(graph)
+        _unlink_relationships(
+            ctx, graph, update_instances['reduced_and_related'], **kwargs)
+
     if uninstall_instances:
         _clear_graph(graph)
         lifecycle.uninstall_node_instances(
