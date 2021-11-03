@@ -235,11 +235,11 @@ def update_deployment_nodes(*, update_id):
     )
 
 
-def _format_old_relationships(node_instance):
+def _format_instance_relationships(node_instance):
     """Dump ni's relationships to a dict that can be parsed by RESTservice"""
     return [
         {
-            'target_id': old_rel.relationship.target_id,
+            'target_id': old_rel.target_id,
             'target_name': old_rel.relationship.target_node.id,
             'type': old_rel.relationship.type,
         }
@@ -265,7 +265,7 @@ def update_deployment_node_instances(*, update_id):
         for ni in update_instances['extended_and_related']:
             if ni.get('modification') != 'extended':
                 continue
-            old_rels = _format_old_relationships(
+            old_rels = _format_instance_relationships(
                 workflow_ctx.get_node_instance(ni['id']))
             client.node_instances.update(
                 ni['id'],
@@ -302,7 +302,7 @@ def delete_removed_relationships(*, update_id):
         for ni in update_instances['reduced_and_related']:
             if ni.get('modification') != 'reduced':
                 continue
-            old_rels = _format_old_relationships(
+            old_rels = _format_instance_relationships(
                 workflow_ctx.get_node_instance(ni['id']))
             new_rels = []
             # yes, in this, .relationships is the list of relationships
@@ -310,7 +310,7 @@ def delete_removed_relationships(*, update_id):
             delete_rels = ni['relationships']
             for old_rel in old_rels:
                 if not any(
-                    old_rel.get('target_id') == to_delete['target_name']
+                    old_rel.get('target_name') == to_delete['target_name']
                     and old_rel['type'] == to_delete['type']
                     for to_delete in delete_rels
                 ):
