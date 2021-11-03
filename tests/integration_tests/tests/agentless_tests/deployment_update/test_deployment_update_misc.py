@@ -541,9 +541,12 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
 
 
 class NewTestDeploymentUpdateMisc(DeploymentUpdateBase):
-    test_deployment_updated_twice = TestDeploymentUpdateMisc.test_deployment_updated_twice
-    test_modify_deployment_update_schema = TestDeploymentUpdateMisc.test_modify_deployment_update_schema
-    test_add_and_override_resource = TestDeploymentUpdateMisc.test_add_and_override_resource
+    test_deployment_updated_twice = \
+        TestDeploymentUpdateMisc.test_deployment_updated_twice
+    test_modify_deployment_update_schema = \
+        TestDeploymentUpdateMisc.test_modify_deployment_update_schema
+    test_add_and_override_resource = \
+        TestDeploymentUpdateMisc.test_add_and_override_resource
 
     def _do_update(self, deployment_id, blueprint_id=None,
                    preview=False, inputs=None, skip_reinstall=False, **kwargs):

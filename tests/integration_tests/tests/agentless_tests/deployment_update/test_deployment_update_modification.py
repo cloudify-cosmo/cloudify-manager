@@ -311,7 +311,7 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
             self._deploy_and_get_modified_bp_path('modify_workflow')
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
         wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
-        dep_update = self._do_update(deployment.id, BLUEPRINT_ID)
+        self._do_update(deployment.id, BLUEPRINT_ID)
 
         execution = self.client.executions.start(
             deployment.id,

@@ -588,7 +588,11 @@ def _reinstall_instances(graph, dep_up, to_install, to_uninstall,
             continue
         subgraph |= ni.get_contained_subgraph()
     subgraph -= set(to_uninstall)
-    intact_nodes = set(workflow_ctx.node_instances) - subgraph - set(to_uninstall)
+    intact_nodes = (
+        set(workflow_ctx.node_instances)
+        - subgraph
+        - set(to_uninstall)
+    )
     for n in subgraph:
         for r in n._relationship_instances:
             if r in uninstall_ids:
@@ -601,7 +605,6 @@ def _reinstall_instances(graph, dep_up, to_install, to_uninstall,
             related_nodes=intact_nodes,
             ignore_failure=ignore_failure
         )
-
 
 
 @workflow
