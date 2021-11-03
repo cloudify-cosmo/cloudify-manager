@@ -247,22 +247,36 @@ def _format_instance_relationships(node_instance):
     ]
 
 
+def _parse_reorder_relationships_step(step):
+    """Return parts of the step, if this is a reorder-relationships, or None
+
+    Parse steps that modify relationships, with entity_id like
+    nodes:node_id:relationships:[1]:[0] - that means relationship
+    at index=1 is to be moved to index=0.
+    """
+    if step['action'] != 'modify' or step['entity_type'] != 'relationship':
+        return None
+    parts = step['entity_id'].split(':')
+    if len(parts) != 5:
+        return None
+    # parts is expected to be: ["nodes", node_id, "relationships", from, to]
+    nodes_label, node_id, relationships_label, from_ix, to_ix = parts
+    if nodes_label != 'nodes' or relationships_label != 'relationships':
+        return None
+    from_ix = int(from_ix.strip('[]'))
+    to_ix = int(to_ix.strip('[]'))
+    return node_id, from_ix, to_ix
+
+
 def reorder_node_instance_relationships(*, update_id):
     client = get_rest_client()
     dep_up = client.deployment_updates.get(update_id)
     node_reorders = defaultdict(dict)
     for step in dep_up.steps:
-        # find steps that modify relationships, with entity_id like
-        # nodes:node_id:relationships:[1]:[0] - that means relationship
-        # at index=1 is to be moved to index=0
-        if step['action'] != 'modify' or step['entity_type'] != 'relationship':
+        reorder_parts = _parse_reorder_relationships_step(step)
+        if reorder_parts is None:
             continue
-        parts = step['entity_id'].split(':')
-        if len(parts) != 5:
-            continue
-        _, node_id, _, from_ix, to_ix = parts
-        from_ix = int(from_ix.strip('[]'))
-        to_ix = int(to_ix.strip('[]'))
+        node_id, from_ix, to_ix = reorder_parts
         node_reorders[node_id][to_ix] = from_ix
 
     for node_id, reorders in node_reorders.items():
