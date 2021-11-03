@@ -214,7 +214,9 @@ def update_deployment_nodes(*, update_id):
                 if old_rel_key not in new_rel_keys:
                     new_attributes['relationships'].append(
                         old_rel._relationship)
-
+            for rel in new_attributes['relationships']:
+                rel.pop('source_interfaces', None)
+                rel.pop('target_interfaces', None)
         client.nodes.update(
             dep_up.deployment_id, node_name,
             **new_attributes
@@ -287,9 +289,13 @@ def delete_removed_relationships(*, update_id):
         else:
             raise RuntimeError(f'Node {node_name} not found in the plan')
         if 'relationships' in changed_attrs:
+            new_relationships = plan_node['relationships']
+            for rel in new_relationships:
+                rel.pop('source_interfaces', None)
+                rel.pop('target_interfaces', None)
             client.nodes.update(
                 dep_up.deployment_id, node_name,
-                relationships=plan_node['relationships']
+                relationships=new_relationships
             )
 
     if update_instances.get('reduced_and_related'):
