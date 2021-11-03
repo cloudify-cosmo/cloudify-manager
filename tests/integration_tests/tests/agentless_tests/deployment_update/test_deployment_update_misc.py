@@ -53,10 +53,10 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
                                               blueprint_id):
             self.client.blueprints.upload(bp_path, blueprint_id)
             wait_for_blueprint_upload(blueprint_id, self.client)
-            dep_update = self._do_update(dep.id, blueprint_id)
+            self._do_update(dep.id, blueprint_id)
 
             # verify deployment output
-            dep = self.client.deployments.get(dep_update.deployment_id)
+            dep = self.client.deployments.get(deployment.id)
             self._assertDictContainsSubset(
                 {'custom_output': {'value': expected_output_value}},
                 dep.outputs)
@@ -64,20 +64,20 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
             self.assertEqual('modified description' in dep.description,
                              is_description_modified)
 
+        self.assertEqual(
+            self.client.deployments.get(deployment.id).blueprint_id, 'start')
+
         # modify output and verify
         update_deployment_wait_and_assert(
             deployment, modification_bp_path, 1, False, 'first')
+        self.assertEqual(
+            self.client.deployments.get(deployment.id).blueprint_id, 'first')
+
         # modify output again and modify description
         update_deployment_wait_and_assert(
             deployment, remodification_bp_path, 2, True, 'second')
-
-        executions = [ex for ex in
-                      self.client.executions.list(is_descending=False)
-                      if ex.workflow_id != 'upload_blueprint']
-        self.assertEqual('start', executions[0].blueprint_id)
-        self.assertEqual('start', executions[1].blueprint_id)
-        self.assertEqual('first', executions[2].blueprint_id)
-        self.assertEqual('second', executions[3].blueprint_id)
+        self.assertEqual(
+            self.client.deployments.get(deployment.id).blueprint_id, 'second')
 
     def test_modify_deployment_update_schema(self):
         # this test verifies that storage (elasticsearch) can deal with
