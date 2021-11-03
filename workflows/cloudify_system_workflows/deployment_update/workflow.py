@@ -476,6 +476,22 @@ def _establish_relationships(ctx, graph, extended_and_related, **kwargs):
     )
 
 
+def _find_reinstall_instances(steps):
+    nodes_to_reinstall = set()
+    for step in steps:
+        if step['entity_type'] not in ('property', 'operation'):
+            continue
+        modified = step['entity_id'].split(':')
+        if not modified or modified[0] != 'nodes':
+            continue
+        nodes_to_reinstall.add(modified[1])
+    to_reinstall = []
+    for node_id in nodes_to_reinstall:
+        node = workflow_ctx.get_node(node_id)
+        to_reinstall.extend(node.instances)
+    return to_reinstall
+
+
 def _execute_deployment_update(ctx, client, update_id, **kwargs):
     """Do all the non-preview, destructive, update operations."""
     graph = ctx.graph_mode()
@@ -544,9 +560,48 @@ def _execute_deployment_update(ctx, client, update_id, **kwargs):
         _establish_relationships(
             ctx, graph, update_instances['extended_and_related'], **kwargs)
 
+    _reinstall_instances(
+        graph,
+        dep_up,
+        install_instances,
+        uninstall_instances,
+        ignore_failure=kwargs.get('ignore_failure', False),
+        skip_reinstall=kwargs.get('skip_reinstall', False),
+    )
     _clear_graph(graph)
     graph = _post_update_graph(ctx, update_id)
     graph.execute()
+
+
+def _reinstall_instances(graph, dep_up, to_install, to_uninstall,
+                         ignore_failure=False, skip_reinstall=False):
+    install_ids = {ni.id for ni in to_install}
+    uninstall_ids = {ni.id for ni in to_uninstall}
+    skip_ids = install_ids | uninstall_ids
+    subgraph = set()
+    if skip_reinstall:
+        to_reinstall = []
+    else:
+        to_reinstall = _find_reinstall_instances(dep_up.steps)
+    for ni in to_reinstall:
+        if ni.id in skip_ids:
+            continue
+        subgraph |= ni.get_contained_subgraph()
+    subgraph -= set(to_uninstall)
+    intact_nodes = set(workflow_ctx.node_instances) - subgraph - set(to_uninstall)
+    for n in subgraph:
+        for r in n._relationship_instances:
+            if r in uninstall_ids:
+                n._relationship_instances.pop(r)
+    if subgraph:
+        _clear_graph(graph)
+        lifecycle.reinstall_node_instances(
+            graph=graph,
+            node_instances=subgraph,
+            related_nodes=intact_nodes,
+            ignore_failure=ignore_failure
+        )
+
 
 
 @workflow
