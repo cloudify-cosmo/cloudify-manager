@@ -7,6 +7,8 @@ from cloudify.plugins import lifecycle
 
 from dsl_parser import tasks
 
+from .. import idd
+
 from .step_extractor import extract_steps
 
 
@@ -382,13 +384,19 @@ def set_deployment_attributes(*, update_id):
     if dep_up.new_blueprint_id:
         new_attributes['blueprint_id'] = dep_up.new_blueprint_id
         # in the currently-running execution, update the current context as
-        # well, so that later graphs downlod scripts from the new blueprint.
+        # well, so that later graphs downlood scripts from the new blueprint.
         # Unfortunate, but no public method for this just yet
         workflow_ctx._context['blueprint_id'] = dep_up.new_blueprint_id
     client.deployments.set_attributes(
         dep_up.deployment_id,
         **new_attributes
     )
+
+
+def update_inter_deployment_dependencies(*, update_id):
+    client = get_rest_client()
+    dep_up = client.deployment_updates.get(update_id)
+    idd.update(client, dep_up.deployment_plan)
 
 
 def _perform_update_graph(ctx, update_id, **kwargs):
@@ -401,6 +409,9 @@ def _perform_update_graph(ctx, update_id, **kwargs):
     seq = graph.sequence()
     seq.add(
         ctx.local_task(set_deployment_attributes, kwargs={
+            'update_id': update_id,
+        }, total_retries=0),
+        ctx.local_task(update_inter_deployment_dependencies, kwargs={
             'update_id': update_id,
         }, total_retries=0),
         ctx.local_task(update_deployment_nodes, kwargs={

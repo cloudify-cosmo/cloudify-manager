@@ -37,6 +37,39 @@ def create(client: CloudifyClient,
             external_idds)
 
 
+def update(client: CloudifyClient,
+           deployment_plan: dsl_models.Plan):
+    """Update inter-deployment dependencies based on the deployment_plan."""
+    new_dependencies = deployment_plan.setdefault(
+        dsl_constants.INTER_DEPLOYMENT_FUNCTIONS, {})
+    if not new_dependencies:
+        return
+    workflow_ctx.logger.info('Updating inter-deployment dependencies for '
+                             f'deployment `{workflow_ctx.deployment.id}`')
+    manager_ips = [manager.private_ip
+                   for manager in client.manager.get_managers()]
+    ext_client, client_config, ext_deployment_id = \
+        _get_external_clients(deployment_plan['nodes'], manager_ips)
+
+    local_tenant_name = workflow_ctx.tenant_name if ext_client else None
+    local_idds, external_idds = _do_create(
+        manager_ips,
+        client_config,
+        new_dependencies,
+        workflow_ctx.deployment.id,
+        local_tenant_name,
+        bool(ext_client),
+        ext_deployment_id)
+    if local_idds:
+        client.inter_deployment_dependencies.update_all(
+            workflow_ctx.deployment.id,
+            local_idds)
+    if external_idds:
+        ext_client.inter_deployment_dependencies.update_all(
+            workflow_ctx.deployment.id,
+            external_idds)
+
+
 def _do_create(manager_ips: list,
                client_config,
                new_dependencies: dict,
