@@ -403,6 +403,7 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
 
 class NewTestDeploymentUpdateModification(TestDeploymentUpdateModification):
     _workflow_name = 'csys_new_deployment_update'
+
     def _do_update(self, deployment_id, blueprint_id=None,
                    preview=False, inputs=None, skip_reinstall=False, **kwargs):
         params = {
