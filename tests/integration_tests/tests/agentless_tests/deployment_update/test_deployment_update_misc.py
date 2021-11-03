@@ -105,16 +105,16 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
             blueprint_id = 'b{0}'.format(uuid4())
             self.client.blueprints.upload(bp_path, blueprint_id)
             wait_for_blueprint_upload(blueprint_id, self.client)
-            dep_update = self._do_update(dep.id, blueprint_id)
+            self._do_update(dep.id, blueprint_id)
 
             # verify deployment output value
             outputs = self.client.deployments.outputs.get(
-                dep_update.deployment_id).outputs
+                deployment.id).outputs
             self.assertDictEqual(
                 {'custom_output': expected_output_value},
                 outputs)
             # verify deployment output definition
-            dep = self.client.deployments.get(dep_update.deployment_id)
+            dep = self.client.deployments.get(deployment.id)
             self.assertDictEqual(
                 {'custom_output': {'value': expected_output_definition}},
                 dep.outputs)
@@ -538,3 +538,24 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
         for deployment_id in group.deployment_ids:
             dep = self.client.deployments.get(deployment_id)
             self.assertIn('description', dep.description)
+
+
+class NewTestDeploymentUpdateMisc(DeploymentUpdateBase):
+    test_deployment_updated_twice = TestDeploymentUpdateMisc.test_deployment_updated_twice
+    test_modify_deployment_update_schema = TestDeploymentUpdateMisc.test_modify_deployment_update_schema
+    test_add_and_override_resource = TestDeploymentUpdateMisc.test_add_and_override_resource
+
+    def _do_update(self, deployment_id, blueprint_id=None,
+                   preview=False, inputs=None, skip_reinstall=False, **kwargs):
+        params = {
+            'blueprint_id': blueprint_id,
+        }
+        if preview:
+            params['preview'] = preview
+        if inputs:
+            params['inputs'] = inputs
+        if skip_reinstall:
+            params['skip_reinstall'] = skip_reinstall
+        exc = self.client.executions.start(
+            deployment_id, 'csys_new_deployment_update', parameters=params)
+        self.wait_for_execution_to_end(exc)
