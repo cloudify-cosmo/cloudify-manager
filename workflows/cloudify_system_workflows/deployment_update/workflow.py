@@ -247,6 +247,39 @@ def _format_instance_relationships(node_instance):
     ]
 
 
+def reorder_node_instance_relationships(*, update_id):
+    client = get_rest_client()
+    dep_up = client.deployment_updates.get(update_id)
+    node_reorders = defaultdict(dict)
+    for step in dep_up.steps:
+        # find steps that modify relationships, with entity_id like
+        # nodes:node_id:relationships:[1]:[0] - that means relationship
+        # at index=1 is to be moved to index=0
+        if step['action'] != 'modify' or step['entity_type'] != 'relationship':
+            continue
+        parts = step['entity_id'].split(':')
+        if len(parts) != 5:
+            continue
+        _, node_id, _, from_ix, to_ix = parts
+        from_ix = int(from_ix.strip('[]'))
+        to_ix = int(to_ix.strip('[]'))
+        node_reorders[node_id][to_ix] = from_ix
+
+    for node_id, reorders in node_reorders.items():
+        node = workflow_ctx.get_node(node_id)
+        for ni in node.instances:
+            reordered = []
+            old_relationships = _format_instance_relationships(ni)
+            for old_ix, _ in enumerate(old_relationships):
+                new_ix = reorders.get(old_ix, old_ix)
+                reordered.append(old_relationships[new_ix])
+            client.node_instances.update(
+                ni.id,
+                relationships=reordered,
+                force=True
+            )
+
+
 def update_deployment_node_instances(*, update_id):
     client = get_rest_client()
     dep_up = client.deployment_updates.get(update_id)
@@ -360,6 +393,9 @@ def _perform_update_graph(ctx, update_id, **kwargs):
             'update_id': update_id,
         }, total_retries=0),
         ctx.local_task(update_deployment_node_instances, kwargs={
+            'update_id': update_id,
+        }, total_retries=0),
+        ctx.local_task(reorder_node_instance_relationships, kwargs={
             'update_id': update_id,
         }, total_retries=0),
     )
