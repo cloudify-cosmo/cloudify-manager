@@ -214,7 +214,9 @@ def update_deployment_nodes(*, update_id):
                 if old_rel_key not in new_rel_keys:
                     new_attributes['relationships'].append(
                         old_rel._relationship)
-
+            for rel in new_attributes['relationships']:
+                rel.pop('source_interfaces', None)
+                rel.pop('target_interfaces', None)
         client.nodes.update(
             dep_up.deployment_id, node_name,
             **new_attributes
@@ -233,16 +235,63 @@ def update_deployment_nodes(*, update_id):
     )
 
 
-def _format_old_relationships(node_instance):
+def _format_instance_relationships(node_instance):
     """Dump ni's relationships to a dict that can be parsed by RESTservice"""
     return [
         {
-            'target_id': old_rel.relationship.target_id,
+            'target_id': old_rel.target_id,
             'target_name': old_rel.relationship.target_node.id,
             'type': old_rel.relationship.type,
         }
         for old_rel in node_instance.relationships
     ]
+
+
+def _parse_reorder_relationships_step(step):
+    """Return parts of the step, if this is a reorder-relationships, or None
+
+    Parse steps that modify relationships, with entity_id like
+    nodes:node_id:relationships:[1]:[0] - that means relationship
+    at index=1 is to be moved to index=0.
+    """
+    if step['action'] != 'modify' or step['entity_type'] != 'relationship':
+        return None
+    parts = step['entity_id'].split(':')
+    if len(parts) != 5:
+        return None
+    # parts is expected to be: ["nodes", node_id, "relationships", from, to]
+    nodes_label, node_id, relationships_label, from_ix, to_ix = parts
+    if nodes_label != 'nodes' or relationships_label != 'relationships':
+        return None
+    from_ix = int(from_ix.strip('[]'))
+    to_ix = int(to_ix.strip('[]'))
+    return node_id, from_ix, to_ix
+
+
+def reorder_node_instance_relationships(*, update_id):
+    client = get_rest_client()
+    dep_up = client.deployment_updates.get(update_id)
+    node_reorders = defaultdict(dict)
+    for step in dep_up.steps:
+        reorder_parts = _parse_reorder_relationships_step(step)
+        if reorder_parts is None:
+            continue
+        node_id, from_ix, to_ix = reorder_parts
+        node_reorders[node_id][to_ix] = from_ix
+
+    for node_id, reorders in node_reorders.items():
+        node = workflow_ctx.get_node(node_id)
+        for ni in node.instances:
+            reordered = []
+            old_relationships = _format_instance_relationships(ni)
+            for old_ix, _ in enumerate(old_relationships):
+                new_ix = reorders.get(old_ix, old_ix)
+                reordered.append(old_relationships[new_ix])
+            client.node_instances.update(
+                ni.id,
+                relationships=reordered,
+                force=True
+            )
 
 
 def update_deployment_node_instances(*, update_id):
@@ -263,7 +312,7 @@ def update_deployment_node_instances(*, update_id):
         for ni in update_instances['extended_and_related']:
             if ni.get('modification') != 'extended':
                 continue
-            old_rels = _format_old_relationships(
+            old_rels = _format_instance_relationships(
                 workflow_ctx.get_node_instance(ni['id']))
             client.node_instances.update(
                 ni['id'],
@@ -287,16 +336,20 @@ def delete_removed_relationships(*, update_id):
         else:
             raise RuntimeError(f'Node {node_name} not found in the plan')
         if 'relationships' in changed_attrs:
+            new_relationships = plan_node['relationships']
+            for rel in new_relationships:
+                rel.pop('source_interfaces', None)
+                rel.pop('target_interfaces', None)
             client.nodes.update(
                 dep_up.deployment_id, node_name,
-                relationships=plan_node['relationships']
+                relationships=new_relationships
             )
 
     if update_instances.get('reduced_and_related'):
         for ni in update_instances['reduced_and_related']:
             if ni.get('modification') != 'reduced':
                 continue
-            old_rels = _format_old_relationships(
+            old_rels = _format_instance_relationships(
                 workflow_ctx.get_node_instance(ni['id']))
             new_rels = []
             # yes, in this, .relationships is the list of relationships
@@ -304,7 +357,7 @@ def delete_removed_relationships(*, update_id):
             delete_rels = ni['relationships']
             for old_rel in old_rels:
                 if not any(
-                    old_rel.get('target_id') == to_delete['target_name']
+                    old_rel.get('target_name') == to_delete['target_name']
                     and old_rel['type'] == to_delete['type']
                     for to_delete in delete_rels
                 ):
@@ -354,6 +407,9 @@ def _perform_update_graph(ctx, update_id, **kwargs):
             'update_id': update_id,
         }, total_retries=0),
         ctx.local_task(update_deployment_node_instances, kwargs={
+            'update_id': update_id,
+        }, total_retries=0),
+        ctx.local_task(reorder_node_instance_relationships, kwargs={
             'update_id': update_id,
         }, total_retries=0),
     )
@@ -434,6 +490,22 @@ def _establish_relationships(ctx, graph, extended_and_related, **kwargs):
     )
 
 
+def _find_reinstall_instances(steps):
+    nodes_to_reinstall = set()
+    for step in steps:
+        if step['entity_type'] not in ('property', 'operation'):
+            continue
+        modified = step['entity_id'].split(':')
+        if not modified or modified[0] != 'nodes':
+            continue
+        nodes_to_reinstall.add(modified[1])
+    to_reinstall = []
+    for node_id in nodes_to_reinstall:
+        node = workflow_ctx.get_node(node_id)
+        to_reinstall.extend(node.instances)
+    return to_reinstall
+
+
 def _execute_deployment_update(ctx, client, update_id, **kwargs):
     """Do all the non-preview, destructive, update operations."""
     graph = ctx.graph_mode()
@@ -502,9 +574,51 @@ def _execute_deployment_update(ctx, client, update_id, **kwargs):
         _establish_relationships(
             ctx, graph, update_instances['extended_and_related'], **kwargs)
 
+    _reinstall_instances(
+        graph,
+        dep_up,
+        install_instances,
+        uninstall_instances,
+        ignore_failure=kwargs.get('ignore_failure', False),
+        skip_reinstall=kwargs.get('skip_reinstall', False),
+    )
     _clear_graph(graph)
     graph = _post_update_graph(ctx, update_id)
     graph.execute()
+
+
+def _reinstall_instances(graph, dep_up, to_install, to_uninstall,
+                         ignore_failure=False, skip_reinstall=False):
+    install_ids = {ni.id for ni in to_install}
+    uninstall_ids = {ni.id for ni in to_uninstall}
+    skip_ids = install_ids | uninstall_ids
+    subgraph = set()
+    if skip_reinstall:
+        to_reinstall = []
+    else:
+        to_reinstall = _find_reinstall_instances(dep_up.steps)
+    for ni in to_reinstall:
+        if ni.id in skip_ids:
+            continue
+        subgraph |= ni.get_contained_subgraph()
+    subgraph -= set(to_uninstall)
+    intact_nodes = (
+        set(workflow_ctx.node_instances)
+        - subgraph
+        - set(to_uninstall)
+    )
+    for n in subgraph:
+        for r in n._relationship_instances:
+            if r in uninstall_ids:
+                n._relationship_instances.pop(r)
+    if subgraph:
+        _clear_graph(graph)
+        lifecycle.reinstall_node_instances(
+            graph=graph,
+            node_instances=subgraph,
+            related_nodes=intact_nodes,
+            ignore_failure=ignore_failure
+        )
 
 
 @workflow
