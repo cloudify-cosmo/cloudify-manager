@@ -15,6 +15,8 @@ from manager_rest.storage import get_storage_manager, models
 
 
 def execute_workflow(messages):
+    if not messages:
+        return
     client = get_amqp_client()
     handler = workflow_sendhandler()
     client.add_handler(handler)

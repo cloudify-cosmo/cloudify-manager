@@ -1,18 +1,3 @@
-#########
-# Copyright (c) 2017 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-#
 import uuid
 from datetime import datetime
 
@@ -110,6 +95,21 @@ class Executions(SecuredResource):
         parameters = request_dict.get('parameters', None)
         wait_after_fail = request_dict.get('wait_after_fail', 600)
         scheduled_time = request_dict.get('scheduled_time', None)
+        force_status = request_dict.get('force_status', None)
+
+        if force_status and scheduled_time:
+            raise manager_exceptions.BadParametersError(
+                'A status cannot be forced when scheduling an execution.'
+            )
+
+        if force_status and force_status not in ExecutionState.STATES:
+            raise manager_exceptions.BadParametersError(
+                'Force status was set to invalid state "{state}". '
+                'Valid states are: {valid}'.format(
+                    state=force_status,
+                    valid=','.join(ExecutionState.STATES),
+                )
+            )
 
         if scheduled_time:
             sm = get_storage_manager()
@@ -149,17 +149,19 @@ class Executions(SecuredResource):
                 deployment=deployment,
                 parameters=parameters,
                 is_dry_run=dry_run,
-                status=ExecutionState.PENDING,
+                status=force_status or ExecutionState.PENDING,
                 allow_custom_parameters=allow_custom_parameters,
             )
             sm.put(execution)
-            messages = rm.prepare_executions(
-                [execution],
-                bypass_maintenance=is_bypass_maintenance_mode(),
-                force=force,
-                queue=queue,
-                wait_after_fail=wait_after_fail,
-            )
+            messages = []
+            if not force_status:
+                messages = rm.prepare_executions(
+                    [execution],
+                    bypass_maintenance=is_bypass_maintenance_mode(),
+                    force=force,
+                    queue=queue,
+                    wait_after_fail=wait_after_fail,
+                )
         workflow_executor.execute_workflow(messages)
         return execution, 201
 
