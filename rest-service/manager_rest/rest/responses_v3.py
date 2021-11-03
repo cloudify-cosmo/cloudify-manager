@@ -62,6 +62,7 @@ class UserResponse(BaseResponse):
         'last_login_at': fields.String,
         'is_locked': fields.Boolean,
         'show_getting_started': fields.Boolean,
+        'password_hash': fields.String,
     }
 
 
