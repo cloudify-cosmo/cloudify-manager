@@ -161,7 +161,7 @@ def create(ctx, labels=None, inputs=None, skip_plugins_validation=False,
         tenant=ctx.tenant_name,
         logger=ctx.logger)
 
-    idd.create(client, deployment_plan)
+    idd.create(ctx, client, deployment_plan)
 
 
 @workflow

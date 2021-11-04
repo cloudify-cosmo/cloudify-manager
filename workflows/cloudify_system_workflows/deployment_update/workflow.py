@@ -393,10 +393,10 @@ def set_deployment_attributes(*, update_id):
     )
 
 
-def update_inter_deployment_dependencies(*, update_id):
+def update_inter_deployment_dependencies(*, ctx, update_id):
     client = get_rest_client()
     dep_up = client.deployment_updates.get(update_id)
-    idd.update(client, dep_up.deployment_plan)
+    idd.update(ctx, client, dep_up.deployment_plan)
 
 
 def _perform_update_graph(ctx, update_id, **kwargs):
@@ -412,7 +412,7 @@ def _perform_update_graph(ctx, update_id, **kwargs):
             'update_id': update_id,
         }, total_retries=0),
         ctx.local_task(update_inter_deployment_dependencies, kwargs={
-            'update_id': update_id,
+            'ctx': ctx, 'update_id': update_id,
         }, total_retries=0),
         ctx.local_task(update_deployment_nodes, kwargs={
             'update_id': update_id,

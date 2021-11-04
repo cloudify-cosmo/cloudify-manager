@@ -1,101 +1,91 @@
+from typing import Dict, List, Optional, Sequence, Tuple
+
 from cloudify.deployment_dependencies import create_deployment_dependency
-from cloudify.state import workflow_ctx
+from cloudify.workflows.workflow_context import CloudifyWorkflowContext
 from cloudify_rest_client.client import CloudifyClient
 from dsl_parser import constants as dsl_constants
 from dsl_parser import models as dsl_models
 
 
-def create(client: CloudifyClient,
+def create(ctx: CloudifyWorkflowContext,
+           client: CloudifyClient,
            deployment_plan: dsl_models.Plan):
     """Create inter-deployment dependencies based on the deployment_plan."""
-    new_dependencies = deployment_plan.setdefault(
-        dsl_constants.INTER_DEPLOYMENT_FUNCTIONS, {})
-    if not new_dependencies:
-        return
-    workflow_ctx.logger.info('Creating inter-deployment dependencies')
-    manager_ips = [manager.private_ip
-                   for manager in client.manager.get_managers()]
-    ext_client, client_config, ext_deployment_id = \
-        _get_external_clients(deployment_plan['nodes'], manager_ips)
-
-    local_tenant_name = workflow_ctx.tenant_name if ext_client else None
-    local_idds, external_idds = _do_create(
-        manager_ips,
-        client_config,
-        new_dependencies,
-        workflow_ctx.deployment.id,
-        local_tenant_name,
-        bool(ext_client),
-        ext_deployment_id)
-    if local_idds:
+    local_dependencies, external_dependencies, ext_client = _prepare(
+        deployment_plan,
+        client.manager.get_managers(),
+        deployment_plan['nodes'],
+        ctx.tenant_name,
+        ctx.deployment.id,
+    )
+    if local_dependencies:
         client.inter_deployment_dependencies.create_many(
-            workflow_ctx.deployment.id,
-            local_idds)
-    if external_idds:
+            ctx.deployment.id,
+            local_dependencies)
+    if external_dependencies:
         ext_client.inter_deployment_dependencies.create_many(
-            workflow_ctx.deployment.id,
-            external_idds)
+            ctx.deployment.id,
+            external_dependencies)
 
 
-def update(client: CloudifyClient,
+def update(ctx: CloudifyWorkflowContext,
+           client: CloudifyClient,
            deployment_plan: dsl_models.Plan):
     """Update inter-deployment dependencies based on the deployment_plan."""
+    local_dependencies, external_dependencies, ext_client = _prepare(
+        deployment_plan,
+        client.manager.get_managers(),
+        deployment_plan['nodes'],
+        ctx.tenant_name,
+        ctx.deployment.id,
+    )
+    if local_dependencies:
+        client.inter_deployment_dependencies.update_all(
+            ctx.deployment.id,
+            local_dependencies)
+    if external_dependencies:
+        ext_client.inter_deployment_dependencies.update_all(
+            ctx.deployment.id,
+            external_dependencies)
+
+
+def _prepare(deployment_plan: dsl_models.Plan,
+             managers: Sequence,
+             nodes: List,
+             tenant_name: str,
+             local_deployment_id: str,
+             ) -> Tuple[List, List, Optional[CloudifyClient]]:
+
     new_dependencies = deployment_plan.setdefault(
         dsl_constants.INTER_DEPLOYMENT_FUNCTIONS, {})
     if not new_dependencies:
-        return
-    workflow_ctx.logger.info('Updating inter-deployment dependencies for '
-                             f'deployment `{workflow_ctx.deployment.id}`')
-    manager_ips = [manager.private_ip
-                   for manager in client.manager.get_managers()]
+        return [], [], None
+
+    manager_ips = [manager.private_ip for manager in managers]
     ext_client, client_config, ext_deployment_id = \
-        _get_external_clients(deployment_plan['nodes'], manager_ips)
+        _get_external_clients(manager_ips, nodes)
+    local_tenant_name = tenant_name if ext_client else None
 
-    local_tenant_name = workflow_ctx.tenant_name if ext_client else None
-    local_idds, external_idds = _do_create(
-        manager_ips,
-        client_config,
-        new_dependencies,
-        workflow_ctx.deployment.id,
-        local_tenant_name,
-        bool(ext_client),
-        ext_deployment_id)
-    if local_idds:
-        client.inter_deployment_dependencies.update_all(
-            workflow_ctx.deployment.id,
-            local_idds)
-    if external_idds:
-        ext_client.inter_deployment_dependencies.update_all(
-            workflow_ctx.deployment.id,
-            external_idds)
-
-
-def _do_create(manager_ips: list,
-               client_config,
-               new_dependencies: dict,
-               local_deployment_id: str,
-               local_tenant_name: str,
-               external: bool,
-               ext_deployment_id: str) -> tuple:
-    local_idds = []
-    external_idds = []
+    local_dependencies, external_dependencies = [], []
     for func_id, deployment_id_func in new_dependencies.items():
         target_deployment_id, target_deployment_func = deployment_id_func
-        if external:
-            local_idds += [
+        if ext_client:
+            local_dependencies += [
                 create_deployment_dependency(
                     dependency_creator=func_id,
                     target_deployment=None,
                     external_target={
                         'deployment': (ext_deployment_id
-                                       if ext_deployment_id else None),
+                                       if ext_deployment_id
+                                       else None),
                         'client_config': client_config
                     })]
-            external_idds += [
+            external_dependencies += [
                 create_deployment_dependency(
                     dependency_creator=func_id,
                     target_deployment=(target_deployment_id
-                                       if target_deployment_id else ' '),
+                                       if target_deployment_id
+                                       else ' '),
                     external_source={
                         'deployment': local_deployment_id,
                         'tenant': local_tenant_name,
@@ -106,18 +96,23 @@ def _do_create(manager_ips: list,
             # is known, there's no point passing target_deployment_func.
             # Also because in this case the target_deployment_func will
             # be of type string, while REST endpoint expects a dict.
-            local_idds += [
+            local_dependencies += [
                 create_deployment_dependency(
                     dependency_creator=func_id,
                     target_deployment=target_deployment_id,
                     target_deployment_func=(
-                        target_deployment_func if not target_deployment_id
+                        target_deployment_func
+                        if not target_deployment_id
                         else None)
                 )]
-    return local_idds, external_idds
+    return local_dependencies, external_dependencies, ext_client
 
 
-def _get_external_clients(nodes: list, manager_ips: list):
+def _get_external_clients(manager_ips: List,
+                          nodes: List
+                          ) -> Tuple[Optional[CloudifyClient],
+                                     Dict,
+                                     Optional[str]]:
     client_config = None
     target_deployment = None
     for node in nodes:
