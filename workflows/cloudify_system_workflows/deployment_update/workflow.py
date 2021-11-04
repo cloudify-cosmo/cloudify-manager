@@ -521,11 +521,6 @@ def _execute_deployment_update(ctx, client, update_id, **kwargs):
     """Do all the non-preview, destructive, update operations."""
     graph = ctx.graph_mode()
 
-    _clear_graph(graph)
-    graph = _perform_update_graph(ctx, update_id)
-    graph.execute()
-    ctx.refresh_node_instances()
-
     dep_up = client.deployment_updates.get(update_id)
     update_instances = dep_up['deployment_update_node_instances']
 
@@ -593,9 +588,6 @@ def _execute_deployment_update(ctx, client, update_id, **kwargs):
         ignore_failure=kwargs.get('ignore_failure', False),
         skip_reinstall=kwargs.get('skip_reinstall', False),
     )
-    _clear_graph(graph)
-    graph = _post_update_graph(ctx, update_id)
-    graph.execute()
 
 
 def _reinstall_instances(graph, dep_up, to_install, to_uninstall,
@@ -640,7 +632,16 @@ def update_deployment(ctx, *, preview=False, **kwargs):
     graph.execute()
 
     if not preview:
+        _clear_graph(graph)
+        graph = _perform_update_graph(ctx, update_id)
+        graph.execute()
+        ctx.refresh_node_instances()
+
         _execute_deployment_update(ctx, client, update_id, **kwargs)
+
+        _clear_graph(graph)
+        graph = _post_update_graph(ctx, update_id)
+        graph.execute()
 
     client.deployment_updates.set_attributes(
         update_id,
