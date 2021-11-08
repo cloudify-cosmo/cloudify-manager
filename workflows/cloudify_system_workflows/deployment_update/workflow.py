@@ -1,5 +1,4 @@
 from collections import defaultdict
-from functools import wraps
 import time
 
 from cloudify.decorators import workflow
@@ -672,7 +671,7 @@ def _execute_deployment_update(ctx, client, update_id, install_params):
 
     dep_up = client.deployment_updates.get(update_id)
 
-    if install_params.reduced  and not install_params.skip_uninstall:
+    if install_params.reduced and not install_params.skip_uninstall:
         _clear_graph(graph)
         _unlink_relationships(ctx, graph, install_params)
 
@@ -728,7 +727,6 @@ def _execute_custom_workflow(client, dep_up, workflow_id, install_params,
         time.sleep(1)
         if deadline and time.time() > deadline:
             raise NonRecoverableError(f'Timeout running {workflow_id}')
-
 
 
 @workflow

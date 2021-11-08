@@ -533,7 +533,6 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
             self.assertIn('description', dep.description)
 
 
-
 class NewTestDeploymentUpdateMisc(TestDeploymentUpdateMisc):
     _group_update_workflow = 'csys_new_deployment_update'
 
