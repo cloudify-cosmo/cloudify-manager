@@ -1,9 +1,12 @@
 from collections import defaultdict
 from functools import wraps
+import time
 
 from cloudify.decorators import workflow
+from cloudify.exceptions import NonRecoverableError
 from cloudify.state import workflow_ctx, workflow_parameters
 from cloudify.manager import get_rest_client
+from cloudify.models_states import ExecutionState
 from cloudify.plugins import lifecycle
 
 from dsl_parser import tasks
@@ -555,22 +558,32 @@ class InstallParameters(object):
     provided by the user. All the install/uninstall/reinstall parameters
     are encapsulated in this.
     """
+    update_id: str
+
     added: list
     added_targets: list
+    added_ids: list
+    added_target_ids: list
     added_instances: list
     added_target_instances: list
 
     removed: list
+    removed_ids: list
+    removed_target_ids: list
     removed_targets: list
     removed_instances: list
     removed_target_instances: list
 
     extended: list
+    extended_ids: list
+    extended_target_ids: list
     extended_targets: list
     extended_instances: list
     extended_target_instances: list
 
     reduced: list
+    reduced_ids: list
+    reduced_target_ids: list
     reduced_targets: list
     reduced_instances: list
     reduced_target_instances: list
@@ -580,6 +593,7 @@ class InstallParameters(object):
 
     def __init__(self, ctx, update_params, dep_update):
         self._update_instances = dep_update['deployment_update_node_instances']
+        self.update_id = dep_update.id
 
         for kind in ['added', 'removed', 'extended', 'reduced']:
             changed, related = self._split_by_modification(
@@ -619,6 +633,33 @@ class InstallParameters(object):
             else:
                 second.append(instance)
         return first, second
+
+    @property
+    def modified_entity_ids(self):
+        # TODO: compute this (RD-3523)
+        return []
+
+    def as_workflow_parameters(self):
+        return {
+            'update_id': self.update_id,
+            'modified_entity_ids': self.modified_entity_ids,
+            'added_instance_ids': self.added_ids,
+            'added_target_instances_ids': self.added_target_ids,
+            'removed_instance_ids': self.removed_ids,
+            'remove_target_instance_ids': self.removed_target_ids,
+            'extended_instance_ids': self.extended_ids,
+            'extend_target_instance_ids': self.extended_target_ids,
+            'reduced_instance_ids': self.reduced_ids,
+            'reduce_target_instance_ids': self.reduced_target_ids,
+            'skip_install': self.skip_install,
+            'skip_uninstall': self.skip_uninstall,
+            'ignore_failure': self.ignore_failure,
+            'install_first': False,
+            'node_instances_to_reinstall': None,
+            'central_plugins_to_install': None,
+            'central_plugins_to_uninstall': None,
+            'update_plugins': True
+        }
 
 
 def _execute_deployment_update(ctx, client, update_id, install_params):
@@ -664,9 +705,36 @@ def _execute_deployment_update(ctx, client, update_id, install_params):
     )
 
 
+def _execute_custom_workflow(client, dep_up, workflow_id, install_params,
+                             custom_workflow_timeout=None):
+    execution = client.executions.start(
+        dep_up.deployment_id,
+        workflow_id,
+        parameters=install_params.as_workflow_parameters(),
+        allow_custom_parameters=True,
+        force=True
+    )
+    if custom_workflow_timeout:
+        deadline = time.time() + custom_workflow_timeout
+    else:
+        deadline = None
+    while True:
+        execution = client.executions.get(execution.id)
+        if execution.status in ExecutionState.END_STATES:
+            if execution.status != ExecutionState.TERMINATED:
+                NonRecoverableError(
+                    f'{workflow_id} is in state {execution.status}')
+            break
+        time.sleep(1)
+        if deadline and time.time() > deadline:
+            raise NonRecoverableError(f'Timeout running {workflow_id}')
+
+
+
 @workflow
 def update_deployment(ctx, *, preview=False, ignore_failure=False,
-                      skip_reinstall=False, **kwargs):
+                      skip_reinstall=False, workflow_id=None,
+                      custom_workflow_timeout=None, **kwargs):
     client = get_rest_client()
     update_id = '{0}_{1}'.format(ctx.deployment.id, ctx.execution_id)
     graph = _prepare_update_graph(ctx, update_id, **kwargs)
@@ -677,11 +745,13 @@ def update_deployment(ctx, *, preview=False, ignore_failure=False,
         graph = _perform_update_graph(ctx, update_id)
         graph.execute()
         ctx.refresh_node_instances()
-        install_params = InstallParameters(
-            ctx, workflow_parameters,
-            client.deployment_updates.get(update_id)
-        )
-        _execute_deployment_update(ctx, client, update_id, install_params)
+        dep_up = client.deployment_updates.get(update_id)
+        install_params = InstallParameters(ctx, workflow_parameters, dep_up)
+        if workflow_id:
+            _execute_custom_workflow(client, dep_up, workflow_id,
+                                     install_params, custom_workflow_timeout)
+        else:
+            _execute_deployment_update(ctx, client, update_id, install_params)
 
         _clear_graph(graph)
         graph = _post_update_graph(ctx, update_id)
