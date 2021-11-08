@@ -550,7 +550,7 @@ def _reinstall_instances(graph, dep_up, to_install, to_uninstall,
         )
 
 
-class InstallParameters(object):
+class InstallParameters:
     """Packaged parameters for the install part of the workflow.
 
     This is to be given to the install part, or to the custom workflow
