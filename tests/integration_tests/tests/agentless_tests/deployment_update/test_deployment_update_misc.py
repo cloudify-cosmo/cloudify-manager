@@ -263,8 +263,8 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
         wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
-        dep_update = self._do_update(deployment.id, BLUEPRINT_ID,
-                                     workflow_id='custom_workflow')
+        self._do_update(
+            deployment.id, BLUEPRINT_ID, workflow_id='custom_workflow')
 
         modified_nodes, modified_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
@@ -285,10 +285,7 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
 
         intact_node_instance = modified_node_instances['intact'][0]
 
-        self._assertDictContainsSubset(
-            {'update_id': dep_update.id},
-            intact_node_instance.runtime_properties
-        )
+        self.assertIn('update_id', intact_node_instance.runtime_properties)
 
         workflows = [e['workflow_id'] for e in
                      self.client.executions.list(deployment_id=deployment.id,
