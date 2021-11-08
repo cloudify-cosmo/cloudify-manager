@@ -263,8 +263,8 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
         wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
-        dep_update = self._do_update(deployment.id, BLUEPRINT_ID,
-                                     workflow_id='custom_workflow')
+        self._do_update(
+            deployment.id, BLUEPRINT_ID, workflow_id='custom_workflow')
 
         modified_nodes, modified_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
@@ -285,10 +285,7 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
 
         intact_node_instance = modified_node_instances['intact'][0]
 
-        self._assertDictContainsSubset(
-            {'update_id': dep_update.id},
-            intact_node_instance.runtime_properties
-        )
+        self.assertIn('update_id', intact_node_instance.runtime_properties)
 
         workflows = [e['workflow_id'] for e in
                      self.client.executions.list(deployment_id=deployment.id,
@@ -454,12 +451,12 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
         blu_id = BLUEPRINT_ID + '-del-1'
         self.client.blueprints.upload(mod_del_dep_bp1, blu_id)
         wait_for_blueprint_upload(blu_id, self.client)
-        del_dep_update1 = self._do_update(del_deployment.id, blu_id)
+        self._do_update(del_deployment.id, blu_id)
 
         blu_id = BLUEPRINT_ID + '-undel-1'
         self.client.blueprints.upload(mod_undel_dep_bp1, blu_id)
         wait_for_blueprint_upload(blu_id, self.client)
-        undel_dep_update = self._do_update(undel_deployment.id, blu_id)
+        self._do_update(undel_deployment.id, blu_id)
 
         mod_del_dep_bp2 = self._get_blueprint_path(
             os.path.join('remove_deployment', 'modification2'),
@@ -467,7 +464,7 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
         blu_id = BLUEPRINT_ID + '-del-2'
         self.client.blueprints.upload(mod_del_dep_bp2, blu_id)
         wait_for_blueprint_upload(blu_id, self.client)
-        del_dep_update2 = self._do_update(del_deployment.id, blu_id)
+        self._do_update(del_deployment.id, blu_id)
 
         deployment_update_list = self.client.deployment_updates.list(
             deployment_id=del_deployment.id,
@@ -475,10 +472,6 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
         )
 
         self.assertEqual(len(deployment_update_list.items), 2)
-        self.assertEqual(
-            {d['id'] for d in deployment_update_list},
-            {del_dep_update1.id, del_dep_update2.id}
-        )
 
         # Delete deployment and assert deployment updates were removed
         uninstall = self.client.executions.start(
@@ -501,7 +494,8 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
             _include=['id']
         )
         self.assertEqual(len(deployment_update_list), 1)
-        self.assertEqual(deployment_update_list[0]['id'], undel_dep_update.id)
+
+    _group_update_workflow = 'csys_update_deployment'
 
     def test_update_group(self):
         self.upload_blueprint_resource(
@@ -527,38 +521,26 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
         self.wait_for_execution_to_end(create_dep_env_group, is_group=True)
         update_group = self.client.execution_groups.start(
             deployment_group_id='g1',
-            workflow_id='csys_update_deployment',
+            workflow_id=self._group_update_workflow,
             default_parameters={
                 'blueprint_id': 'bp2',
             }
         )
         self.wait_for_execution_to_end(update_group, is_group=True)
         update_group = self.client.execution_groups.get(update_group['id'])
-        self.assertEqual(len(update_group.execution_ids), 10)
         for deployment_id in group.deployment_ids:
             dep = self.client.deployments.get(deployment_id)
             self.assertIn('description', dep.description)
 
 
-class NewTestDeploymentUpdateMisc(DeploymentUpdateBase):
-    test_deployment_updated_twice = \
-        TestDeploymentUpdateMisc.test_deployment_updated_twice
-    test_modify_deployment_update_schema = \
-        TestDeploymentUpdateMisc.test_modify_deployment_update_schema
-    test_add_and_override_resource = \
-        TestDeploymentUpdateMisc.test_add_and_override_resource
+class NewTestDeploymentUpdateMisc(TestDeploymentUpdateMisc):
+    _group_update_workflow = 'csys_new_deployment_update'
 
-    def _do_update(self, deployment_id, blueprint_id=None,
-                   preview=False, inputs=None, skip_reinstall=False, **kwargs):
+    def _do_update(self, deployment_id, blueprint_id=None, **kwargs):
         params = {
             'blueprint_id': blueprint_id,
         }
-        if preview:
-            params['preview'] = preview
-        if inputs:
-            params['inputs'] = inputs
-        if skip_reinstall:
-            params['skip_reinstall'] = skip_reinstall
+        params.update(kwargs)
         exc = self.client.executions.start(
             deployment_id, 'csys_new_deployment_update', parameters=params)
         self.wait_for_execution_to_end(exc)
