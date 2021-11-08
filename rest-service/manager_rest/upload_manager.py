@@ -1,18 +1,3 @@
-#########
-# Copyright (c) 2015 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 import os
 import json
 import tarfile
@@ -362,13 +347,15 @@ class UploadedBlueprintsManager(UploadedDataManager):
             blueprint_url,
             application_file_name=args.application_file_name,
             override_failed_blueprint=override_failed_blueprint,
-            labels=labels)
+            labels=labels,
+            created_at=kwargs.get('created_at'),
+            owner=kwargs.get('owner'))
         return new_blueprint, 201
 
     def _prepare_and_process_doc(self, data_id, visibility, blueprint_url,
                                  application_file_name,
                                  override_failed_blueprint,
-                                 labels=None):
+                                 labels=None, created_at=None, owner=None):
         # Put a new blueprint entry in DB
         now = get_formatted_timestamp()
         rm = get_resource_manager()
@@ -383,16 +370,19 @@ class UploadedBlueprintsManager(UploadedDataManager):
             new_blueprint.state = BlueprintUploadState.PENDING
             rm.sm.update(new_blueprint)
         else:
-            new_blueprint = rm.sm.put(Blueprint(
+            blueprint = Blueprint(
                 plan=None,
                 id=data_id,
                 description=None,
-                created_at=now,
+                created_at=created_at or now,
                 updated_at=now,
                 main_file_name=None,
                 visibility=visibility,
                 state=BlueprintUploadState.PENDING
-            ))
+            )
+            if owner:
+                blueprint.creator = owner
+            new_blueprint = rm.sm.put(blueprint)
 
         if not blueprint_url:
             new_blueprint.state = BlueprintUploadState.UPLOADING

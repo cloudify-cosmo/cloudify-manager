@@ -1,18 +1,3 @@
-#########
-# Copyright (c) 2018 Cloudify Platform Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 from os.path import join
 
 from flask import request
@@ -27,7 +12,10 @@ from cloudify.models_states import VisibilityState, BlueprintUploadState
 from dsl_parser import constants
 
 from manager_rest.security import SecuredResource
-from manager_rest.security.authorization import authorize
+from manager_rest.security.authorization import (
+    authorize,
+    is_user_action_allowed,
+)
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.upload_manager import (UploadedBlueprintsManager,
                                          UploadedBlueprintsValidator)
@@ -35,7 +23,7 @@ from manager_rest.rest import (rest_utils,
                                resources_v1,
                                resources_v2,
                                rest_decorators)
-from manager_rest.storage import models, get_storage_manager
+from manager_rest.storage import models, get_storage_manager, user_datastore
 from manager_rest.utils import get_formatted_timestamp, remove
 from manager_rest.rest.rest_utils import (get_labels_from_plan,
                                           get_args_and_verify_arguments)
@@ -95,6 +83,16 @@ class BlueprintsIcon(SecuredResource):
         return blueprint
 
 
+def valid_user(input_value):
+    """Convert a user name to a User object, or raise an exception if the user
+    does not exist.
+    """
+    user = user_datastore.get_user(input_value)
+    if not user:
+        raise BadParametersError('User {} does not exist.'.format(input_value))
+    return user
+
+
 class BlueprintsId(resources_v2.BlueprintsId):
     @authorize('blueprint_upload')
     @rest_decorators.marshal_with(models.Blueprint)
@@ -105,8 +103,20 @@ class BlueprintsId(resources_v2.BlueprintsId):
         rest_utils.validate_inputs({'blueprint_id': blueprint_id})
         args = get_args_and_verify_arguments(
             [Argument('async_upload', type=boolean, default=False),
+             Argument('owner'),
+             Argument('created_at'),
              Argument('labels')]
         )
+
+        created_at = owner = None
+        if args.created_at:
+            if is_user_action_allowed('set_timestamp', None, True):
+                created_at = rest_utils.parse_datetime_string(args.created_at)
+
+        if args.owner:
+            if is_user_action_allowed('set_creator', None, True):
+                owner = valid_user(args.owner)
+
         async_upload = args.async_upload
         visibility = rest_utils.get_visibility_parameter(
             optional=True,
@@ -148,7 +158,9 @@ class BlueprintsId(resources_v2.BlueprintsId):
             receive_uploaded_data(data_id=blueprint_id,
                                   visibility=visibility,
                                   override_failed=override_failed,
-                                  labels=labels)
+                                  labels=labels,
+                                  created_at=created_at,
+                                  owner=owner)
         if not async_upload:
             sm = get_storage_manager()
             blueprint, _ = response
