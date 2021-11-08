@@ -603,6 +603,8 @@ class InstallParameters(object):
 
         for param, default in [
             ('ignore_failure', False),
+            ('skip_install', False),
+            ('skip_uninstall', False),
             ('skip_reinstall', []),
         ]:
             setattr(self, param, update_params.get(param, default))
@@ -629,11 +631,11 @@ def _execute_deployment_update(ctx, client, update_id, install_params):
 
     dep_up = client.deployment_updates.get(update_id)
 
-    if install_params.reduced:
+    if install_params.reduced  and not install_params.skip_uninstall:
         _clear_graph(graph)
         _unlink_relationships(ctx, graph, install_params)
 
-    if install_params.removed:
+    if install_params.removed and not install_params.skip_uninstall:
         _clear_graph(graph)
         lifecycle.uninstall_node_instances(
             graph=graph,
@@ -641,14 +643,14 @@ def _execute_deployment_update(ctx, client, update_id, install_params):
             node_instances=install_params.removed_instances,
             related_nodes=install_params.removed_target_instances,
         )
-    if install_params.added:
+    if install_params.added and not install_params.skip_install:
         _clear_graph(graph)
         lifecycle.install_node_instances(
             graph=graph,
             node_instances=install_params.added_instances,
             related_nodes=install_params.added_target_instances,
         )
-    if install_params.extended:
+    if install_params.extended and not install_params.skip_install:
         _clear_graph(graph)
         _establish_relationships(ctx, graph, install_params)
 
