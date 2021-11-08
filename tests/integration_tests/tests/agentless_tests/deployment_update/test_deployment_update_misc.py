@@ -495,6 +495,7 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
         )
         self.assertEqual(len(deployment_update_list), 1)
 
+    _group_update_workflow = 'csys_update_deployment'
 
     def test_update_group(self):
         self.upload_blueprint_resource(
@@ -520,14 +521,13 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
         self.wait_for_execution_to_end(create_dep_env_group, is_group=True)
         update_group = self.client.execution_groups.start(
             deployment_group_id='g1',
-            workflow_id='csys_update_deployment',
+            workflow_id=self._group_update_workflow,
             default_parameters={
                 'blueprint_id': 'bp2',
             }
         )
         self.wait_for_execution_to_end(update_group, is_group=True)
         update_group = self.client.execution_groups.get(update_group['id'])
-        self.assertEqual(len(update_group.execution_ids), 10)
         for deployment_id in group.deployment_ids:
             dep = self.client.deployments.get(deployment_id)
             self.assertIn('description', dep.description)
