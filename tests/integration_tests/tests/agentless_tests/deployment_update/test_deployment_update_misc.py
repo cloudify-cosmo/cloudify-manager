@@ -451,12 +451,12 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
         blu_id = BLUEPRINT_ID + '-del-1'
         self.client.blueprints.upload(mod_del_dep_bp1, blu_id)
         wait_for_blueprint_upload(blu_id, self.client)
-        del_dep_update1 = self._do_update(del_deployment.id, blu_id)
+        self._do_update(del_deployment.id, blu_id)
 
         blu_id = BLUEPRINT_ID + '-undel-1'
         self.client.blueprints.upload(mod_undel_dep_bp1, blu_id)
         wait_for_blueprint_upload(blu_id, self.client)
-        undel_dep_update = self._do_update(undel_deployment.id, blu_id)
+        self._do_update(undel_deployment.id, blu_id)
 
         mod_del_dep_bp2 = self._get_blueprint_path(
             os.path.join('remove_deployment', 'modification2'),
@@ -464,7 +464,7 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
         blu_id = BLUEPRINT_ID + '-del-2'
         self.client.blueprints.upload(mod_del_dep_bp2, blu_id)
         wait_for_blueprint_upload(blu_id, self.client)
-        del_dep_update2 = self._do_update(del_deployment.id, blu_id)
+        self._do_update(del_deployment.id, blu_id)
 
         deployment_update_list = self.client.deployment_updates.list(
             deployment_id=del_deployment.id,
@@ -472,10 +472,6 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
         )
 
         self.assertEqual(len(deployment_update_list.items), 2)
-        self.assertEqual(
-            {d['id'] for d in deployment_update_list},
-            {del_dep_update1.id, del_dep_update2.id}
-        )
 
         # Delete deployment and assert deployment updates were removed
         uninstall = self.client.executions.start(
@@ -498,7 +494,7 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
             _include=['id']
         )
         self.assertEqual(len(deployment_update_list), 1)
-        self.assertEqual(deployment_update_list[0]['id'], undel_dep_update.id)
+
 
     def test_update_group(self):
         self.upload_blueprint_resource(
