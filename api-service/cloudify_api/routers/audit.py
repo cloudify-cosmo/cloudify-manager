@@ -51,12 +51,10 @@ class TruncateParams(BaseModel):
     execution_id: Optional[str]
 
 
-router = APIRouter(prefix="/audit")
+router = APIRouter(prefix="/audit", tags=["Audit Log"])
 
 
-@router.get("",
-            response_model=PaginatedAuditLog,
-            tags=["Audit Log"])
+@router.get("", response_model=PaginatedAuditLog)
 async def list_audit_log(creator_name: Optional[str] = None,
                          execution_id: Optional[str] = None,
                          since: Optional[datetime] = None,
@@ -73,7 +71,7 @@ async def list_audit_log(creator_name: Optional[str] = None,
 def _list_audit_log(creator_name: Optional[str] = None,
                     execution_id: Optional[str] = None,
                     since: Optional[datetime] = None) -> Select:
-    stmt = select(models.AuditLog)
+    stmt = select(models.AuditLog).order_by('created_at')
     if creator_name is not None:
         stmt = stmt.where(models.AuditLog.creator_name == creator_name)
     if execution_id is not None:
@@ -83,8 +81,7 @@ def _list_audit_log(creator_name: Optional[str] = None,
     return stmt
 
 
-@router.get("/stream",
-            tags=["Audit Log"])
+@router.get("/stream")
 async def stream_audit_log(request: Request,
                            creator_name: Optional[str] = None,
                            execution_id: Optional[str] = None,
@@ -109,7 +106,7 @@ async def _audit_log_streamer(request: Request,
     if since is not None:
         query = _list_audit_log(creator_name=creator_name,
                                 execution_id=execution_id,
-                                since=since).order_by('created_at')
+                                since=since)
         async with request.app.db_session_maker() as session:
             db_records = await session.execute(query)
         for db_record in db_records.scalars().all():
@@ -143,9 +140,7 @@ def _make_streaming_response(data: str) -> bytes:
     return f"{data}\n\n".encode('utf-8', errors='ignore')
 
 
-@router.delete("",
-               response_model=DeletedResult,
-               tags=["Audit Log"])
+@router.delete("", response_model=DeletedResult)
 async def truncate_audit_log(p=Depends(TruncateParams),
                              session=Depends(make_db_session),
                              app=Depends(get_app)):
