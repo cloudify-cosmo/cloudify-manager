@@ -36,27 +36,19 @@ def setup_logger(logger):
 
 
 def log_request():
-    # form and args parameters are "multidicts", i.e. values are not
-    # flattened and will appear in a list (even if single value)
-    form_data = request.form.to_dict(False)
     # args is the parsed query string data
     args_data = request.args.to_dict(False)
-    # json data; other data (e.g. binary) is available via request.data,
-    #  but is not logged
 
     # content-type and content-length are already included in headers
-
     current_app.logger.debug(
         '\nRequest (%s):\n'
         '\tpath: %s\n'
         '\thttp method: %s\n'
-        '\tquery string data: %s\n'
-        '\tform data: %s',
+        '\tquery string data: %s',
         id(request),
         request.path,  # includes "path parameters"
         request.method,
         args_data,
-        form_data
     )
 
 
