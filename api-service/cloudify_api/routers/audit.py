@@ -34,6 +34,15 @@ class AuditLog(BaseModel):
         }
 
 
+class InsertLog(BaseModel):
+    ref_table: str
+    ref_id: int
+    operation: str
+    creator_name: Optional[str]
+    execution_id: Optional[str]
+    created_at: datetime
+
+
 class PaginatedAuditLog(Paginated):
     items: List[AuditLog]
 
@@ -52,6 +61,20 @@ class TruncateParams(BaseModel):
 
 
 router = APIRouter(prefix="/audit", tags=["Audit Log"])
+
+
+@router.post("", status_code=204)
+async def inject_audit_logs(logs: List[InsertLog],
+                            session=Depends(make_db_session),
+                            app=Depends(get_app)):
+    app.logger.debug("insert_audit_logs with %s records",
+                     len(logs))
+    logs = [log.dict() for log in logs]
+    await session.execute(
+        models.AuditLog.__table__.insert(),
+        logs,
+    )
+    await session.commit()
 
 
 @router.get("", response_model=PaginatedAuditLog)
