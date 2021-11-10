@@ -1,27 +1,12 @@
-#########
-# Copyright (c) 2016 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 from flask_security import current_user
 
 from manager_rest import constants, config
 from manager_rest.storage import models, user_datastore
 from manager_rest.security.authorization import (authorize,
-                                                 is_user_action_allowed)
+                                                 check_user_action_allowed)
 from manager_rest.security import (SecuredResource,
                                    MissingPremiumFeatureResource)
-from manager_rest.manager_exceptions import BadParametersError, ForbiddenError
+from manager_rest.manager_exceptions import BadParametersError
 
 from .. import rest_decorators, rest_utils
 from ..responses_v3 import UserResponse
@@ -160,10 +145,7 @@ class UsersId(SecuredMultiTenancyResource):
         if config.instance.test_mode:
             return
 
-        if not is_user_action_allowed('user_update'):
-            error_message = 'User `{0}` is not permitted to perform the ' \
-                            'action user_update'.format(current_user.username)
-            raise ForbiddenError(error_message)
+        check_user_action_allowed('user_update')
 
 
 class UsersActive(SecuredMultiTenancyResource):
