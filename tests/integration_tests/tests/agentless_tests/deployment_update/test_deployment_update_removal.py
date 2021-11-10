@@ -15,7 +15,7 @@ from pytest import mark
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 
-from . import DeploymentUpdateBase, BLUEPRINT_ID
+from . import DeploymentUpdateBase, BLUEPRINT_ID, NewDeploymentUpdateMixin
 from integration_tests.tests.utils import wait_for_blueprint_upload
 
 pytestmark = mark.group_deployments
@@ -406,14 +406,8 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         self.assertFalse(deployment.get('description'))
 
 
-class NewTestDeploymentUpdateRemoval(TestDeploymentUpdateRemoval):
-    def _do_update(self, deployment_id, blueprint_id=None,
-                   preview=False, **kwargs):
-        params = {
-            'blueprint_id': blueprint_id,
-        }
-        if preview:
-            params['preview'] = preview
-        exc = self.client.executions.start(
-            deployment_id, 'csys_new_deployment_update', parameters=params)
-        self.wait_for_execution_to_end(exc)
+class NewTestDeploymentUpdateRemoval(
+    NewDeploymentUpdateMixin,
+    TestDeploymentUpdateRemoval
+):
+    pass

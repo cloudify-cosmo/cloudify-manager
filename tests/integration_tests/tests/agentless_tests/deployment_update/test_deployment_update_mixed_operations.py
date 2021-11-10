@@ -14,7 +14,7 @@
 
 import pytest
 
-from . import DeploymentUpdateBase, BLUEPRINT_ID
+from . import DeploymentUpdateBase, BLUEPRINT_ID, NewDeploymentUpdateMixin
 
 from integration_tests.tests.utils import wait_for_blueprint_upload
 
@@ -256,3 +256,10 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
             self._assertDictContainsSubset(
                     {'target_ops_counter': str(1)},
                     node_instances[node]['runtime_properties'])
+
+
+class NewTestDeploymentUpdateMixedOperations(
+        NewDeploymentUpdateMixin,
+        TestDeploymentUpdateMixedOperations
+):
+    pass

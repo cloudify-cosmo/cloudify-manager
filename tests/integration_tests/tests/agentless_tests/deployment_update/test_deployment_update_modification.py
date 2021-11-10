@@ -15,7 +15,7 @@
 import re
 import pytest
 
-from . import DeploymentUpdateBase, BLUEPRINT_ID
+from . import DeploymentUpdateBase, BLUEPRINT_ID, NewDeploymentUpdateMixin
 from integration_tests.tests.utils import wait_for_blueprint_upload
 
 pytestmark = pytest.mark.group_deployments
@@ -401,20 +401,8 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
                         event_messages.index(u'Node instance started'))
 
 
-class NewTestDeploymentUpdateModification(TestDeploymentUpdateModification):
-    _workflow_name = 'csys_new_deployment_update'
-
-    def _do_update(self, deployment_id, blueprint_id=None,
-                   preview=False, inputs=None, skip_reinstall=False, **kwargs):
-        params = {
-            'blueprint_id': blueprint_id,
-        }
-        if preview:
-            params['preview'] = preview
-        if inputs:
-            params['inputs'] = inputs
-        if skip_reinstall:
-            params['skip_reinstall'] = skip_reinstall
-        exc = self.client.executions.start(
-            deployment_id, 'csys_new_deployment_update', parameters=params)
-        self.wait_for_execution_to_end(exc)
+class NewTestDeploymentUpdateModification(
+    NewDeploymentUpdateMixin,
+    TestDeploymentUpdateModification
+):
+    pass
