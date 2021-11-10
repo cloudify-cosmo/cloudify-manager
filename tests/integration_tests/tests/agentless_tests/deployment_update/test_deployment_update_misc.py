@@ -20,7 +20,7 @@ from integration_tests.tests.utils import (
     wait_for_blueprint_upload,
     wait_for_deployment_deletion_to_complete
 )
-from . import DeploymentUpdateBase, BLUEPRINT_ID
+from . import DeploymentUpdateBase, BLUEPRINT_ID, NewDeploymentUpdateMixin
 
 pytestmark = pytest.mark.group_deployments
 
@@ -533,14 +533,8 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
             self.assertIn('description', dep.description)
 
 
-class NewTestDeploymentUpdateMisc(TestDeploymentUpdateMisc):
-    _group_update_workflow = 'csys_new_deployment_update'
-
-    def _do_update(self, deployment_id, blueprint_id=None, **kwargs):
-        params = {
-            'blueprint_id': blueprint_id,
-        }
-        params.update(kwargs)
-        exc = self.client.executions.start(
-            deployment_id, 'csys_new_deployment_update', parameters=params)
-        self.wait_for_execution_to_end(exc)
+class NewTestDeploymentUpdateMisc(
+    NewDeploymentUpdateMixin,
+    TestDeploymentUpdateMisc
+):
+    pass
