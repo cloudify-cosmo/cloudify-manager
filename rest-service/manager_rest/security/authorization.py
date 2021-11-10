@@ -65,12 +65,6 @@ def authorize(action,
             if is_user_action_allowed(action, tenant_name, allow_all_tenants):
                 return func(*args, **kwargs)
 
-            # none of the user's role is allowed to perform the action
-            error_message = 'User `{0}` is not permitted to perform the ' \
-                            'action {1}'.format(current_user.username, action)
-            if tenant_name:
-                error_message += ' in the tenant `{0}`'.format(tenant_name)
-            raise ForbiddenError(error_message)
         return wrapper
     return authorize_dec
 
@@ -101,4 +95,11 @@ def is_user_action_allowed(action, tenant_name=None, allow_all_tenants=False):
         )
     user_roles = get_current_user_roles(tenant_name, allow_all_tenants)
     action_roles = config.instance.authorization_permissions[action]
-    return set(user_roles) & set(action_roles)
+    if not set(user_roles) & set(action_roles):
+        # none of the user's role is allowed to perform the action
+        error_message = 'User `{0}` is not permitted to perform the ' \
+                        'action {1}'.format(current_user.username, action)
+        if tenant_name:
+            error_message += ' in the tenant `{0}`'.format(tenant_name)
+        raise ForbiddenError(error_message)
+    return True
