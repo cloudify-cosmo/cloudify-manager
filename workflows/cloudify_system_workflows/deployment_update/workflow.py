@@ -1,5 +1,6 @@
 from collections import defaultdict
 import time
+import typing
 
 from cloudify.decorators import workflow
 from cloudify.exceptions import NonRecoverableError
@@ -145,6 +146,8 @@ def prepare_update_nodes(*, update_id):
         'add': _added_nodes(dep_up.steps),
         'remove': _removed_nodes(dep_up.steps),
     }
+    instance_changes['relationships_changed'] = \
+        _relationship_changed_nodes(dep_up.steps)
     client.deployment_updates.set_attributes(
         update_id,
         nodes=node_changes,
@@ -249,54 +252,22 @@ def _format_instance_relationships(node_instance):
             'type': old_rel.relationship.type,
         }
         for old_rel in node_instance.relationships
+        if old_rel.relationship and old_rel.relationship.target_node
     ]
 
 
-def _parse_reorder_relationships_step(step):
-    """Return parts of the step, if this is a reorder-relationships, or None
-
-    Parse steps that modify relationships, with entity_id like
-    nodes:node_id:relationships:[1]:[0] - that means relationship
-    at index=1 is to be moved to index=0.
-    """
-    if step['action'] != 'modify' or step['entity_type'] != 'relationship':
-        return None
-    parts = step['entity_id'].split(':')
-    if len(parts) != 5:
-        return None
-    # parts is expected to be: ["nodes", node_id, "relationships", from, to]
-    nodes_label, node_id, relationships_label, from_ix, to_ix = parts
-    if nodes_label != 'nodes' or relationships_label != 'relationships':
-        return None
-    from_ix = int(from_ix.strip('[]'))
-    to_ix = int(to_ix.strip('[]'))
-    return node_id, from_ix, to_ix
-
-
-def reorder_node_instance_relationships(*, update_id):
-    client = get_rest_client()
-    dep_up = client.deployment_updates.get(update_id)
-    node_reorders = defaultdict(dict)
-    for step in dep_up.steps:
-        reorder_parts = _parse_reorder_relationships_step(step)
-        if reorder_parts is None:
+def _relationship_changed_nodes(steps):
+    """Names of the nodes that have had any of their relationships changed"""
+    nodes = set()
+    for step in steps:
+        if step['entity_type'] != 'relationship':
             continue
-        node_id, from_ix, to_ix = reorder_parts
-        node_reorders[node_id][to_ix] = from_ix
-
-    for node_id, reorders in node_reorders.items():
-        node = workflow_ctx.get_node(node_id)
-        for ni in node.instances:
-            reordered = []
-            old_relationships = _format_instance_relationships(ni)
-            for old_ix, _ in enumerate(old_relationships):
-                new_ix = reorders.get(old_ix, old_ix)
-                reordered.append(old_relationships[new_ix])
-            client.node_instances.update(
-                ni.id,
-                relationships=reordered,
-                force=True
-            )
+        parts = step['entity_id'].split(':')
+        nodes_label, node_id, relationships_label = parts[:3]
+        if nodes_label != 'nodes' or relationships_label != 'relationships':
+            continue
+        nodes.add(node_id)
+    return list(nodes)
 
 
 def update_deployment_node_instances(*, update_id):
@@ -327,20 +298,19 @@ def update_deployment_node_instances(*, update_id):
 
 
 def delete_removed_relationships(*, update_id):
+    workflow_ctx.refresh_node_instances()
     client = get_rest_client()
     dep_up = client.deployment_updates.get(update_id)
     update_nodes = dep_up['deployment_update_nodes'] or {}
-    plan_nodes = dep_up.deployment_plan['nodes']
+    plan_nodes = {
+        node['id']: node for node in dep_up.deployment_plan['nodes']
+    }
     update_instances = dep_up['deployment_update_node_instances']
 
     for node_name, changed_attrs in update_nodes.get(
             'modify_attributes', {}).items():
-        for plan_node in plan_nodes:
-            if plan_node['name'] == node_name:
-                break
-        else:
-            raise RuntimeError(f'Node {node_name} not found in the plan')
         if 'relationships' in changed_attrs:
+            plan_node = plan_nodes[node_name]
             new_relationships = plan_node['relationships']
             for rel in new_relationships:
                 rel.pop('source_interfaces', None)
@@ -350,28 +320,69 @@ def delete_removed_relationships(*, update_id):
                 relationships=new_relationships
             )
 
-    if update_instances.get('reduced_and_related'):
-        for ni in update_instances['reduced_and_related']:
-            if ni.get('modification') != 'reduced':
+    for node_name in update_instances.get('relationships_changed', []):
+        node = plan_nodes[node_name]
+        for instance in workflow_ctx.get_node(node_name).instances:
+            if not instance:
                 continue
-            old_rels = _format_instance_relationships(
-                workflow_ctx.get_node_instance(ni['id']))
-            new_rels = []
-            # yes, in this, .relationships is the list of relationships
-            # to be deleted!
-            delete_rels = ni['relationships']
-            for old_rel in old_rels:
-                if not any(
-                    old_rel.get('target_name') == to_delete['target_name']
-                    and old_rel['type'] == to_delete['type']
-                    for to_delete in delete_rels
-                ):
-                    new_rels.append(old_rel)
+            new_rels = _reorder_instance_relationships(
+                node['relationships'],
+                _format_instance_relationships(instance)
+            )
             client.node_instances.update(
-                ni['id'],
+                instance.id,
                 relationships=new_rels,
                 force=True
             )
+
+
+_T = typing.TypeVar('T')
+_KT = typing.TypeVar('KT')
+
+
+def _indexed_by(
+    items: typing.Sequence[_T],
+    key_func: typing.Callable[[_T], _KT]
+) -> typing.Iterable[typing.Tuple[_T, _KT, int]]:
+    """Index items by return of key_func
+
+    This yields tuples of (item, key, count), where key is the result of
+    calling key_func(item), and count says which item is it, when checking
+    by the key.
+    Eg. if items=[{'a': c}, {'a': d}, {'a': c}], and key_func=itemgetter('a'),
+    then the result is going to be:
+        - {'a': 1}, c, 0
+        - {'a': 2}, d, 0
+        - {'a': 1}, c, 1
+    """
+    seen: typing.MutableMapping[_KT, int] = defaultdict(int)
+    for item in items:
+        key = key_func(item)
+        yield item, key, seen[key]
+        seen[key] += 1
+
+
+def _reorder_instance_relationships(plan_rels, instance_rels):
+    """Given instance relationships, reorder them based on the plan.
+
+    Change the ordering of the relationships, and drop relationships
+    that don't exist in the plan.
+    """
+    instance_rels_keyed = {
+        (key, count): rel
+        for rel, key, count in _indexed_by(
+            instance_rels, lambda r: (r['type'], r['target_name']))
+    }
+
+    new_instance_rels = []
+    for _, key, count in _indexed_by(
+        plan_rels,
+        lambda r: (r['type'], r['target_id'])
+    ):
+        instance_rel = instance_rels_keyed.get((key, count))
+        if instance_rel:
+            new_instance_rels.append(instance_rel)
+    return new_instance_rels
 
 
 def set_deployment_attributes(*, update_id):
@@ -421,9 +432,6 @@ def _perform_update_graph(ctx, update_id, **kwargs):
             'update_id': update_id,
         }, total_retries=0),
         ctx.local_task(update_deployment_node_instances, kwargs={
-            'update_id': update_id,
-        }, total_retries=0),
-        ctx.local_task(reorder_node_instance_relationships, kwargs={
             'update_id': update_id,
         }, total_retries=0),
     )
