@@ -14,7 +14,7 @@ from dsl_parser import constants
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import (
     authorize,
-    is_user_action_allowed,
+    check_user_action_allowed,
 )
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.upload_manager import (UploadedBlueprintsManager,
@@ -100,12 +100,12 @@ class BlueprintsId(resources_v2.BlueprintsId):
 
         created_at = owner = None
         if args.created_at:
-            if is_user_action_allowed('set_timestamp', None, True):
-                created_at = rest_utils.parse_datetime_string(args.created_at)
+            check_user_action_allowed('set_timestamp', None, True)
+            created_at = rest_utils.parse_datetime_string(args.created_at)
 
         if args.owner:
-            if is_user_action_allowed('set_creator', None, True):
-                owner = rest_utils.valid_user(args.owner)
+            check_user_action_allowed('set_creator', None, True)
+            owner = rest_utils.valid_user(args.owner)
 
         async_upload = args.async_upload
         visibility = rest_utils.get_visibility_parameter(
