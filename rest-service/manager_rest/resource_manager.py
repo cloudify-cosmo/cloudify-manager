@@ -2640,18 +2640,21 @@ def get_resource_manager(sm=None):
                                          ResourceManager())
 
 
-def create_secret(key, secret, tenant):
+def create_secret(key, secret, tenant, created_at=None,
+                  updated_at=None, creator=None):
     sm = get_storage_manager()
     timestamp = utils.get_formatted_timestamp()
     new_secret = models.Secret(
         id=key,
         value=encrypt(secret['value']),
-        created_at=timestamp,
-        updated_at=timestamp,
+        created_at=created_at or timestamp,
+        updated_at=updated_at or timestamp,
         visibility=secret['visibility'],
         is_hidden_value=secret['is_hidden_value'],
         tenant=tenant
     )
+    if creator:
+        new_secret.creator = creator
     created_secret = sm.put(new_secret)
     return created_secret
 

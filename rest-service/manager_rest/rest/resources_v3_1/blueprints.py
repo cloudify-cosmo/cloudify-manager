@@ -23,7 +23,7 @@ from manager_rest.rest import (rest_utils,
                                resources_v1,
                                resources_v2,
                                rest_decorators)
-from manager_rest.storage import models, get_storage_manager, user_datastore
+from manager_rest.storage import models, get_storage_manager
 from manager_rest.utils import get_formatted_timestamp, remove
 from manager_rest.rest.rest_utils import (get_labels_from_plan,
                                           get_args_and_verify_arguments)
@@ -83,16 +83,6 @@ class BlueprintsIcon(SecuredResource):
         return blueprint
 
 
-def valid_user(input_value):
-    """Convert a user name to a User object, or raise an exception if the user
-    does not exist.
-    """
-    user = user_datastore.get_user(input_value)
-    if not user:
-        raise BadParametersError('User {} does not exist.'.format(input_value))
-    return user
-
-
 class BlueprintsId(resources_v2.BlueprintsId):
     @authorize('blueprint_upload')
     @rest_decorators.marshal_with(models.Blueprint)
@@ -115,7 +105,7 @@ class BlueprintsId(resources_v2.BlueprintsId):
 
         if args.owner:
             if is_user_action_allowed('set_creator', None, True):
-                owner = valid_user(args.owner)
+                owner = rest_utils.valid_user(args.owner)
 
         async_upload = args.async_upload
         visibility = rest_utils.get_visibility_parameter(
