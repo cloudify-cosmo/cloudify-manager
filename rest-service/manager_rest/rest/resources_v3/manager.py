@@ -5,9 +5,13 @@ from cloudify.models_states import VisibilityState
 
 from manager_rest.security import SecuredResource
 from manager_rest import config, premium_enabled, utils
-from manager_rest.security.authorization import authorize
+from manager_rest.security.authorization import (
+    authorize,
+    check_user_action_allowed,
+)
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.manager_exceptions import (BadParametersError,
+                                             ForbiddenError,
                                              MethodNotAllowedError,
                                              UnauthorizedError,
                                              NotFoundError,
@@ -41,7 +45,6 @@ class FileServerAuth(SecuredResource):
             FILE_SERVER_TENANT_RESOURCES_FOLDER
         ]
         tenanted_resources = [r.strip('/') for r in tenanted_resources]
-        uri = uri.strip('/')
         if uri.startswith('resources/'):
             uri = uri.replace('resources/', '', 1)
         # verifying that the only tenant that can be accessed is the one in
@@ -88,6 +91,22 @@ class FileServerAuth(SecuredResource):
             return False
         return blueprint.visibility == VisibilityState.GLOBAL
 
+    @staticmethod
+    def _verify_audit(uri, method):
+        if method == 'GET':
+            check_user_action_allowed('audit_log_view', None, True)
+        elif method == 'DELETE':
+            check_user_action_allowed('audit_log_truncate', None, True)
+        elif method == 'POST':
+            check_user_action_allowed('audit_log_inject', None, True)
+        else:
+            # This must be a 401 or 403 to work with nginx's auth_check
+            raise ForbiddenError(
+                'Method {} is not permitted on this {}.'.format(
+                    method, uri,
+                )
+            )
+
     @rest_decorators.marshal_with(ResourceID)
     def get(self, **_):
         """
@@ -95,7 +114,16 @@ class FileServerAuth(SecuredResource):
 
         The user cannot access tenants except the one in the request's header.
         """
-        uri = request.headers.get('X-Original-Uri')
+        uri = request.headers['X-Original-Uri'].strip('/')
+        method = request.headers['X-Original-Method']
+        with open('/tmp/ilikecake', 'w') as fh:
+            fh.write('%s\n' % uri)
+            fh.write('%s\n' % method)
+        if uri.startswith('api/'):
+            resource = uri.split('/')[2]
+
+            if resource.startswith('audit'):
+                self._verify_audit(uri, method)
         self._verify_tenant(uri)
 
         # verified successfully
