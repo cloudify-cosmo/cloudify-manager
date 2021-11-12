@@ -33,7 +33,7 @@ from cloudify.models_states import (
     DeploymentState,
 )
 
-from manager_rest.storage import db, models
+from manager_rest.storage import db, models, user_datastore
 from manager_rest.execution_token import current_execution
 from manager_rest.constants import RESERVED_LABELS, RESERVED_PREFIX
 from manager_rest.dsl_functions import (get_secret_method,
@@ -1117,3 +1117,14 @@ def is_deployment_update():
     """Is the current request within a deployment-update execution?"""
     return current_execution and current_execution.workflow_id in (
         'update', 'csys_new_deployment_update')
+
+
+def valid_user(input_value):
+    """Convert a user name to a User object, or raise an exception if the user
+    does not exist.
+    """
+    user = user_datastore.get_user(input_value)
+    if not user:
+        raise manager_exceptions.BadParametersError(
+            'User {} does not exist.'.format(input_value))
+    return user
