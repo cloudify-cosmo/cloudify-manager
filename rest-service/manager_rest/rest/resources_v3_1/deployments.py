@@ -1,18 +1,3 @@
-#########
-# Copyright (c) 2016 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 import uuid
 from builtins import staticmethod
 
@@ -33,7 +18,8 @@ from cloudify.deployment_dependencies import (create_deployment_dependency,
 
 from manager_rest import utils, manager_exceptions, workflow_executor
 from manager_rest.security import SecuredResource
-from manager_rest.security.authorization import authorize
+from manager_rest.security.authorization import (authorize,
+                                                 check_user_action_allowed)
 from manager_rest.storage import db, models, get_storage_manager
 from manager_rest.manager_exceptions import (
     DeploymentEnvironmentCreationInProgressError,
@@ -801,7 +787,20 @@ class DeploymentGroupsId(SecuredResource):
             'deployment_ids': {'optional': True},
             'new_deployments': {'optional': True},
             'deployments_from_group': {'optional': True},
+            'creator': {'optional': True},
+            'created_at': {'optional': True},
         })
+
+        created_at = creator = None
+        if request_dict.get('created_at'):
+            check_user_action_allowed('set_timestamp', None, True)
+            created_at = rest_utils.parse_datetime_string(
+                request_dict['created_at'])
+
+        if request_dict.get('creator'):
+            check_user_action_allowed('set_owner', None, True)
+            creator = rest_utils.valid_user(request_dict['creator'])
+
         sm = get_storage_manager()
         graph = rest_utils.RecursiveDeploymentLabelsDependencies(sm)
         with sm.transaction():
@@ -810,6 +809,10 @@ class DeploymentGroupsId(SecuredResource):
             except manager_exceptions.NotFoundError:
                 group = models.DeploymentGroup(id=group_id)
                 sm.put(group)
+            if creator:
+                group.creator = creator
+            if created_at:
+                group.created_at = created_at
             self._set_group_attributes(sm, group, request_dict)
             if request_dict.get('labels') is not None:
                 self._set_group_labels(
