@@ -7,7 +7,8 @@ from manager_rest.security import SecuredResource
 from manager_rest.constants import RESERVED_PREFIX
 from manager_rest.utils import get_formatted_timestamp
 from manager_rest.rest import rest_decorators, rest_utils
-from manager_rest.security.authorization import authorize
+from manager_rest.security.authorization import (authorize,
+                                                 check_user_action_allowed)
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.rest.filters_utils import create_filter_rules_list
@@ -77,13 +78,23 @@ class FiltersId(SecuredResource):
         visibility = rest_utils.get_visibility_parameter(
             optional=True, valid_values=VisibilityState.STATES)
 
+        created_at = creator = None
+        if 'created_at' in request_dict:
+            check_user_action_allowed('set_timestamp', None, True)
+            created_at = rest_utils.parse_datetime_string(
+                request_dict['created_at'])
+        if 'creator' in request_dict:
+            check_user_action_allowed('set_owner', None, True)
+            creator = rest_utils.valid_user(request_dict['creator'])
+
         now = get_formatted_timestamp()
         new_filter = filters_model(
             id=filter_id,
             value=filter_rules,
-            created_at=now,
+            created_at=created_at or now,
             updated_at=now,
-            visibility=visibility
+            visibility=visibility,
+            creator=creator,
         )
 
         return get_storage_manager().put(new_filter)
