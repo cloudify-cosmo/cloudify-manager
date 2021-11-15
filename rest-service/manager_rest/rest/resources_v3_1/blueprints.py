@@ -212,9 +212,21 @@ class BlueprintsId(resources_v2.BlueprintsId):
             'state': {'type': text_type, 'optional': True},
             'error': {'type': text_type, 'optional': True},
             'error_traceback': {'type': text_type, 'optional': True},
-            'labels': {'type': list, 'optional': True}
+            'labels': {'type': list, 'optional': True},
+            'creator': {'type': text_type, 'optional': True},
+            'created_at': {'type': text_type, 'optional': True},
         }
         request_dict = rest_utils.get_json_and_verify_params(request_schema)
+
+        created_at = creator = None
+        if request_dict.get('created_at'):
+            check_user_action_allowed('set_timestamp', None, True)
+            created_at = rest_utils.parse_datetime_string(
+                request_dict['created_at'])
+
+        if request_dict.get('creator'):
+            check_user_action_allowed('set_owner', None, True)
+            creator = rest_utils.valid_user(request_dict['creator'])
 
         invalid_params = set(request_dict.keys()) - set(request_schema.keys())
         if invalid_params:
@@ -306,7 +318,9 @@ class BlueprintsId(resources_v2.BlueprintsId):
                 labels_list = rest_utils.get_labels_list(provided_labels)
                 rm.update_resource_labels(models.BlueprintLabel,
                                           blueprint,
-                                          labels_list)
+                                          labels_list,
+                                          creator=creator,
+                                          created_at=created_at)
 
         blueprint.updated_at = get_formatted_timestamp()
         return sm.update(blueprint)
