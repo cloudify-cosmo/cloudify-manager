@@ -1,18 +1,3 @@
-#########
-# Copyright (c) 2017-2019 Cloudify Platform Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 import os
 import uuid
 import yaml
@@ -2486,7 +2471,9 @@ class ResourceManager(object):
     def update_resource_labels(self,
                                labels_resource_model,
                                resource,
-                               new_labels):
+                               new_labels,
+                               creator=None,
+                               created_at=None):
         """
         Updating the resource labels.
 
@@ -2504,7 +2491,9 @@ class ResourceManager(object):
 
         self.create_resource_labels(labels_resource_model,
                                     resource,
-                                    labels_to_create)
+                                    labels_to_create,
+                                    creator=creator,
+                                    created_at=created_at)
 
     @staticmethod
     def get_labels_to_create(resource, new_labels):
@@ -2527,7 +2516,9 @@ class ResourceManager(object):
     def create_resource_labels(self,
                                labels_resource_model,
                                resource,
-                               labels_list):
+                               labels_list,
+                               creator=None,
+                               created_at=None):
         """
         Populate the resource_labels table.
 
@@ -2535,6 +2526,8 @@ class ResourceManager(object):
         :param resource: A resource element
         :param labels_list: A list of labels of the form:
                             [(key1, value1), (key2, value2)]
+        :param creator: Specify creator (e.g. for snapshots).
+        :param created_at: Specify creation time (e.g. for snapshots).
         """
         if not labels_list:
             return
@@ -2543,8 +2536,8 @@ class ResourceManager(object):
         for key, value in labels_list:
             new_label = {'key': key,
                          'value': value,
-                         'created_at': current_time,
-                         'creator': current_user}
+                         'created_at': created_at or current_time,
+                         'creator': creator or current_user}
             if labels_resource_model == models.DeploymentLabel:
                 new_label['deployment'] = resource
             elif labels_resource_model == models.BlueprintLabel:
