@@ -805,6 +805,7 @@ class DeploymentGroupsId(SecuredResource):
         sm = get_storage_manager()
         graph = rest_utils.RecursiveDeploymentLabelsDependencies(sm)
         with sm.transaction():
+            storage_utils.deployments_lock()
             try:
                 group = sm.get(models.DeploymentGroup, group_id)
             except manager_exceptions.NotFoundError:
