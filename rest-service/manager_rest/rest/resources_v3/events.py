@@ -106,7 +106,7 @@ class Events(v2_Events):
             level=raw_log['level'],
             message=_strip_nul(raw_log['message']['text']),
             message_code=raw_log.get('message_code'),
-            operation=raw_log.get('operation'),
+            operation=raw_log['context'].get('operation'),
             node_id=raw_log['context'].get('node_id'),
             source_id=raw_log['context'].get('source_id'),
             target_id=raw_log['context'].get('target_id'),
