@@ -262,7 +262,8 @@ class ResourceManager(object):
 
     def _prepare_execution_or_log(self, execution: models.Execution) -> list:
         try:
-            return self.prepare_executions([execution], queue=True)
+            return self.prepare_executions(
+                [execution], queue=True, commit=False)
         except Exception as e:
             current_app.logger.warning(
                 'Could not dequeue execution %s: %s',
