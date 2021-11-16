@@ -53,7 +53,8 @@ from manager_rest.plugins_update.constants import STATES as PluginsUpdateStates
 from manager_rest.storage import (db,
                                   get_storage_manager,
                                   models,
-                                  get_node)
+                                  get_node,
+                                  storage_utils)
 
 from . import utils
 from . import config
@@ -124,6 +125,7 @@ class ResourceManager(object):
 
     def update_execution_status(self, execution_id, status, error):
         with self.sm.transaction():
+            storage_utils.deployments_lock()
             execution = self.sm.get(models.Execution, execution_id,
                                     locking=True)
             if execution._deployment_fk:
