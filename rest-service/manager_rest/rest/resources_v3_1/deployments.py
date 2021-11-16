@@ -34,7 +34,7 @@ from cloudify.deployment_dependencies import (create_deployment_dependency,
 from manager_rest import utils, manager_exceptions
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
-from manager_rest.storage import db, models, get_storage_manager
+from manager_rest.storage import db, models, get_storage_manager, storage_utils
 from manager_rest.manager_exceptions import (
     DeploymentEnvironmentCreationInProgressError,
     DeploymentCreationError,
@@ -282,6 +282,7 @@ class DeploymentsId(resources_v1.DeploymentsId):
         sm = get_storage_manager()
         rm = get_resource_manager()
         with sm.transaction():
+            storage_utils.deployments_lock()
             deployment = sm.get(models.Deployment, deployment_id, locking=True)
             allowed_attribs = {
                 'description', 'workflows', 'inputs', 'policy_types',
@@ -752,6 +753,7 @@ class DeploymentGroupsId(SecuredResource):
         sm = get_storage_manager()
         graph = rest_utils.RecursiveDeploymentLabelsDependencies(sm)
         with sm.transaction():
+            storage_utils.deployments_lock()
             try:
                 group = sm.get(models.DeploymentGroup, group_id)
             except manager_exceptions.NotFoundError:
@@ -787,6 +789,7 @@ class DeploymentGroupsId(SecuredResource):
         })
         sm = get_storage_manager()
         with sm.transaction():
+            storage_utils.deployments_lock()
             group = sm.get(models.DeploymentGroup, group_id)
             if request_dict.get('add'):
                 self._add_group_deployments(
