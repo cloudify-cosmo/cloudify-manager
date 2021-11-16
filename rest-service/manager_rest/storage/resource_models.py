@@ -553,46 +553,24 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                          parameters=wf.get('parameters', dict()))
                 for wf_name, wf in deployment_workflows.items()]
 
+    @classmethod
     def compare_between_statuses(
-            self,
-            first_status,
-            second_status
-    ):
-        """
-        Compare between two deployment statuses so that we can tell which
-        one is worst than others. If first_status > second_status then
-        return the first status otherwise return the second_status
-        :param first_status: The first deployment status
-        :rtype str
-        :param second_status: The second deployment status
-        :rtype str
-        :return: Return the end result status
-        :rtype str
-        """
-        class _DeploymentStatus(object):
-            def __init__(self, status):
-                self.status = status
+                cls, *statuses: typing.Optional[str]
+            ) -> typing.Optional[str]:
+        """Unify multiple DeploymentStates into a single state.
 
-            def __gt__(self, other):
-                if not self.status:
-                    return False
-                elif self.status and not other.status:
-                    return True
-                elif (self.status == DeploymentState.REQUIRE_ATTENTION and
-                      other.status in [
-                          DeploymentState.GOOD,
-                          DeploymentState.IN_PROGRESS
-                      ]):
-                    return True
-                elif (
-                        self.status == DeploymentState.IN_PROGRESS
-                        and other.status == DeploymentState.GOOD):
-                    return True
-                return False
-
-        _source = _DeploymentStatus(first_status)
-        _target = _DeploymentStatus(second_status)
-        return _source.status if _source > _target else _target.status
+        Choose the "worst" possible outcome based on the given states,
+        ie. if there's one that requires attention, then the overall status
+        is also "requires attention".
+        """
+        if not statuses:
+            return None
+        importance = {
+            DeploymentState.GOOD: 1,
+            DeploymentState.IN_PROGRESS: 2,
+            DeploymentState.REQUIRE_ATTENTION: 3
+        }
+        return max(statuses, key=lambda st: importance.get(st, 0))
 
     def evaluate_sub_deployments_statuses(self):
         """
