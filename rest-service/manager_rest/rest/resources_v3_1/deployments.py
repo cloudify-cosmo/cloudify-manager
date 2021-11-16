@@ -846,6 +846,7 @@ class DeploymentGroupsId(SecuredResource):
         })
         sm = get_storage_manager()
         with sm.transaction():
+            storage_utils.deployments_lock()
             group = sm.get(models.DeploymentGroup, group_id)
             if request_dict.get('add'):
                 self._add_group_deployments(
