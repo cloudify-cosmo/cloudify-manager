@@ -53,7 +53,8 @@ from manager_rest.plugins_update.constants import STATES as PluginsUpdateStates
 from manager_rest.storage import (db,
                                   get_storage_manager,
                                   models,
-                                  get_node)
+                                  get_node,
+                                  storage_utils)
 
 from . import utils
 from . import config
@@ -124,6 +125,7 @@ class ResourceManager(object):
 
     def update_execution_status(self, execution_id, status, error):
         with self.sm.transaction():
+            storage_utils.deployments_lock()
             execution = self.sm.get(models.Execution, execution_id,
                                     locking=True)
             if execution._deployment_fk:
@@ -212,6 +214,7 @@ class ResourceManager(object):
         to_run = []
         while True:
             with self.sm.transaction():
+                storage_utils.deployments_lock()
                 dequeued = self._get_queued_executions(deployment_storage_id)
                 all_started = True
                 for execution in dequeued:
@@ -259,7 +262,8 @@ class ResourceManager(object):
 
     def _prepare_execution_or_log(self, execution: models.Execution) -> list:
         try:
-            return self.prepare_executions([execution], queue=True)
+            return self.prepare_executions(
+                [execution], queue=True, commit=False)
         except Exception as e:
             current_app.logger.warning(
                 'Could not dequeue execution %s: %s',
