@@ -214,6 +214,7 @@ class ResourceManager(object):
         to_run = []
         while True:
             with self.sm.transaction():
+                storage_utils.deployments_lock()
                 dequeued = self._get_queued_executions(deployment_storage_id)
                 all_started = True
                 for execution in dequeued:
