@@ -124,6 +124,22 @@ def _create_default_tenant():
     return default_tenant
 
 
+def deployments_lock():
+    """Lock multi-deployments update.
+
+    This lock is to be used around operations that possibly access multiple
+    deployments, their dependencies, and their executions.
+
+    This is not strictly based on deployments themselves, but to be used
+    co-operatively by functions, to avoid deadlocks in case multiple locks
+    on the deployments table are going to be acquired.
+    """
+    # the number doesn't mean anything, just needs to be globally unique,
+    # ie. not used by any other kind of lock across all of Cloudify
+    lock = 5
+    db.session.execute('SELECT pg_advisory_xact_lock(:lock)', {'lock': lock})
+
+
 def try_acquire_lock_on_table(lock_number):
     # make sure a flask app exists before calling this function
     results = db.session.execute('SELECT pg_try_advisory_lock(:lock_number)',
