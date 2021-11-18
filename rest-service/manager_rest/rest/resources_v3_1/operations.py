@@ -258,11 +258,11 @@ class TasksGraphsId(SecuredResource):
     @marshal_with(models.TasksGraph)
     def post(self, **kwargs):
         params = get_json_and_verify_params({
-            'name': {'type': text_type, 'required': True},
-            'execution_id': {'type': text_type, 'required': True},
-            'operations': {'required': False},
-            'created_at': {'required': False},
-            'graph_id': {'required': False},
+            'name': {'type': text_type},
+            'execution_id': {'type': text_type},
+            'operations': {'optional': True},
+            'created_at': {'optional': True},
+            'graph_id': {'optional': True},
         })
         created_at = params.get('created_at')
         operations = params.get('operations', [])
