@@ -13,8 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from manager_rest.test.attribute import attr
-
 from cloudify_rest_client.exceptions import CloudifyClientError
 from manager_rest import manager_exceptions
 from manager_rest.storage import models
@@ -26,7 +24,6 @@ TEST_PACKAGE_VERSION = '1.3'
 OLD_TEST_PACKAGE_VERSION = '1.2'
 
 
-@attr(client_min_version=2, client_max_version=base_test.LATEST_API_VERSION)
 class ResourceListFiltersTestCase(BaseListTest):
 
     def setUp(self):

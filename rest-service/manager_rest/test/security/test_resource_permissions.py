@@ -18,13 +18,11 @@ import os
 from cloudify.models_states import VisibilityState
 from cloudify_rest_client.exceptions import CloudifyClientError
 
-from manager_rest.test.attribute import attr
 from manager_rest.test.base_test import LATEST_API_VERSION
 
 from .test_base import SecurityTestBase
 
 
-@attr(client_min_version=3.1, client_max_version=LATEST_API_VERSION)
 class ResourcePermissionTests(SecurityTestBase):
     NOT_FOUND_MSG = '404: Requested `{0}` with ID `{1}` was not found'
 

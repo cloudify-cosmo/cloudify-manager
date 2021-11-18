@@ -6,12 +6,10 @@ from cloudify.snapshots import STATES
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from manager_rest.test import base_test
-from manager_rest.test.attribute import attr
 from .test_utils import generate_progress_func
 from manager_rest.test.base_test import BaseServerTestCase
 
 
-@attr(client_min_version=2, client_max_version=base_test.LATEST_API_VERSION)
 class SnapshotsTest(BaseServerTestCase):
     def test_create_snapshot_illegal_id(self):
         # try id with whitespace
@@ -29,8 +27,6 @@ class SnapshotsTest(BaseServerTestCase):
                                False,
                                False)
 
-    @attr(client_min_version=3,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_snapshot_upload_progress(self):
         tmp_file_path = self.create_wheel('wagon', '0.6.2')
         total_size = os.path.getsize(tmp_file_path)
@@ -44,8 +40,6 @@ class SnapshotsTest(BaseServerTestCase):
         finally:
             self.quiet_delete(tmp_file_path)
 
-    @attr(client_min_version=3,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_snapshot_download_progress(self):
         tmp_file_path = self.create_wheel('wagon', '0.6.2')
         total_size = os.path.getsize(tmp_file_path)
@@ -63,8 +57,6 @@ class SnapshotsTest(BaseServerTestCase):
             self.quiet_delete(tmp_local_path)
 
 
-@attr(client_min_version=3.1,
-      client_max_version=base_test.LATEST_API_VERSION)
 class SnapshotStatusTest(BaseServerTestCase):
     def test_snapshot_status_reports_not_running(self):
         status = self.client.snapshots.get_status()

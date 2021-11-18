@@ -39,7 +39,6 @@ class StatusV1TestCase(base_test.BaseServerTestCase):
         self.assertGreater(after_status, before_status)
 
 
-@attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
 class StatusTestCase(base_test.BaseServerTestCase):
 
     def test_get_status(self):

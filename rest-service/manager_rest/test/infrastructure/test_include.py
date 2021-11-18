@@ -21,11 +21,9 @@ from cloudify_rest_client.exceptions import NoSuchIncludeFieldError
 
 from manager_rest.test import base_test
 from manager_rest.storage import ListResult
-from manager_rest.test.attribute import attr
 from manager_rest.storage.models import Blueprint
 
 
-@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
 class IncludeQueryParamTests(base_test.BaseServerTestCase):
 
     def setUp(self):
@@ -33,8 +31,6 @@ class IncludeQueryParamTests(base_test.BaseServerTestCase):
         self.put_deployment(deployment_id='d{0}'.format(uuid.uuid4()),
                             blueprint_file_name='blueprint.yaml')
 
-    @attr(client_min_version=2,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_include_propagation_to_model(self):
         self._test_include_propagation_to_model(
             [Blueprint],
@@ -132,8 +128,6 @@ class IncludeQueryParamTests(base_test.BaseServerTestCase):
         self.assertEqual(execution_id, response.id)
         self.assertIsNotNone(response.created_at)
 
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_execution_with_status_field(self):
         # status_display is defaulted to status in recent clients
         deployment_id = self.client.deployments.list()[0].id

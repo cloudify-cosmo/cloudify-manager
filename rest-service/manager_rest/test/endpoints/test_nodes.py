@@ -13,7 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from manager_rest.test.attribute import attr
 from unittest import skip
 
 from cloudify_rest_client.exceptions import CloudifyClientError
@@ -24,7 +23,6 @@ from manager_rest import manager_exceptions
 from manager_rest.test.mocks import put_node_instance
 
 
-@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
 class NodesTest(base_test.BaseServerTestCase):
     """Test the HTTP interface and the behaviour of node instance endpoints.
 
@@ -54,8 +52,6 @@ class NodesTest(base_test.BaseServerTestCase):
         self.assertEqual(1, len(response.json['runtime_properties']))
         self.assertEqual('value', response.json['runtime_properties']['key'])
 
-    @attr(client_min_version=3,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_sort_nodes_list(self):
         self.put_deployment(deployment_id='d0', blueprint_id='b0')
         self.put_deployment(deployment_id='d1', blueprint_id='b1')
@@ -276,8 +272,6 @@ class NodesTest(base_test.BaseServerTestCase):
 
         self.assertEqual(cm.exception.status_code, 409)
 
-    @attr(client_min_version=2,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_list_node_instances_multiple_value_filter(self):
         put_node_instance(
             self.sm, node_id='1', instance_id='11', deployment_id='111')
@@ -367,8 +361,6 @@ class NodesTest(base_test.BaseServerTestCase):
         assert_dep_and_node(2, '222', '3', dep2_n3_instances)
         assert_dep_and_node(2, '222', '4', dep2_n4_instances)
 
-    @attr(client_min_version=3,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_sort_node_instances_list(self):
         put_node_instance(
             self.sm, node_id='0', instance_id='00', deployment_id='000')
@@ -396,8 +388,6 @@ class NodesTest(base_test.BaseServerTestCase):
 
         self.assertEqual(cm.exception.status_code, 404)
 
-    @attr(client_min_version=2.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_node_and_node_instance_properties(self):
         _, _, _, deployment = self.put_deployment(
             blueprint_file_name='deployment-creation-with-groups.yaml')

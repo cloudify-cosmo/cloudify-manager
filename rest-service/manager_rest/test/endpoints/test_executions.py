@@ -27,11 +27,9 @@ from cloudify.constants import CLOUDIFY_EXECUTION_TOKEN_HEADER
 
 from manager_rest.storage import models, db
 from manager_rest import manager_exceptions
-from manager_rest.test.attribute import attr
 from manager_rest.test.base_test import BaseServerTestCase, LATEST_API_VERSION
 
 
-@attr(client_min_version=1, client_max_version=LATEST_API_VERSION)
 class ExecutionsTestCase(BaseServerTestCase):
 
     DEPLOYMENT_ID = 'deployment'
@@ -89,8 +87,6 @@ class ExecutionsTestCase(BaseServerTestCase):
 
         return get_execution
 
-    @attr(client_min_version=3,
-          client_max_version=LATEST_API_VERSION)
     def test_sort_list(self):
         blueprint = self._add_blueprint()
         deployment = self._add_deployment(blueprint)
@@ -215,7 +211,6 @@ class ExecutionsTestCase(BaseServerTestCase):
             for next_status in status_list:
                 assert_invalid_update()
 
-    @attr(client_min_version=2.1, client_max_version=LATEST_API_VERSION)
     def test_bad_update_execution_status_client_exception(self):
         execution = self.test_get_execution_by_id()
         expected_message = (
@@ -512,8 +507,6 @@ class ExecutionsTestCase(BaseServerTestCase):
         self.assertIn(execution.status,
                       (ExecutionState.STARTED, ExecutionState.TERMINATED))
 
-    @attr(client_min_version=3.1,
-          client_max_version=LATEST_API_VERSION)
     def test_resume_force_failed(self):
         """Force-resume resets operation state and restart count"""
         _, deployment_id, _, _ = self.put_deployment(
@@ -521,8 +514,6 @@ class ExecutionsTestCase(BaseServerTestCase):
         deployment = self.sm.get(models.Deployment, deployment_id)
         self._execution_resume_test(deployment, ExecutionState.FAILED)
 
-    @attr(client_min_version=3.1,
-          client_max_version=LATEST_API_VERSION)
     def test_resume_force_cancelled(self):
         """Force-resume resets operation state and restart count"""
         _, deployment_id, _, _ = self.put_deployment(
@@ -530,8 +521,6 @@ class ExecutionsTestCase(BaseServerTestCase):
         deployment = self.sm.get(models.Deployment, deployment_id)
         self._execution_resume_test(deployment, ExecutionState.CANCELLED)
 
-    @attr(client_min_version=3.1,
-          client_max_version=LATEST_API_VERSION)
     def test_resume_invalid_state(self):
         """Resuming is allowed in the STARTED state"""
         _, deployment_id, _, _ = self.put_deployment(
@@ -559,8 +548,6 @@ class ExecutionsTestCase(BaseServerTestCase):
             self.assertEqual(cm.exception.status_code, 409)
             self.assertIn('Cannot resume execution', str(cm.exception))
 
-    @attr(client_min_version=3.1,
-          client_max_version=LATEST_API_VERSION)
     def test_force_resume_invalid_state(self):
         """Force-resuming is allowed in the FAILED, CANCELLED  states
         """
@@ -590,17 +577,14 @@ class ExecutionsTestCase(BaseServerTestCase):
             self.assertEqual(cm.exception.status_code, 409)
             self.assertIn('Cannot force-resume execution', str(cm.exception))
 
-    @attr(client_min_version=3.1, client_max_version=LATEST_API_VERSION)
     def test_execution_token_invalid(self):
         self._assert_invalid_execution_token()
 
-    @attr(client_min_version=3.1, client_max_version=LATEST_API_VERSION)
     def test_execution_token_valid(self):
         token = uuid.uuid4().hex
         self._create_execution_and_update_token('deployment_1', token)
         self._assert_valid_execution_token(token)
 
-    @attr(client_min_version=3.1, client_max_version=LATEST_API_VERSION)
     def test_execution_token_sequence(self):
         """ Verify the execution token authentication is not affected by
             previous requests
@@ -611,7 +595,6 @@ class ExecutionsTestCase(BaseServerTestCase):
         self._assert_valid_execution_token(token)
         self._assert_invalid_execution_token()
 
-    @attr(client_min_version=3.1, client_max_version=LATEST_API_VERSION)
     def test_execution_token_created_in_db(self):
         _, deployment_id, _, _ = self.put_deployment(self.DEPLOYMENT_ID)
         execution = self.client.executions.start(deployment_id, 'install')
@@ -619,7 +602,6 @@ class ExecutionsTestCase(BaseServerTestCase):
         self.assertIsNotNone(db_execution.token)
         assert len(db_execution.token) > 10
 
-    @attr(client_min_version=3.1, client_max_version=LATEST_API_VERSION)
     def test_execution_token_invalid_status(self):
         _, deployment_id, _, _ = self.put_deployment(self.DEPLOYMENT_ID)
         execution = self.client.executions.start(deployment_id, 'install')
@@ -648,7 +630,6 @@ class ExecutionsTestCase(BaseServerTestCase):
         executions = client.executions.list()
         assert len(executions) == 3   # bp upload + create dep.env + install
 
-    @attr(client_min_version=3.1, client_max_version=LATEST_API_VERSION)
     def test_duplicate_execution_token(self):
         token = uuid.uuid4().hex
         self._create_execution_and_update_token('deployment_1', token)
@@ -656,7 +637,6 @@ class ExecutionsTestCase(BaseServerTestCase):
         self._create_execution_and_update_token('deployment_2', token)
         self._assert_invalid_execution_token(token)
 
-    @attr(client_min_version=3.1, client_max_version=LATEST_API_VERSION)
     def test_delete_executions(self):
         self.put_deployment('dep-1')
         self._create_execution_and_update_token('dep-2', uuid.uuid4().hex)
@@ -667,7 +647,6 @@ class ExecutionsTestCase(BaseServerTestCase):
         self.client.executions.delete()
         assert len(self.client.executions.list()) == 3
 
-    @attr(client_min_version=3.1, client_max_version=LATEST_API_VERSION)
     def test_delete_executions_keep_last(self):
         self.put_deployment('dep-1')
         self.client.executions.start('dep-1', 'update')
@@ -677,7 +656,6 @@ class ExecutionsTestCase(BaseServerTestCase):
         self.client.executions.delete(keep_last=2)
         assert len(self.client.executions.list()) == 2
 
-    @attr(client_min_version=3.1, client_max_version=LATEST_API_VERSION)
     def test_delete_executions_by_date(self):
         self.put_deployment('dep-1')  # 2 execs: bp upload + dep.env.create
         exec1 = self.client.executions.start('dep-1', 'update')

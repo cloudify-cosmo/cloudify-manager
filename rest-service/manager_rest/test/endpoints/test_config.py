@@ -17,12 +17,10 @@ from flask_login import current_user
 from manager_rest import manager_exceptions
 from manager_rest.test import base_test
 from manager_rest.storage import models
-from manager_rest.test.attribute import attr
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 
-@attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
 class ManagerConfigTestCase(base_test.BaseServerTestCase):
     def _put_config(self, **kwargs):
         config = {

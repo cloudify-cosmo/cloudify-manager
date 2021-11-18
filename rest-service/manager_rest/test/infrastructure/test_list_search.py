@@ -13,8 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from manager_rest.test.attribute import attr
-
 from manager_rest.test import base_test
 from manager_rest.test.infrastructure.base_list_test import BaseListTest
 
@@ -22,7 +20,6 @@ from manager_rest.test.infrastructure.base_list_test import BaseListTest
 NUM_OF_RESOURCES = 2
 
 
-@attr(client_min_version=3, client_max_version=base_test.LATEST_API_VERSION)
 class ResourceListSearchTestCase(BaseListTest):
 
     def setUp(self):

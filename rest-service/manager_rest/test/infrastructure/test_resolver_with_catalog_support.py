@@ -13,7 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from manager_rest.test.attribute import attr
 from manager_rest.test.base_test import (BaseServerTestCase,
                                          LATEST_API_VERSION)
 from manager_rest.resolver_with_catalog_support import (
@@ -32,8 +31,6 @@ TEST_PLUGIN_VERSION2 = '1.5'
 PLUGIN_IMPORT_FORMAT = PLUGIN_PREFIX + "{0}?version={1}"
 
 
-@attr(client_min_version=LATEST_API_VERSION,
-      client_max_version=LATEST_API_VERSION)
 class TestPluginParseWithResolver(BaseServerTestCase):
     def setUp(self):
         super(TestPluginParseWithResolver, self).setUp()
@@ -119,8 +116,6 @@ class TestPluginParseWithResolver(BaseServerTestCase):
         self.assertTrue('this_is_plugin_2' in plugin_str)
 
 
-@attr(client_min_version=LATEST_API_VERSION,
-      client_max_version=LATEST_API_VERSION)
 class TestBlueprintParseWithResolver(BaseServerTestCase):
     def setUp(self):
         super(TestBlueprintParseWithResolver, self).setUp()

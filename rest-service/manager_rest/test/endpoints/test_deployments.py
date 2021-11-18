@@ -39,7 +39,6 @@ TEST_PACKAGE_NAME = 'cloudify-script-plugin'
 TEST_PACKAGE_VERSION = '1.2'
 
 
-@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
 class DeploymentsTestCase(base_test.BaseServerTestCase):
 
     DEPLOYMENT_ID = 'deployment'
@@ -68,8 +67,6 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         self.assertIsNotNone(deployment_response['created_at'])
         self.assertIsNotNone(deployment_response['updated_at'])
 
-    @attr(client_min_version=3,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_sort_list(self):
         self.put_deployment(deployment_id='d0', blueprint_id='b0')
         self.put_deployment(deployment_id='d1', blueprint_id='b1')
@@ -85,8 +82,6 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         self.assertEqual('d1', deployments[0].id)
         self.assertEqual('d0', deployments[1].id)
 
-    @attr(client_min_version=2.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_put_scaling_groups(self):
         _, _, _, deployment_response = self.put_deployment(
             self.DEPLOYMENT_ID,
@@ -509,8 +504,6 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         outputs = self.client.deployments.outputs.get(id_)
         self.assertEqual(outputs['outputs'], {})
 
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_creation_failure_when_plugin_not_found_central_deployment(self):
         from cloudify_rest_client.exceptions import DeploymentPluginNotFound
         id_ = 'i{0}'.format(uuid.uuid4())
@@ -525,8 +518,6 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             manager_exceptions.DeploymentPluginNotFound.error_code,
             cm.exception.error_code)
 
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_creation_failure_when_plugin_not_found_host_agent(self):
         from cloudify_rest_client.exceptions import DeploymentPluginNotFound
         id_ = 'i{0}'.format(uuid.uuid4())
@@ -541,8 +532,6 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             manager_exceptions.DeploymentPluginNotFound.error_code,
             cm.exception.error_code)
 
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_creation_success_when_source_plugin_exists_on_manager(self):
         self.upload_plugin(TEST_PACKAGE_NAME, TEST_PACKAGE_VERSION).json
         id_ = 'i{0}'.format(uuid.uuid4())
@@ -552,8 +541,6 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             blueprint_id=id_,
             deployment_id=id_)
 
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_creation_success_when_source_plugin_with_address_exists(self):
         self.upload_plugin(TEST_PACKAGE_NAME, TEST_PACKAGE_VERSION).json
         id_ = 'i{0}'.format(uuid.uuid4())
@@ -562,8 +549,6 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             blueprint_id=id_,
             deployment_id=id_)
 
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_creation_success_when_plugin_not_found_with_new_flag(self):
         id_ = 'i{0}'.format(uuid.uuid4())
         self.put_deployment(
@@ -572,8 +557,6 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             deployment_id=id_,
             skip_plugins_validation=True)
 
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_creation_failure_with_invalid_flag_argument(self):
         id_ = 'i{0}'.format(uuid.uuid4())
         with self.assertRaises(CloudifyClientError) as cm:
@@ -586,8 +569,6 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         self.assertEqual(manager_exceptions.BadParametersError.error_code,
                          cm.exception.error_code)
 
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_creation_failure_without_skip_plugins_validation_argument(self):
         id_ = 'i{0}'.format(uuid.uuid4())
         self.put_blueprint('mock_blueprint',
@@ -617,8 +598,6 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             blueprint_id=id_,
             deployment_id=id_)
 
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_creation_success_when_diamond_plugin_in_blueprint(self):
         id_ = 'i{0}'.format(uuid.uuid4())
         self.put_deployment(
@@ -627,8 +606,6 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             blueprint_id=id_,
             deployment_id=id_)
 
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_creation_success_when_diamond_as_host_agent_in_blueprint(self):
         id_ = 'i{0}'.format(uuid.uuid4())
         self.put_deployment(
@@ -637,13 +614,9 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             blueprint_id=id_,
             deployment_id=id_)
 
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_creation_success_without_site(self):
         self._put_deployment_without_site()
 
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_creation_success_with_site(self):
         self.client.sites.create(self.SITE_NAME)
         resource_id = 'i{0}'.format(uuid.uuid4())
@@ -654,8 +627,6 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         deployment = self.client.deployments.get(resource_id)
         self.assertEqual(deployment.site_name, self.SITE_NAME)
 
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_creation_success_with_different_site_visibility(self):
         self.client.sites.create(self.SITE_NAME,
                                  visibility=VisibilityState.GLOBAL)
@@ -668,8 +639,6 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         self.assertEqual(deployment.site_name, self.SITE_NAME)
         self.assertEqual(deployment.visibility, VisibilityState.TENANT)
 
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_creation_failure_invalid_site_visibility(self):
         self.client.sites.create(self.SITE_NAME,
                                  visibility=VisibilityState.PRIVATE)
@@ -685,8 +654,6 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                                deployment_id=resource_id,
                                site_name=self.SITE_NAME)
 
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_creation_failure_invalid_site(self):
         error_msg = '404: Requested `Site` with ID `test_site` was not found'
         self.assertRaisesRegex(CloudifyClientError,
@@ -707,8 +674,6 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                                deployment_id='i{0}'.format(uuid.uuid4()),
                                site_name=':invalid_site')
 
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_set_site_deployment_created_without_site(self):
         resource_id = self._put_deployment_without_site()
         self.client.sites.create(self.SITE_NAME)
@@ -723,8 +688,6 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         deployment = self.client.deployments.get(resource_id)
         self.assertEqual(deployment.site_name, new_site_name)
 
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_set_site_deployment_created_with_site(self):
         resource_id = self._put_deployment_with_site()
 
@@ -735,8 +698,6 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         deployment = self.client.deployments.get(resource_id)
         self.assertEqual(deployment.site_name, new_site_name)
 
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_set_site_different_visibility(self):
         self.client.sites.create(self.SITE_NAME,
                                  visibility=VisibilityState.GLOBAL)
@@ -747,8 +708,6 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         deployment = self.client.deployments.get(resource_id)
         self.assertEqual(deployment.site_name, self.SITE_NAME)
 
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_set_site_invalid_deployment_visibility(self):
         resource_id = self._put_deployment_without_site()
         self.client.sites.create(self.SITE_NAME,
@@ -762,8 +721,6 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                                resource_id,
                                site_name=self.SITE_NAME)
 
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_set_site_invalid_deployment(self):
         error_msg = '404: Requested `Deployment` with ID `no_deployment` ' \
                     'was not found'
@@ -773,8 +730,6 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                                'no_deployment',
                                site_name=self.SITE_NAME)
 
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_set_site_invalid_site(self):
         resource_id = self._put_deployment_without_site()
         error_msg = '404: Requested `Site` with ID `{0}` was not ' \
@@ -793,8 +748,6 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                                deployment_id='i{0}'.format(uuid.uuid4()),
                                site_name=':invalid_site')
 
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_set_site_bad_parameters(self):
         resource_id = self._put_deployment_without_site()
         error_msg = '400: Must provide either a `site_name` of a valid site ' \
@@ -812,8 +765,6 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                                site_name=self.SITE_NAME,
                                detach_site=True)
 
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_set_site_detach_existing_site(self):
         resource_id = self._put_deployment_with_site()
 
@@ -822,8 +773,6 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         deployment = self.client.deployments.get(resource_id)
         self.assertIsNone(deployment.site_name)
 
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_set_site_detach_none_site(self):
         # Detaching the site when the deployment is not assigned with one
         resource_id = self._put_deployment_without_site()
@@ -831,8 +780,6 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         deployment = self.client.deployments.get(resource_id)
         self.assertIsNone(deployment.site_name)
 
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_delete_site_of_deployment(self):
         resource_id = self._put_deployment_with_site()
 
@@ -846,8 +793,6 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                                self.client.sites.get,
                                self.SITE_NAME)
 
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_delete_deployment_attached_to_site(self):
         resource_id = self._put_deployment_with_site()
 
@@ -884,8 +829,6 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         self.assertEqual(deployment.site_name, self.SITE_NAME)
         return resource_id
 
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_list_deployments_with_filter_id(self):
         self.put_deployment_with_labels(self.LABELS)
         dep2 = self.put_deployment_with_labels(self.LABELS_2)

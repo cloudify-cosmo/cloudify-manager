@@ -1,13 +1,10 @@
 from datetime import datetime, timedelta
 
-from manager_rest.test.attribute import attr
 from manager_rest.test.base_test import BaseServerTestCase, LATEST_API_VERSION
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 
-@attr(client_min_version=LATEST_API_VERSION,
-      client_max_version=LATEST_API_VERSION)
 class ExecutionSchedulesTestCase(BaseServerTestCase):
 
     DEPLOYMENT_ID = 'deployment'
