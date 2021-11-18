@@ -69,7 +69,7 @@ def cope_with_db_failover():
     max_attempts = 10
     for attempt in range(1, max_attempts + 1):
         try:
-            standby = db.engine.execute(
+            standby = db.session.execute(
                 'SELECT pg_is_in_recovery()').fetchall()[0][0]
             if standby:
                 # This is a hot standby, we need to fail over

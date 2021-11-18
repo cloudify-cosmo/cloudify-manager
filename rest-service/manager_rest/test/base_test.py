@@ -24,6 +24,7 @@ import tarfile
 import unittest
 import tempfile
 import sqlalchemy.exc
+from sqlalchemy.orm.session import close_all_sessions
 
 import yaml
 import wagon
@@ -304,7 +305,7 @@ class BaseServerTestCase(unittest.TestCase):
         their contents, which is faster than dropping and recreating
         the tables.
         """
-        server.db.session.remove()
+        close_all_sessions()
         if keep_tables is None:
             keep_tables = []
         meta = server.db.metadata
