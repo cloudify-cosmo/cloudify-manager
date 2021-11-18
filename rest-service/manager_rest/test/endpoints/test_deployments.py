@@ -22,7 +22,6 @@ from cloudify.models_states import VisibilityState
 from dsl_parser import exceptions as dsl_exceptions
 
 from manager_rest.test import base_test
-from manager_rest.test.attribute import attr
 from manager_rest import manager_exceptions
 from manager_rest.storage import models
 from manager_rest.constants import (DEFAULT_TENANT_NAME,
@@ -579,24 +578,6 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                          response.json['error_code'])
         self.assertEqual('400 BAD REQUEST', response.status)
         self.assertEqual(400, response.status_code)
-
-    @attr(client_min_version=1, client_max_version=3)
-    def test_creation_success_when_plugin_not_found_central_deployment_agent(
-            self):
-        id_ = 'i{0}'.format(uuid.uuid4())
-        self.put_deployment(
-            blueprint_file_name='deployment_with_source_plugin.yaml',
-            blueprint_id=id_,
-            deployment_id=id_)
-
-    @attr(client_min_version=1, client_max_version=3)
-    def test_creation_success_when_plugin_not_found_host_agent(self):
-        id_ = 'i{0}'.format(uuid.uuid4())
-        self.put_deployment(
-            blueprint_file_name='deployment_with'
-                                '_source_plugin_host_agent.yaml',
-            blueprint_id=id_,
-            deployment_id=id_)
 
     def test_creation_success_when_diamond_plugin_in_blueprint(self):
         id_ = 'i{0}'.format(uuid.uuid4())

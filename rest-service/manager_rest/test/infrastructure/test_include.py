@@ -45,13 +45,6 @@ class IncludeQueryParamTests(base_test.BaseServerTestCase):
                 filter_rules=None)
         )
 
-    @attr(client_min_version=1, client_max_version=1)
-    def test_include_propagation_to_model_v1(self):
-        self._test_include_propagation_to_model(
-            [Blueprint],
-            dict(include=[u'id'])
-        )
-
     def _test_include_propagation_to_model(self,
                                            expected_blueprints_list_args,
                                            expected_blueprints_list_kwargs):

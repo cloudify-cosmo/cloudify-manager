@@ -13,34 +13,12 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from datetime import datetime
-
-from flask_security import current_user
-
 from cloudify.cluster_status import ServiceStatus
 
 from manager_rest.test import base_test
-from manager_rest.test.attribute import attr
-from manager_rest.storage import management_models
-
-
-@attr(client_min_version=1, client_max_version=3)
-class StatusV1TestCase(base_test.BaseServerTestCase):
-
-    def test_get_status(self):
-        before_status = datetime.utcnow()
-        result = self.client.manager.get_status()
-        last_login_at = self.sm.get(management_models.User,
-                                    current_user.id).last_login_at
-        after_status = datetime.strptime(last_login_at,
-                                         "%Y-%m-%dT%H:%M:%S.%fZ")
-        self.assertEqual(result['status'], 'running')
-        self.assertEqual(type(result['services']), list)
-        self.assertGreater(after_status, before_status)
 
 
 class StatusTestCase(base_test.BaseServerTestCase):
-
     def test_get_status(self):
         result = self.client.manager.get_status()
 
