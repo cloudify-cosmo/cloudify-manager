@@ -14,8 +14,6 @@
 
 import os
 
-from manager_rest.deployment_update.constants import STATES
-
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 
@@ -43,7 +41,7 @@ class DeploymentUpdateBase(AgentlessTestCase):
             self.client.executions.get(dep_update.execution_id))
         self.assertEqual(
             self.client.deployment_updates.get(dep_update.id).state,
-            STATES.SUCCESSFUL
+            'successful'
         )
 
     def _assert_relationship(self,
@@ -170,3 +168,17 @@ class DeploymentUpdateBase(AgentlessTestCase):
     @staticmethod
     def _assertDictContainsSubset(subset, containing_dict):
         assert subset.items() <= containing_dict.items()
+
+
+class NewDeploymentUpdateMixin(object):
+    _group_update_workflow = 'csys_new_deployment_update'
+    _workflow_name = 'csys_new_deployment_update'
+
+    def _do_update(self, deployment_id, blueprint_id=None, **kwargs):
+        params = {
+            'blueprint_id': blueprint_id,
+        }
+        params.update(kwargs)
+        exc = self.client.executions.start(
+            deployment_id, 'csys_new_deployment_update', parameters=params)
+        self.wait_for_execution_to_end(exc)

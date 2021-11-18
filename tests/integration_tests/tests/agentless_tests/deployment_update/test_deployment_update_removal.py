@@ -15,7 +15,7 @@ from pytest import mark
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 
-from . import DeploymentUpdateBase, BLUEPRINT_ID
+from . import DeploymentUpdateBase, BLUEPRINT_ID, NewDeploymentUpdateMixin
 from integration_tests.tests.utils import wait_for_blueprint_upload
 
 pytestmark = mark.group_deployments
@@ -259,7 +259,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
             self._deploy_and_get_modified_bp_path('remove_workflow')
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
         wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
-        dep_update = self._do_update(deployment.id, BLUEPRINT_ID)
+        self._do_update(deployment.id, BLUEPRINT_ID)
 
         self.assertRaisesRegexp(CloudifyClientError,
                                 'Workflow {0} does not exist in deployment {1}'
@@ -269,7 +269,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
                                 workflow_id=workflow_id,
                                 parameters={'node_id': 'site1'})
 
-        deployment = self.client.deployments.get(dep_update.deployment_id)
+        deployment = self.client.deployments.get(deployment.id)
         self.assertNotIn('my_custom_workflow',
                          [w['name'] for w in deployment.workflows])
 
@@ -406,18 +406,8 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         self.assertFalse(deployment.get('description'))
 
 
-class NewTestDeploymentUpdateRemoval(DeploymentUpdateBase):
-    test_uninstall_execution_order = \
-        TestDeploymentUpdateRemoval.test_uninstall_execution_order
-    test_remove_node = TestDeploymentUpdateRemoval.test_remove_node
-
-    def _do_update(self, deployment_id, blueprint_id=None,
-                   preview=False, **kwargs):
-        params = {
-            'blueprint_id': blueprint_id,
-        }
-        if preview:
-            params['preview'] = preview
-        exc = self.client.executions.start(
-            deployment_id, 'csys_new_deployment_update', parameters=params)
-        self.wait_for_execution_to_end(exc)
+class NewTestDeploymentUpdateRemoval(
+    NewDeploymentUpdateMixin,
+    TestDeploymentUpdateRemoval
+):
+    pass

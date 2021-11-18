@@ -63,7 +63,7 @@ pipeline {
                 sh script: '''
                     . .venv/bin/activate
                   cd rest-service
-                  pip install -Ur dev-requirements.txt
+                  pip install -Ur requirements.txt
                   pip install -Ur test-requirements.txt
                   pip install -e .
                 ''', label: "installing requirements for pytest"
@@ -213,7 +213,7 @@ pipeline {
                   sh script: '''
                     . .venv/bin/activate
                     cd rest-service
-                    pip install -Ur dev-requirements.txt
+                    pip install -Ur requirements.txt
                     pip install -Ur test-requirements.txt
                     pip install -e .
                     cd ..

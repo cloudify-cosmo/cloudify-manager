@@ -1,23 +1,9 @@
-#########
-# Copyright (c) 2016 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 from flask_security import current_user
 
-from manager_rest import constants
+from manager_rest import constants, config
 from manager_rest.storage import models, user_datastore
-from manager_rest.security.authorization import authorize
+from manager_rest.security.authorization import (authorize,
+                                                 check_user_action_allowed)
 from manager_rest.security import (SecuredResource,
                                    MissingPremiumFeatureResource)
 from manager_rest.manager_exceptions import BadParametersError
@@ -84,6 +70,8 @@ class Users(SecuredMultiTenancyResource):
                 },
             }
         )
+        is_prehashed = rest_utils.verify_and_convert_bool(
+            'is_prehashed', request_dict.pop('is_prehashed', False))
 
         # The password shouldn't be validated here
         password = request_dict.pop('password')
@@ -91,15 +79,16 @@ class Users(SecuredMultiTenancyResource):
         rest_utils.validate_inputs(request_dict)
         role = request_dict.get('role', constants.DEFAULT_SYSTEM_ROLE)
         rest_utils.verify_role(role, is_system_role=True)
+
         return multi_tenancy.create_user(
             request_dict['username'],
             password,
             role,
+            is_prehashed=is_prehashed,
         )
 
 
 class UsersId(SecuredMultiTenancyResource):
-    @authorize('user_update')
     @rest_decorators.marshal_with(UserResponse)
     def post(self, username, multi_tenancy):
         """
@@ -113,9 +102,13 @@ class UsersId(SecuredMultiTenancyResource):
         if password:
             if role_name:
                 raise BadParametersError('Both `password` and `role` provided')
+            if username != current_user.username:
+                self.authorize_update()
             password = rest_utils.validate_and_decode_password(password)
             return multi_tenancy.set_user_password(username, password)
-        elif role_name:
+
+        self.authorize_update()
+        if role_name:
             rest_utils.verify_role(role_name, is_system_role=True)
             return multi_tenancy.set_user_role(username, role_name)
         if show_getting_started is not None:
@@ -146,6 +139,13 @@ class UsersId(SecuredMultiTenancyResource):
         rest_utils.validate_inputs({'username': username})
         multi_tenancy.delete_user(username)
         return None, 204
+
+    def authorize_update(self):
+        # when running unittests, there is no authorization
+        if config.instance.test_mode:
+            return
+
+        check_user_action_allowed('user_update')
 
 
 class UsersActive(SecuredMultiTenancyResource):

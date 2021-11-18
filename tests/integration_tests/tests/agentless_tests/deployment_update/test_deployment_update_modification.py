@@ -15,13 +15,14 @@
 import re
 import pytest
 
-from . import DeploymentUpdateBase, BLUEPRINT_ID
+from . import DeploymentUpdateBase, BLUEPRINT_ID, NewDeploymentUpdateMixin
 from integration_tests.tests.utils import wait_for_blueprint_upload
 
 pytestmark = pytest.mark.group_deployments
 
 
 class TestDeploymentUpdateModification(DeploymentUpdateBase):
+    _workflow_name = 'update'
 
     def test_modify_relationships(self):
         deployment, modified_bp_path = \
@@ -310,20 +311,20 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
             self._deploy_and_get_modified_bp_path('modify_workflow')
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
         wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
-        dep_update = self._do_update(deployment.id, BLUEPRINT_ID)
+        self._do_update(deployment.id, BLUEPRINT_ID)
 
         execution = self.client.executions.start(
-            dep_update.deployment_id,
+            deployment.id,
             workflow_id='my_custom_workflow',
             parameters={'node_id': 'site1'})
         self.wait_for_execution_to_end(execution)
 
         affected_node = self.client.node_instances.list(
-            deployment_id=dep_update.deployment_id,
+            deployment_id=deployment.id,
             node_id='site1'
         )
         self.assertEqual(len(affected_node), 6)
-        deployment = self.client.deployments.get(dep_update.deployment_id)
+        deployment = self.client.deployments.get(deployment.id)
         self.assertIn('my_custom_workflow',
                       [w['name'] for w in deployment.workflows])
 
@@ -337,9 +338,9 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
         wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
-        dep_update = self._do_update(deployment.id, BLUEPRINT_ID)
+        self._do_update(deployment.id, BLUEPRINT_ID)
 
-        deployment = self.client.deployments.get(dep_update.deployment_id)
+        deployment = self.client.deployments.get(deployment.id)
         self._assertDictContainsSubset({'custom_output': {'value': 1}},
                                        deployment.outputs)
 
@@ -351,9 +352,9 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
         wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
-        dep_update = self._do_update(deployment.id, BLUEPRINT_ID)
+        self._do_update(deployment.id, BLUEPRINT_ID)
 
-        deployment = self.client.deployments.get(dep_update.deployment_id)
+        deployment = self.client.deployments.get(deployment.id)
         self.assertRegexpMatches(deployment['description'], 'new description')
 
     def test_modify_inputs_ops_order(self):
@@ -364,18 +365,18 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
             u'test_list': u'initial_input'})
 
         new_test_list = [u'update_input1', u'update_input2']
-        dep_update = self._do_update(
+        self._do_update(
             deployment.id, inputs={u'test_list': new_test_list})
 
         execution_ids = [en.id for en in self.client.executions.list(
             deployment_id=deployment.id,
-            workflow_id='update',
+            workflow_id=self._workflow_name,
             status='terminated',
         )]
         self.assertEqual(len(execution_ids), 1)
 
         # verify if inputs have been updated
-        deployment = self.client.deployments.get(dep_update.deployment_id)
+        deployment = self.client.deployments.get(deployment.id)
         self.assertEqual(deployment['inputs'], {u'test_list': new_test_list})
 
         # verify reinstall-(un)install tasks graphs were generated
@@ -398,3 +399,10 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
                         event_messages.index(u'Deleted node instance'))
         self.assertLess(event_messages.index(u'Deleted node instance'),
                         event_messages.index(u'Node instance started'))
+
+
+class NewTestDeploymentUpdateModification(
+    NewDeploymentUpdateMixin,
+    TestDeploymentUpdateModification
+):
+    pass

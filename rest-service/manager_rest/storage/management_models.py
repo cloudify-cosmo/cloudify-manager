@@ -1,18 +1,3 @@
-#########
-# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 import tempfile
 from uuid import uuid4
 from collections import (
@@ -431,7 +416,8 @@ class User(SQLModelBase, UserMixin):
             for tenant in self.group_tenants
         }
 
-    def to_response(self, include=None, get_data=False, **kwargs):
+    def to_response(self, include=None, get_data=False,
+                    include_hash=False, **kwargs):
         user_dict = super(User, self).to_response(include, **kwargs)
         user_dict['tenants'] = self._get_tenants_response()
         user_dict['groups'] = self._get_groups_response()
@@ -447,6 +433,8 @@ class User(SQLModelBase, UserMixin):
         else:
             for attr in ('tenants', 'groups'):
                 user_dict[attr] = len(user_dict[attr])
+        if include_hash:
+            user_dict['password_hash'] = self.password
 
         return user_dict
 

@@ -1,18 +1,3 @@
-#########
-# Copyright (c) 2018 Cloudify Platform Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 from os.path import join
 
 from flask import request
@@ -27,7 +12,10 @@ from cloudify.models_states import VisibilityState, BlueprintUploadState
 from dsl_parser import constants
 
 from manager_rest.security import SecuredResource
-from manager_rest.security.authorization import authorize
+from manager_rest.security.authorization import (
+    authorize,
+    check_user_action_allowed,
+)
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.upload_manager import (UploadedBlueprintsManager,
                                          UploadedBlueprintsValidator)
@@ -76,6 +64,25 @@ class BlueprintsSetVisibility(SecuredResource):
                                                      visibility)
 
 
+class BlueprintsIcon(SecuredResource):
+
+    @authorize('blueprint_upload')
+    @rest_decorators.marshal_with(models.Blueprint)
+    def patch(self, blueprint_id):
+        """
+        Set the blueprint's icon
+        """
+        # Get the blueprint to verify if it exists (in the current context)
+        blueprint = get_storage_manager().get(models.Blueprint, blueprint_id)
+        if request.data:
+            UploadedBlueprintsManager().update_icon_file(
+                blueprint.tenant_name, blueprint_id)
+        else:
+            UploadedBlueprintsManager().remove_icon_file(
+                blueprint.tenant_name, blueprint_id)
+        return blueprint
+
+
 class BlueprintsId(resources_v2.BlueprintsId):
     @authorize('blueprint_upload')
     @rest_decorators.marshal_with(models.Blueprint)
@@ -86,8 +93,20 @@ class BlueprintsId(resources_v2.BlueprintsId):
         rest_utils.validate_inputs({'blueprint_id': blueprint_id})
         args = get_args_and_verify_arguments(
             [Argument('async_upload', type=boolean, default=False),
+             Argument('owner'),
+             Argument('created_at'),
              Argument('labels')]
         )
+
+        created_at = owner = None
+        if args.created_at:
+            check_user_action_allowed('set_timestamp', None, True)
+            created_at = rest_utils.parse_datetime_string(args.created_at)
+
+        if args.owner:
+            check_user_action_allowed('set_creator', None, True)
+            owner = rest_utils.valid_user(args.owner)
+
         async_upload = args.async_upload
         visibility = rest_utils.get_visibility_parameter(
             optional=True,
@@ -129,7 +148,9 @@ class BlueprintsId(resources_v2.BlueprintsId):
             receive_uploaded_data(data_id=blueprint_id,
                                   visibility=visibility,
                                   override_failed=override_failed,
-                                  labels=labels)
+                                  labels=labels,
+                                  created_at=created_at,
+                                  owner=owner)
         if not async_upload:
             sm = get_storage_manager()
             blueprint, _ = response
@@ -191,9 +212,21 @@ class BlueprintsId(resources_v2.BlueprintsId):
             'state': {'type': text_type, 'optional': True},
             'error': {'type': text_type, 'optional': True},
             'error_traceback': {'type': text_type, 'optional': True},
-            'labels': {'type': list, 'optional': True}
+            'labels': {'type': list, 'optional': True},
+            'creator': {'type': text_type, 'optional': True},
+            'created_at': {'type': text_type, 'optional': True},
         }
         request_dict = rest_utils.get_json_and_verify_params(request_schema)
+
+        created_at = creator = None
+        if request_dict.get('created_at'):
+            check_user_action_allowed('set_timestamp', None, True)
+            created_at = rest_utils.parse_datetime_string(
+                request_dict['created_at'])
+
+        if request_dict.get('creator'):
+            check_user_action_allowed('set_owner', None, True)
+            creator = rest_utils.valid_user(request_dict['creator'])
 
         invalid_params = set(request_dict.keys()) - set(request_schema.keys())
         if invalid_params:
@@ -285,7 +318,9 @@ class BlueprintsId(resources_v2.BlueprintsId):
                 labels_list = rest_utils.get_labels_list(provided_labels)
                 rm.update_resource_labels(models.BlueprintLabel,
                                           blueprint,
-                                          labels_list)
+                                          labels_list,
+                                          creator=creator,
+                                          created_at=created_at)
 
         blueprint.updated_at = get_formatted_timestamp()
         return sm.update(blueprint)

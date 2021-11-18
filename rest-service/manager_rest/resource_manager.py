@@ -1,18 +1,3 @@
-#########
-# Copyright (c) 2017-2019 Cloudify Platform Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 import os
 import uuid
 import yaml
@@ -68,7 +53,8 @@ from manager_rest.plugins_update.constants import STATES as PluginsUpdateStates
 from manager_rest.storage import (db,
                                   get_storage_manager,
                                   models,
-                                  get_node)
+                                  get_node,
+                                  storage_utils)
 
 from . import utils
 from . import config
@@ -139,6 +125,7 @@ class ResourceManager(object):
 
     def update_execution_status(self, execution_id, status, error):
         with self.sm.transaction():
+            storage_utils.deployments_lock()
             execution = self.sm.get(models.Execution, execution_id,
                                     locking=True)
             if execution._deployment_fk:
@@ -227,33 +214,25 @@ class ResourceManager(object):
         to_run = []
         while True:
             with self.sm.transaction():
+                storage_utils.deployments_lock()
                 dequeued = self._get_queued_executions(deployment_storage_id)
                 all_started = True
                 for execution in dequeued:
-                    if self._refresh_execution(execution):
-                        try:
-                            messages = self.prepare_executions(
-                                [execution],
-                                queue=True)
-                            to_run.extend(messages)
-                        except Exception as e:
-                            current_app.logger.warning(
-                                'Could not dequeue execution %s: %s',
-                                execution, e)
-                    else:
-                        all_started = False
+                    refreshed, messages = self._refresh_execution(execution)
+                    to_run.extend(messages)
+                    all_started &= refreshed
                 if all_started:
                     break
         workflow_executor.execute_workflow(to_run)
 
-    def _refresh_execution(self, execution: models.Execution) -> bool:
+    def _refresh_execution(self, execution: models.Execution) -> (bool, list):
         """Prepare the execution to be started.
 
         Re-evaluate parameters, and return if the execution can run.
         """
         execution.status = ExecutionState.PENDING
         if not execution.deployment:
-            return True
+            return True, self._prepare_execution_or_log(execution)
         self.sm.refresh(execution.deployment)
         try:
             if execution and execution.deployment and \
@@ -273,13 +252,23 @@ class ResourceManager(object):
         except Exception as e:
             execution.status = ExecutionState.FAILED
             execution.error = str(e)
-            return False
+            return False, []
         else:
             flag_modified(execution, 'parameters')
-            return True
         finally:
             self.sm.update(execution)
             db.session.flush([execution])
+        return True, self._prepare_execution_or_log(execution)
+
+    def _prepare_execution_or_log(self, execution: models.Execution) -> list:
+        try:
+            return self.prepare_executions(
+                [execution], queue=True, commit=False)
+        except Exception as e:
+            current_app.logger.warning(
+                'Could not dequeue execution %s: %s',
+                execution, e)
+            return []
 
     def _get_queued_executions(self, deployment_storage_id):
         sort_by = {'created_at': 'asc'}
@@ -545,7 +534,8 @@ class ResourceManager(object):
         # Verify plugin exists and can be removed
         plugin = self.sm.get(models.Plugin, plugin_id)
         validate_global_modification(plugin)
-        self._check_for_active_system_wide_execution(queue=False)
+        self._check_for_running_executions(
+            self._active_system_wide_execution_filter(), queue=False)
 
         if not force:
             affected_blueprint_ids = []
@@ -669,7 +659,9 @@ class ResourceManager(object):
             blueprints_location,
             utils.current_tenant.name,
             folder_name.id)
-        shutil.rmtree(blueprint_folder)
+        # Don't cry if the blueprint folder never got created
+        if os.path.exists(blueprint_folder):
+            shutil.rmtree(blueprint_folder)
 
     def delete_blueprint(self, blueprint_id, force, remove_files=True):
         blueprint = self.sm.get(models.Blueprint, blueprint_id)
@@ -1002,8 +994,8 @@ class ResourceManager(object):
             if exc.is_system_workflow \
                     and exc.deployment is None \
                     and not allow_overlapping_running_wf:
-                should_queue = self._check_for_any_active_executions(
-                    exc, queue)
+                should_queue = self._check_for_running_executions(
+                    self._any_active_executions_filter(exc), queue)
             elif not allow_overlapping_running_wf:
                 should_queue = self.check_for_executions(
                     exc, force, queue)
@@ -1043,8 +1035,8 @@ class ResourceManager(object):
         :param queue: if the execution can't be run in parallel with others,
             and this is set, queue the execution. Otherwise, throw.
         """
-        system_exec_running = self._check_for_active_system_wide_execution(
-            queue)
+        system_exec_running = self._check_for_running_executions(
+            self._active_system_wide_execution_filter(), queue)
         if system_exec_running:
             return True
         if force:
@@ -1052,6 +1044,18 @@ class ResourceManager(object):
         if not execution.deployment or not execution.deployment._storage_id:
             return system_exec_running
         return self._check_for_active_executions(execution, queue)
+
+    def _active_system_wide_execution_filter(self, *_):
+        return {
+            'is_system_workflow': [True],
+            'status': ExecutionState.ACTIVE_STATES + [ExecutionState.QUEUED],
+        }
+
+    def _any_active_executions_filter(self, execution):
+        return {
+            'status': ExecutionState.ACTIVE_STATES,
+            'id': lambda col: col != execution.id,
+        }
 
     def _check_for_active_executions(self, execution, queue):
         def status_filter(col):
@@ -1087,45 +1091,21 @@ class ResourceManager(object):
                 f'deployment: {running}. To execute this workflow anyway, '
                 f'pass "force=true" as a query parameter to this request')
 
-    def _check_for_active_system_wide_execution(self, queue):
-        executions = self.sm.list(models.Execution, filters={
-            'is_system_workflow': True,
-            'status': ExecutionState.ACTIVE_STATES + [ExecutionState.QUEUED],
-        }, get_all_results=True, all_tenants=True).items
-        if executions and queue:
-            return True
-        elif executions:
-            raise manager_exceptions.ExistingRunningExecutionError(
-                f'Cannot start an execution if there are running '
-                f'system-wide executions ('
-                f'{ ", ".join(e.id for e in executions) })'
-            )
-        else:
-            return False
-
-    def _check_for_any_active_executions(self, execution, queue):
-        filters = {
-            'status': ExecutionState.ACTIVE_STATES,
-            'id': lambda col: col != execution.id,
-        }
-        executions = [
+    def _check_for_running_executions(self, filters, queue):
+        execution_ids = [
             e.id
             for e in self.list_executions(is_include_system_workflows=True,
                                           filters=filters,
                                           all_tenants=True,
                                           get_all_results=True).items
         ]
-        # Execution can't currently run because other executions are running,
-        # since `queue` flag is on - we will queue the execution and it will
-        # run when possible
-        if executions and queue:
+        if execution_ids and queue:
             return True
-        elif executions:
+        elif execution_ids:
             raise manager_exceptions.ExistingRunningExecutionError(
-                'You cannot start a system-wide execution if there are '
-                'other executions running. '
-                'Currently running executions: {0}'
-                .format(executions))
+                f'Cannot start execution because there are other executions '
+                f'running: { ", ".join(execution_ids) }'
+            )
         else:
             return False
 
@@ -2123,34 +2103,39 @@ class ResourceManager(object):
             modified_attrs=('total_operations', 'finished_operations'))
         return operation
 
-    def create_tasks_graph(self, name, execution_id, operations=None):
+    def create_tasks_graph(self, name, execution_id, operations=None,
+                           created_at=None, graph_id=None):
         execution = self.sm.list(models.Execution,
                                  filters={'id': execution_id},
                                  get_all_results=True,
                                  all_tenants=True)[0]
+        created_at = created_at or datetime.utcnow()
         graph = models.TasksGraph(
             name=name,
             _execution_fk=execution._storage_id,
-            created_at=utils.get_formatted_timestamp(),
+            created_at=created_at,
             _tenant_id=execution._tenant_id,
             _creator_id=execution._creator_id
         )
+        if graph_id:
+            graph.id = graph_id
         db.session.add(graph)
+
+        if execution.total_operations is None:
+            execution.total_operations = 0
+            execution.finished_operations = 0
         if operations:
             created_ops = []
             for operation in operations:
                 operation.setdefault('state', 'pending')
                 op = models.Operation(
                     tenant=utils.current_tenant,
-                    creator=current_user,
+                    _creator_id=execution._creator_id,
+                    created_at=operation.pop('created_at', created_at),
                     tasks_graph=graph,
                     **operation)
                 created_ops.append(op)
                 db.session.add(op)
-        if execution.total_operations is None:
-            execution.total_operations = 0
-            execution.finished_operations = 0
-        if operations:
             execution.total_operations += sum(
                 not op.is_nop
                 for op in created_ops
@@ -2495,7 +2480,9 @@ class ResourceManager(object):
     def update_resource_labels(self,
                                labels_resource_model,
                                resource,
-                               new_labels):
+                               new_labels,
+                               creator=None,
+                               created_at=None):
         """
         Updating the resource labels.
 
@@ -2513,7 +2500,9 @@ class ResourceManager(object):
 
         self.create_resource_labels(labels_resource_model,
                                     resource,
-                                    labels_to_create)
+                                    labels_to_create,
+                                    creator=creator,
+                                    created_at=created_at)
 
     @staticmethod
     def get_labels_to_create(resource, new_labels):
@@ -2536,7 +2525,9 @@ class ResourceManager(object):
     def create_resource_labels(self,
                                labels_resource_model,
                                resource,
-                               labels_list):
+                               labels_list,
+                               creator=None,
+                               created_at=None):
         """
         Populate the resource_labels table.
 
@@ -2544,6 +2535,8 @@ class ResourceManager(object):
         :param resource: A resource element
         :param labels_list: A list of labels of the form:
                             [(key1, value1), (key2, value2)]
+        :param creator: Specify creator (e.g. for snapshots).
+        :param created_at: Specify creation time (e.g. for snapshots).
         """
         if not labels_list:
             return
@@ -2552,8 +2545,8 @@ class ResourceManager(object):
         for key, value in labels_list:
             new_label = {'key': key,
                          'value': value,
-                         'created_at': current_time,
-                         'creator': current_user}
+                         'created_at': created_at or current_time,
+                         'creator': creator or current_user}
             if labels_resource_model == models.DeploymentLabel:
                 new_label['deployment'] = resource
             elif labels_resource_model == models.BlueprintLabel:
@@ -2649,18 +2642,21 @@ def get_resource_manager(sm=None):
                                          ResourceManager())
 
 
-def create_secret(key, secret, tenant):
+def create_secret(key, secret, tenant, created_at=None,
+                  updated_at=None, creator=None):
     sm = get_storage_manager()
     timestamp = utils.get_formatted_timestamp()
     new_secret = models.Secret(
         id=key,
         value=encrypt(secret['value']),
-        created_at=timestamp,
-        updated_at=timestamp,
+        created_at=created_at or timestamp,
+        updated_at=updated_at or timestamp,
         visibility=secret['visibility'],
         is_hidden_value=secret['is_hidden_value'],
         tenant=tenant
     )
+    if creator:
+        new_secret.creator = creator
     created_secret = sm.put(new_secret)
     return created_secret
 

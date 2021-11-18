@@ -26,8 +26,6 @@ from integration_tests.tests.utils import (
     wait_for_deployment_deletion_to_complete
 )
 
-from manager_rest.constants import DEFAULT_TENANT_NAME
-
 pytestmark = pytest.mark.group_deployments
 RESOURCE_PATH = 'resources/resource.txt'
 RESOURCE_CONTENT = 'this is a deployment resource'
@@ -43,12 +41,12 @@ class DeploymentResourceTest(AgentlessTestCase):
         base_dep_dir = '/opt/manager/resources/deployments'
         dep_resources_dir = join(
             base_dep_dir,
-            DEFAULT_TENANT_NAME,
+            'default_tenant',
             deployment_id,
             'resources'
         )
         full_resource_path = join(base_dep_dir,
-                                  DEFAULT_TENANT_NAME,
+                                  'default_tenant',
                                   deployment_id,
                                   RESOURCE_PATH)
         self.execute_on_manager('mkdir -p {0}'.format(dep_resources_dir))

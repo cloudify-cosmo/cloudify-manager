@@ -1,18 +1,3 @@
-#########
-# Copyright (c) 2018 Cloudify Platform Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 from datetime import datetime
 from flask_restful.reqparse import Argument
 
@@ -20,10 +5,10 @@ from cloudify._compat import text_type
 from cloudify import constants as common_constants
 from cloudify.workflows import events as common_events
 
-from manager_rest import manager_exceptions
 from manager_rest.rest.rest_utils import (
     get_args_and_verify_arguments,
     get_json_and_verify_params,
+    parse_datetime_string,
 )
 from manager_rest.rest.rest_decorators import (
     marshal_with,
@@ -33,12 +18,12 @@ from manager_rest.rest.rest_decorators import (
 from manager_rest.storage import (
     get_storage_manager,
     models,
-    db
+    db,
 )
 from manager_rest.security.authorization import authorize
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.security import SecuredResource
-from manager_rest.security.authorization import is_user_action_allowed
+from manager_rest.security.authorization import check_user_action_allowed
 from manager_rest.execution_token import current_execution
 
 
@@ -124,12 +109,8 @@ class OperationsId(SecuredResource):
     def _on_success_SetNodeInstanceStateTask(self, sm, operation):
         required_permission = 'node_instance_update'
         tenant_name = current_execution.tenant.name
-        if not is_user_action_allowed(required_permission,
-                                      tenant_name=tenant_name):
-            raise manager_exceptions.ForbiddenError(
-                f'Execution is not permitted to perform the action '
-                f'{required_permission} in the tenant {tenant_name}'
-            )
+        check_user_action_allowed(required_permission,
+                                  tenant_name=tenant_name)
         try:
             kwargs = operation.parameters['task_kwargs']
             node_instance_id = kwargs['node_instance_id']
@@ -277,16 +258,30 @@ class TasksGraphsId(SecuredResource):
     @marshal_with(models.TasksGraph)
     def post(self, **kwargs):
         params = get_json_and_verify_params({
-            'name': {'type': text_type, 'required': True},
-            'execution_id': {'type': text_type, 'required': True},
-            'operations': {'required': False}
+            'name': {'type': text_type},
+            'execution_id': {'type': text_type},
+            'operations': {'optional': True},
+            'created_at': {'optional': True},
+            'graph_id': {'optional': True},
         })
+        created_at = params.get('created_at')
+        operations = params.get('operations', [])
+        if params.get('graph_id'):
+            check_user_action_allowed('set_execution_details')
+        if created_at or any(op.get('created_at') for op in operations):
+            check_user_action_allowed('set_timestamp')
+            created_at = parse_datetime_string(params.get('created_at'))
+            for op in operations:
+                if op.get('created_at'):
+                    op['created_at'] = parse_datetime_string(op['created_at'])
         sm = get_storage_manager()
         with sm.transaction():
             tasks_graph = get_resource_manager().create_tasks_graph(
                 name=params['name'],
                 execution_id=params['execution_id'],
-                operations=params.get('operations', [])
+                operations=params.get('operations', []),
+                created_at=created_at,
+                graph_id=params.get('graph_id')
             )
         return tasks_graph, 201
 

@@ -20,7 +20,7 @@ from integration_tests.tests.utils import (
     wait_for_blueprint_upload,
     wait_for_deployment_deletion_to_complete
 )
-from . import DeploymentUpdateBase, BLUEPRINT_ID
+from . import DeploymentUpdateBase, BLUEPRINT_ID, NewDeploymentUpdateMixin
 
 pytestmark = pytest.mark.group_deployments
 
@@ -53,10 +53,10 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
                                               blueprint_id):
             self.client.blueprints.upload(bp_path, blueprint_id)
             wait_for_blueprint_upload(blueprint_id, self.client)
-            dep_update = self._do_update(dep.id, blueprint_id)
+            self._do_update(dep.id, blueprint_id)
 
             # verify deployment output
-            dep = self.client.deployments.get(dep_update.deployment_id)
+            dep = self.client.deployments.get(deployment.id)
             self._assertDictContainsSubset(
                 {'custom_output': {'value': expected_output_value}},
                 dep.outputs)
@@ -64,20 +64,20 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
             self.assertEqual('modified description' in dep.description,
                              is_description_modified)
 
+        self.assertEqual(
+            self.client.deployments.get(deployment.id).blueprint_id, 'start')
+
         # modify output and verify
         update_deployment_wait_and_assert(
             deployment, modification_bp_path, 1, False, 'first')
+        self.assertEqual(
+            self.client.deployments.get(deployment.id).blueprint_id, 'first')
+
         # modify output again and modify description
         update_deployment_wait_and_assert(
             deployment, remodification_bp_path, 2, True, 'second')
-
-        executions = [ex for ex in
-                      self.client.executions.list(is_descending=False)
-                      if ex.workflow_id != 'upload_blueprint']
-        self.assertEqual('start', executions[0].blueprint_id)
-        self.assertEqual('start', executions[1].blueprint_id)
-        self.assertEqual('first', executions[2].blueprint_id)
-        self.assertEqual('second', executions[3].blueprint_id)
+        self.assertEqual(
+            self.client.deployments.get(deployment.id).blueprint_id, 'second')
 
     def test_modify_deployment_update_schema(self):
         # this test verifies that storage (elasticsearch) can deal with
@@ -105,16 +105,16 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
             blueprint_id = 'b{0}'.format(uuid4())
             self.client.blueprints.upload(bp_path, blueprint_id)
             wait_for_blueprint_upload(blueprint_id, self.client)
-            dep_update = self._do_update(dep.id, blueprint_id)
+            self._do_update(dep.id, blueprint_id)
 
             # verify deployment output value
             outputs = self.client.deployments.outputs.get(
-                dep_update.deployment_id).outputs
+                deployment.id).outputs
             self.assertDictEqual(
                 {'custom_output': expected_output_value},
                 outputs)
             # verify deployment output definition
-            dep = self.client.deployments.get(dep_update.deployment_id)
+            dep = self.client.deployments.get(deployment.id)
             self.assertDictEqual(
                 {'custom_output': {'value': expected_output_definition}},
                 dep.outputs)
@@ -263,8 +263,8 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
         wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
-        dep_update = self._do_update(deployment.id, BLUEPRINT_ID,
-                                     workflow_id='custom_workflow')
+        self._do_update(
+            deployment.id, BLUEPRINT_ID, workflow_id='custom_workflow')
 
         modified_nodes, modified_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
@@ -285,10 +285,7 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
 
         intact_node_instance = modified_node_instances['intact'][0]
 
-        self._assertDictContainsSubset(
-            {'update_id': dep_update.id},
-            intact_node_instance.runtime_properties
-        )
+        self.assertIn('update_id', intact_node_instance.runtime_properties)
 
         workflows = [e['workflow_id'] for e in
                      self.client.executions.list(deployment_id=deployment.id,
@@ -454,12 +451,12 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
         blu_id = BLUEPRINT_ID + '-del-1'
         self.client.blueprints.upload(mod_del_dep_bp1, blu_id)
         wait_for_blueprint_upload(blu_id, self.client)
-        del_dep_update1 = self._do_update(del_deployment.id, blu_id)
+        self._do_update(del_deployment.id, blu_id)
 
         blu_id = BLUEPRINT_ID + '-undel-1'
         self.client.blueprints.upload(mod_undel_dep_bp1, blu_id)
         wait_for_blueprint_upload(blu_id, self.client)
-        undel_dep_update = self._do_update(undel_deployment.id, blu_id)
+        self._do_update(undel_deployment.id, blu_id)
 
         mod_del_dep_bp2 = self._get_blueprint_path(
             os.path.join('remove_deployment', 'modification2'),
@@ -467,7 +464,7 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
         blu_id = BLUEPRINT_ID + '-del-2'
         self.client.blueprints.upload(mod_del_dep_bp2, blu_id)
         wait_for_blueprint_upload(blu_id, self.client)
-        del_dep_update2 = self._do_update(del_deployment.id, blu_id)
+        self._do_update(del_deployment.id, blu_id)
 
         deployment_update_list = self.client.deployment_updates.list(
             deployment_id=del_deployment.id,
@@ -475,10 +472,6 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
         )
 
         self.assertEqual(len(deployment_update_list.items), 2)
-        self.assertEqual(
-            {d['id'] for d in deployment_update_list},
-            {del_dep_update1.id, del_dep_update2.id}
-        )
 
         # Delete deployment and assert deployment updates were removed
         uninstall = self.client.executions.start(
@@ -501,7 +494,8 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
             _include=['id']
         )
         self.assertEqual(len(deployment_update_list), 1)
-        self.assertEqual(deployment_update_list[0]['id'], undel_dep_update.id)
+
+    _group_update_workflow = 'csys_update_deployment'
 
     def test_update_group(self):
         self.upload_blueprint_resource(
@@ -527,14 +521,20 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
         self.wait_for_execution_to_end(create_dep_env_group, is_group=True)
         update_group = self.client.execution_groups.start(
             deployment_group_id='g1',
-            workflow_id='csys_update_deployment',
+            workflow_id=self._group_update_workflow,
             default_parameters={
                 'blueprint_id': 'bp2',
             }
         )
         self.wait_for_execution_to_end(update_group, is_group=True)
         update_group = self.client.execution_groups.get(update_group['id'])
-        self.assertEqual(len(update_group.execution_ids), 10)
         for deployment_id in group.deployment_ids:
             dep = self.client.deployments.get(deployment_id)
             self.assertIn('description', dep.description)
+
+
+class NewTestDeploymentUpdateMisc(
+    NewDeploymentUpdateMixin,
+    TestDeploymentUpdateMisc
+):
+    pass

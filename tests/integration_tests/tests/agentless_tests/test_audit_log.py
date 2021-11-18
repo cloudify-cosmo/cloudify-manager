@@ -8,7 +8,6 @@ from cloudify_rest_client import CloudifyClient
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.constants import USER_ROLE
 from integration_tests.tests.utils import get_resource as resource
-from manager_rest.constants import DEFAULT_TENANT_ROLE
 
 pytestmark = pytest.mark.group_api
 
@@ -106,7 +105,7 @@ class AuditLogMultiTenantTest(AgentlessTestCase):
             self.client.users.create(user.name, user.password, USER_ROLE)
             self.client.tenants.create(user.tenant)
             self.client.tenants.add_user(user.name, user.tenant,
-                                         DEFAULT_TENANT_ROLE)
+                                         'user')
             user.client = self.create_rest_client(username=user.name,
                                                   password=user.password,
                                                   tenant=user.tenant)

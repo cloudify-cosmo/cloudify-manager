@@ -33,8 +33,6 @@ from requests.exceptions import ConnectionError
 import cloudify.utils
 from cloudify.snapshots import STATES, SNAPSHOT_RESTORE_FLAG_FILE
 
-from manager_rest.constants import CLOUDIFY_TENANT_HEADER
-
 from integration_tests.framework import utils, docker
 from integration_tests.tests import utils as test_utils
 from integration_tests.tests.utils import (
@@ -392,12 +390,12 @@ class BaseTestCase(unittest.TestCase):
 
     @contextmanager
     def client_using_tenant(self, client, tenant_name):
-        curr_tenant = client._client.headers.get(CLOUDIFY_TENANT_HEADER)
+        curr_tenant = client._client.headers.get('Tenant')
         try:
-            client._client.headers[CLOUDIFY_TENANT_HEADER] = tenant_name
+            client._client.headers['Tenant'] = tenant_name
             yield
         finally:
-            client._client.headers[CLOUDIFY_TENANT_HEADER] = curr_tenant
+            client._client.headers['Tenant'] = curr_tenant
 
     def make_file_with_name(self, content, filename, base_dir=None):
         base_dir = (os.path.join(self._temp_dir, base_dir)

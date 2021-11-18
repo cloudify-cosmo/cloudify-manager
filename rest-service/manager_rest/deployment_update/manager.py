@@ -146,8 +146,11 @@ class DeploymentUpdateManager(object):
                          'state': [STATES.UPDATING,
                                    STATES.EXECUTING_WORKFLOW,
                                    STATES.FINALIZING]}):
-            reevaluated_state = _map_execution_to_deployment_update_status(
-                active_update.execution.status)
+            reevaluated_state = \
+                _map_execution_to_deployment_update_status(
+                    active_update.execution.status) \
+                if active_update.execution \
+                else STATES.FAILED
             if reevaluated_state and active_update.state != reevaluated_state:
                 current_app.logger.info("Deployment update %s status "
                                         "reevaluation: `%s` -> `%s`",
@@ -632,6 +635,8 @@ class DeploymentUpdateManager(object):
         """
         # mark deployment update as finalizing
         dep_update = self.get_deployment_update(deployment_update_id)
+        if dep_update.execution.workflow_id == 'csys_new_deployment_update':
+            return dep_update
         dep_update.state = STATES.FINALIZING
         self.sm.update(dep_update)
 

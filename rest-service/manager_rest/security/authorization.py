@@ -57,26 +57,15 @@ def authorize(action,
                         'invalid tenant name: {0}'.format(tenant_name)
                     )
 
-            if not current_user.active:
-                raise ForbiddenError(
-                    'Authorization failed: '
-                    'User `{0}` is deactivated'.format(current_user.username)
-                )
-
             # when running unittests, there is no authorization
             if config.instance.test_mode:
                 return func(*args, **kwargs)
 
             # checking if any of the user's roles is allowed to perform action
-            if is_user_action_allowed(action, tenant_name, allow_all_tenants):
-                return func(*args, **kwargs)
+            check_user_action_allowed(action, tenant_name, allow_all_tenants)
 
-            # none of the user's role is allowed to perform the action
-            error_message = 'User `{0}` is not permitted to perform the ' \
-                            'action {1}'.format(current_user.username, action)
-            if tenant_name:
-                error_message += ' in the tenant `{0}`'.format(tenant_name)
-            raise ForbiddenError(error_message)
+            return func(*args, **kwargs)
+
         return wrapper
     return authorize_dec
 
@@ -100,6 +89,22 @@ def get_current_user_roles(tenant_name=None, allow_all_tenants=False):
 
 
 def is_user_action_allowed(action, tenant_name=None, allow_all_tenants=False):
+    if not current_user.active:
+        raise ForbiddenError(
+            'Authorization failed: '
+            'User `{0}` is deactivated'.format(current_user.username)
+        )
     user_roles = get_current_user_roles(tenant_name, allow_all_tenants)
     action_roles = config.instance.authorization_permissions[action]
     return set(user_roles) & set(action_roles)
+
+
+def check_user_action_allowed(action, tenant_name=None,
+                              allow_all_tenants=False):
+    if not is_user_action_allowed(action, tenant_name, allow_all_tenants):
+        # none of the user's roles are allowed to perform the action
+        error_message = 'User `{0}` is not permitted to perform the ' \
+                        'action {1}'.format(current_user.username, action)
+        if tenant_name:
+            error_message += ' in the tenant `{0}`'.format(tenant_name)
+        raise ForbiddenError(error_message)

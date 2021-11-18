@@ -1,18 +1,3 @@
-#########
-# Copyright (c) 2016 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 import uuid
 from builtins import staticmethod
 
@@ -33,8 +18,9 @@ from cloudify.deployment_dependencies import (create_deployment_dependency,
 
 from manager_rest import utils, manager_exceptions, workflow_executor
 from manager_rest.security import SecuredResource
-from manager_rest.security.authorization import authorize
-from manager_rest.storage import db, models, get_storage_manager
+from manager_rest.security.authorization import (authorize,
+                                                 check_user_action_allowed)
+from manager_rest.storage import db, models, get_storage_manager, storage_utils
 from manager_rest.manager_exceptions import (
     DeploymentEnvironmentCreationInProgressError,
     DeploymentCreationError,
@@ -281,6 +267,7 @@ class DeploymentsId(resources_v1.DeploymentsId):
         sm = get_storage_manager()
         rm = get_resource_manager()
         with sm.transaction():
+            storage_utils.deployments_lock()
             deployment = sm.get(models.Deployment, deployment_id, locking=True)
             allowed_attribs = {
                 'description', 'workflows', 'inputs', 'policy_types',
@@ -505,36 +492,8 @@ class InterDeploymentDependencies(SecuredResource):
         created_ids = []
         with sm.transaction():
             for dependency in dependencies:
-                now = utils.get_formatted_timestamp()
-
-                if (TARGET_DEPLOYMENT in dependency and
-                        EXTERNAL_SOURCE not in dependency and
-                        EXTERNAL_TARGET not in dependency):
-                    target_deployment = sm.get(models.Deployment,
-                                               dependency[TARGET_DEPLOYMENT],
-                                               fail_silently=True)
-                else:
-                    target_deployment = None
-
-                deployment_dependency = models.InterDeploymentDependencies(
-                    id=str(uuid.uuid4()),
-                    dependency_creator=dependency[DEPENDENCY_CREATOR],
-                    source_deployment=source_deployment,
-                    target_deployment=target_deployment,
-                    target_deployment_func=dependency.get(
-                        TARGET_DEPLOYMENT_FUNC),
-                    external_source=dependency.get(EXTERNAL_SOURCE),
-                    external_target=dependency.get(EXTERNAL_TARGET),
-                    created_at=now)
-                record = sm.put(deployment_dependency)
-
-                if source_deployment and target_deployment:
-                    source_id = str(source_deployment.id)
-                    target_id = str(target_deployment.id)
-                    dep_graph.assert_no_cyclic_dependencies(source_id,
-                                                            target_id)
-                    dep_graph.add_dependency_to_graph(source_id, target_id)
-
+                record = _create_inter_deployment_dependency(
+                    source_deployment, dependency, sm, dep_graph)
                 created_ids += [record.id]
 
         return ListResponse(
@@ -727,6 +686,63 @@ class InterDeploymentDependencies(SecuredResource):
         return inter_deployment_dependencies
 
 
+class InterDeploymentDependenciesId(SecuredResource):
+    @swagger.operation(
+        responseClass=models.InterDeploymentDependencies,
+        nickname="DeploymentDependenciesUpdate",
+        notes="Rewrites inter-deployment dependencies for deployment_id.",
+        parameters=list(utils.create_filter_params_list_description(
+            models.InterDeploymentDependencies.response_fields,
+            'deployment_dependency'))
+    )
+    @authorize('inter_deployment_dependency_create')  # TODO: '..._update'
+    @rest_decorators.marshal_list_response
+    def put(self, deployment_id):
+        """Updates an inter-deployment dependency for given deployment.
+
+        :param deployment_id: ID of the source deployment
+         (the one which depends on the target deployment).
+        :param inter_deployment_dependencies: a list containing
+         inter_deployment_dependencies descriptions.
+        :return: a list of InterDeploymentDependency IDs.
+        """
+        sm = get_storage_manager()
+
+        params = rest_utils.get_json_and_verify_params({
+            'inter_deployment_dependencies': {'type': list}
+        })
+
+        dependencies = params.get('inter_deployment_dependencies')
+        if len(dependencies) > 0 and EXTERNAL_SOURCE in dependencies[0]:
+            source_deployment = None
+        else:
+            source_deployment = sm.get(models.Deployment, deployment_id)
+
+        dep_graph = rest_utils.RecursiveDeploymentDependencies(sm)
+        dep_graph.create_dependencies_graph()
+
+        created_ids = []
+        with sm.transaction():
+            # Remove all previous dependencies for source_deployment
+            for previous_deployment_dependency in sm.list(
+                    models.InterDeploymentDependencies,
+                    filters={'source_deployment': source_deployment}):
+                sm.delete(previous_deployment_dependency)
+            for dependency in dependencies:
+                record = _create_inter_deployment_dependency(
+                    source_deployment, dependency, sm, dep_graph)
+                created_ids += [record.id]
+
+        return ListResponse(
+            items=[{'id': i} for i in created_ids],
+            metadata={'pagination': {
+                'total': len(created_ids),
+                'size': len(created_ids),
+                'offset': 0,
+            }}
+        )
+
+
 class DeploymentGroups(SecuredResource):
     @authorize('deployment_group_list', allow_all_tenants=True)
     @rest_decorators.marshal_with(models.DeploymentGroup)
@@ -772,15 +788,33 @@ class DeploymentGroupsId(SecuredResource):
             'deployment_ids': {'optional': True},
             'new_deployments': {'optional': True},
             'deployments_from_group': {'optional': True},
+            'creator': {'optional': True},
+            'created_at': {'optional': True},
         })
+
+        created_at = creator = None
+        if request_dict.get('created_at'):
+            check_user_action_allowed('set_timestamp', None, True)
+            created_at = rest_utils.parse_datetime_string(
+                request_dict['created_at'])
+
+        if request_dict.get('creator'):
+            check_user_action_allowed('set_owner', None, True)
+            creator = rest_utils.valid_user(request_dict['creator'])
+
         sm = get_storage_manager()
         graph = rest_utils.RecursiveDeploymentLabelsDependencies(sm)
         with sm.transaction():
+            storage_utils.deployments_lock()
             try:
                 group = sm.get(models.DeploymentGroup, group_id)
             except manager_exceptions.NotFoundError:
                 group = models.DeploymentGroup(id=group_id)
                 sm.put(group)
+            if creator:
+                group.creator = creator
+            if created_at:
+                group.created_at = created_at
             self._set_group_attributes(sm, group, request_dict)
             if request_dict.get('labels') is not None:
                 self._set_group_labels(
@@ -812,6 +846,7 @@ class DeploymentGroupsId(SecuredResource):
         })
         sm = get_storage_manager()
         with sm.transaction():
+            storage_utils.deployments_lock()
             group = sm.get(models.DeploymentGroup, group_id)
             if request_dict.get('add'):
                 self._add_group_deployments(
@@ -1009,7 +1044,7 @@ class DeploymentGroupsId(SecuredResource):
                 sm, deployments, group_labels
             )
         # Update deployment conversion which could be from service to env or
-        # vie versa
+        # vice versa
         converted_deps = self._handle_resource_counts_after_source_conversion(
             graph,
             _target_deployments,
@@ -1295,3 +1330,40 @@ class DeploymentGroupsId(SecuredResource):
 
         sm.delete(group)
         return None, 204
+
+
+def _create_inter_deployment_dependency(
+        source_deployment: models.Deployment,
+        dependency: models.InterDeploymentDependencies,
+        sm,
+        dep_graph) -> models.InterDeploymentDependencies:
+    now = utils.get_formatted_timestamp()
+
+    if (TARGET_DEPLOYMENT in dependency and
+            EXTERNAL_SOURCE not in dependency and
+            EXTERNAL_TARGET not in dependency):
+        target_deployment = sm.get(models.Deployment,
+                                   dependency[TARGET_DEPLOYMENT],
+                                   fail_silently=True)
+    else:
+        target_deployment = None
+
+    deployment_dependency = models.InterDeploymentDependencies(
+        id=str(uuid.uuid4()),
+        dependency_creator=dependency[DEPENDENCY_CREATOR],
+        source_deployment=source_deployment,
+        target_deployment=target_deployment,
+        target_deployment_func=dependency.get(TARGET_DEPLOYMENT_FUNC),
+        external_source=dependency.get(EXTERNAL_SOURCE),
+        external_target=dependency.get(EXTERNAL_TARGET),
+        created_at=now)
+    record = sm.put(deployment_dependency)
+
+    if source_deployment and target_deployment:
+        source_id = str(source_deployment.id)
+        target_id = str(target_deployment.id)
+        dep_graph.assert_no_cyclic_dependencies(source_id,
+                                                target_id)
+        dep_graph.add_dependency_to_graph(source_id, target_id)
+
+    return record

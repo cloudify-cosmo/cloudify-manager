@@ -47,7 +47,7 @@ class Postgres(object):
     _CONFIG_TABLES = ['config', 'rabbitmq_brokers', 'db_nodes',
                       'maintenance_mode', 'usage_collector', 'plugins_states']
     _TABLES_TO_EXCLUDE_ON_DUMP = _TABLES_TO_KEEP + \
-        ['audit_log__storage_id_seq', 'snapshots'] + \
+        ['audit_log', 'audit_log__storage_id_seq', 'snapshots'] + \
         _CONFIG_TABLES
     _TABLES_TO_RESTORE = ['users', 'tenants']
     _STAGE_TABLES_TO_EXCLUDE = ['"SequelizeMeta"']
@@ -94,8 +94,15 @@ class Postgres(object):
         with db_schema(schema_revision, config=config):
             clear_tables_queries = self._get_clear_tables_queries(
                 snapshot_version)
+            disable_trigger_queries = self._get_toggle_trigger_queries(
+                disable=True)
+            enable_trigger_queries = self._get_toggle_trigger_queries(
+                disable=False)
             dump_file = self._prepend_dump(
-                dump_file, deferrable_roles_constraints + clear_tables_queries)
+                dump_file,
+                disable_trigger_queries + deferrable_roles_constraints
+                + clear_tables_queries)
+            self._append_dump(dump_file, '\n'.join(enable_trigger_queries))
             self._restore_dump(dump_file, self._db_name)
         self.run_query(self._get_execution_restore_query())
 
@@ -521,6 +528,25 @@ class Postgres(object):
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self._connection:
             self._connection.close()
+
+    def _get_toggle_trigger_queries(self, disable=False):
+        audit_triggers = self.run_query("""
+            select
+                pg_catalog.pg_class.relname,
+                pg_catalog.pg_trigger.tgname
+            from
+                pg_catalog.pg_trigger
+            join
+                pg_catalog.pg_class
+                on pg_catalog.pg_trigger.tgrelid = pg_catalog.pg_class.oid
+            where
+                pg_catalog.pg_trigger.tgname like 'audit_%'
+        """)
+        action = 'disable' if disable else 'enable'
+        return [
+            f'alter table public.{tablename} {action} trigger {trigname};'
+            for tablename, trigname in audit_triggers['all']
+        ]
 
     def _get_clear_tables_queries(self, snapshot_version,
                                   preserve_defaults=False):

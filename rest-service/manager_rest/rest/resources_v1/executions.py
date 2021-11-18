@@ -1,18 +1,3 @@
-#########
-# Copyright (c) 2017 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-#
 import uuid
 from datetime import datetime
 
@@ -36,10 +21,12 @@ from manager_rest.rest.rest_utils import (
     get_args_and_verify_arguments,
     get_json_and_verify_params,
     verify_and_convert_bool,
-    parse_datetime_string
+    parse_datetime_string,
+    valid_user,
 )
 from manager_rest.security import SecuredResource
-from manager_rest.security.authorization import authorize
+from manager_rest.security.authorization import (authorize,
+                                                 check_user_action_allowed)
 from manager_rest.storage import (
     get_storage_manager,
     models,
@@ -89,8 +76,16 @@ class Executions(SecuredResource):
     @marshal_with(models.Execution)
     def post(self, **kwargs):
         """Execute a workflow"""
-        request_dict = get_json_and_verify_params({'deployment_id',
-                                                   'workflow_id'})
+        request_dict = get_json_and_verify_params({
+            'deployment_id': {'type': str},
+            'workflow_id': {'type': str},
+            'creator': {'optional': True},
+            'created_at': {'optional': True},
+            'started_at': {'optional': True},
+            'ended_at': {'optional': True},
+            'status': {'optional': True},
+            'id': {'optional': True},
+        })
 
         allow_custom_parameters = verify_and_convert_bool(
             'allow_custom_parameters',
@@ -110,6 +105,42 @@ class Executions(SecuredResource):
         parameters = request_dict.get('parameters', None)
         wait_after_fail = request_dict.get('wait_after_fail', 600)
         scheduled_time = request_dict.get('scheduled_time', None)
+        force_status = request_dict.get('force_status', None)
+        creator = request_dict.get('creator')
+        created_at = request_dict.get('created_at')
+        started_at = request_dict.get('started_at')
+        ended_at = request_dict.get('ended_at')
+        execution_id = request_dict.get('id')
+
+        if creator:
+            check_user_action_allowed('set_owner', None, True)
+            creator = valid_user(creator)
+
+        if created_at or started_at or ended_at:
+            check_user_action_allowed('set_timestamp', None, True)
+            if created_at:
+                created_at = parse_datetime_string(created_at)
+            if started_at:
+                started_at = parse_datetime_string(started_at)
+            if ended_at:
+                ended_at = parse_datetime_string(ended_at)
+
+        if force_status or execution_id:
+            check_user_action_allowed('set_execution_details', None, True)
+
+        if force_status and scheduled_time:
+            raise manager_exceptions.BadParametersError(
+                'A status cannot be forced when scheduling an execution.'
+            )
+
+        if force_status and force_status not in ExecutionState.STATES:
+            raise manager_exceptions.BadParametersError(
+                'Force status was set to invalid state "{state}". '
+                'Valid states are: {valid}'.format(
+                    state=force_status,
+                    valid=','.join(ExecutionState.STATES),
+                )
+            )
 
         if scheduled_time:
             sm = get_storage_manager()
@@ -149,17 +180,29 @@ class Executions(SecuredResource):
                 deployment=deployment,
                 parameters=parameters,
                 is_dry_run=dry_run,
-                status=ExecutionState.PENDING,
+                status=force_status or ExecutionState.PENDING,
                 allow_custom_parameters=allow_custom_parameters,
             )
+            if creator:
+                execution.creator = creator
+            if created_at:
+                execution.created_at = created_at
+            if started_at:
+                execution.started_at = started_at
+            if ended_at:
+                execution.ended_at = ended_at
+            if execution_id:
+                execution.id = execution_id
             sm.put(execution)
-            messages = rm.prepare_executions(
-                [execution],
-                bypass_maintenance=is_bypass_maintenance_mode(),
-                force=force,
-                queue=queue,
-                wait_after_fail=wait_after_fail,
-            )
+            messages = []
+            if not force_status:
+                messages = rm.prepare_executions(
+                    [execution],
+                    bypass_maintenance=is_bypass_maintenance_mode(),
+                    force=force,
+                    queue=queue,
+                    wait_after_fail=wait_after_fail,
+                )
         workflow_executor.execute_workflow(messages)
         return execution, 201
 

@@ -1,11 +1,17 @@
 from collections import defaultdict
+import time
+import typing
 
 from cloudify.decorators import workflow
-from cloudify.state import workflow_ctx
+from cloudify.exceptions import NonRecoverableError
+from cloudify.state import workflow_ctx, workflow_parameters
 from cloudify.manager import get_rest_client
+from cloudify.models_states import ExecutionState
 from cloudify.plugins import lifecycle
 
 from dsl_parser import tasks
+
+from .. import idd
 
 from .step_extractor import extract_steps
 
@@ -140,6 +146,8 @@ def prepare_update_nodes(*, update_id):
         'add': _added_nodes(dep_up.steps),
         'remove': _removed_nodes(dep_up.steps),
     }
+    instance_changes['relationships_changed'] = \
+        _relationship_changed_nodes(dep_up.steps)
     client.deployment_updates.set_attributes(
         update_id,
         nodes=node_changes,
@@ -200,6 +208,23 @@ def update_deployment_nodes(*, update_id):
         new_attributes = {
             attr_name: plan_node[attr_name] for attr_name in changed_attrs
         }
+        if 'relationships' in new_attributes:
+            # if we're to remove a relationship, make sure to keep it for now,
+            # so that unlink operations can run; we'll actually remove it in
+            # the post-graph
+            old_node = workflow_ctx.get_node(node_name)
+            new_rel_keys = {
+                (r['target_id'], r['type'])
+                for r in new_attributes['relationships']
+            }
+            for old_rel in old_node.relationships:
+                old_rel_key = (old_rel.target_id, old_rel.type)
+                if old_rel_key not in new_rel_keys:
+                    new_attributes['relationships'].append(
+                        old_rel._relationship)
+            for rel in new_attributes['relationships']:
+                rel.pop('source_interfaces', None)
+                rel.pop('target_interfaces', None)
         client.nodes.update(
             dep_up.deployment_id, node_name,
             **new_attributes
@@ -218,16 +243,31 @@ def update_deployment_nodes(*, update_id):
     )
 
 
-def _format_old_relationships(node_instance):
+def _format_instance_relationships(node_instance):
     """Dump ni's relationships to a dict that can be parsed by RESTservice"""
     return [
         {
-            'target_id': old_rel.relationship.target_id,
+            'target_id': old_rel.target_id,
             'target_name': old_rel.relationship.target_node.id,
             'type': old_rel.relationship.type,
         }
         for old_rel in node_instance.relationships
+        if old_rel.relationship and old_rel.relationship.target_node
     ]
+
+
+def _relationship_changed_nodes(steps):
+    """Names of the nodes that have had any of their relationships changed"""
+    nodes = set()
+    for step in steps:
+        if step['entity_type'] != 'relationship':
+            continue
+        parts = step['entity_id'].split(':')
+        nodes_label, node_id, relationships_label = parts[:3]
+        if nodes_label != 'nodes' or relationships_label != 'relationships':
+            continue
+        nodes.add(node_id)
+    return list(nodes)
 
 
 def update_deployment_node_instances(*, update_id):
@@ -248,13 +288,101 @@ def update_deployment_node_instances(*, update_id):
         for ni in update_instances['extended_and_related']:
             if ni.get('modification') != 'extended':
                 continue
-            old_rels = _format_old_relationships(
+            old_rels = _format_instance_relationships(
                 workflow_ctx.get_node_instance(ni['id']))
             client.node_instances.update(
                 ni['id'],
                 relationships=old_rels + ni['relationships'],
                 force=True
             )
+
+
+def delete_removed_relationships(*, update_id):
+    workflow_ctx.refresh_node_instances()
+    client = get_rest_client()
+    dep_up = client.deployment_updates.get(update_id)
+    update_nodes = dep_up['deployment_update_nodes'] or {}
+    plan_nodes = {
+        node['id']: node for node in dep_up.deployment_plan['nodes']
+    }
+    update_instances = dep_up['deployment_update_node_instances']
+
+    for node_name, changed_attrs in update_nodes.get(
+            'modify_attributes', {}).items():
+        if 'relationships' in changed_attrs:
+            plan_node = plan_nodes[node_name]
+            new_relationships = plan_node['relationships']
+            for rel in new_relationships:
+                rel.pop('source_interfaces', None)
+                rel.pop('target_interfaces', None)
+            client.nodes.update(
+                dep_up.deployment_id, node_name,
+                relationships=new_relationships
+            )
+
+    for node_name in update_instances.get('relationships_changed', []):
+        node = plan_nodes[node_name]
+        for instance in workflow_ctx.get_node(node_name).instances:
+            if not instance:
+                continue
+            new_rels = _reorder_instance_relationships(
+                node['relationships'],
+                _format_instance_relationships(instance)
+            )
+            client.node_instances.update(
+                instance.id,
+                relationships=new_rels,
+                force=True
+            )
+
+
+_T = typing.TypeVar('T')
+_KT = typing.TypeVar('KT')
+
+
+def _indexed_by(
+    items: typing.Sequence[_T],
+    key_func: typing.Callable[[_T], _KT]
+) -> typing.Iterable[typing.Tuple[_T, _KT, int]]:
+    """Index items by return of key_func
+
+    This yields tuples of (item, key, count), where key is the result of
+    calling key_func(item), and count says which item is it, when checking
+    by the key.
+    Eg. if items=[{'a': c}, {'a': d}, {'a': c}], and key_func=itemgetter('a'),
+    then the result is going to be:
+        - {'a': 1}, c, 0
+        - {'a': 2}, d, 0
+        - {'a': 1}, c, 1
+    """
+    seen: typing.MutableMapping[_KT, int] = defaultdict(int)
+    for item in items:
+        key = key_func(item)
+        yield item, key, seen[key]
+        seen[key] += 1
+
+
+def _reorder_instance_relationships(plan_rels, instance_rels):
+    """Given instance relationships, reorder them based on the plan.
+
+    Change the ordering of the relationships, and drop relationships
+    that don't exist in the plan.
+    """
+    instance_rels_keyed = {
+        (key, count): rel
+        for rel, key, count in _indexed_by(
+            instance_rels, lambda r: (r['type'], r['target_name']))
+    }
+
+    new_instance_rels = []
+    for _, key, count in _indexed_by(
+        plan_rels,
+        lambda r: (r['type'], r['target_id'])
+    ):
+        instance_rel = instance_rels_keyed.get((key, count))
+        if instance_rel:
+            new_instance_rels.append(instance_rel)
+    return new_instance_rels
 
 
 def set_deployment_attributes(*, update_id):
@@ -265,19 +393,24 @@ def set_deployment_attributes(*, update_id):
         'outputs': dep_up.deployment_plan['outputs'],
         'description': dep_up.deployment_plan['description'],
     }
-    workflow_ctx.logger.info('NEW INPOS %s', dep_up.new_inputs)
     if dep_up.new_inputs:
         new_attributes['inputs'] = dep_up.new_inputs
     if dep_up.new_blueprint_id:
         new_attributes['blueprint_id'] = dep_up.new_blueprint_id
         # in the currently-running execution, update the current context as
-        # well, so that later graphs downlod scripts from the new blueprint.
+        # well, so that later graphs downlood scripts from the new blueprint.
         # Unfortunate, but no public method for this just yet
         workflow_ctx._context['blueprint_id'] = dep_up.new_blueprint_id
     client.deployments.set_attributes(
         dep_up.deployment_id,
         **new_attributes
     )
+
+
+def update_inter_deployment_dependencies(*, ctx, update_id):
+    client = get_rest_client()
+    dep_up = client.deployment_updates.get(update_id)
+    idd.update(ctx, client, dep_up.deployment_plan)
 
 
 def _perform_update_graph(ctx, update_id, **kwargs):
@@ -291,6 +424,9 @@ def _perform_update_graph(ctx, update_id, **kwargs):
     seq.add(
         ctx.local_task(set_deployment_attributes, kwargs={
             'update_id': update_id,
+        }, total_retries=0),
+        ctx.local_task(update_inter_deployment_dependencies, kwargs={
+            'ctx': ctx, 'update_id': update_id,
         }, total_retries=0),
         ctx.local_task(update_deployment_nodes, kwargs={
             'update_id': update_id,
@@ -324,6 +460,9 @@ def _post_update_graph(ctx, update_id, **kwargs):
         ctx.local_task(delete_removed_nodes, kwargs={
             'update_id': update_id,
         }, total_retries=0),
+        ctx.local_task(delete_removed_relationships, kwargs={
+            'update_id': update_id,
+        }, total_retries=0),
     )
     return graph
 
@@ -333,102 +472,296 @@ def _clear_graph(graph):
         graph.remove_task(task)
 
 
-def _establish_relationships(ctx, graph, extended_and_related, **kwargs):
-    node_instances = [
-        ctx.get_node_instance(ni['id'])
-        for ni in extended_and_related
-    ]
+def _unlink_relationships(ctx, graph, install_params):
+    node_instances = (
+        install_params.reduced_instances
+        + install_params.reduced_target_instances
+    )
 
     modified_relationship_ids = defaultdict(list)
-    for ni in extended_and_related:
-        if ni.get('modification') != 'extended':
-            continue
+    for ni in install_params.reduced:
+        node_id = ni['node_id']
+        for new_rel in ni['relationships']:
+            modified_relationship_ids[node_id].append(new_rel['target_name'])
+    lifecycle.execute_unlink_relationships(
+        graph=graph,
+        node_instances=set(node_instances),
+        modified_relationship_ids=modified_relationship_ids
+    )
+
+
+def _establish_relationships(ctx, graph, install_params):
+    node_instances = (
+        install_params.extended_instances
+        + install_params.extended_target_instances
+    )
+
+    modified_relationship_ids = defaultdict(list)
+    for ni in install_params.extended:
         node_id = ni['node_id']
         for new_rel in ni['relationships']:
             modified_relationship_ids[node_id].append(new_rel['target_name'])
     lifecycle.execute_establish_relationships(
         graph=graph,
-        node_instances=node_instances,
+        node_instances=set(node_instances),
         modified_relationship_ids=modified_relationship_ids
     )
 
 
-def _execute_deployment_update(ctx, client, update_id, **kwargs):
-    """Do all the non-preview, destructive, update operations."""
+def _find_reinstall_instances(steps):
+    nodes_to_reinstall = set()
+    for step in steps:
+        if step['entity_type'] not in ('property', 'operation'):
+            continue
+        modified = step['entity_id'].split(':')
+        if not modified or modified[0] != 'nodes':
+            continue
+        nodes_to_reinstall.add(modified[1])
+    to_reinstall = []
+    for node_id in nodes_to_reinstall:
+        node = workflow_ctx.get_node(node_id)
+        to_reinstall.extend(node.instances)
+    return to_reinstall
+
+
+def _reinstall_instances(graph, dep_up, to_install, to_uninstall,
+                         ignore_failure=False, skip_reinstall=False):
+    install_ids = {ni.id for ni in to_install}
+    uninstall_ids = {ni.id for ni in to_uninstall}
+    skip_ids = install_ids | uninstall_ids
+    subgraph = set()
+    if skip_reinstall:
+        to_reinstall = []
+    else:
+        to_reinstall = _find_reinstall_instances(dep_up.steps)
+    for ni in to_reinstall:
+        if ni.id in skip_ids:
+            continue
+        subgraph |= ni.get_contained_subgraph()
+    subgraph -= set(to_uninstall)
+    intact_nodes = (
+        set(workflow_ctx.node_instances)
+        - subgraph
+        - set(to_uninstall)
+    )
+    for n in subgraph:
+        for r in n._relationship_instances:
+            if r in uninstall_ids:
+                n._relationship_instances.pop(r)
+    if subgraph:
+        _clear_graph(graph)
+        lifecycle.reinstall_node_instances(
+            graph=graph,
+            node_instances=subgraph,
+            related_nodes=intact_nodes,
+            ignore_failure=ignore_failure
+        )
+
+
+class InstallParameters:
+    """Packaged parameters for the install part of the workflow.
+
+    This is to be given to the install part, or to the custom workflow
+    provided by the user. All the install/uninstall/reinstall parameters
+    are encapsulated in this.
+    """
+    update_id: str
+
+    added: list
+    added_targets: list
+    added_ids: list
+    added_target_ids: list
+    added_instances: list
+    added_target_instances: list
+
+    removed: list
+    removed_ids: list
+    removed_target_ids: list
+    removed_targets: list
+    removed_instances: list
+    removed_target_instances: list
+
+    extended: list
+    extended_ids: list
+    extended_target_ids: list
+    extended_targets: list
+    extended_instances: list
+    extended_target_instances: list
+
+    reduced: list
+    reduced_ids: list
+    reduced_target_ids: list
+    reduced_targets: list
+    reduced_instances: list
+    reduced_target_instances: list
+
+    ignore_failure: bool
+    skip_reinstall: list
+
+    def __init__(self, ctx, update_params, dep_update):
+        self._update_instances = dep_update['deployment_update_node_instances']
+        self.update_id = dep_update.id
+
+        for kind in ['added', 'removed', 'extended', 'reduced']:
+            changed, related = self._split_by_modification(
+                self._update_instances.get(f'{kind}_and_related'),
+                kind,
+            )
+            changed_ids = [item['id'] for item in changed]
+            related_ids = [item['id'] for item in related]
+            changed_instances = [
+                ctx.get_node_instance(ni_id) for ni_id in changed_ids
+            ]
+            related_instances = [
+                ctx.get_node_instance(ni_id) for ni_id in related_ids
+            ]
+            setattr(self, kind, changed)
+            setattr(self, f'{kind}_targets', related)
+            setattr(self, f'{kind}_ids', changed_ids)
+            setattr(self, f'{kind}_target_ids', related_ids)
+            setattr(self, f'{kind}_instances', changed_instances)
+            setattr(self, f'{kind}_target_instances', related_instances)
+
+        for param, default in [
+            ('ignore_failure', False),
+            ('skip_install', False),
+            ('skip_uninstall', False),
+            ('skip_reinstall', []),
+        ]:
+            setattr(self, param, update_params.get(param, default))
+
+    def _split_by_modification(self, items, modification):
+        first, second = [], []
+        if not items:
+            return first, second
+        for instance in items:
+            if instance.get('modification') == modification:
+                first.append(instance)
+            else:
+                second.append(instance)
+        return first, second
+
+    @property
+    def modified_entity_ids(self):
+        # TODO: compute this (RD-3523)
+        return []
+
+    def as_workflow_parameters(self):
+        return {
+            'update_id': self.update_id,
+            'modified_entity_ids': self.modified_entity_ids,
+            'added_instance_ids': self.added_ids,
+            'added_target_instances_ids': self.added_target_ids,
+            'removed_instance_ids': self.removed_ids,
+            'remove_target_instance_ids': self.removed_target_ids,
+            'extended_instance_ids': self.extended_ids,
+            'extend_target_instance_ids': self.extended_target_ids,
+            'reduced_instance_ids': self.reduced_ids,
+            'reduce_target_instance_ids': self.reduced_target_ids,
+            'skip_install': self.skip_install,
+            'skip_uninstall': self.skip_uninstall,
+            'ignore_failure': self.ignore_failure,
+            'install_first': False,
+            'node_instances_to_reinstall': None,
+            'central_plugins_to_install': None,
+            'central_plugins_to_uninstall': None,
+            'update_plugins': True
+        }
+
+
+def _execute_deployment_update(ctx, client, update_id, install_params):
+    """Do the "install" part of the dep-update.
+
+    This installs, uninstalls, and reinstalls the node-instances as
+    necessary. Relationships are established and unlinked as needed as well.`
+    """
     graph = ctx.graph_mode()
 
-    _clear_graph(graph)
-    graph = _perform_update_graph(ctx, update_id)
-    graph.execute()
-    ctx.refresh_node_instances()
-
     dep_up = client.deployment_updates.get(update_id)
-    update_instances = dep_up['deployment_update_node_instances']
 
-    install_instances = []
-    install_related_instances = []
+    if install_params.reduced and not install_params.skip_uninstall:
+        _clear_graph(graph)
+        _unlink_relationships(ctx, graph, install_params)
 
-    uninstall_instances = []
-    uninstall_related_instances = []
-
-    if update_instances.get('added_and_related'):
-        added_and_related = update_instances['added_and_related']
-        install_instances += [
-            ctx.get_node_instance(ni['id'])
-            for ni in added_and_related
-            if ni.get('modification') == 'added'
-        ]
-        install_related_instances += [
-            ctx.get_node_instance(ni['id'])
-            for ni in added_and_related
-            if ni.get('modification') != 'added'
-        ]
-    if update_instances.get('removed_and_related'):
-        removed_and_related = update_instances['removed_and_related']
-        uninstall_instances += [
-            ctx.get_node_instance(ni['id'])
-            for ni in removed_and_related
-            if ni.get('modification') == 'removed'
-        ]
-        uninstall_related_instances += [
-            ctx.get_node_instance(ni['id'])
-            for ni in removed_and_related
-            if ni.get('modification') != 'removed'
-        ]
-    if uninstall_instances:
+    if install_params.removed and not install_params.skip_uninstall:
         _clear_graph(graph)
         lifecycle.uninstall_node_instances(
             graph=graph,
-            ignore_failure=kwargs.get('ignore_failure', False),
-            node_instances=uninstall_instances,
-            related_nodes=uninstall_related_instances,
+            ignore_failure=install_params.ignore_failure,
+            node_instances=install_params.removed_instances,
+            related_nodes=install_params.removed_target_instances,
         )
-    if install_instances:
+    if install_params.added and not install_params.skip_install:
         _clear_graph(graph)
         lifecycle.install_node_instances(
             graph=graph,
-            node_instances=install_instances,
-            related_nodes=install_related_instances,
+            node_instances=install_params.added_instances,
+            related_nodes=install_params.added_target_instances,
         )
-    if update_instances.get('extended_and_related'):
+    if install_params.extended and not install_params.skip_install:
         _clear_graph(graph)
-        _establish_relationships(
-            ctx, graph, update_instances['extended_and_related'], **kwargs)
+        _establish_relationships(ctx, graph, install_params)
 
-    _clear_graph(graph)
-    graph = _post_update_graph(ctx, update_id)
-    graph.execute()
+    _reinstall_instances(
+        graph,
+        dep_up,
+        install_params.added_instances,
+        install_params.removed_instances,
+        ignore_failure=install_params.ignore_failure,
+        skip_reinstall=install_params.skip_reinstall,
+    )
+
+
+def _execute_custom_workflow(client, dep_up, workflow_id, install_params,
+                             custom_workflow_timeout=None):
+    execution = client.executions.start(
+        dep_up.deployment_id,
+        workflow_id,
+        parameters=install_params.as_workflow_parameters(),
+        allow_custom_parameters=True,
+        force=True
+    )
+    if custom_workflow_timeout:
+        deadline = time.time() + custom_workflow_timeout
+    else:
+        deadline = None
+    while True:
+        execution = client.executions.get(execution.id)
+        if execution.status in ExecutionState.END_STATES:
+            if execution.status != ExecutionState.TERMINATED:
+                NonRecoverableError(
+                    f'{workflow_id} is in state {execution.status}')
+            break
+        time.sleep(1)
+        if deadline and time.time() > deadline:
+            raise NonRecoverableError(f'Timeout running {workflow_id}')
 
 
 @workflow
-def update_deployment(ctx, *, preview=False, **kwargs):
+def update_deployment(ctx, *, preview=False, ignore_failure=False,
+                      skip_reinstall=False, workflow_id=None,
+                      custom_workflow_timeout=None, **kwargs):
     client = get_rest_client()
     update_id = '{0}_{1}'.format(ctx.deployment.id, ctx.execution_id)
     graph = _prepare_update_graph(ctx, update_id, **kwargs)
     graph.execute()
 
     if not preview:
-        _execute_deployment_update(ctx, client, update_id, **kwargs)
+        _clear_graph(graph)
+        graph = _perform_update_graph(ctx, update_id)
+        graph.execute()
+        ctx.refresh_node_instances()
+        dep_up = client.deployment_updates.get(update_id)
+        install_params = InstallParameters(ctx, workflow_parameters, dep_up)
+        if workflow_id:
+            _execute_custom_workflow(client, dep_up, workflow_id,
+                                     install_params, custom_workflow_timeout)
+        else:
+            _execute_deployment_update(ctx, client, update_id, install_params)
+
+        _clear_graph(graph)
+        graph = _post_update_graph(ctx, update_id)
+        graph.execute()
 
     client.deployment_updates.set_attributes(
         update_id,

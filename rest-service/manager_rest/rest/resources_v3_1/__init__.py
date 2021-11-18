@@ -51,6 +51,7 @@ from .deployments import (                       # NOQA
     DeploymentsSetVisibility,
     DeploymentsIdCapabilities,
     InterDeploymentDependencies,
+    InterDeploymentDependenciesId,
     DeploymentGroups,
     DeploymentGroupsId
 )
@@ -61,6 +62,7 @@ from .blueprints import (                        # NOQA
     BlueprintsIdValidate,
     BlueprintsSetGlobal,
     BlueprintsSetVisibility,
+    BlueprintsIcon,
 )
 
 from .summary import (                           # NOQA
