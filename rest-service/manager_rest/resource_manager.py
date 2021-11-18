@@ -2103,34 +2103,39 @@ class ResourceManager(object):
             modified_attrs=('total_operations', 'finished_operations'))
         return operation
 
-    def create_tasks_graph(self, name, execution_id, operations=None):
+    def create_tasks_graph(self, name, execution_id, operations=None,
+                           created_at=None, graph_id=None):
         execution = self.sm.list(models.Execution,
                                  filters={'id': execution_id},
                                  get_all_results=True,
                                  all_tenants=True)[0]
+        created_at = created_at or datetime.utcnow()
         graph = models.TasksGraph(
             name=name,
             _execution_fk=execution._storage_id,
-            created_at=utils.get_formatted_timestamp(),
+            created_at=created_at,
             _tenant_id=execution._tenant_id,
             _creator_id=execution._creator_id
         )
+        if graph_id:
+            graph.id = graph_id
         db.session.add(graph)
+
+        if execution.total_operations is None:
+            execution.total_operations = 0
+            execution.finished_operations = 0
         if operations:
             created_ops = []
             for operation in operations:
                 operation.setdefault('state', 'pending')
                 op = models.Operation(
                     tenant=utils.current_tenant,
-                    creator=current_user,
+                    _creator_id=execution._creator_id,
+                    created_at=operation.pop('created_at', created_at),
                     tasks_graph=graph,
                     **operation)
                 created_ops.append(op)
                 db.session.add(op)
-        if execution.total_operations is None:
-            execution.total_operations = 0
-            execution.finished_operations = 0
-        if operations:
             execution.total_operations += sum(
                 not op.is_nop
                 for op in created_ops
