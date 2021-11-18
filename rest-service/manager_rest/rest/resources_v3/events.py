@@ -80,8 +80,8 @@ class Events(v2_Events):
         if task_error_causes is not None:
             task_error_causes = json.dumps(task_error_causes)
         return models.Event.__table__.insert().values(
-            timestamp=raw_event.get('timestamp', now),
-            reported_timestamp=raw_event.get('reported_timestamp', now),
+            timestamp=raw_event.get('timestamp') or now,
+            reported_timestamp=raw_event.get('reported_timestamp') or now,
             event_type=raw_event['event_type'],
             message=_strip_nul(raw_event['message']['text']),
             message_code=raw_event.get('message_code'),
@@ -96,8 +96,8 @@ class Events(v2_Events):
     def _log_from_raw_log(self, sm, raw_log, exc_params):
         now = datetime.utcnow()
         return models.Log.__table__.insert().values(
-            timestamp=raw_log.get('timestamp', now),
-            reported_timestamp=raw_log.get('reported_timestamp', now),
+            timestamp=raw_log.get('timestamp') or now,
+            reported_timestamp=raw_log.get('reported_timestamp') or now,
             logger=raw_log['logger'],
             level=raw_log['level'],
             message=_strip_nul(raw_log['message']['text']),
