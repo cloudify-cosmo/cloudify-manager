@@ -66,21 +66,29 @@ def _parse_plan_datetime(time_expression, base_datetime):
     return datetime.strptime(time_expression, time_fmt)
 
 
-def _create_schedules(client, deployment_id, schedules):
+def format_plan_schedule(schedule):
+    """Format a schedule from the plan form, to the REST form.
+
+    Use this to re-format schedules from the plan, to the style accepted by
+    the restservice.
+    """
     base_time = datetime.utcnow()
+    schedule['workflow_id'] = schedule.pop('workflow')
+    if 'since' in schedule:
+        schedule['since'] = _parse_plan_datetime(schedule['since'], base_time)
+    if 'until' in schedule:
+        schedule['until'] = _parse_plan_datetime(schedule['until'], base_time)
+    if 'workflow_parameters' in schedule:
+        schedule['parameters'] = schedule.pop('workflow_parameters')
+    return schedule
+
+
+def _create_schedules(client, deployment_id, schedules):
     for name, spec in schedules.items():
-        workflow_id = spec.pop('workflow')
-        if 'since' in spec:
-            spec['since'] = _parse_plan_datetime(spec['since'], base_time)
-        if 'until' in spec:
-            spec['until'] = _parse_plan_datetime(spec['until'], base_time)
-        if 'workflow_parameters' in spec:
-            spec['parameters'] = spec.pop('workflow_parameters')
         client.execution_schedules.create(
             name,
             deployment_id=deployment_id,
-            workflow_id=workflow_id,
-            **spec
+            **format_plan_schedule(spec.copy())
         )
 
 
