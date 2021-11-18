@@ -134,10 +134,13 @@ class ExecutionSchedulesId(SecuredResource):
 
         since = request.json.get('since')
         until = request.json.get('until')
+        workflow_id = request.json.get('workflow_id')
         if since:
             schedule.since = parse_datetime_multiple_formats(since)
         if until:
             schedule.until = parse_datetime_multiple_formats(until)
+        if workflow_id:
+            schedule.workflow_id = workflow_id
         if slip is not None:
             schedule.slip = slip
         if stop_on_fail is not None:
