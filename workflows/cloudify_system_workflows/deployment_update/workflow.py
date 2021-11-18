@@ -454,7 +454,8 @@ def update_schedules(*, update_id):
     dep_up = client.deployment_updates.get(update_id)
     old_schedule_ids = {s['id'] for s in client.execution_schedules.list(
         deployment_id=dep_up.deployment_id, _include=['id'])}
-    new_schedules = dep_up.deployment_plan['deployment_settings']['default_schedules']
+    new_schedules = \
+        dep_up.deployment_plan['deployment_settings']['default_schedules']
     new_schedule_ids = set(new_schedules)
 
     for changed_id in old_schedule_ids & new_schedule_ids:
