@@ -314,6 +314,7 @@ class BaseServerTestCase(unittest.TestCase):
                 continue
             server.db.session.execute(table.delete())
         server.db.session.commit()
+        db.engine.dispose()
 
     def _clean_tmpdir(self):
         shutil.rmtree(os.path.join(self.tmpdir, 'blueprints'),
