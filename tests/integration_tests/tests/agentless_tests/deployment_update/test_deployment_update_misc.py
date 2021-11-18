@@ -27,6 +27,30 @@ pytestmark = pytest.mark.group_deployments
 
 class TestDeploymentUpdateMisc(DeploymentUpdateBase):
 
+    def test_change_schedules(self):
+        deployment, modified_bp_path = self._deploy_and_get_modified_bp_path(
+            'modify_schedules')
+
+        schedules = self.client.execution_schedules.list(
+            deployment_id=deployment.id)
+        assert len(schedules) == 2
+        assert {s['id'] for s in schedules} == {'s1', 's2'}
+        modified_sched = next(s for s in schedules if s['id'] == 's1')
+        assert modified_sched['next_occurrence'].startswith('2525')
+
+        self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
+        self._do_update(deployment.id, BLUEPRINT_ID)
+
+        schedules = self.client.execution_schedules.list(
+            deployment_id=deployment.id)
+        assert len(schedules) == 3
+        # we're not deleting a schedule that isn't in the new plan -
+        # it might have been added by the user explicitly
+        assert {s['id'] for s in schedules} == {'s1', 's2', 's3'}
+        modified_sched = next(s for s in schedules if s['id'] == 's1')
+        assert modified_sched['next_occurrence'].startswith('3535')
+
     def test_deployment_updated_twice(self):
         base_bp_path = self._get_blueprint_path(
             'update_deployment_twice',

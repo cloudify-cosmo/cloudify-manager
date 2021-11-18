@@ -1,0 +1,19 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - cloudify/types/types.yaml
+
+node_templates:
+  x:
+    type: cloudify.nodes.Root
+
+deployment_settings:
+  default_schedules:
+    s1:
+      workflow: install
+      since: "2525-01-01 00:00"  # this will run in the year 2525, if man is still alive
+      recurrence: 1w
+    s2:  # this one will be deleted in the modification
+      workflow: install
+      since: "2525-01-01 00:00"
+      recurrence: 2w
