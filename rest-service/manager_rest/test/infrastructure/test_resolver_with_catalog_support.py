@@ -13,8 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from manager_rest.test.base_test import (BaseServerTestCase,
-                                         LATEST_API_VERSION)
+from manager_rest.test.base_test import BaseServerTestCase
 from manager_rest.resolver_with_catalog_support import (
     ResolverWithCatalogSupport,
     BLUEPRINT_PREFIX,

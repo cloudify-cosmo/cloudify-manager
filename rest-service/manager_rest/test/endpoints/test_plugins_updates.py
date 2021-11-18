@@ -25,7 +25,6 @@ from dsl_parser.constants import (PLUGIN_NAME_KEY,
                                   DEPLOYMENT_PLUGINS_TO_INSTALL,
                                   HOST_AGENT_PLUGINS_TO_INSTALL)
 
-from manager_rest.test import base_test
 from manager_rest.test.base_test import BaseServerTestCase
 
 from manager_rest.plugins_update.constants import STATES

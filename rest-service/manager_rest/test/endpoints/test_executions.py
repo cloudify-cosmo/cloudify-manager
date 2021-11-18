@@ -27,7 +27,7 @@ from cloudify.constants import CLOUDIFY_EXECUTION_TOKEN_HEADER
 
 from manager_rest.storage import models, db
 from manager_rest import manager_exceptions
-from manager_rest.test.base_test import BaseServerTestCase, LATEST_API_VERSION
+from manager_rest.test.base_test import BaseServerTestCase
 
 
 class ExecutionsTestCase(BaseServerTestCase):

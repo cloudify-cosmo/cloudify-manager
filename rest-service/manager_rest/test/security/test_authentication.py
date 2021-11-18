@@ -16,7 +16,6 @@
 from base64 import b64encode
 
 from manager_rest.storage import management_models
-from manager_rest.test.base_test import LATEST_API_VERSION
 from manager_rest.maintenance import remove_maintenance_state
 from manager_rest.constants import (CLOUDIFY_TENANT_HEADER,
                                     BASIC_AUTH_PREFIX,

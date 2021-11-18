@@ -89,8 +89,6 @@ MIGRATION_DIR = os.path.normpath(os.path.join(
     'cloudify', 'migrations'
 ))
 
-LATEST_API_VERSION = 3.1  # to be used by max_client_version test attribute
-
 permitted_roles = ['sys_admin', 'manager', 'user', 'operations', 'viewer']
 auth_dict = {
     'roles': [

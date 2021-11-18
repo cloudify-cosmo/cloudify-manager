@@ -16,7 +16,6 @@
 from cloudify_rest_client.exceptions import CloudifyClientError
 from manager_rest import manager_exceptions
 from manager_rest.storage import models
-from manager_rest.test import base_test
 from manager_rest.test.infrastructure.base_list_test import BaseListTest
 
 TEST_PACKAGE_NAME = 'cloudify-script-plugin'

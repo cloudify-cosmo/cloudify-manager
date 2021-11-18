@@ -18,8 +18,6 @@ import os
 from cloudify.models_states import VisibilityState
 from cloudify_rest_client.exceptions import CloudifyClientError
 
-from manager_rest.test.base_test import LATEST_API_VERSION
-
 from .test_base import SecurityTestBase
 
 

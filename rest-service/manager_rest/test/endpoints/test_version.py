@@ -16,7 +16,7 @@
 from manager_rest import utils
 from manager_rest.version import get_version_data
 from manager_rest.test.security_utils import get_admin_user
-from manager_rest.test.base_test import BaseServerTestCase, LATEST_API_VERSION
+from manager_rest.test.base_test import BaseServerTestCase
 
 
 class VersionTestCase(BaseServerTestCase):

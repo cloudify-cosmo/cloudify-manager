@@ -22,7 +22,6 @@ from cloudify.deployment_dependencies import create_deployment_dependency
 from manager_rest.manager_exceptions import NotFoundError, ConflictError
 from manager_rest.rest.rest_utils import RecursiveDeploymentDependencies
 
-from manager_rest.test import base_test
 from manager_rest.test.base_test import BaseServerTestCase
 
 

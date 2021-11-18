@@ -12,7 +12,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from manager_rest.test.base_test import LATEST_API_VERSION
 from manager_rest.test.infrastructure.base_list_test import BaseListTest
 
 

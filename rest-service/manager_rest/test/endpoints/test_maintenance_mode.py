@@ -18,7 +18,6 @@ from mock import patch
 from cloudify_rest_client import exceptions
 from cloudify.models_states import ExecutionState
 
-from manager_rest.test import base_test
 from manager_rest.storage import models
 from manager_rest.test.base_test import BaseServerTestCase
 from manager_rest.maintenance import (

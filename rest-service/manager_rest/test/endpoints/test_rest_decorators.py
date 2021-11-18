@@ -26,7 +26,6 @@ from manager_rest.rest.rest_decorators import (
     rangeable,
     sortable,
 )
-from manager_rest.test import base_test
 
 
 class PaginateTest(TestCase):

@@ -5,7 +5,6 @@ from mock import patch
 from cloudify.snapshots import STATES
 from cloudify_rest_client.exceptions import CloudifyClientError
 
-from manager_rest.test import base_test
 from .test_utils import generate_progress_func
 from manager_rest.test.base_test import BaseServerTestCase
 

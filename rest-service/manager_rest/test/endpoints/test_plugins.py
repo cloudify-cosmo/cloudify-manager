@@ -15,7 +15,6 @@
 
 import os
 
-from manager_rest.test import base_test
 from manager_rest.test.base_test import BaseServerTestCase
 
 from cloudify_rest_client import exceptions

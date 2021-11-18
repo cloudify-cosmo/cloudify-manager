@@ -2,7 +2,6 @@ import json
 
 import unittest
 
-from manager_rest.test.base_test import LATEST_API_VERSION
 from manager_rest.storage import models
 from manager_rest.deployment_update.step_extractor import (
     PROPERTY, PROPERTIES, OUTPUT, OUTPUTS, WORKFLOW, WORKFLOWS, NODE,

@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 
-from manager_rest.test.base_test import BaseServerTestCase, LATEST_API_VERSION
+from manager_rest.test.base_test import BaseServerTestCase
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 
