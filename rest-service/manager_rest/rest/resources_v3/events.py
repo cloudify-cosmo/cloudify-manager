@@ -42,7 +42,7 @@ class Events(v2_Events):
         raw_events = request_dict.get('events') or []
         raw_logs = request_dict.get('logs') or []
         if any(
-            item.get('timestamp') or item.get('reported_timestamp')
+            item.get('reported_timestamp')
             for item in itertools.chain(raw_events, raw_logs)
         ):
             check_user_action_allowed('set_timestamp')
