@@ -1,18 +1,3 @@
-#########
-# Copyright (c) 2016 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 from flask import request
 
 from manager_rest import constants
@@ -88,6 +73,12 @@ class TenantsId(SecuredMultiTenancyResource):
         Create a tenant
         """
         rest_utils.validate_inputs({'tenant_name': tenant_name})
+        if request.content_length:
+            request_dict = rest_utils.get_json_and_verify_params({
+                'rabbitmq_password': {'type': text_type, 'optional': True},
+            })
+        else:
+            request_dict = {}
         if tenant_name in ('users', 'user-groups'):
             raise BadParametersError(
                 '{0!r} is not allowed as a tenant name '
@@ -95,7 +86,9 @@ class TenantsId(SecuredMultiTenancyResource):
                 'a conflict with the remove {0} from tenant endpoint'
                 .format(str(tenant_name))
             )
-        return multi_tenancy.create_tenant(tenant_name)
+        return multi_tenancy.create_tenant(
+            tenant_name,
+            request_dict.get('rabbitmq_password'))
 
     @authorize('tenant_get', get_tenant_from='param')
     @rest_decorators.marshal_with(TenantDetailsResponse)
