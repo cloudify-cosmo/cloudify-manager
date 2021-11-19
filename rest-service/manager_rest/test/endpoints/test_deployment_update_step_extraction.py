@@ -1,9 +1,7 @@
 import json
 
 import unittest
-from manager_rest.test.attribute import attr
 
-from manager_rest.test.base_test import LATEST_API_VERSION
 from manager_rest.storage import models
 from manager_rest.deployment_update.step_extractor import (
     PROPERTY, PROPERTIES, OUTPUT, OUTPUTS, WORKFLOW, WORKFLOWS, NODE,
@@ -19,7 +17,6 @@ from manager_rest.deployment_update.step_extractor import DeploymentUpdateStep
 from manager_rest.test.utils import get_resource
 
 
-@attr(client_min_version=2.1, client_max_version=LATEST_API_VERSION)
 class StepExtractorTestCase(unittest.TestCase):
 
     @staticmethod

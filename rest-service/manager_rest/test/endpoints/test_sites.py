@@ -16,13 +16,11 @@
 from manager_rest import utils
 from manager_rest.test import base_test
 from manager_rest.storage import models
-from manager_rest.test.attribute import attr
 
 from cloudify.models_states import VisibilityState
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 
-@attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
 class SitesTestCase(base_test.BaseServerTestCase):
 
     def _put_site(self, name='test_site'):

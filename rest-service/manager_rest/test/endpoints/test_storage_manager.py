@@ -23,10 +23,8 @@ from cloudify.models_states import VisibilityState
 from manager_rest import manager_exceptions, utils
 from manager_rest.test import base_test
 from manager_rest.storage import models, db
-from manager_rest.test.attribute import attr
 
 
-@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
 class StorageManagerTests(base_test.BaseServerTestCase):
 
     def test_store_load_delete_blueprint(self):

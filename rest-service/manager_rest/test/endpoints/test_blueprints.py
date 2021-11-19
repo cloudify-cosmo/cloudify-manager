@@ -21,7 +21,6 @@ import shutil
 
 from manager_rest import archiving
 from manager_rest.test import base_test
-from manager_rest.test.attribute import attr
 from manager_rest.storage.resource_models import Blueprint, db
 
 from cloudify._compat import text_type
@@ -39,7 +38,6 @@ def mocked_requests_get(*args, **kwargs):
     return MockResponse({'error_code': 'no can do'}, 404)
 
 
-@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
 class BlueprintsTestCase(base_test.BaseServerTestCase):
     LABELS = [{'key1': 'val1'}, {'key2': 'val2'}]
 
@@ -90,8 +88,6 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
             blueprint_id='hello_world')
         self.assertEqual('hello_world', post_blueprints_response['id'])
 
-    @attr(client_min_version=2,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_blueprint_description(self):
         post_blueprints_response = self.put_blueprint()
         self.assertEqual('blueprint',
@@ -179,8 +175,6 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
             self.put_blueprint(blueprint_id=blueprint_id,
                                blueprint_dir='mock_blueprint_no_default')
 
-    @attr(client_min_version=2,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_blueprint_main_file_name(self):
         blueprint_id = 'blueprint_main_file_name'
         blueprint_file = 'blueprint_with_inputs.yaml'
@@ -194,8 +188,6 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         blueprint = self.client.blueprints.list()[0]
         self.assertEqual(blueprint_file, blueprint.main_file_name)
 
-    @attr(client_min_version=3,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_sort_list(self):
         blueprint_file = 'blueprint_with_inputs.yaml'
         blueprint_path = os.path.join(
@@ -215,8 +207,6 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         self.assertEqual('b1', blueprints[0].id)
         self.assertEqual('b0', blueprints[1].id)
 
-    @attr(client_min_version=3,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_blueprint_upload_progress(self):
         tmp_dir = '/tmp/tmp_upload_blueprint'
         blueprint_path = self._create_big_blueprint('empty_blueprint.yaml',
@@ -233,8 +223,6 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         finally:
             self.quiet_delete_directory(tmp_dir)
 
-    @attr(client_min_version=3,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_blueprint_download_progress(self):
         tmp_dir = '/tmp/tmp_upload_blueprint'
         tmp_local_path = '/tmp/blueprint.bl'
@@ -280,8 +268,6 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
             big_file.write(b'\0')
         return blueprint_path
 
-    @attr(client_min_version=2,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_blueprint_default_main_file_name(self):
         blueprint_id = 'blueprint_default_main_file_name'
         blueprint_file = 'blueprint.yaml'
@@ -305,8 +291,6 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         self.assertTrue(archive_filename in
                         response.headers['X-Accel-Redirect'])
 
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_delete_used_blueprints_via_import(self):
         """
         Test deletion protection of a blueprint which is used in another
@@ -338,8 +322,6 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         self.client.blueprints.delete(first_blueprint_id)
         self.client.blueprints.delete(second_blueprint_id)
 
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_force_delete_used_blueprints_via_import(self):
         """
         Test force deletion protection of a blueprint which is used in another
@@ -360,8 +342,6 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
 
         self.client.blueprints.delete(first_blueprint_id, True)
 
-    @attr(client_min_version=2,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_not_listing_hidden_blueprints(self):
         b0_id = 'b0'
         b1_id = 'b1'
@@ -380,8 +360,6 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         self.assertEqual(1, len(blueprints))
         self.assertEqual(b0_id, blueprints[0].id)
 
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_blueprint_validate_invalid_id(self):
         blueprint_id = 'invalid blueprint id'
         blueprint_file = 'blueprint.yaml'
@@ -395,8 +373,6 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
             "The `blueprint_id` argument contains illegal characters.",
             str(context.exception))
 
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_blueprint_update_state(self):
         blueprint_id = 'blue_state'
         new_state = 'failed_uploading'
@@ -423,8 +399,6 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         assert updated_blueprint.state == new_state
         assert updated_blueprint.error == new_error
 
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_blueprint_update_invalid_state(self):
         blueprint_id = 'blue_invalid_state'
         new_state = 'nonsuch_state'
@@ -439,8 +413,6 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
             {'state': new_state}
         )
 
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_blueprint_update_invalid_param(self):
         blueprint_id = 'blue_invalid_param'
         self.put_blueprint('mock_blueprint',
@@ -454,8 +426,6 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
             {'abc': 123}
         )
 
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_blueprint_update_invalid_param_type(self):
         blueprint_id = 'blue_invalid_param_type'
         self.put_blueprint('mock_blueprint',
@@ -493,8 +463,6 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
             'blueprint_with_plugin_import.yaml',
             blueprint_id)
 
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_list_blueprints_with_filter_id(self):
         self.put_blueprint_with_labels(self.LABELS, blueprint_id='bp1')
         bp2 = self.put_blueprint_with_labels(self.LABELS_2, blueprint_id='bp2')

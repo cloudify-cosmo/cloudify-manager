@@ -1,11 +1,9 @@
 from manager_rest.test import base_test
 from manager_rest.storage import models
-from manager_rest.test.attribute import attr
 from manager_rest.rest.filters_utils import FilterRule
 from manager_rest.rest.resources_v3_1.searches import get_filter_rules
 
 
-@attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
 class SearchesTestCase(base_test.BaseServerTestCase):
     LABELS = [{'key1': 'val1'}, {'key1': 'val2'}, {'key2': 'val3'}]
     LABELS_2 = [{'key1': 'val1'}, {'key1': 'val3'}, {'key3': 'val3'}]

@@ -53,7 +53,6 @@ from cloudify.cluster_status import (
 
 from manager_rest import server
 from manager_rest.rest import rest_utils
-from manager_rest.test.attribute import attr
 from manager_rest.storage.models_base import db
 from manager_rest.rest.filters_utils import FilterRule
 from manager_rest.resource_manager import get_resource_manager
@@ -89,8 +88,6 @@ MIGRATION_DIR = os.path.normpath(os.path.join(
     os.path.dirname(__file__), '..', '..', '..', 'resources', 'rest-service',
     'cloudify', 'migrations'
 ))
-
-LATEST_API_VERSION = 3.1  # to be used by max_client_version test attribute
 
 permitted_roles = ['sys_admin', 'manager', 'user', 'operations', 'viewer']
 auth_dict = {
@@ -145,7 +142,6 @@ class TestClient(FlaskClient):
         return super(TestClient, self).open(*args, **kwargs)
 
 
-@attr(client_min_version=1, client_max_version=LATEST_API_VERSION)
 class BaseServerTestCase(unittest.TestCase):
     # hack for running tests with py2's unnitest, but using py3's
     # assert method name; to be removed once we run unittests on py3 only

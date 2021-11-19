@@ -17,7 +17,6 @@ import copy
 import uuid
 import dateutil.parser
 from datetime import timedelta
-from manager_rest.test.attribute import attr
 
 from manager_rest.test.base_test import CLIENT_API_VERSION
 
@@ -31,7 +30,6 @@ from cloudify_rest_client.deployment_modifications import (
 EXPECTS_SCALING_GROUPS = CLIENT_API_VERSION not in ['v1', 'v2']
 
 
-@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
 class ModifyTests(base_test.BaseServerTestCase):
 
     def test_data_model_with_finish(self):
@@ -401,15 +399,11 @@ class ModifyTests(base_test.BaseServerTestCase):
         self.assertEqual(expected_number_of_instances,
                          node.number_of_instances)
 
-    @attr(client_min_version=2.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_scaling_groups_finish(self):
         self._test_scaling_groups(
             end_method=self.client.deployment_modifications.finish,
             end_expectation={'current': 2, 'planned': 2})
 
-    @attr(client_min_version=2.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_scaling_groups_rollback(self):
         self._test_scaling_groups(
             end_method=self.client.deployment_modifications.rollback,
@@ -464,8 +458,6 @@ class ModifyTests(base_test.BaseServerTestCase):
         self.client.deployments.delete(deployment.id)
         assert_deployment_instances(deployment, **end_expectation)
 
-    @attr(client_min_version=2,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_relationship_order_of_related_nodes(self):
         _, _, _, deployment = self.put_deployment(
             blueprint_file_name='modify4-relationship-order.yaml')

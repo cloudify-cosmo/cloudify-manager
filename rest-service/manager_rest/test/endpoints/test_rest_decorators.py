@@ -19,7 +19,6 @@ from unittest import TestCase
 
 from dateutil.parser import parse as parse_datetime
 from mock import Mock, patch, MagicMock
-from manager_rest.test.attribute import attr
 from voluptuous import Invalid
 
 from manager_rest.rest.rest_decorators import (
@@ -27,10 +26,8 @@ from manager_rest.rest.rest_decorators import (
     rangeable,
     sortable,
 )
-from manager_rest.test import base_test
 
 
-@attr(client_min_version=2, client_max_version=base_test.LATEST_API_VERSION)
 class PaginateTest(TestCase):
 
     """Paginate decorator test cases."""
@@ -71,7 +68,6 @@ class PaginateTest(TestCase):
                     paginate(verify)()
 
 
-@attr(client_min_version=2, client_max_version=base_test.LATEST_API_VERSION)
 class RangeableTest(TestCase):
 
     """Rangeable decorator test cases."""
@@ -185,7 +181,6 @@ class RangeableTest(TestCase):
                 rangeable(self.verify(expected_value))()
 
 
-@attr(client_min_version=2, client_max_version=base_test.LATEST_API_VERSION)
 class SortableTest(TestCase):
 
     """Sortable decorator test cases."""
