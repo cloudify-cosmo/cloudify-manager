@@ -18,9 +18,7 @@ from mock import patch
 from cloudify_rest_client import exceptions
 from cloudify.models_states import ExecutionState
 
-from manager_rest.test import base_test
 from manager_rest.storage import models
-from manager_rest.test.attribute import attr
 from manager_rest.test.base_test import BaseServerTestCase
 from manager_rest.maintenance import (
     get_maintenance_state,
@@ -33,7 +31,6 @@ from manager_rest.constants import (
 )
 
 
-@attr(client_min_version=2.1, client_max_version=base_test.LATEST_API_VERSION)
 class MaintenanceModeTest(BaseServerTestCase):
     def tearDown(self):
         super(MaintenanceModeTest, self).tearDown()

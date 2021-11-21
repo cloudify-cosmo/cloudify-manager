@@ -12,14 +12,9 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from manager_rest.test.attribute import attr
-
-from manager_rest.test.base_test import LATEST_API_VERSION
 from manager_rest.test.infrastructure.base_list_test import BaseListTest
 
 
-@attr(client_min_version=2,
-      client_max_version=LATEST_API_VERSION)
 class ResourceListTestCase(BaseListTest):
 
     def setUp(self):
@@ -55,8 +50,6 @@ class ResourceListTestCase(BaseListTest):
         self._put_n_snapshots(3)
         self._resource_list_sorted_test('snapshots', 'id')
 
-    @attr(client_min_version=3,
-          client_max_version=LATEST_API_VERSION)
     def test_sort_snapshots_list(self):
         self._put_n_snapshots(2)
 

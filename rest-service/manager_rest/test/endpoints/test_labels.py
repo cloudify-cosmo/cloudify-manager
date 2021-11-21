@@ -18,7 +18,6 @@ import uuid
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from manager_rest.test import base_test
-from manager_rest.test.attribute import attr
 from manager_rest.constants import RESERVED_LABELS
 
 
@@ -172,7 +171,6 @@ class LabelsBaseTestCase(base_test.BaseServerTestCase):
         self.assertEqual(reserved_labels.items, list(RESERVED_LABELS))
 
 
-@attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
 class DeploymentsLabelsTestCase(LabelsBaseTestCase):
     __test__ = True
 
@@ -251,7 +249,6 @@ class DeploymentsLabelsTestCase(LabelsBaseTestCase):
                                deployment_id='dep1')
 
 
-@attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
 class BlueprintsLabelsTestCase(LabelsBaseTestCase):
     __test__ = True
 

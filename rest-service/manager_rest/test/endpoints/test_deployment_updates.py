@@ -33,7 +33,6 @@ from cloudify.deployment_dependencies import (DEPENDENCY_CREATOR,
 
 from manager_rest.storage import models
 from manager_rest.test import base_test
-from manager_rest.test.attribute import attr
 from manager_rest.deployment_update import handlers
 from manager_rest.test.utils import get_resource as resource
 
@@ -55,7 +54,6 @@ class DeploymentUpdatesBase(base_test.BaseServerTestCase):
         )
 
 
-@attr(client_min_version=2.1, client_max_version=base_test.LATEST_API_VERSION)
 class DeploymentUpdatesTestCase(DeploymentUpdatesBase):
 
     execution_parameters = {
@@ -198,8 +196,6 @@ class DeploymentUpdatesTestCase(DeploymentUpdatesBase):
                                        "%Y-%m-%dT%H:%M:%S.%fZ")
         self.assertGreater(timestamp_after_update, timestamp_before_update)
 
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     @patch('manager_rest.deployment_update.handlers.'
            'DeploymentUpdateNodeHandler.finalize')
     @patch('manager_rest.deployment_update.handlers.'
@@ -463,7 +459,6 @@ class DeploymentUpdatesStepAndStageTestCase(base_test.BaseServerTestCase):
                                **step)
 
 
-@attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
 class DeploymentUpdatesSourcePluginsTestCase(DeploymentUpdatesBase):
 
     def _deploy_base(self,

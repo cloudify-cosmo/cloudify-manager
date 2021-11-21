@@ -14,12 +14,10 @@
 #  * limitations under the License.
 
 from manager_rest.test import base_test
-from manager_rest.test.attribute import attr
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 
-@attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
 class CapabilitiesTestCase(base_test.BaseServerTestCase):
 
     complex_capability = {

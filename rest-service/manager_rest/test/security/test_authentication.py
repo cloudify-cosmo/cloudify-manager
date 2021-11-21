@@ -15,9 +15,7 @@
 
 from base64 import b64encode
 
-from manager_rest.test.attribute import attr
 from manager_rest.storage import management_models
-from manager_rest.test.base_test import LATEST_API_VERSION
 from manager_rest.maintenance import remove_maintenance_state
 from manager_rest.constants import (CLOUDIFY_TENANT_HEADER,
                                     BASIC_AUTH_PREFIX,
@@ -28,7 +26,6 @@ from ..security_utils import ADMIN_ROLE, USER_ROLE
 FAILED_LOGINS_NUMBER = 6
 
 
-@attr(client_min_version=1, client_max_version=LATEST_API_VERSION)
 class AuthenticationTests(SecurityTestBase):
 
     def _fetch_alice(self):
@@ -115,8 +112,6 @@ class AuthenticationTests(SecurityTestBase):
     def test_invalid_token_authentication(self):
         self._assert_user_unauthorized(token='wrong token')
 
-    @attr(client_min_version=3,
-          client_max_version=LATEST_API_VERSION)
     def test_token_returns_role(self):
         with self.use_secured_client(username='alice',
                                      password='alice_password'):
@@ -137,8 +132,6 @@ class AuthenticationTests(SecurityTestBase):
                 async_upload=True
             )
 
-    @attr(client_min_version=2.1,
-          client_max_version=LATEST_API_VERSION)
     def test_requested_by_secured(self):
         try:
             with self.use_secured_client(username='alice',

@@ -17,9 +17,7 @@ import os
 
 from dsl_parser import tasks, constants
 
-from manager_rest.test.attribute import attr
-from manager_rest.test.base_test import (BaseServerTestCase,
-                                         LATEST_API_VERSION)
+from manager_rest.test.base_test import BaseServerTestCase
 from manager_rest.resolver_with_catalog_support import \
     ResolverWithCatalogSupport
 
@@ -29,8 +27,6 @@ TEST_PACKAGE_VERSION = '1.3'
 TEST_PACKAGE_YAML_FILE = 'mock_blueprint/plugin-cloudify-diamond-plugin.yaml'
 
 
-@attr(client_min_version=LATEST_API_VERSION,
-      client_max_version=LATEST_API_VERSION)
 class TestParseWithResolver(BaseServerTestCase):
     def setUp(self):
         super(TestParseWithResolver, self).setUp()

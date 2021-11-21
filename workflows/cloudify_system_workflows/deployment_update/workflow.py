@@ -12,6 +12,7 @@ from cloudify.plugins import lifecycle
 from dsl_parser import tasks
 
 from .. import idd
+from ..deployment_environment import format_plan_schedule
 
 from .step_extractor import extract_steps
 
@@ -448,6 +449,26 @@ def delete_removed_nodes(*, update_id):
         client.nodes.delete(dep_up.deployment_id, node_name)
 
 
+def update_schedules(*, update_id):
+    client = get_rest_client()
+    dep_up = client.deployment_updates.get(update_id)
+    old_schedule_ids = {s['id'] for s in client.execution_schedules.list(
+        deployment_id=dep_up.deployment_id, _include=['id'])}
+    new_schedules = \
+        dep_up.deployment_plan['deployment_settings']['default_schedules']
+    new_schedule_ids = set(new_schedules)
+
+    for changed_id in old_schedule_ids & new_schedule_ids:
+        schedule = format_plan_schedule(new_schedules[changed_id].copy())
+        client.execution_schedules.update(
+            changed_id, dep_up.deployment_id, **schedule)
+
+    for added_id in new_schedule_ids - old_schedule_ids:
+        schedule = format_plan_schedule(new_schedules[added_id].copy())
+        client.execution_schedules.create(
+            added_id, dep_up.deployment_id, **schedule)
+
+
 def _post_update_graph(ctx, update_id, **kwargs):
     """The update part that runs after the interface operations.
 
@@ -461,6 +482,9 @@ def _post_update_graph(ctx, update_id, **kwargs):
             'update_id': update_id,
         }, total_retries=0),
         ctx.local_task(delete_removed_relationships, kwargs={
+            'update_id': update_id,
+        }, total_retries=0),
+        ctx.local_task(update_schedules, kwargs={
             'update_id': update_id,
         }, total_retries=0),
     )

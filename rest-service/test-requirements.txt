@@ -5,6 +5,5 @@ virtualenv==15.1.0
 wagon>0.10
 pytest
 pytest-cov
-pytest-attrib
 pytest-xdist
 -e ../workflows
