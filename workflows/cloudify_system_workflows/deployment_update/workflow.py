@@ -452,11 +452,18 @@ def delete_removed_nodes(*, update_id):
 def update_schedules(*, update_id):
     client = get_rest_client()
     dep_up = client.deployment_updates.get(update_id)
+    new_schedules = (
+        dep_up.deployment_plan
+        .get('deployment_settings', {})
+        .get('default_schedules')
+    )
+    if not new_schedules:
+        # we are not going to be deleting schedules that are now missing,
+        # because we can't tell if they were added by the user explicitly
+        return
+    new_schedule_ids = set(new_schedules)
     old_schedule_ids = {s['id'] for s in client.execution_schedules.list(
         deployment_id=dep_up.deployment_id, _include=['id'])}
-    new_schedules = \
-        dep_up.deployment_plan['deployment_settings']['default_schedules']
-    new_schedule_ids = set(new_schedules)
 
     for changed_id in old_schedule_ids & new_schedule_ids:
         schedule = format_plan_schedule(new_schedules[changed_id].copy())
