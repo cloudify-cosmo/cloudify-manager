@@ -203,7 +203,7 @@ class Events(SecuredResource):
         if 'from' in range_filter:
             query = query.filter(getattr(model, field) >= range_filter['from'])
         if 'to' in range_filter:
-            query = query.filter(getattr(model, field) <= range_filter['to'])
+            query = query.filter(getattr(model, field) < range_filter['to'])
         return query
 
     @staticmethod
