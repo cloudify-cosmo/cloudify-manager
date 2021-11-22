@@ -11,7 +11,7 @@ from manager_rest import config
 def print_event(event):
     try:
         timestamp = datetime.strptime(
-            event['timestamp'], '%Y-%m-%dT%H:%M:%S.%f')
+            event['timestamp'][:19], '%Y-%m-%dT%H:%M:%S')
         # skip events coming from old snapshots, only display current logs
         if (datetime.now() - timestamp) < timedelta(days=1):
             print(f"\t{event['timestamp']:<26}\t{event['message']}")
