@@ -969,11 +969,9 @@ class ResourceManager(object):
                            bypass_maintenance=None, wait_after_fail=600,
                            allow_overlapping_running_wf=False,
                            commit=True):
-        executions = list(executions)
         messages = []
         errors = []
-        while executions:
-            exc = executions.pop()
+        for exc in self._flat_list_of_executions(executions):
             exc.ensure_defaults()
             try:
                 if exc.is_system_workflow:
@@ -1009,16 +1007,19 @@ class ResourceManager(object):
             )
             exc.status = ExecutionState.PENDING
             messages.append(message)
-            workflow = exc.get_workflow()
-            if not workflow.get('is_cascading', False):
-                continue
-            component_executions = self.get_component_executions(exc)
-            executions.extend(component_executions)
         if commit:
             db.session.commit()
         if errors:
             raise errors[0]
         return messages
+
+    def _flat_list_of_executions(self, executions):
+        result = []
+        while executions:
+            exc = executions.pop()
+            result.append(exc)
+            executions.extend(self.get_component_executions(exc))
+        return result
 
     @staticmethod
     def _verify_workflow_in_deployment(wf_id, deployment, dep_id):
