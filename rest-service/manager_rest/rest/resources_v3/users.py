@@ -68,10 +68,17 @@ class Users(SecuredMultiTenancyResource):
                     'type': text_type,
                     'optional': True,
                 },
+                'created_at': {'type': text_type, 'optional': True},
             }
         )
         is_prehashed = rest_utils.verify_and_convert_bool(
             'is_prehashed', request_dict.pop('is_prehashed', False))
+
+        created_at = None
+        if request_dict.get('created_at'):
+            check_user_action_allowed('set_timestamp', None, True)
+            created_at = rest_utils.parse_datetime_string(
+                request_dict.pop('created_at'))
 
         # The password shouldn't be validated here
         password = request_dict.pop('password')
@@ -85,6 +92,7 @@ class Users(SecuredMultiTenancyResource):
             password,
             role,
             is_prehashed=is_prehashed,
+            created_at=created_at,
         )
 
 
