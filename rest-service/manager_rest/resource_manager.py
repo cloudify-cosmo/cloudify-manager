@@ -708,7 +708,16 @@ class ResourceManager(object):
 
         return self.sm.delete(blueprint)
 
-    def retrieve_and_display_dependencies(self, deployment):
+    def retrieve_and_display_dependencies(self, deployment,
+                                          skip_components=False):
+        """Retrieve list of deployment's dependencies.
+        A dependency is a deployment with a `csys-obj-parent` label set to
+        deployment.id, or any of its children.
+        :param deployment:      a parent deployment
+        :param skip_components: if True will not report components as
+                                dependencies
+        :returns: a list of strings describing dependencies
+        """
         dep_graph = RecursiveDeploymentDependencies(self.sm)
         excluded_ids = self._excluded_component_creator_ids(deployment)
         deployment_dependencies = \
@@ -717,7 +726,8 @@ class ResourceManager(object):
                 excluded_component_creator_ids=excluded_ids)
 
         if deployment.has_sub_deployments:
-            dep_graph = RecursiveDeploymentLabelsDependencies(self.sm)
+            dep_graph = RecursiveDeploymentLabelsDependencies(self.sm,
+                                                              skip_components)
             labels_dependencies = \
                 dep_graph.retrieve_and_display_dependencies(
                     deployment
@@ -2361,7 +2371,7 @@ class ResourceManager(object):
         # if we're in the middle of an execution initiated by the component
         # creator, we'd like to drop the component dependency from the list
         deployment_dependencies = self.retrieve_and_display_dependencies(
-            deployment
+            deployment, skip_components=True
         )
         if not deployment_dependencies:
             return
