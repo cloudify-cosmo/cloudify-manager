@@ -608,6 +608,10 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
     cyclic_error_message = 'Deployments adding labels results in ' \
                            'cyclic deployment-labels dependencies.'
 
+    def __init__(self, sm, skip_components=False):
+        super().__init__(sm)
+        self.skip_components = skip_components
+
     def create_dependencies_graph(self):
         """
         Create deployment labels dependencies from the
@@ -827,16 +831,21 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
             if not from_dependencies:
                 continue
             for from_dependency in from_dependencies:
-                if from_dependency.source_deployment_id in self.graph[v]:
-                    if not visited[from_dependency.source_deployment_id]:
-                        queue.append(from_dependency.source_deployment_id)
-                        dependencies.append({
-                            'parent':
-                                from_dependency.target_deployment_id,
-                            'child':
-                                from_dependency.source_deployment_id
-                        })
-                        visited[from_dependency.source_deployment_id] = True
+                if from_dependency.source_deployment_id not in self.graph[v]:
+                    continue
+                if visited[from_dependency.source_deployment_id]:
+                    continue
+                if self.skip_components \
+                        and defines_component(self.sm, from_dependency):
+                    continue
+                queue.append(from_dependency.source_deployment_id)
+                dependencies.append({
+                    'parent':
+                        from_dependency.target_deployment_id,
+                    'child':
+                        from_dependency.source_deployment_id
+                })
+                visited[from_dependency.source_deployment_id] = True
         dependency_display = '  [{0}] Deployment `{1}` depends on `{2}`'
         return '\n'.join(
             dependency_display.format(i + 1,
@@ -1128,3 +1137,14 @@ def valid_user(input_value):
         raise manager_exceptions.BadParametersError(
             'User {} does not exist.'.format(input_value))
     return user
+
+
+def defines_component(sm, dep: models.DeploymentLabelsDependencies) -> bool:
+    """Checks if the source deployment defined by deployment dependency `dep`
+    is a component created by target deployment of that dependency.
+    """
+    idds = sm.list(models.InterDeploymentDependencies,
+                   filters={'target_deployment': dep.source_deployment,
+                            'source_deployment': dep.target_deployment})
+    return all(idd.dependency_creator.startswith('component.')
+               for idd in idds) if idds else False
