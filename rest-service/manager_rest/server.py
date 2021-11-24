@@ -88,6 +88,8 @@ def cope_with_db_failover():
                 'Attempt number %s/%s. Error was: %s',
                 attempt, max_attempts, err,
             )
+        finally:
+            db.session.rollback()
 
 
 def query_service_settings():
