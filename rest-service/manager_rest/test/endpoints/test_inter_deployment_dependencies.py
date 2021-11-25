@@ -26,7 +26,7 @@ from manager_rest.rest.rest_utils import RecursiveDeploymentDependencies
 from manager_rest.test.base_test import BaseServerTestCase
 
 
-class ModelDependenciesTest(BaseServerTestCase):
+class _DependencyTestUtils(object):
     def setUp(self):
         super().setUp()
         self.tenant = models.Tenant()
@@ -62,6 +62,167 @@ class ModelDependenciesTest(BaseServerTestCase):
             creator=self.user
         ))
 
+    def _label(self, dep, k, v):
+        db.session.add(models.DeploymentLabel(
+            deployment=dep,
+            creator=self.user,
+            key=k,
+            value=v
+        ))
+
+
+class UpdateTreeTest(_DependencyTestUtils, BaseServerTestCase):
+    def test_empty(self):
+        d1 = self._deployment(id='d1')
+        db.session.flush()
+
+        update_tree = models.DeploymentLabelsDependencies._get_update_tree(
+            [d1._storage_id])
+        assert not update_tree
+
+    def test_direct_dependency(self):
+        d1 = self._deployment(id='d1')
+        d2 = self._deployment(id='d2')
+        self._deployment(id='unrelated')
+        self._label_dependency(d1, d2)
+        db.session.flush()
+        update_tree = models.DeploymentLabelsDependencies._get_update_tree(
+            [d1._storage_id])
+        assert len(update_tree) == 2
+        assert {r._storage_id for r in update_tree} == \
+            {d1._storage_id, d2._storage_id}
+        assert {
+            (r._source_deployment, r._target_deployment) for r in update_tree
+        } == {(d1._storage_id, d2._storage_id)}
+
+    def test_multi_level(self):
+        d1 = self._deployment(id='d1')
+        d2 = self._deployment(id='d2')
+        d3 = self._deployment(id='d3')
+        self._deployment(id='unrelated')
+        self._label_dependency(d1, d2)
+        self._label_dependency(d2, d3)
+        db.session.flush()
+        update_tree = models.DeploymentLabelsDependencies._get_update_tree(
+            [d1._storage_id])
+        assert len(update_tree) == 4
+        assert {r._storage_id for r in update_tree} == \
+            {d1._storage_id, d2._storage_id, d3._storage_id}
+        assert {
+            (r._source_deployment, r._target_deployment) for r in update_tree
+        } == {
+            (d1._storage_id, d2._storage_id),
+            (d2._storage_id, d3._storage_id)
+        }
+
+    def test_siblings(self):
+        d1 = self._deployment(id='d1')
+        d2 = self._deployment(id='d2')
+        d3 = self._deployment(id='d3')
+        self._deployment(id='unrelated')
+        self._label_dependency(d1, d2)
+        self._label_dependency(d3, d2)
+        db.session.flush()
+        update_tree = models.DeploymentLabelsDependencies._get_update_tree(
+            [d1._storage_id])
+        assert {r._storage_id for r in update_tree} == \
+            {d1._storage_id, d2._storage_id, d3._storage_id}
+        assert {
+            (r._source_deployment, r._target_deployment) for r in update_tree
+        } == {
+            (d1._storage_id, d2._storage_id),
+            (d3._storage_id, d2._storage_id)
+        }
+
+    def test_tree(self):
+        # with a tree like:
+        # E1__
+        # |   \
+        # E2   E3
+        # | \    \
+        # E4 S2   S3
+        # | \
+        # S1 S4
+        # ...select the tree rooted at S1: we expect to get back all the
+        # ancestors, and all the siblings of ancestors:
+        # S1, S4, E4, S2, E2, E1, E3
+        # ...but not S3
+        deps = {
+            dep_id: self._deployment(id=dep_id)
+            for dep_id in ['s1', 's2', 's3', 's4', 'e1', 'e2', 'e3', 'e4',
+                           'unrelated']
+        }
+        dependencies = [
+            ('s1', 'e4'),
+            ('s4', 'e4'),
+            ('e4', 'e2'),
+            ('s2', 'e2'),
+            ('e2', 'e1'),
+            ('e3', 'e1'),
+            ('s3', 'e3'),
+        ]
+        for source, target in dependencies:
+            self._label_dependency(deps[source], deps[target])
+        db.session.flush()
+
+        update_tree = models.DeploymentLabelsDependencies._get_update_tree(
+            [deps['s1']._storage_id])
+
+        assert {r._storage_id for r in update_tree} == \
+            {
+                deps[dep_id]._storage_id for dep_id in
+                ['s1', 's4', 'e4', 's2', 'e2', 'e1', 'e3']
+            }
+
+        expected_edges = {
+            (deps[source]._storage_id, deps[target]._storage_id)
+            for source, target in dependencies
+            # we dont want s3 here, it's not an ancestor of s1, nor a direct
+            # child of an ancestor
+            if source != 's3'
+        }
+        assert {
+            (r._source_deployment, r._target_deployment) for r in update_tree
+        } == expected_edges
+
+    def test_is_env(self):
+        d1 = self._deployment(id='d1')
+        d2 = self._deployment(id='d2')
+        self._label(d1, 'csys-obj-type', 'environment')
+        self._label(d2, 'csys-obj-type', 'service')
+        self._label_dependency(d1, d2)
+        db.session.flush()
+        update_tree = models.DeploymentLabelsDependencies._get_update_tree(
+            [d1._storage_id])
+        assert {(r._storage_id, r.is_env) for r in update_tree} == \
+            {(d1._storage_id, True), (d2._storage_id, False)}
+
+    def test_latest_status(self):
+        d1 = self._deployment(id='d1')
+        d2 = self._deployment(id='d2')
+        d1.latest_execution = models.Execution(
+            status='pending',
+            workflow_id='',
+            tenant=self.tenant,
+            creator=self.user,
+        )
+        d2.latest_execution = models.Execution(
+            status='terminated',
+            workflow_id='',
+            tenant=self.tenant,
+            creator=self.user,
+        )
+        self._label_dependency(d1, d2)
+        db.session.flush()
+        update_tree = models.DeploymentLabelsDependencies._get_update_tree(
+            [d1._storage_id])
+        assert {
+            (r._storage_id, r.latest_execution_status)
+            for r in update_tree
+        } == {(d1._storage_id, 'pending'), (d2._storage_id, 'terminated')}
+
+
+class ModelDependenciesTest(_DependencyTestUtils, BaseServerTestCase):
     def test_empty(self):
         d1 = self._deployment(id='d1')
         db.session.flush()

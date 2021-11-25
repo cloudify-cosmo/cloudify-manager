@@ -2157,6 +2157,99 @@ class BaseDeploymentDependencies(CreatedAtMixin, SQLResourceBase):
             query = query.with_for_update()
         return query.all()
 
+    @classmethod
+    def _get_update_tree(cls, deployment_ids):
+        """Fetch just enough data to recalculate statuses for a subtree.
+
+        To recalculate the status/sub_counts of each ancestor, we must
+        select all the ancestors in the tree, and all of their direct
+        children: for each ancestor, we must know how many sub-deployments
+        it has, and what are their statuses.
+
+        Eg. when computing the update-tree of a deployment, we fetch that
+        deployment's parent, and ALL of the children of that parent, ie.
+        all of the target deployment's siblings.
+
+        This method is very closely tied to its usage: we only select the
+        columns that are necessarily required; it's only useful for
+        recalculating the status of a subtree of deployments, PLEASE
+        do not use this for anything else.
+
+        Returns a a list of rows that contain:
+            - several columns from each deployment
+            - the edges, ie. source_id/target_id
+            - if the deployment is an environment
+            - the latest execution status for each deployment
+        """
+        select_cols = db.session.query(
+            cls._storage_id,
+            cls._source_deployment,
+            cls._target_deployment,
+        )
+
+        base = select_cols.filter(db.or_(
+            # starting at both source AND target: we want the parents
+            # of the given deployments, but also their _direct_ (only direct)
+            # children
+            cls._target_deployment.in_(deployment_ids),
+            cls._source_deployment.in_(deployment_ids)
+        )).cte(name='dependents', recursive=True)
+
+        recursive = select_cols.join(
+            # recurse up the tree - fetch ancestors
+            base, cls._source_deployment == base.c._target_deployment)
+        cte = base.union(recursive)
+
+        depends = (
+            db.session.query(cte)
+            .union(
+                # for each ancestor, ALSO fetch all of its direct children
+                select_cols
+                .filter(cls._target_deployment == cte.c._target_deployment)
+            )
+            .subquery()
+        )
+
+        return (
+            db.session.query(
+                # these columns just happen to be enough to recalculate
+                # the statuses and counts; we avoid selecting anything
+                # that isn't necessarily required
+                Deployment._storage_id,
+                Deployment.deployment_status,
+                Deployment.installation_status,
+                Deployment.sub_services_count,
+                Deployment.sub_environments_count,
+                Deployment.sub_services_status,
+                Deployment.sub_environments_status,
+                depends.c.dependents__target_deployment.label(
+                    '_target_deployment'),
+                depends.c.dependents__source_deployment.label(
+                    '_source_deployment'),
+                db.session.query(DeploymentLabel.id)
+                .filter_by(_labeled_model_fk=Deployment._storage_id)
+                .filter_by(key='csys-obj-type')
+                .filter_by(value='environment')
+                .exists()
+                .label('is_env'),
+                Execution.status.label('latest_execution_status'),
+            )
+            .select_from(Deployment)
+            .join(depends, db.or_(
+                # we want deployment details for the parents and the children
+                Deployment._storage_id ==
+                depends.c.dependents__target_deployment,
+                Deployment._storage_id ==
+                depends.c.dependents__source_deployment
+            ))
+            .outerjoin(
+                Execution,
+                Deployment._latest_execution_fk == Execution._storage_id
+            )
+            .with_for_update(of=Deployment)
+            .all()
+        )
+
 
 class InterDeploymentDependencies(BaseDeploymentDependencies):
     __tablename__ = 'inter_deployment_dependencies'
