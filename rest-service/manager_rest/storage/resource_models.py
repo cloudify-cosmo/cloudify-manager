@@ -796,6 +796,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             self.get_descendants(*args, **kwargs)
         )
 
+
 class DeploymentGroup(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'deployment_groups'
     description = db.Column(db.Text)
@@ -2112,9 +2113,11 @@ class BaseDeploymentDependencies(CreatedAtMixin, SQLResourceBase):
         )
 
         if dependents:
-            base = select_cols.filter(cls._target_deployment.in_(deployment_ids))
+            base = select_cols.filter(
+                cls._target_deployment.in_(deployment_ids))
         else:
-            base = select_cols.filter(cls._source_deployment.in_(deployment_ids))
+            base = select_cols.filter(
+                cls._source_deployment.in_(deployment_ids))
         base = base.cte(name='dependents', recursive=True)
 
         if dependents:
@@ -2138,9 +2141,10 @@ class BaseDeploymentDependencies(CreatedAtMixin, SQLResourceBase):
 
     @classmethod
     def get_dependencies(cls, deployments, dependents=True, locking=False,
-                          fetch_deployments=True):
+                         fetch_deployments=True):
         deployment_ids = [d._storage_id for d in deployments]
-        dependencies = cls._dependencies_adjacency(deployment_ids, dependents=dependents)
+        dependencies = cls._dependencies_adjacency(
+            deployment_ids, dependents=dependents)
         if fetch_deployments:
             query = cls._join_deployments(dependencies, dependents)
         else:
@@ -2150,6 +2154,7 @@ class BaseDeploymentDependencies(CreatedAtMixin, SQLResourceBase):
         if locking:
             query = query.with_for_update()
         return query.all()
+
 
 class InterDeploymentDependencies(BaseDeploymentDependencies):
     __tablename__ = 'inter_deployment_dependencies'

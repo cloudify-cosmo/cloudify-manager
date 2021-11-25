@@ -73,7 +73,7 @@ class ModelDependenciesTest(BaseServerTestCase):
     def test_direct_dependency(self):
         d1 = self._deployment(id='d1')
         d2 = self._deployment(id='d2')
-        unrelated = self._deployment(id='unrelated')
+        self._deployment(id='unrelated')
         self._dependency(d1, d2)
         db.session.flush()
         assert d1.get_dependencies() == [d2]
@@ -105,7 +105,7 @@ class ModelDependenciesTest(BaseServerTestCase):
     def test_dependency_objects(self):
         d1 = self._deployment(id='d1')
         d2 = self._deployment(id='d2')
-        unrelated = self._deployment(id='unrelated')
+        self._deployment(id='unrelated')
         self._dependency(d1, d2)
         db.session.flush()
         deps = d1.get_dependencies(fetch_deployments=False)
@@ -120,14 +120,13 @@ class ModelDependenciesTest(BaseServerTestCase):
     def test_label_dependencies(self):
         d1 = self._deployment(id='d1')
         d2 = self._deployment(id='d2')
-        unrelated = self._deployment(id='unrelated')
+        self._deployment(id='unrelated')
         self._label_dependency(d1, d2)
         db.session.flush()
         assert d1.get_dependencies() == []
         assert d2.get_dependents() == []
         assert d1.get_ancestors() == [d2]
         assert d2.get_descendants() == [d1]
-
 
     def test_label_dependencies_objects(self):
         d1 = self._deployment(id='d1')
@@ -148,7 +147,7 @@ class ModelDependenciesTest(BaseServerTestCase):
         d2 = self._deployment(id='d2')
         d3 = self._deployment(id='d3')
         d4 = self._deployment(id='d4')
-        unrelated = self._deployment(id='unrelated')
+        self._deployment(id='unrelated')
         self._dependency(d1, d2)
         self._label_dependency(d3, d2)
         self._dependency(d3, d4)
