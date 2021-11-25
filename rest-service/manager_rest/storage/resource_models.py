@@ -2227,20 +2227,20 @@ class BaseDeploymentDependencies(CreatedAtMixin, SQLResourceBase):
                 depends.c.dependents__source_deployment.label(
                     '_source_deployment'),
                 db.session.query(DeploymentLabel.id)
-                    .filter_by(_labeled_model_fk=Deployment._storage_id)
-                    .filter_by(key='csys-obj-type')
-                    .filter_by(value='environment')
-                    .exists()
-                    .label('is_env'),
+                .filter_by(_labeled_model_fk=Deployment._storage_id)
+                .filter_by(key='csys-obj-type')
+                .filter_by(value='environment')
+                .exists()
+                .label('is_env'),
                 Execution.status.label('latest_execution_status'),
             )
             .select_from(Deployment)
             .join(depends, db.or_(
                 # we want deployment details for the parents and the children
                 Deployment._storage_id ==
-                     depends.c.dependents__target_deployment,
+                depends.c.dependents__target_deployment,
                 Deployment._storage_id ==
-                    depends.c.dependents__source_deployment
+                depends.c.dependents__source_deployment
             ))
             .outerjoin(
                 Execution,

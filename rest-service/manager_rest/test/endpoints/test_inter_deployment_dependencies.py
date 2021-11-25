@@ -26,7 +26,7 @@ from manager_rest.rest.rest_utils import RecursiveDeploymentDependencies
 from manager_rest.test.base_test import BaseServerTestCase
 
 
-class ModelDependenciesTest(BaseServerTestCase):
+class _DependencyTestUtils(BaseServerTestCase):
     def setUp(self):
         super().setUp()
         self.tenant = models.Tenant()
@@ -220,7 +220,6 @@ class UpdateTreeTest(_DependencyTestUtils, BaseServerTestCase):
             (r._storage_id, r.latest_execution_status)
             for r in update_tree
         } == {(d1._storage_id, 'pending'), (d2._storage_id, 'terminated')}
-
 
 
 class ModelDependenciesTest(_DependencyTestUtils, BaseServerTestCase):
