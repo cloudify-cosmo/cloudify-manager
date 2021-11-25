@@ -289,7 +289,9 @@ def create(timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL, **kwargs):
     deployment_id = _do_create_deployment(
         client,
         _create_deployment_id(deployment_id, deployment_auto_suffix),
-        {'blueprint_id': blueprint_id, 'inputs': deployment_inputs},
+        {'blueprint_id': blueprint_id,
+         'inputs': deployment_inputs,
+         'labels': [{'csys-obj-parent': ctx.deployment.id}]},
     )
     ctx.logger.info('Creating "%s" component deployment', deployment_id)
     _create_inter_deployment_dependency(client, deployment_id)

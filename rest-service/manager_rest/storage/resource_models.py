@@ -1232,6 +1232,8 @@ class Execution(CreatedAtMixin, SQLResourceBase):
         }
         if self.deployment is not None:
             context['deployment_id'] = self.deployment.id
+            context['deployment_display_name'] = self.deployment.display_name
+            context['deployment_creator'] = self.deployment.creator.username
             context['blueprint_id'] = self.blueprint_id
             context['runtime_only_evaluation'] = \
                 self.deployment.runtime_only_evaluation

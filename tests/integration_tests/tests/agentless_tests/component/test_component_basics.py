@@ -110,6 +110,38 @@ capabilities:
                           self.client.deployments.get,
                           deployment_id)
 
+    def test_component_labeling(self):
+        component_blueprint = """
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - cloudify/types/types.yaml
+
+node_templates:
+  component_node:
+    type: cloudify.nodes.Root
+"""
+        blueprint_path = self.make_yaml_file(component_blueprint)
+        self.client.blueprints.upload(blueprint_path,
+                                      entity_id=self.basic_blueprint_id)
+        wait_for_blueprint_upload(self.basic_blueprint_id, self.client, True)
+        deployment_id = f"parent-{uuid.uuid4()}"
+        dsl_path = resource('dsl/component_with_blueprint_id.yaml')
+        self.deploy_application(dsl_path, deployment_id=deployment_id)
+        component_deployment = self.client.deployments.get(self.component_name)
+        parent_deployment = self.client.deployments.get(deployment_id)
+
+        assert not parent_deployment.labels
+        assert component_deployment.labels
+        assert component_deployment.labels[0].get('key') == 'csys-obj-parent'
+        assert component_deployment.labels[0].get('value') == deployment_id
+
+        self.undeploy_application(deployment_id, is_delete_deployment=True)
+        with pytest.raises(CloudifyClientError):
+            self.client.deployments.get(self.component_name)
+        with pytest.raises(CloudifyClientError):
+            self.client.deployments.get(deployment_id)
+
 
 @wait_for_executions
 class ComponentPluginsTest(AgentlessTestCase):
