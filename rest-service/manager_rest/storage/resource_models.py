@@ -2022,6 +2022,66 @@ class BaseDeploymentDependencies(CreatedAtMixin, SQLResourceBase):
     source_deployment_id = association_proxy('source_deployment', 'id')
     target_deployment_id = association_proxy('target_deployment', 'id')
 
+    @classmethod
+    def _dependencies_adjacency(cls, deployment_ids, dependents=True):
+        """Select a dependency subgraph in an adjacency-list form.
+
+        Returns a query yielding (idd_id, source_id, target_id), which mean
+        "IDD with id idd_id, says that deployment source_id depends on the
+        deployment target_id".
+
+        This is recursive, so will return parents, then parents of parents,
+        etc. (or children, then children of children, etc).
+
+        :param deployment_ids: storage_ids of the root deployments
+        :param dependents: if set, return dependents, ie. children; otherwise,
+            return dependencies, ie. parents
+        """
+        select_cols = db.session.query(
+            cls._storage_id,
+            cls._source_deployment,
+            cls._target_deployment,
+        )
+
+        if dependents:
+            base = select_cols.filter(cls._target_deployment.in_(deployment_ids))
+        else:
+            base = select_cols.filter(cls._source_deployment.in_(deployment_ids))
+        base = base.cte(name='dependents', recursive=True)
+
+        if dependents:
+            recursive = select_cols.join(
+                base, cls._target_deployment == base.c._source_deployment)
+        else:
+            recursive = select_cols.join(
+                base, cls._source_deployment == base.c._target_deployment)
+        return base.union(recursive)
+
+    @classmethod
+    def _join_deployments(cls, adjacency, dependents=True):
+        if dependents:
+            join_column = adjacency.c._source_deployment
+        else:
+            join_column = adjacency.c._target_deployment
+        return (
+            db.session.query(Deployment)
+            .join(adjacency, Deployment._storage_id == join_column)
+        )
+
+    @classmethod
+    def get_dependencies(cls, deployments, dependents=True, locking=False,
+                          fetch_deployments=True):
+        deployment_ids = [d._storage_id for d in deployments]
+        dependencies = cls._dependencies_adjacency(deployment_ids, dependents=dependents)
+        if fetch_deployments:
+            query = cls._join_deployments(dependencies, dependents)
+        else:
+            query = db.session.query(cls).filter(
+                cls._storage_id == dependencies.c._storage_id
+            )
+        if locking:
+            query = query.with_for_update()
+        return query.all()
 
 class InterDeploymentDependencies(BaseDeploymentDependencies):
     __tablename__ = 'inter_deployment_dependencies'
