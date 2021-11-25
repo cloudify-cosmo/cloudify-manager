@@ -19,10 +19,150 @@ from mock import patch
 from cloudify_rest_client.exceptions import CloudifyClientError
 from cloudify.deployment_dependencies import create_deployment_dependency
 
+from manager_rest.storage import db, models
 from manager_rest.manager_exceptions import NotFoundError, ConflictError
 from manager_rest.rest.rest_utils import RecursiveDeploymentDependencies
 
 from manager_rest.test.base_test import BaseServerTestCase
+
+
+class ModelDependenciesTest(BaseServerTestCase):
+    def setUp(self):
+        super().setUp()
+        self.tenant = models.Tenant()
+        self.user = models.User()
+        self.bp1 = models.Blueprint(tenant=self.tenant, creator=self.user)
+
+    def _deployment(self, **kwargs):
+        dep_params = {
+            'blueprint': self.bp1,
+            'display_name': 'a',
+            'creator': self.user,
+            'tenant': self.tenant
+        }
+        dep_params.update(kwargs)
+        dep = models.Deployment(**dep_params)
+        db.session.add(dep)
+        return dep
+
+    def _dependency(self, source, target):
+        db.session.add(models.InterDeploymentDependencies(
+            source_deployment=source,
+            target_deployment=target,
+            tenant=self.tenant,
+            dependency_creator='',
+            creator=self.user
+        ))
+
+    def _label_dependency(self, source, target):
+        db.session.add(models.DeploymentLabelsDependencies(
+            source_deployment=source,
+            target_deployment=target,
+            tenant=self.tenant,
+            creator=self.user
+        ))
+
+    def test_empty(self):
+        d1 = self._deployment(id='d1')
+        db.session.flush()
+        assert d1.get_dependencies() == []
+        assert d1.get_dependents() == []
+        assert d1.get_ancestors() == []
+        assert d1.get_descendants() == []
+
+    def test_direct_dependency(self):
+        d1 = self._deployment(id='d1')
+        d2 = self._deployment(id='d2')
+        self._deployment(id='unrelated')
+        self._dependency(d1, d2)
+        db.session.flush()
+        assert d1.get_dependencies() == [d2]
+        assert d2.get_dependents() == [d1]
+
+    def test_multiple_dependencies(self):
+        d1 = self._deployment(id='d1')
+        d2 = self._deployment(id='d2')
+        d3 = self._deployment(id='d3')
+        self._dependency(d1, d2)
+        self._dependency(d3, d2)
+        db.session.flush()
+        assert d1.get_dependencies() == d3.get_dependencies() == [d2]
+        assert set(d2.get_dependents()) == {d1, d3}
+
+    def test_multi_level(self):
+        d1 = self._deployment(id='d1')
+        d2 = self._deployment(id='d2')
+        d3 = self._deployment(id='d3')
+        self._dependency(d1, d2)
+        self._dependency(d2, d3)
+        db.session.flush()
+        assert set(d1.get_dependencies()) == {d2, d3}
+        assert set(d3.get_dependents()) == {d1, d2}
+
+        assert set(d2.get_dependents()) == {d1}
+        assert set(d2.get_dependencies()) == {d3}
+
+    def test_dependency_objects(self):
+        d1 = self._deployment(id='d1')
+        d2 = self._deployment(id='d2')
+        self._deployment(id='unrelated')
+        self._dependency(d1, d2)
+        db.session.flush()
+        deps = d1.get_dependencies(fetch_deployments=False)
+        deps2 = d2.get_dependents(fetch_deployments=False)
+        assert deps == deps2
+        assert len(deps) == 1
+        dep = deps[0]
+        assert isinstance(dep, models.InterDeploymentDependencies)
+        assert dep.source_deployment == d1
+        assert dep.target_deployment == d2
+
+    def test_label_dependencies(self):
+        d1 = self._deployment(id='d1')
+        d2 = self._deployment(id='d2')
+        self._deployment(id='unrelated')
+        self._label_dependency(d1, d2)
+        db.session.flush()
+        assert d1.get_dependencies() == []
+        assert d2.get_dependents() == []
+        assert d1.get_ancestors() == [d2]
+        assert d2.get_descendants() == [d1]
+
+    def test_label_dependencies_objects(self):
+        d1 = self._deployment(id='d1')
+        d2 = self._deployment(id='d2')
+        self._label_dependency(d1, d2)
+        db.session.flush()
+        deps = d1.get_ancestors(fetch_deployments=False)
+        deps2 = d2.get_descendants(fetch_deployments=False)
+        assert deps == deps2
+        assert len(deps) == 1
+        dep = deps[0]
+        assert isinstance(dep, models.DeploymentLabelsDependencies)
+        assert dep.source_deployment == d1
+        assert dep.target_deployment == d2
+
+    def test_get_all(self):
+        d1 = self._deployment(id='d1')
+        d2 = self._deployment(id='d2')
+        d3 = self._deployment(id='d3')
+        d4 = self._deployment(id='d4')
+        self._deployment(id='unrelated')
+        self._dependency(d1, d2)
+        self._label_dependency(d3, d2)
+        self._dependency(d3, d4)
+        db.session.flush()
+        assert d1.get_all_dependents() == set()
+        assert d3.get_all_dependents() == set()
+
+        assert d2.get_all_dependencies() == set()
+        assert d4.get_all_dependencies() == set()
+
+        assert d1.get_all_dependencies() == {d2}
+        assert d3.get_all_dependencies() == {d2, d4}
+
+        assert d2.get_all_dependents() == {d1, d3}
+        assert d4.get_all_dependents() == {d3}
 
 
 class InterDeploymentDependenciesTest(BaseServerTestCase):

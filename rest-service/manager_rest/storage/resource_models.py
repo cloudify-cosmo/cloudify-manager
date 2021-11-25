@@ -727,6 +727,75 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
     def has_sub_deployments(self):
         return (self.sub_services_count + self.sub_environments_count) > 0
 
+    def get_dependencies(self, fetch_deployments=True, locking=False):
+        """Dependency deployments of this deployment.
+
+        Those are dependencies as defined by InterDeploymentDependencies.
+
+        :param fetch_deployments: if set (the default), return deployments;
+            otherwise return the InterDeploymentDependency objects
+        :param locking: select using a `WITH FOR UPDATE`
+        """
+        return InterDeploymentDependencies.get_dependencies(
+            deployments=[self],
+            dependents=False,
+            fetch_deployments=fetch_deployments,
+            locking=locking,
+        )
+
+    def get_dependents(self, fetch_deployments=True, locking=False):
+        """Dependent deployments of this deployment.
+
+        Those are dependents as defined by InterDeploymentDependencies.
+        See get_dependencies for the explanation of parameters.
+        """
+        return InterDeploymentDependencies.get_dependencies(
+            deployments=[self],
+            dependents=True,
+            fetch_deployments=fetch_deployments,
+            locking=locking,
+        )
+
+    def get_ancestors(self, fetch_deployments=True, locking=False):
+        """Ancestor deployments of this deployment.
+
+        Those are ancestors as defined by DeploymentLabelsDependencies.
+        See get_dependencies for the explanation of parameters.
+        """
+        return DeploymentLabelsDependencies.get_dependencies(
+            deployments=[self],
+            dependents=False,
+            fetch_deployments=fetch_deployments,
+            locking=locking,
+        )
+
+    def get_descendants(self, fetch_deployments=True, locking=False):
+        """Descendant deployments of this deployment.
+
+        Those are descendants as defined by DeploymentLabelsDependencies.
+        See get_dependencies for the explanation of parameters.
+        """
+        return DeploymentLabelsDependencies.get_dependencies(
+            deployments=[self],
+            dependents=True,
+            fetch_deployments=fetch_deployments,
+            locking=locking,
+        )
+
+    def get_all_dependencies(self, *args, **kwargs):
+        """Both dependencies, and ancestors, of this deployment"""
+        return set(
+            self.get_ancestors(*args, **kwargs) +
+            self.get_dependencies(*args, **kwargs)
+        )
+
+    def get_all_dependents(self, *args, **kwargs):
+        """Both dependents, and descendants, of this deployment"""
+        return set(
+            self.get_dependents(*args, **kwargs) +
+            self.get_descendants(*args, **kwargs)
+        )
+
 
 class DeploymentGroup(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'deployment_groups'
@@ -2023,6 +2092,70 @@ class BaseDeploymentDependencies(CreatedAtMixin, SQLResourceBase):
 
     source_deployment_id = association_proxy('source_deployment', 'id')
     target_deployment_id = association_proxy('target_deployment', 'id')
+
+    @classmethod
+    def _dependencies_adjacency(cls, deployment_ids, dependents=True):
+        """Select a dependency subgraph in an adjacency-list form.
+
+        Returns a query yielding (idd_id, source_id, target_id), which mean
+        "IDD with id idd_id, says that deployment source_id depends on the
+        deployment target_id".
+
+        This is recursive, so will return parents, then parents of parents,
+        etc. (or children, then children of children, etc).
+
+        :param deployment_ids: storage_ids of the root deployments
+        :param dependents: if set, return dependents, ie. children; otherwise,
+            return dependencies, ie. parents
+        """
+        select_cols = db.session.query(
+            cls._storage_id,
+            cls._source_deployment,
+            cls._target_deployment,
+        )
+
+        if dependents:
+            base = select_cols.filter(
+                cls._target_deployment.in_(deployment_ids))
+        else:
+            base = select_cols.filter(
+                cls._source_deployment.in_(deployment_ids))
+        base = base.cte(name='dependents', recursive=True)
+
+        if dependents:
+            recursive = select_cols.join(
+                base, cls._target_deployment == base.c._source_deployment)
+        else:
+            recursive = select_cols.join(
+                base, cls._source_deployment == base.c._target_deployment)
+        return base.union(recursive)
+
+    @classmethod
+    def _join_deployments(cls, adjacency, dependents=True):
+        if dependents:
+            join_column = adjacency.c._source_deployment
+        else:
+            join_column = adjacency.c._target_deployment
+        return (
+            db.session.query(Deployment)
+            .join(adjacency, Deployment._storage_id == join_column)
+        )
+
+    @classmethod
+    def get_dependencies(cls, deployments, dependents=True, locking=False,
+                         fetch_deployments=True):
+        deployment_ids = [d._storage_id for d in deployments]
+        dependencies = cls._dependencies_adjacency(
+            deployment_ids, dependents=dependents)
+        if fetch_deployments:
+            query = cls._join_deployments(dependencies, dependents)
+        else:
+            query = db.session.query(cls).filter(
+                cls._storage_id == dependencies.c._storage_id
+            )
+        if locking:
+            query = query.with_for_update()
+        return query.all()
 
 
 class InterDeploymentDependencies(BaseDeploymentDependencies):
