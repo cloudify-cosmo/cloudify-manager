@@ -26,7 +26,7 @@ from manager_rest.rest.rest_utils import RecursiveDeploymentDependencies
 from manager_rest.test.base_test import BaseServerTestCase
 
 
-class _DependencyTestUtils(BaseServerTestCase):
+class _DependencyTestUtils(object):
     def setUp(self):
         super().setUp()
         self.tenant = models.Tenant()
