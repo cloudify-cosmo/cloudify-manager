@@ -727,6 +727,74 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
     def has_sub_deployments(self):
         return (self.sub_services_count + self.sub_environments_count) > 0
 
+    def get_dependencies(self, fetch_deployments=True, locking=False):
+        """Dependency deployments of this deployment.
+
+        Those are dependencies as defined by InterDeploymentDependencies.
+
+        :param fetch_deployments: if set (the default), return deployments;
+            otherwise return the InterDeploymentDependency objects
+        :param locking: select using a `WITH FOR UPDATE`
+        """
+        return InterDeploymentDependencies.get_dependencies(
+            deployments=[self],
+            dependents=False,
+            fetch_deployments=fetch_deployments,
+            locking=locking,
+        )
+
+    def get_dependents(self, fetch_deployments=True, locking=False):
+        """Dependent deployments of this deployment.
+
+        Those are dependents as defined by InterDeploymentDependencies.
+        See get_dependencies for the explanation of parameters.
+        """
+        return InterDeploymentDependencies.get_dependencies(
+            deployments=[self],
+            dependents=True,
+            fetch_deployments=fetch_deployments,
+            locking=locking,
+        )
+
+    def get_ancestors(self, fetch_deployments=True, locking=False):
+        """Ancestor deployments of this deployment.
+
+        Those are ancestors as defined by DeploymentLabelsDependencies.
+        See get_dependencies for the explanation of parameters.
+        """
+        return DeploymentLabelsDependencies.get_dependencies(
+            deployments=[self],
+            dependents=False,
+            fetch_deployments=fetch_deployments,
+            locking=locking,
+        )
+
+    def get_descendants(self, fetch_deployments=True, locking=False):
+        """Descendant deployments of this deployment.
+
+        Those are descendants as defined by DeploymentLabelsDependencies.
+        See get_dependencies for the explanation of parameters.
+        """
+        return DeploymentLabelsDependencies.get_dependencies(
+            deployments=[self],
+            dependents=True,
+            fetch_deployments=fetch_deployments,
+            locking=locking,
+        )
+
+    def get_all_dependencies(self, *args, **kwargs):
+        """Both dependencies, and ancestors, of this deployment"""
+        return set(
+            self.get_ancestors(*args, **kwargs) +
+            self.get_dependencies(*args, **kwargs)
+        )
+
+    def get_all_dependents(self, *args, **kwargs):
+        """Both dependents, and descendants, of this deployment"""
+        return set(
+            self.get_dependents(*args, **kwargs) +
+            self.get_descendants(*args, **kwargs)
+        )
 
 class DeploymentGroup(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'deployment_groups'
