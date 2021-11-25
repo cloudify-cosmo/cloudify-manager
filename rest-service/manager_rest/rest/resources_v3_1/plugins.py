@@ -1,18 +1,3 @@
-#########
-# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 from flask_restful_swagger import swagger
 from werkzeug.exceptions import BadRequest
 
@@ -22,7 +7,8 @@ from cloudify.models_states import VisibilityState
 from manager_rest import manager_exceptions
 from manager_rest.security import SecuredResource
 from manager_rest.plugins_update.constants import PHASES
-from manager_rest.security.authorization import authorize
+from manager_rest.security.authorization import (authorize,
+                                                 check_user_action_allowed)
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.utils import create_filter_params_list_description
@@ -108,7 +94,7 @@ class PluginsUpdate(SecuredResource):
         :param phase: either PHASES.INITIAL or PHASES.FINAL (internal).
         """
         try:
-            filters = rest_utils.get_json_and_verify_params({
+            args = rest_utils.get_json_and_verify_params({
                 PLUGIN_NAMES: {'type': list, 'optional': True},
                 ALL_TO_LATEST: {'type': bool, 'optional': True},
                 TO_LATEST: {'type': list, 'optional': True},
@@ -118,20 +104,80 @@ class PluginsUpdate(SecuredResource):
                 FORCE: {'type': bool, 'optional': True},
                 AUTO_CORRECT_TYPES: {'type': bool, 'optional': True},
                 REEVALUATE_ACTIVE_STATUSES: {'type': bool, 'optional': True},
+                'creator': {'type': text_type, 'optional': True},
+                'created_at': {'type': text_type, 'optional': True},
+                'update_id': {'type': text_type, 'optional': True},
+                'execution_id': {'type': text_type, 'optional': True},
+                'state': {'type': text_type, 'optional': True},
+                'affected_deployments': {'type': list, 'optional': True},
+                'temp_blueprint_id': {'type': text_type, 'optional': True},
             })
         except BadRequest:
-            filters = {}
-        auto_correct_types = filters.pop(AUTO_CORRECT_TYPES, False)
-        reevaluate_active_statuses = filters.pop(REEVALUATE_ACTIVE_STATUSES,
-                                                 False)
+            args = {}
+
+        filter_args = [
+            PLUGIN_NAMES, MAPPING, FORCE,
+            ALL_TO_LATEST, TO_LATEST, ALL_TO_MINOR, TO_MINOR,
+        ]
+
+        filters = {arg: value for arg, value in args.items()
+                   if arg in filter_args}
+
+        auto_correct_types = args.get(AUTO_CORRECT_TYPES, False)
+        reevaluate_active_statuses = args.get(REEVALUATE_ACTIVE_STATUSES,
+                                              False)
+
+        update_manager = get_plugins_updates_manager()
+
+        if any(arg in args for arg in ['creator', 'created_at', 'update_id',
+                                       'execution_id', 'state',
+                                       'affected_deployments',
+                                       'temp_blueprint_id']):
+            check_user_action_allowed('set_plugin_update_details')
+            if not args.get('state'):
+                raise manager_exceptions.BadParametersError(
+                    'State must be supplied when overriding plugin update '
+                    'settings.'
+                )
+
+            created_at = None
+            if args.get('created_at'):
+                check_user_action_allowed('set_timestamp', None, True)
+                created_at = rest_utils.parse_datetime_string(
+                    args['created_at'])
+
+            plugins_update = update_manager.stage_plugin_update(
+                blueprint=update_manager.sm.get(models.Blueprint, id),
+                forced=args.get('force', False),
+                update_id=args.get('update_id'),
+                created_at=created_at,
+            )
+
+            if args.get('creator'):
+                check_user_action_allowed('set_owner', None, True)
+                plugins_update.creator = rest_utils.valid_user(
+                    args['creator'])
+
+            plugins_update.state = args['state']
+            if args.get('execution_id'):
+                plugins_update._execution_fk = update_manager.sm.get(
+                    models.Execution, args['execution_id'],
+                )._storage_id
+            plugins_update.deployments_to_update = args.get(
+                'affected_deployments', [])
+            if args.get('temp_blueprint_id'):
+                plugins_update.temp_blueprint = update_manager.sm.get(
+                    models.Blueprint, args['temp_blueprint_id'])
+
+            return update_manager.sm.put(plugins_update)
+
         if phase == PHASES.INITIAL:
-            return get_plugins_updates_manager().initiate_plugins_update(
+            return update_manager.initiate_plugins_update(
                 blueprint_id=id, filters=filters,
                 auto_correct_types=auto_correct_types,
                 reevaluate_active_statuses=reevaluate_active_statuses)
         elif phase == PHASES.FINAL:
-            return get_plugins_updates_manager().finalize(
-                plugins_update_id=id)
+            return update_manager.finalize(plugins_update_id=id)
 
 
 class PluginsUpdateId(SecuredResource):
