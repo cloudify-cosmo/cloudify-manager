@@ -554,7 +554,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                 for wf_name, wf in deployment_workflows.items()]
 
     @classmethod
-    def compare_between_statuses(
+    def compare_statuses(
                 cls, *statuses: typing.Optional[str]
             ) -> typing.Optional[str]:
         """Unify multiple DeploymentStates into a single state.
@@ -589,14 +589,14 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         _sub_services_status = self.sub_services_status
         if self.is_environment:
             _sub_environments_status = \
-                self.compare_between_statuses(
+                self.compare_statuses(
                     self.sub_environments_status,
                     self.deployment_status
                 )
 
         else:
             _sub_services_status = \
-                self.compare_between_statuses(
+                self.compare_statuses(
                     self.sub_services_status,
                     self.deployment_status
                 )
@@ -608,35 +608,46 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         and latest execution object
         :return: deployment_status: Overall deployment status
         """
+        deployment_status = self.decide_deployment_status(
+            self.latest_execution_status,
+            self.installation_status,
+            self.sub_services_status,
+            self.sub_environments_status
+        )
+        self.deployment_status = deployment_status
+        return deployment_status
+
+    @classmethod
+    def decide_deployment_status(
+        cls,
+        latest_execution_status,
+        installation_status,
+        sub_services_status,
+        sub_environments_status,
+    ):
         latest_status = DeploymentState.EXECUTION_STATES_SUMMARY.get(
-            self.latest_execution_status)
+            latest_execution_status)
         if latest_status == DeploymentState.IN_PROGRESS:
             deployment_status = DeploymentState.IN_PROGRESS
         elif latest_status == DeploymentState.FAILED \
-                or self.installation_status == DeploymentState.INACTIVE:
+                or installation_status == DeploymentState.INACTIVE:
             deployment_status = DeploymentState.REQUIRE_ATTENTION
         else:
             deployment_status = DeploymentState.GOOD
 
-        has_sub_sts = self.sub_services_status or self.sub_environments_status
-        if not has_sub_sts or exclude_sub_deployments:
-            return deployment_status
-
         # Check whether or not deployment has services or environments
         # attached to it, so that we can consider that while evaluating the
         # deployment status
-        if self.sub_services_status:
-            deployment_status = \
-                self.compare_between_statuses(
-                    self.sub_services_status,
-                    deployment_status
-                )
-        if self.sub_environments_status:
-            deployment_status = \
-                self.compare_between_statuses(
-                    self.sub_environments_status,
-                    deployment_status
-                )
+        if sub_services_status:
+            deployment_status = cls.compare_statuses(
+                sub_services_status,
+                deployment_status
+            )
+        if sub_environments_status:
+            deployment_status = cls.compare_statuses(
+                sub_environments_status,
+                deployment_status
+            )
         return deployment_status
 
     @property

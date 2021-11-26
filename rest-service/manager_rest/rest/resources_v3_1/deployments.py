@@ -91,13 +91,13 @@ class DeploymentsId(resources_v1.DeploymentsId):
                 exclude_sub_deployments=True)
             if _dep.is_environment:
                 sub_environments_count += 1
-                sub_environments_status = _dep.compare_between_statuses(
+                sub_environments_status = _dep.compare_statuses(
                     sub_environments_status,
                     _dep_status
                 )
             else:
                 sub_services_count += 1
-                sub_services_status = _dep.compare_between_statuses(
+                sub_services_status = _dep.compare_statuses(
                     sub_services_status,
                     _dep_status
                 )

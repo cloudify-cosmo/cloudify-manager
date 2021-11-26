@@ -806,10 +806,10 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
                         total_srv_status = DeploymentState.REQUIRE_ATTENTION
                         break
 
-                    total_env_status = _source.compare_between_statuses(
+                    total_env_status = _source.compare_statuses(
                         total_env_status, _sub_env_status
                     )
-                    total_srv_status = _source.compare_between_statuses(
+                    total_srv_status = _source.compare_statuses(
                         total_srv_status, _sub_srv_status
                     )
             _update_deployment_status(v, total_srv_status, total_env_status)
