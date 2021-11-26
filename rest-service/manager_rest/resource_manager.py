@@ -1602,14 +1602,18 @@ class ResourceManager(object):
             )
         )
 
-    def _remove_deployment_label_dependency(self, source, target):
+    def _remove_deployment_label_dependency(self, deployments, parents):
+        if not parents or not deployments:
+            return
         dld = models.DeploymentLabelsDependencies.__table__
         db.session.execute(
             dld.delete()
             .where(
-                sql_and(
-                    dld.c._source_deployment == source._storage_id,
-                    dld.c._target_deployment == target._storage_id,
+                db.and_(
+                    dld.c._target_deployment.in_(
+                        {d._storage_id for d in parents}),
+                    dld.c._source_deployment.in_(
+                        {d._storage_id for d in deployments})
                 )
             )
         )
@@ -1623,7 +1627,7 @@ class ResourceManager(object):
 
     def _remove_deployments_from_label_graph(self, graph, source, target):
         graph.remove_dependency_from_graph(source.id, target.id)
-        self._remove_deployment_label_dependency(source, target)
+        self._remove_deployment_label_dependency([source], [target])
 
     def _get_total_services_and_environments_from_sources(self, deployments):
         total_services = 0
