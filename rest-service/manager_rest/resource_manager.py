@@ -91,10 +91,10 @@ class _SubDepSummary(object):
 
     def __add__(self, other):
         return self.__class__(
-            sub_services_count=
-            self.sub_services_count + other.sub_services_count,
-            sub_environments_count=
-            self.sub_environments_count + other.sub_environments_count,
+            sub_services_count=self.sub_services_count +
+            other.sub_services_count,
+            sub_environments_count=self.sub_environments_count +
+            other.sub_environments_count,
             sub_services_status=models.Deployment.compare_statuses(
                 self.sub_services_status, other.sub_services_status
             ),
@@ -2834,6 +2834,7 @@ class ResourceManager(object):
                     sub_environments_status=dep_summary.sub_environments_status
                 )
             )
+
 
 # What we need to access this manager in Flask
 def get_resource_manager(sm=None):
