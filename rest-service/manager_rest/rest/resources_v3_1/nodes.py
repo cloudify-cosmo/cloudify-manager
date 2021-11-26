@@ -34,7 +34,6 @@ class Nodes(v3_Nodes):
                 models.Node.__table__.insert(),
                 raw_nodes,
             )
-            db.session.commit()
         return None, 201
 
     def _prepare_raw_nodes(self, deployment, raw_nodes):
@@ -162,7 +161,6 @@ class NodeInstances(v2_NodeInstances):
                 models.NodeInstance.__table__.insert(),
                 raw_instances,
             )
-            db.session.commit()
         return None, 201
 
     def _prepare_raw_instances(self, sm, deployment, raw_instances):
