@@ -159,10 +159,10 @@ class NodeInstances(v2_NodeInstances):
 
         nodes = {node.id: node._storage_id for node in deployment.nodes}
 
-        valid_params = ['id', 'runtime_properties', 'state', 'version',
+        valid_params = {'id', 'runtime_properties', 'state', 'version',
                         'relationships', 'scaling_groups', 'host_id',
                         'index', 'visibility',
-                        '_tenant_id', '_node_fk', '_creator_id']
+                        '_tenant_id', '_node_fk', '_creator_id'}
 
         user_lookup = {}
 
@@ -175,31 +175,20 @@ class NodeInstances(v2_NodeInstances):
             raw_instance['_node_fk'] = nodes[raw_instance.pop('node_id')]
             creator = raw_instance.get('creator')
             if creator:
-                if creator in user_lookup:
-                    user = user_lookup[creator]
-                else:
-                    rest_utils.valid_user(creator)
-                    user = sm.get(models.User, None, include=['id'],
-                                  filters={'username': creator})
-                    user_lookup[creator] = user
+                if creator not in user_lookup:
+                    user_lookup[creator] = rest_utils.valid_user(creator)
+                user = user_lookup[creator]
             else:
                 user = current_user
             raw_instance['_creator_id'] = user.id
 
-            clear = [param for param in raw_instance
-                     if param not in valid_params]
+            clear = raw_instance.keys() - valid_params
             for param in clear:
                 raw_instance.pop(param)
 
-            if 'runtime_properties' not in raw_instance:
-                raw_instance['runtime_properties'] = {}
-            if 'state' not in raw_instance:
-                raw_instance['state'] = 'uninitialized'
-            if 'version' not in raw_instance:
-                raw_instance['version'] = 1
-            if 'relationships' not in raw_instance:
-                raw_instance['relationships'] = []
-            if 'scaling_groups' not in raw_instance:
-                raw_instance['scaling_groups'] = []
-            if 'host_id' not in raw_instance:
-                raw_instance['host_id'] = None
+            raw_instance.setdefault('runtime_properties', {})
+            raw_instance.setdefault('state', 'uninitialized')
+            raw_instance.setdefault('version', 1)
+            raw_instance.setdefault('relationships', [])
+            raw_instance.setdefault('scaling_groups', [])
+            raw_instance.setdefault('host_id', None)
