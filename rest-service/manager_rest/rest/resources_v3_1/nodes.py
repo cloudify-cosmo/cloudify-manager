@@ -167,12 +167,12 @@ class NodeInstances(v2_NodeInstances):
         user_lookup = {}
 
         for raw_instance in raw_instances:
-            node_id = raw_instance['node_id']
+            node_id = raw_instance.pop('node_id')
             index = raw_instance.get('index', current_node_index[node_id] + 1)
             raw_instance['index'] = current_node_index[node_id] = index
 
             raw_instance['_tenant_id'] = deployment._tenant_id
-            node = nodes[raw_instance.pop('node_id')]
+            node = nodes[node_id]
             raw_instance['_node_fk'] = node._storage_id
             raw_instance['visibility'] = node.visibility
             creator = raw_instance.get('creator')
