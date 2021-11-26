@@ -157,7 +157,7 @@ class NodeInstances(v2_NodeInstances):
             if ni.index > current_node_index[ni.node_id]:
                 current_node_index[ni.node_id] = ni.index
 
-        nodes = {node.id: node._storage_id for node in deployment.nodes}
+        nodes = {node.id: node for node in deployment.nodes}
 
         valid_params = {'id', 'runtime_properties', 'state', 'version',
                         'relationships', 'scaling_groups', 'host_id',
@@ -172,7 +172,9 @@ class NodeInstances(v2_NodeInstances):
             raw_instance['index'] = current_node_index[node_id] = index
 
             raw_instance['_tenant_id'] = deployment._tenant_id
-            raw_instance['_node_fk'] = nodes[raw_instance.pop('node_id')]
+            node = nodes[raw_instance.pop('node_id')]
+            raw_instance['_node_fk'] = node._storage_id
+            raw_instance['visibility'] = node.visibility
             creator = raw_instance.get('creator')
             if creator:
                 if creator not in user_lookup:
