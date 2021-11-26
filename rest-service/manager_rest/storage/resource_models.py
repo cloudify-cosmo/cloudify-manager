@@ -554,7 +554,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                 for wf_name, wf in deployment_workflows.items()]
 
     @classmethod
-    def compare_between_statuses(
+    def compare_statuses(
                 cls, *statuses: typing.Optional[str]
             ) -> typing.Optional[str]:
         """Unify multiple DeploymentStates into a single state.
@@ -571,8 +571,6 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             DeploymentState.REQUIRE_ATTENTION: 3
         }
         return max(statuses, key=lambda st: importance.get(st, 0))
-
-    compare_statuses = compare_between_statuses
 
     def evaluate_sub_deployments_statuses(self):
         """
@@ -591,14 +589,14 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         _sub_services_status = self.sub_services_status
         if self.is_environment:
             _sub_environments_status = \
-                self.compare_between_statuses(
+                self.compare_statuses(
                     self.sub_environments_status,
                     self.deployment_status
                 )
 
         else:
             _sub_services_status = \
-                self.compare_between_statuses(
+                self.compare_statuses(
                     self.sub_services_status,
                     self.deployment_status
                 )
@@ -641,12 +639,12 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         # attached to it, so that we can consider that while evaluating the
         # deployment status
         if sub_services_status:
-            deployment_status = cls.compare_between_statuses(
+            deployment_status = cls.compare_statuses(
                 sub_services_status,
                 deployment_status
             )
         if sub_environments_status:
-            deployment_status = cls.compare_between_statuses(
+            deployment_status = cls.compare_statuses(
                 sub_environments_status,
                 deployment_status
             )
