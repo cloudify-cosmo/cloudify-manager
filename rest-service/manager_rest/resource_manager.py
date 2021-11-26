@@ -177,17 +177,15 @@ class ResourceManager(object):
         dep.latest_execution = latest_execution
         dep.deployment_status = dep.evaluate_deployment_status()
         self.sm.update(dep)
-        if dep.deployment_parents:
-            graph = RecursiveDeploymentLabelsDependencies(self.sm)
-            graph.create_dependencies_graph()
-            graph.propagate_deployment_statuses(dep.id)
 
     def update_execution_status(self, execution_id, status, error):
+        affected_parent_deployments = set()
         with self.sm.transaction():
             storage_utils.deployments_lock()
             execution = self.sm.get(models.Execution, execution_id,
                                     locking=True)
             if execution._deployment_fk:
+                affected_parent_deployments.add(execution._deployment_fk)
                 deployment = execution.deployment
             else:
                 deployment = None
@@ -261,7 +259,12 @@ class ResourceManager(object):
                 status == ExecutionState.TERMINATED:
             # render the execution here, because immediately afterwards
             # we'll delete it, and then we won't be able to render it anymore
-            self.delete_deployment(deployment)
+            affected_parent_deployments |= self.delete_deployment(deployment)
+
+        if affected_parent_deployments:
+            with self.sm.transaction():
+                self.recalc_ancestors(affected_parent_deployments)
+
         return res
 
     def start_queued_executions(self, deployment_storage_id):
@@ -911,6 +914,7 @@ class ResourceManager(object):
             shutil.rmtree(deployment_folder)
 
         self.sm.delete(deployment)
+        return set()
 
     def _clean_dependencies_from_external_targets(self,
                                                   deployment,
