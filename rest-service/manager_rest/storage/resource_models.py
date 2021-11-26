@@ -572,6 +572,8 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         }
         return max(statuses, key=lambda st: importance.get(st, 0))
 
+    compare_statuses = compare_between_statuses
+
     def evaluate_sub_deployments_statuses(self):
         """
         Evaluate the deployment statuses per deployment using the following
