@@ -63,6 +63,65 @@ from . import workflow_executor
 from . import manager_exceptions
 
 
+class _SubDepSummary(object):
+    """A container for sub-counts and sub-statuses of a deployment.
+
+    This is only to be used by the recalc_ancestors machinery. This
+    class defines how counts and statuses should be added together.
+    """
+    __slots__ = (
+        'sub_services_count',
+        'sub_environments_count',
+        'sub_services_status',
+        'sub_environments_status'
+    )
+
+    def __init__(
+        self,
+        *,
+        sub_services_count=0,
+        sub_environments_count=0,
+        sub_services_status=None,
+        sub_environments_status=None,
+    ):
+        self.sub_services_count = sub_services_count
+        self.sub_environments_count = sub_environments_count
+        self.sub_services_status = sub_services_status
+        self.sub_environments_status = sub_environments_status
+
+    def __add__(self, other):
+        return self.__class__(
+            sub_services_count=
+            self.sub_services_count + other.sub_services_count,
+            sub_environments_count=
+            self.sub_environments_count + other.sub_environments_count,
+            sub_services_status=models.Deployment.compare_statuses(
+                self.sub_services_status, other.sub_services_status
+            ),
+            sub_environments_status=models.Deployment.compare_statuses(
+                self.sub_environments_status, other.sub_environments_status
+            )
+        )
+
+    def __iadd__(self, other):
+        self.sub_services_count += other.sub_services_count
+        self.sub_environments_count += other.sub_environments_count
+        self.sub_services_status = models.Deployment.compare_statuses(
+            self.sub_services_status, other.sub_services_status
+        )
+        self.sub_environments_status = models.Deployment.compare_statuses(
+            self.sub_environments_status, other.sub_environments_status
+        )
+        return self
+
+    def __repr__(self):
+        return (
+            f'<{self.__class__.__name__}: {self.sub_services_count}, '
+            f'{self.sub_environments_count}, {self.sub_services_status}, '
+            f'{self.sub_environments_status}>'
+        )
+
+
 class ResourceManager(object):
 
     def __init__(self, sm=None):
@@ -2640,6 +2699,141 @@ class ResourceManager(object):
             return parse_utc_datetime_relative(time_expression, base_datetime)
         return datetime.strptime(time_expression, time_fmt)
 
+    def _reset_sub_deployments(self, deployment_ids):
+        """Set sub-counts to 0 and sub-statuses to None, for deployment_ids.
+
+        We know that deployment_ids have no children, so we can clear their
+        sub-counts and statuses.
+        This however requires re-evaluation of the deployment status as well.
+        """
+        deployments_to_update = (
+            db.session.query(
+                models.Deployment._storage_id,
+                models.Deployment.installation_status,
+                models.Execution.status.label('latest_execution_status')
+            )
+            .filter(models.Deployment._storage_id.in_(deployment_ids))
+            .outerjoin(
+                models.Execution,
+                models.Deployment._latest_execution_fk
+                == models.Execution._storage_id
+            )
+            .with_for_update(of=models.Deployment)
+        )
+        for dep in deployments_to_update:
+            new_status = models.Deployment.decide_deployment_status(
+                latest_execution_status=dep.latest_execution_status,
+                installation_status=dep.installation_status,
+                sub_services_status=None,
+                sub_environments_status=None
+            )
+            db.session.execute(
+                models.Deployment.__table__.update()
+                .where(models.Deployment.__table__.c._storage_id
+                       == dep._storage_id)
+                .values(
+                    deployment_status=new_status,
+                    sub_services_count=0,
+                    sub_environments_count=0,
+                    sub_services_status=None,
+                    sub_environments_status=None,
+                )
+            )
+
+    def _structure_update_tree(self, update_tree):
+        """Give a structure to the update-tree adjacency list.
+
+        Return two dicts - a mapping from deployment-id to the rows,
+        and a mapping from parent-id to a set of child-ids
+        """
+        deps = {}
+        children = {}
+        for row in update_tree:
+            deps[row._storage_id] = row
+            children.setdefault(row._target_deployment, set()).add(
+                row._source_deployment)
+        return deps, children
+
+    def _summarize_tree(self, deps, children):
+        """Given a tree of deployments, figure out their total sub_x counts.
+
+        Traverse the tree, whose connections are given by `children`, and
+        values are given by `deps`, and return a mapping from deployment ids,
+        to their total counts and statuses of sub-services and sub-envs.
+
+        Eg. if deps gives the details of deployments 1 and 2, and
+        children is {1: {2}}, then this will return a dict saying that
+        1 has one sub-service (and its status), while 2 has zero.
+        """
+        summary = defaultdict(lambda: _SubDepSummary())
+
+        # graph traversal - look at each deployment who has no children
+        # left to examine;
+        # to do this, first reverse the `children` graph, so that we have
+        # a mapping of "who are the parents of this deployment", and then
+        # remove entries from `children`, so that we know when all of
+        # a parents' children have been examined
+        parents = {}
+        for parent_id, child_ids in children.items():
+            for child_id in child_ids:
+                parents.setdefault(child_id, set()).add(parent_id)
+
+        no_children = {dep_id for dep_id in deps if not children.get(dep_id)}
+
+        # we've not fetched any children of those, so we just take whatever
+        # counts they declare
+        for dep_id in no_children:
+            summary[dep_id] += deps[dep_id]
+
+        while no_children:
+            dep_id = no_children.pop()
+            dep = deps[dep_id]
+            if dep.is_env:
+                child_summary = _SubDepSummary(
+                    sub_environments_count=1,
+                    sub_environments_status=dep.deployment_status
+                )
+            else:
+                child_summary = _SubDepSummary(
+                    sub_services_count=1,
+                    sub_services_status=dep.deployment_status
+                )
+            for parent_id in parents.get(dep_id, set()):
+                summary[parent_id] += child_summary + summary[dep_id]
+                children[parent_id].remove(dep_id)
+                if not children[parent_id]:
+                    no_children.add(parent_id)
+        return summary
+
+    def recalc_ancestors(self, deployment_ids):
+        """Recalculate statuses & counts for all ancestors of deployment_ids"""
+        if not deployment_ids:
+            return
+        tree = models.DeploymentLabelsDependencies._get_update_tree(
+            deployment_ids)
+        if not tree:
+            return self._reset_sub_deployments(deployment_ids)
+        deps, children = self._structure_update_tree(tree)
+        summary = self._summarize_tree(deps, children)
+        for dep_id, dep_summary in summary.items():
+            dep = deps[dep_id]
+            new_status = models.Deployment.decide_deployment_status(
+                latest_execution_status=dep.latest_execution_status,
+                installation_status=dep.installation_status,
+                sub_services_status=dep_summary.sub_services_status,
+                sub_environments_status=dep_summary.sub_environments_status
+            )
+            db.session.execute(
+                models.Deployment.__table__.update()
+                .where(models.Deployment.__table__.c._storage_id == dep_id)
+                .values(
+                    deployment_status=new_status,
+                    sub_services_count=dep_summary.sub_services_count,
+                    sub_environments_count=dep_summary.sub_environments_count,
+                    sub_services_status=dep_summary.sub_services_status,
+                    sub_environments_status=dep_summary.sub_environments_status
+                )
+            )
 
 # What we need to access this manager in Flask
 def get_resource_manager(sm=None):
