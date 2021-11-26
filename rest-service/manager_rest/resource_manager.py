@@ -866,44 +866,12 @@ class ResourceManager(object):
             self._clean_dependencies_from_external_targets(
                 deployment, external_targets)
 
-        parents = deployment.deployment_parents
+        parents = self.sm.list(
+            models.Deployment, filters={'id': deployment.deployment_parents})
+        parent_storage_ids = set()
         if parents:
-            total_services, total_environments = \
-                self._get_total_services_and_environments_from_sources(
-                    [deployment]
-                )
-            dep_graph = RecursiveDeploymentLabelsDependencies(self.sm)
-            dep_graph.create_dependencies_graph()
-            dep_graph.decrease_deployment_counts_in_graph(
-                parents,
-                total_services,
-                total_environments
-            )
-            for _parent in parents:
-                _parent_obj = self.sm.get(
-                    models.Deployment,
-                    _parent,
-                    fail_silently=True
-                )
-                if _parent_obj:
-                    dep_graph.remove_dependency_from_graph(
-                        deployment.id, _parent)
-                    self._remove_deployment_label_dependency(
-                        deployment,
-                        _parent_obj
-                    )
-                    from_dependencies = self.sm.list(
-                        models.DeploymentLabelsDependencies,
-                        filters={'target_deployment_id': _parent_obj.id}
-                    )
-                    if not from_dependencies:
-                        _parent_obj.sub_services_status = None
-                        _parent_obj.sub_environments_status = None
-                        _parent_obj.deployment_status = \
-                            _parent_obj.evaluate_deployment_status()
-                        self.sm.update(_parent_obj)
-                    else:
-                        dep_graph.propagate_deployment_statuses(_parent)
+            self._remove_deployment_label_dependency([deployment], parents)
+            parent_storage_ids = {p._storage_id for p in parents}
 
         deployment_folder = os.path.join(
             config.instance.file_server_root,
@@ -914,7 +882,7 @@ class ResourceManager(object):
             shutil.rmtree(deployment_folder)
 
         self.sm.delete(deployment)
-        return set()
+        return parent_storage_ids
 
     def _clean_dependencies_from_external_targets(self,
                                                   deployment,
@@ -1634,14 +1602,18 @@ class ResourceManager(object):
             )
         )
 
-    def _remove_deployment_label_dependency(self, source, target):
+    def _remove_deployment_label_dependency(self, deployments, parents):
+        if not parents or not deployments:
+            return
         dld = models.DeploymentLabelsDependencies.__table__
         db.session.execute(
             dld.delete()
             .where(
-                sql_and(
-                    dld.c._source_deployment == source._storage_id,
-                    dld.c._target_deployment == target._storage_id,
+                db.and_(
+                    dld.c._target_deployment.in_(
+                        {d._storage_id for d in parents}),
+                    dld.c._source_deployment.in_(
+                        {d._storage_id for d in deployments})
                 )
             )
         )
@@ -1655,7 +1627,7 @@ class ResourceManager(object):
 
     def _remove_deployments_from_label_graph(self, graph, source, target):
         graph.remove_dependency_from_graph(source.id, target.id)
-        self._remove_deployment_label_dependency(source, target)
+        self._remove_deployment_label_dependency([source], [target])
 
     def _get_total_services_and_environments_from_sources(self, deployments):
         total_services = 0
