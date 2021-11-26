@@ -1,12 +1,16 @@
 from collections import defaultdict
 
+from flask_security import current_user
+
 from ..resources_v3 import Nodes as v3_Nodes
 from ..resources_v2 import NodeInstances as v2_NodeInstances
 
 from manager_rest.rest import rest_utils
 from manager_rest.rest.rest_decorators import only_deployment_update
-from manager_rest.security.authorization import authorize
+from manager_rest.security.authorization import (authorize,
+                                                 check_user_action_allowed)
 from manager_rest.storage import get_storage_manager, models
+from manager_rest.storage.models_base import db
 from manager_rest.security import SecuredResource
 
 
@@ -131,36 +135,62 @@ class NodeInstances(v2_NodeInstances):
         with sm.transaction():
             deployment_id = request_dict['deployment_id']
             deployment = sm.get(models.Deployment, deployment_id)
-            nodes = {node.id: node for node in deployment.nodes}
-            self._set_ni_index(sm, deployment, raw_instances)
-            for raw_instance in raw_instances:
-                node_id = raw_instance['node_id']
-                instance = self._instance_from_raw_instance(raw_instance)
-                instance.set_node(nodes[node_id])
-                sm.put(instance)
+            self._prepare_raw_instances(sm, deployment, raw_instances)
+            db.session.execute(
+                models.NodeInstance.__table__.insert(),
+                raw_instances,
+            )
+            db.session.commit()
         return None, 201
 
-    def _instance_from_raw_instance(self, raw_instance):
-        return models.NodeInstance(
-            id=raw_instance['id'],
-            runtime_properties={},
-            state='uninitialized',
-            version=None,
-            relationships=raw_instance.get('relationships') or [],
-            scaling_groups=raw_instance.get('scaling_groups') or [],
-            host_id=raw_instance.get('host_id'),
-            index=raw_instance['index']
-        )
+    def _prepare_raw_instances(self, sm, deployment, raw_instances):
+        if any(item.get('creator') for item in raw_instances):
+            check_user_action_allowed('set_owner')
 
-    def _set_ni_index(self, sm, deployment, raw_instances):
-        existing_instances = sm.list(models.NodeInstance, filters={
-            'deployment_id': deployment.id
-        }, get_all_results=True)
+        existing_instances = sm.list(
+            models.NodeInstance,
+            filters={'deployment_id': deployment.id},
+            include=['index', 'node_id'],
+            get_all_results=True)
         current_node_index = defaultdict(int)
         for ni in existing_instances:
             if ni.index > current_node_index[ni.node_id]:
                 current_node_index[ni.node_id] = ni.index
+
+        nodes = {node.id: node for node in deployment.nodes}
+
+        valid_params = {'id', 'runtime_properties', 'state', 'version',
+                        'relationships', 'scaling_groups', 'host_id',
+                        'index', 'visibility',
+                        '_tenant_id', '_node_fk', '_creator_id'}
+
+        user_lookup = {}
+
         for raw_instance in raw_instances:
-            node_id = raw_instance['node_id']
+            node_id = raw_instance.pop('node_id')
             index = raw_instance.get('index', current_node_index[node_id] + 1)
             raw_instance['index'] = current_node_index[node_id] = index
+
+            raw_instance['_tenant_id'] = deployment._tenant_id
+            node = nodes[node_id]
+            raw_instance['_node_fk'] = node._storage_id
+            raw_instance['visibility'] = node.visibility
+            creator = raw_instance.get('creator')
+            if creator:
+                if creator not in user_lookup:
+                    user_lookup[creator] = rest_utils.valid_user(creator)
+                user = user_lookup[creator]
+            else:
+                user = current_user
+            raw_instance['_creator_id'] = user.id
+
+            clear = raw_instance.keys() - valid_params
+            for param in clear:
+                raw_instance.pop(param)
+
+            raw_instance.setdefault('runtime_properties', {})
+            raw_instance.setdefault('state', 'uninitialized')
+            raw_instance.setdefault('version', 1)
+            raw_instance.setdefault('relationships', [])
+            raw_instance.setdefault('scaling_groups', [])
+            raw_instance.setdefault('host_id', None)
