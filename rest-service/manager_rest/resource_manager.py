@@ -2702,8 +2702,7 @@ class ResourceManager(object):
     def _reset_sub_deployments(self, deployment_ids):
         """Set sub-counts to 0 and sub-statuses to None, for deployment_ids.
 
-        We know that deployment_ids have no children, so we can clear their
-        sub-counts and statuses.
+        Only call this on deployments who we know have no children.
         This however requires re-evaluation of the deployment status as well.
         """
         deployments_to_update = (
