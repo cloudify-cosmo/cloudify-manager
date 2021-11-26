@@ -16,6 +16,7 @@ import uuid
 
 from mock import patch
 
+from cloudify.models_states import DeploymentState
 from cloudify_rest_client.exceptions import CloudifyClientError
 from cloudify.deployment_dependencies import create_deployment_dependency
 
@@ -324,6 +325,131 @@ class ModelDependenciesTest(_DependencyTestUtils, BaseServerTestCase):
 
         assert d2.get_all_dependents() == {d1, d3}
         assert d4.get_all_dependents() == {d3}
+
+
+class RecalcAncestorsTest(_DependencyTestUtils, BaseServerTestCase):
+    def test_no_relation(self):
+        d1 = self._deployment(id='d1')
+        db.session.flush()
+        self.rm.recalc_ancestors([d1._storage_id])
+        db.session.refresh(d1)
+        assert d1.sub_services_count == 0
+        assert d1.sub_environments_count == 0
+
+    def test_direct_dependency(self):
+        d1 = self._deployment(id='d1')
+        d2 = self._deployment(id='d2')
+        self._deployment(id='unrelated')
+        self._label_dependency(d1, d2)
+        d1.deployment_status = DeploymentState.GOOD
+        db.session.flush()
+        assert d2.sub_services_count == 0
+        assert d2.sub_services_status is None
+        assert d2.deployment_status is None
+        self.rm.recalc_ancestors([d1._storage_id])
+        db.session.refresh(d2)
+        assert d2.sub_services_count == 1
+        assert d2.sub_services_status == DeploymentState.GOOD
+        assert d2.deployment_status == DeploymentState.GOOD
+
+    def test_sibling(self):
+        d1 = self._deployment(id='d1')
+        d2 = self._deployment(id='d2')
+        d3 = self._deployment(id='d3')
+        self._label_dependency(d1, d2)
+        self._label_dependency(d3, d2)
+        db.session.flush()
+        self.rm.recalc_ancestors([d1._storage_id])
+        db.session.refresh(d2)
+        assert d2.sub_services_count == 2
+
+    def test_multi_level(self):
+        d1 = self._deployment(id='d1')
+        d2 = self._deployment(id='d2')
+        d3 = self._deployment(id='d3')
+        self._label_dependency(d1, d2)
+        self._label_dependency(d2, d3)
+        db.session.flush()
+        self.rm.recalc_ancestors([d1._storage_id])
+        db.session.refresh(d2)
+        db.session.refresh(d3)
+        assert d2.sub_services_count == 1
+        assert d3.sub_services_count == 2
+
+    def test_sibling_child(self):
+        d1 = self._deployment(id='d1')
+        d2 = self._deployment(id='d2')
+        d3 = self._deployment(id='d3')
+        d4 = self._deployment(id='d4')
+        self._label_dependency(d1, d2)
+        self._label_dependency(d3, d2)
+        self._label_dependency(d4, d3)
+        d3.sub_services_count = 42
+        db.session.flush()
+        self.rm.recalc_ancestors([d1._storage_id])
+        db.session.refresh(d2)
+        # d3's child wasn't retrieved, because it's not a direct child of
+        # any of d1's parents; instead, we just trust whatever count d3
+        # declared (42 + d3 itself + d1)
+        assert d2.sub_services_count == 44
+
+    def test_is_env(self):
+        d1 = self._deployment(id='d1')
+        d2 = self._deployment(id='d2')
+        self._label_dependency(d1, d2)
+        self._label(d1, 'csys-obj-type', 'environment')
+        db.session.flush()
+        self.rm.recalc_ancestors([d1._storage_id])
+        db.session.refresh(d2)
+        assert d2.sub_services_count == 0
+        assert d2.sub_environments_count == 1
+
+    def test_latest_execution_status(self):
+        d1 = self._deployment(id='d1')
+        d2 = self._deployment(id='d2')
+        self._label_dependency(d1, d2)
+        d2.latest_execution = models.Execution(
+            status='failed',
+            workflow_id='',
+            tenant=self.tenant,
+            creator=self.user,
+        )
+        db.session.flush()
+        self.rm.recalc_ancestors([d1._storage_id])
+        db.session.refresh(d2)
+        assert d2.deployment_status == DeploymentState.REQUIRE_ATTENTION
+
+    def test_multiple_child_status(self):
+        d1 = self._deployment(id='d1')
+        d2 = self._deployment(id='d2')
+        d3 = self._deployment(id='d3')
+        self._label_dependency(d1, d2)
+        self._label_dependency(d3, d2)
+        d1.deployment_status = DeploymentState.GOOD
+        d3.deployment_status = DeploymentState.REQUIRE_ATTENTION
+        db.session.flush()
+        self.rm.recalc_ancestors([d1._storage_id])
+        db.session.refresh(d2)
+        assert d2.sub_services_count == 2
+        assert d2.sub_services_status == DeploymentState.REQUIRE_ATTENTION
+
+    def test_override_when_fetched(self):
+        d1 = self._deployment(id='d1')
+        d2 = self._deployment(id='d2')
+        d3 = self._deployment(id='d3')
+        d4 = self._deployment(id='d4')
+        self._label_dependency(d1, d2)
+        self._label_dependency(d4, d2)
+        self._label_dependency(d2, d3)
+        # we'll be fetching d2's children, so the old 42 is going to be
+        # overridden, because we'll recompute its sub-services to 2
+        d2.sub_services_count = 42
+        db.session.flush()
+        self.rm.recalc_ancestors([d1._storage_id])
+        db.session.refresh(d2)
+        db.session.refresh(d3)
+        assert d2.sub_services_count == 2
+        assert d3.sub_services_count == 3
 
 
 class InterDeploymentDependenciesTest(BaseServerTestCase):
