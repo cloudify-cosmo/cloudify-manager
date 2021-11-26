@@ -29,48 +29,70 @@ class Nodes(v3_Nodes):
         with sm.transaction():
             deployment_id = request_dict['deployment_id']
             deployment = sm.get(models.Deployment, deployment_id)
-            for raw_node in raw_nodes:
-                node = self._node_from_raw_node(raw_node)
-                node.set_deployment(deployment)
-                sm.put(node)
+            self._prepare_raw_nodes(deployment, raw_nodes)
+            db.session.execute(
+                models.Node.__table__.insert(),
+                raw_nodes,
+            )
+            db.session.commit()
         return None, 201
 
-    def _node_from_raw_node(self, raw_node):
-        node_type = raw_node['type']
-        type_hierarchy = raw_node.get('type_hierarchy') or []
-        if not type_hierarchy:
-            type_hierarchy = [node_type]
-        try:
-            scalable = raw_node['capabilities']['scalable']['properties']
-        except KeyError:
-            scalable = {}
+    def _prepare_raw_nodes(self, deployment, raw_nodes):
+        if any(item.get('creator') for item in raw_nodes):
+            check_user_action_allowed('set_owner')
 
-        def _get_instance_num(attribute):
-            value = scalable.get(attribute)
-            return 1 if value is None else value
+        valid_params = {'id', 'deploy_number_of_instances',
+                        'host_id', 'max_number_of_instances',
+                        'min_number_of_instances', 'number_of_instances',
+                        'planned_number_of_instances', 'plugins',
+                        'plugins_to_install', 'properties', 'relationships',
+                        'operations', 'type', 'type_hierarchy', 'visibility',
+                        '_tenant_id', '_deployment_fk', '_creator_id'}
 
-        return models.Node(
-            id=raw_node['id'],
-            type=node_type,
-            type_hierarchy=type_hierarchy,
-            number_of_instances=_get_instance_num('current_instances'),
-            planned_number_of_instances=_get_instance_num('current_instances'),
-            deploy_number_of_instances=_get_instance_num('default_instances'),
-            min_number_of_instances=_get_instance_num('min_instances'),
-            max_number_of_instances=_get_instance_num('max_instances'),
-            host_id=raw_node.get('host_id'),
-            properties=raw_node.get('properties') or {},
-            operations=raw_node.get('operations') or {},
-            plugins=raw_node.get('plugins') or [],
-            plugins_to_install=raw_node.get('plugins_to_install'),
-            relationships=self._prepare_node_relationships(raw_node)
-        )
+        user_lookup_cache = {}
 
-    def _prepare_node_relationships(self, raw_node):
-        if 'relationships' not in raw_node:
-            return []
+        for raw_node in raw_nodes:
+            raw_node['_tenant_id'] = deployment._tenant_id
+
+            creator = _lookup_and_validate_user(raw_node.get('creator'),
+                                                user_lookup_cache)
+            raw_node['_creator_id'] = creator.id
+            raw_node['_deployment_fk'] = deployment._storage_id
+            raw_node['visibility'] = deployment.visibility
+
+            raw_node.setdefault('type_hierarchy', [])
+            if not raw_node['type_hierarchy']:
+                raw_node['type_hierarchy'] = [raw_node['type']]
+
+            scalable = raw_node.get(
+                'capabilities', {}).get(
+                'scalable', {}).get(
+                'properties', {})
+
+            _remove_invalid_keys(raw_node, valid_params)
+
+            raw_node.setdefault('number_of_instances',
+                                scalable.get('current_instances', 1))
+            raw_node.setdefault('planned_number_of_instances',
+                                scalable.get('current_instances', 1))
+            raw_node.setdefault('deploy_number_of_instances',
+                                scalable.get('default_instances', 1))
+            raw_node.setdefault('min_number_of_instances',
+                                scalable.get('min_instances', 1))
+            raw_node.setdefault('max_number_of_instances',
+                                scalable.get('max_instances', 1))
+            raw_node.setdefault('host_id', None)
+            raw_node.setdefault('properties', {})
+            raw_node.setdefault('operations', {})
+            raw_node.setdefault('plugins', {})
+            raw_node.setdefault('plugins_to_install', None)
+            raw_node['relationships'] = self._prepare_node_relationships(
+                raw_node.get('relationships', []),
+            )
+
+    def _prepare_node_relationships(self, raw_relationships):
         prepared_relationships = []
-        for raw_relationship in raw_node['relationships']:
+        for raw_relationship in raw_relationships:
             relationship = {
                 'target_id': raw_relationship['target_id'],
                 'type': raw_relationship['type'],
@@ -164,7 +186,7 @@ class NodeInstances(v2_NodeInstances):
                         'index', 'visibility',
                         '_tenant_id', '_node_fk', '_creator_id'}
 
-        user_lookup = {}
+        user_lookup_cache = {}
 
         for raw_instance in raw_instances:
             node_id = raw_instance.pop('node_id')
@@ -175,18 +197,11 @@ class NodeInstances(v2_NodeInstances):
             node = nodes[node_id]
             raw_instance['_node_fk'] = node._storage_id
             raw_instance['visibility'] = node.visibility
-            creator = raw_instance.get('creator')
-            if creator:
-                if creator not in user_lookup:
-                    user_lookup[creator] = rest_utils.valid_user(creator)
-                user = user_lookup[creator]
-            else:
-                user = current_user
-            raw_instance['_creator_id'] = user.id
+            creator = _lookup_and_validate_user(raw_instance.get('creator'),
+                                                user_lookup_cache)
+            raw_instance['_creator_id'] = creator.id
 
-            clear = raw_instance.keys() - valid_params
-            for param in clear:
-                raw_instance.pop(param)
+            _remove_invalid_keys(raw_instance, valid_params)
 
             raw_instance.setdefault('runtime_properties', {})
             raw_instance.setdefault('state', 'uninitialized')
@@ -194,3 +209,19 @@ class NodeInstances(v2_NodeInstances):
             raw_instance.setdefault('relationships', [])
             raw_instance.setdefault('scaling_groups', [])
             raw_instance.setdefault('host_id', None)
+
+
+def _lookup_and_validate_user(username, cache):
+    if not username:
+        return current_user
+
+    if username not in cache:
+        cache[username] = rest_utils.valid_user(username)
+    user = cache[username]
+    return user
+
+
+def _remove_invalid_keys(input_dict, valid_params):
+    clear = input_dict.keys() - valid_params
+    for param in clear:
+        input_dict.pop(param)
