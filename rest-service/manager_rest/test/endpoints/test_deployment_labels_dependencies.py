@@ -286,6 +286,8 @@ class DeploymentLabelsDependenciesTest(BaseServerTestCase):
             id='exc1',
             _deployment_fk=dep1._storage_id,
             workflow_id='create_deployment_environment',
+            tenant=self.tenant,
+            creator=self.user,
         )
         db.session.add(exc)
         self.client.executions.update(exc.id, status='terminated')
@@ -311,6 +313,8 @@ class DeploymentLabelsDependenciesTest(BaseServerTestCase):
                 id=f'create_{dep.id}',
                 _deployment_fk=dep._storage_id,
                 workflow_id='create_deployment_environment',
+                tenant=self.tenant,
+                creator=self.user,
             )
             db.session.add(exc)
             self.client.executions.update(exc.id, status='terminated')
