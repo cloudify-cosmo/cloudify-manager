@@ -1525,6 +1525,7 @@ class ResourceManager(object):
             display_name=display_name,
             created_at=now,
             updated_at=now,
+            deployment_status=DeploymentState.REQUIRE_ATTENTION,
         )
         new_deployment.runtime_only_evaluation = runtime_only_evaluation
         new_deployment.blueprint = blueprint
