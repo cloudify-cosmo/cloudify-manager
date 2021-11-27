@@ -284,7 +284,7 @@ class DeploymentLabelsDependenciesTest(BaseServerTestCase):
 
         exc = models.Execution(
             id='exc1',
-            deployment=dep1,
+            _deployment_fk=dep1._storage_id,
             workflow_id='create_deployment_environment',
         )
         db.session.add(exc)
@@ -309,7 +309,7 @@ class DeploymentLabelsDependenciesTest(BaseServerTestCase):
         for dep in [env1, env2, srv1]:
             exc = models.Execution(
                 id=f'create_{dep.id}',
-                deployment=dep,
+                _deployment_fk=dep._storage_id,
                 workflow_id='create_deployment_environment',
             )
             db.session.add(exc)
