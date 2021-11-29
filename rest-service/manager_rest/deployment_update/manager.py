@@ -50,8 +50,6 @@ from manager_rest.rest.rest_utils import (
     get_deployment_plan,
     get_labels_from_plan,
     get_parsed_deployment,
-    RecursiveDeploymentDependencies,
-    RecursiveDeploymentLabelsDependencies,
     verify_blueprint_uploaded_state,
 )
 from manager_rest.execution_token import current_execution
@@ -280,7 +278,6 @@ class DeploymentUpdateManager(object):
             dep_update.recursive_dependencies = [
                 dep.summarize() for dep in deployment_dependencies
             ]
-            dep_update.set_recursive_dependencies(deployment_dependencies)
             dep_update.schedules_to_create = \
                 self.list_schedules(schedules_to_create)
             dep_update.schedules_to_delete = schedules_to_delete
@@ -349,12 +346,8 @@ class DeploymentUpdateManager(object):
             labels_to_create
         )
         if parents_labels:
-            for parent in parents_labels:
-                rm.add_deployment_to_labels_graph(
-                    dep_graph,
-                    deployment,
-                    parent
-                )
+            rm.add_deployment_to_labels_graph([deployment], parents_labels)
+            rm.recalc_ancestors([deployment._storage_id])
         return self.get_deployment_update(dep_update.id)
 
     def validate_no_active_updates_per_deployment(self, deployment_id):
