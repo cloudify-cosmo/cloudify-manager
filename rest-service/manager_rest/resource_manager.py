@@ -162,7 +162,9 @@ class ResourceManager(object):
             del execution
 
         if status in ExecutionState.END_STATES:
-            update_inter_deployment_dependencies(self.sm)
+            if deployment and workflow_id != 'delete_deployment_environment':
+                with self.sm.transaction():
+                    update_inter_deployment_dependencies(self.sm, deployment)
             self.start_queued_executions(deployment_storage_id)
 
         # If the execution is a deployment update, and the status we're
@@ -173,6 +175,7 @@ class ResourceManager(object):
                                      filters={'execution_id': execution_id})
             dep_update.state = UpdateStates.FAILED
             self.sm.update(dep_update)
+
 
         # Similarly for a plugin update
         if workflow_id == 'update_plugin' and \

@@ -863,28 +863,43 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
             self.assert_cyclic_dependencies_on_graph(graph)
 
 
-def update_inter_deployment_dependencies(sm):
-    dependencies_list = sm.list(models.InterDeploymentDependencies)
+def update_inter_deployment_dependencies(sm, deployment):
+    dependencies_list = (
+        db.session.query(models.InterDeploymentDependencies)
+        .filter(
+            models.InterDeploymentDependencies._source_deployment
+            == deployment._storage_id
+        )
+        .all()
+    )
+    dependencies_list = [
+        dep for dep in dependencies_list
+        if dep.target_deployment_func and not dep.external_target
+    ]
+    if not dependencies_list:
+        return
+    dependents = {
+        d._source_deployment
+        for d in deployment.get_dependents(fetch_deployments=False)
+    } | {deployment._storage_id}
+
     for dependency in dependencies_list:
-        if (dependency.target_deployment_func and
-                not dependency.external_target):
-            _update_dependency_target_deployment(sm, dependency)
+        eval_target_deployment = _get_deployment_from_target_func(
+            sm,
+            dependency.target_deployment_func,
+            dependency.source_deployment_id
+        )
 
+        if not eval_target_deployment or \
+                eval_target_deployment == dependency.target_deployment:
+            continue
 
-def _update_dependency_target_deployment(sm, dependency):
-    eval_target_deployment = _get_deployment_from_target_func(
-        sm, dependency.target_deployment_func, dependency.source_deployment_id)
-    if (eval_target_deployment and
-            eval_target_deployment != dependency.target_deployment):
+        if eval_target_deployment._storage_id in dependents:
+            raise manager_exceptions.ConflictError(
+                f'Cyclic dependency between {deployment} '
+                f'and {eval_target_deployment}'
+            )
         dependency.target_deployment = eval_target_deployment
-
-        # check for cyclic dependencies
-        dep_graph = RecursiveDeploymentDependencies(sm)
-        source_id = str(dependency.source_deployment_id)
-        target_id = str(eval_target_deployment.id)
-        dep_graph.create_dependencies_graph()
-        dep_graph.assert_no_cyclic_dependencies(source_id, target_id)
-
         sm.update(dependency)
 
 
