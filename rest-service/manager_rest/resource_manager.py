@@ -788,7 +788,7 @@ class ResourceManager(object):
             models.Deployment, filters={'id': deployment.deployment_parents})
         parent_storage_ids = set()
         if parents:
-            self._remove_deployment_label_dependency([deployment], parents)
+            self.delete_deployment_from_labels_graph([deployment], parents)
             parent_storage_ids = {p._storage_id for p in parents}
 
         deployment_folder = os.path.join(
