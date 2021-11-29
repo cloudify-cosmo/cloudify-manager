@@ -2395,6 +2395,9 @@ class ResourceManager(object):
 
         current_time = datetime.utcnow()
         for key, value in labels_list:
+            if key.startswith('csys-'):
+                key = key.lower()
+                value = value.lower()
             new_label = {'key': key,
                          'value': value,
                          'created_at': created_at or current_time,
