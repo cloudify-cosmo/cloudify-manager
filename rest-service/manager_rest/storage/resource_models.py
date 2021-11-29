@@ -1758,9 +1758,6 @@ class DeploymentUpdate(CreatedAtMixin, SQLResourceBase):
         self._set_parent(deployment)
         self.deployment = deployment
 
-    def set_recursive_dependencies(self, recursive_dependencies):
-        self.recursive_dependencies = recursive_dependencies
-
 
 class DeploymentUpdateStep(SQLResourceBase):
     __tablename__ = 'deployment_update_steps'
@@ -2265,6 +2262,7 @@ class DeploymentLabelsDependencies(BaseDeploymentDependencies):
             f'Deployment `{self.target_deployment.id}` is the parent of '
             f'deployment {self.source_deployment.id}'
         )
+
     _children_summary_query_cache = None
 
     @classmethod

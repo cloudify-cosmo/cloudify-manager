@@ -265,12 +265,9 @@ class DeploymentUpdateManager(object):
             parents_labels = rm.get_deployment_parents_from_labels(
                 labels_to_create
             )
-            dep_graph = RecursiveDeploymentLabelsDependencies(self.sm)
-            dep_graph.create_dependencies_graph()
             rm.verify_attaching_deployment_to_parents(
-                dep_graph,
+                deployment,
                 parents_labels,
-                deployment.id
             )
         self.sm.update(dep_update)
         # If this is a preview, no need to run workflow and update DB
@@ -278,11 +275,11 @@ class DeploymentUpdateManager(object):
             dep_update.state = STATES.PREVIEW
             dep_update.id = None
 
-            # retrieving recursive dependencies for the updated deployment
-            dep_graph = RecursiveDeploymentDependencies(self.sm)
-            dep_graph.create_dependencies_graph()
-            deployment_dependencies = dep_graph.retrieve_dependent_deployments(
-                dep_update.deployment_id)
+            deployment_dependencies = dep_update.deployment.get_dependents(
+                fetch_deployments=False)
+            dep_update.recursive_dependencies = [
+                dep.summarize() for dep in deployment_dependencies
+            ]
             dep_update.set_recursive_dependencies(deployment_dependencies)
             dep_update.schedules_to_create = \
                 self.list_schedules(schedules_to_create)
