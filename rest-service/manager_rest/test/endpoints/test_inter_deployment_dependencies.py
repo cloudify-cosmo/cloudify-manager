@@ -70,155 +70,97 @@ class _DependencyTestUtils(object):
         ))
 
 
-class UpdateTreeTest(_DependencyTestUtils, BaseServerTestCase):
+class ChildrenSummaryTest(_DependencyTestUtils, BaseServerTestCase):
     def test_empty(self):
         d1 = self._deployment(id='d1')
+        summary = models.DeploymentLabelsDependencies.get_children_summary(d1)
         db.session.flush()
+        assert summary.environments.count == 0
+        assert summary.services.count == 0
 
-        update_tree = models.DeploymentLabelsDependencies._get_update_tree(
-            [d1._storage_id])
-        assert not update_tree
-
-    def test_direct_dependency(self):
+    def test_service_dependency(self):
         d1 = self._deployment(id='d1')
         d2 = self._deployment(id='d2')
+        d1.deployment_status = DeploymentState.GOOD
         self._deployment(id='unrelated')
         self._label_dependency(d1, d2)
         db.session.flush()
-        update_tree = models.DeploymentLabelsDependencies._get_update_tree(
-            [d1._storage_id])
-        assert len(update_tree) == 2
-        assert {r._storage_id for r in update_tree} == \
-            {d1._storage_id, d2._storage_id}
-        assert {
-            (r._source_deployment, r._target_deployment) for r in update_tree
-        } == {(d1._storage_id, d2._storage_id)}
 
-    def test_multi_level(self):
+        summary = models.DeploymentLabelsDependencies.get_children_summary(d2)
+        assert summary.environments.count == 0
+        assert summary.services.count == 1
+
+    def test_multiple_services_status(self):
         d1 = self._deployment(id='d1')
         d2 = self._deployment(id='d2')
         d3 = self._deployment(id='d3')
-        self._deployment(id='unrelated')
-        self._label_dependency(d1, d2)
-        self._label_dependency(d2, d3)
-        db.session.flush()
-        update_tree = models.DeploymentLabelsDependencies._get_update_tree(
-            [d1._storage_id])
-        assert len(update_tree) == 4
-        assert {r._storage_id for r in update_tree} == \
-            {d1._storage_id, d2._storage_id, d3._storage_id}
-        assert {
-            (r._source_deployment, r._target_deployment) for r in update_tree
-        } == {
-            (d1._storage_id, d2._storage_id),
-            (d2._storage_id, d3._storage_id)
-        }
-
-    def test_siblings(self):
-        d1 = self._deployment(id='d1')
-        d2 = self._deployment(id='d2')
-        d3 = self._deployment(id='d3')
-        self._deployment(id='unrelated')
+        d1.deployment_status = DeploymentState.GOOD
+        d3.deployment_status = DeploymentState.REQUIRE_ATTENTION
         self._label_dependency(d1, d2)
         self._label_dependency(d3, d2)
         db.session.flush()
-        update_tree = models.DeploymentLabelsDependencies._get_update_tree(
-            [d1._storage_id])
-        assert {r._storage_id for r in update_tree} == \
-            {d1._storage_id, d2._storage_id, d3._storage_id}
-        assert {
-            (r._source_deployment, r._target_deployment) for r in update_tree
-        } == {
-            (d1._storage_id, d2._storage_id),
-            (d3._storage_id, d2._storage_id)
+
+        summary = models.DeploymentLabelsDependencies.get_children_summary(d2)
+        assert set(summary.services.deployment_statuses) == {
+            DeploymentState.GOOD, DeploymentState.REQUIRE_ATTENTION
         }
 
-    def test_tree(self):
-        # with a tree like:
-        # E1__
-        # |   \
-        # E2   E3
-        # | \    \
-        # E4 S2   S3
-        # | \
-        # S1 S4
-        # ...select the tree rooted at S1: we expect to get back all the
-        # ancestors, and all the siblings of ancestors:
-        # S1, S4, E4, S2, E2, E1, E3
-        # ...but not S3
-        deps = {
-            dep_id: self._deployment(id=dep_id)
-            for dep_id in ['s1', 's2', 's3', 's4', 'e1', 'e2', 'e3', 'e4',
-                           'unrelated']
-        }
-        dependencies = [
-            ('s1', 'e4'),
-            ('s4', 'e4'),
-            ('e4', 'e2'),
-            ('s2', 'e2'),
-            ('e2', 'e1'),
-            ('e3', 'e1'),
-            ('s3', 'e3'),
-        ]
-        for source, target in dependencies:
-            self._label_dependency(deps[source], deps[target])
+    def test_multiple_services_count(self):
+        d1 = self._deployment(id='d1')
+        d2 = self._deployment(id='d2')
+        d3 = self._deployment(id='d3')
+        d1.sub_services_count = 1
+        d3.sub_services_count = 2
+        self._label_dependency(d1, d2)
+        self._label_dependency(d3, d2)
         db.session.flush()
 
-        update_tree = models.DeploymentLabelsDependencies._get_update_tree(
-            [deps['s1']._storage_id])
+        summary = models.DeploymentLabelsDependencies.get_children_summary(d2)
+        assert summary.services.sub_services_total == 3
 
-        assert {r._storage_id for r in update_tree} == \
-            {
-                deps[dep_id]._storage_id for dep_id in
-                ['s1', 's4', 'e4', 's2', 'e2', 'e1', 'e3']
-            }
-
-        expected_edges = {
-            (deps[source]._storage_id, deps[target]._storage_id)
-            for source, target in dependencies
-            # we dont want s3 here, it's not an ancestor of s1, nor a direct
-            # child of an ancestor
-            if source != 's3'
-        }
-        assert {
-            (r._source_deployment, r._target_deployment) for r in update_tree
-        } == expected_edges
-
-    def test_is_env(self):
+    def test_env_dependency(self):
         d1 = self._deployment(id='d1')
         d2 = self._deployment(id='d2')
         self._label(d1, 'csys-obj-type', 'environment')
-        self._label(d2, 'csys-obj-type', 'service')
+        self._deployment(id='unrelated')
         self._label_dependency(d1, d2)
         db.session.flush()
-        update_tree = models.DeploymentLabelsDependencies._get_update_tree(
-            [d1._storage_id])
-        assert {(r._storage_id, r.is_env) for r in update_tree} == \
-            {(d1._storage_id, True), (d2._storage_id, False)}
 
-    def test_latest_status(self):
+        summary = models.DeploymentLabelsDependencies.get_children_summary(d2)
+        assert summary.environments.count == 1
+        assert summary.services.count == 0
+
+    def test_multiple_envs_status(self):
         d1 = self._deployment(id='d1')
         d2 = self._deployment(id='d2')
-        d1.latest_execution = models.Execution(
-            status='pending',
-            workflow_id='',
-            tenant=self.tenant,
-            creator=self.user,
-        )
-        d2.latest_execution = models.Execution(
-            status='terminated',
-            workflow_id='',
-            tenant=self.tenant,
-            creator=self.user,
-        )
+        d3 = self._deployment(id='d3')
+        self._label(d1, 'csys-obj-type', 'environment')
+        self._label(d3, 'csys-obj-type', 'environment')
+        d1.deployment_status = DeploymentState.GOOD
+        d3.deployment_status = DeploymentState.REQUIRE_ATTENTION
         self._label_dependency(d1, d2)
+        self._label_dependency(d3, d2)
         db.session.flush()
-        update_tree = models.DeploymentLabelsDependencies._get_update_tree(
-            [d1._storage_id])
-        assert {
-            (r._storage_id, r.latest_execution_status)
-            for r in update_tree
-        } == {(d1._storage_id, 'pending'), (d2._storage_id, 'terminated')}
+
+        summary = models.DeploymentLabelsDependencies.get_children_summary(d2)
+        assert set(summary.environments.deployment_statuses) == {
+            DeploymentState.GOOD, DeploymentState.REQUIRE_ATTENTION
+        }
+
+    def test_multiple_envs_total(self):
+        d1 = self._deployment(id='d1')
+        d2 = self._deployment(id='d2')
+        d3 = self._deployment(id='d3')
+        self._label(d1, 'csys-obj-type', 'environment')
+        self._label(d3, 'csys-obj-type', 'environment')
+        d1.sub_environments_count = 1
+        d3.sub_environments_count = 2
+        self._label_dependency(d1, d2)
+        self._label_dependency(d3, d2)
+        db.session.flush()
+
+        summary = models.DeploymentLabelsDependencies.get_children_summary(d2)
+        assert summary.environments.sub_environments_total == 3
 
 
 class ModelDependenciesTest(_DependencyTestUtils, BaseServerTestCase):
