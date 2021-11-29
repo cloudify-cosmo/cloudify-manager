@@ -122,7 +122,6 @@ class ResourceManager(object):
     def update_execution_status(self, execution_id, status, error):
         affected_parent_deployments = set()
         with self.sm.transaction():
-            storage_utils.deployments_lock()
             execution = self.sm.get(models.Execution, execution_id,
                                     locking=True)
             if execution._deployment_fk:
@@ -220,7 +219,6 @@ class ResourceManager(object):
         to_run = []
         while True:
             with self.sm.transaction():
-                storage_utils.deployments_lock()
                 dequeued = self._get_queued_executions(deployment_storage_id)
                 all_started = True
                 for execution in dequeued:
