@@ -19,6 +19,7 @@ import uuid
 
 from os import path
 from datetime import datetime
+from collections import namedtuple
 
 from flask_restful import fields as flask_fields
 
@@ -748,7 +749,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         :param locking: select using a `WITH FOR UPDATE`
         """
         return InterDeploymentDependencies.get_dependencies(
-            deployments=[self],
+            deployment_ids=[self._storage_id],
             dependents=False,
             fetch_deployments=fetch_deployments,
             locking=locking,
@@ -761,7 +762,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         See get_dependencies for the explanation of parameters.
         """
         return InterDeploymentDependencies.get_dependencies(
-            deployments=[self],
+            deployment_ids=[self._storage_id],
             dependents=True,
             fetch_deployments=fetch_deployments,
             locking=locking,
@@ -774,7 +775,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         See get_dependencies for the explanation of parameters.
         """
         return DeploymentLabelsDependencies.get_dependencies(
-            deployments=[self],
+            deployment_ids=[self._storage_id],
             dependents=False,
             fetch_deployments=fetch_deployments,
             locking=locking,
@@ -787,7 +788,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         See get_dependencies for the explanation of parameters.
         """
         return DeploymentLabelsDependencies.get_dependencies(
-            deployments=[self],
+            deployment_ids=[self._storage_id],
             dependents=True,
             fetch_deployments=fetch_deployments,
             locking=locking,
@@ -1757,9 +1758,6 @@ class DeploymentUpdate(CreatedAtMixin, SQLResourceBase):
         self._set_parent(deployment)
         self.deployment = deployment
 
-    def set_recursive_dependencies(self, recursive_dependencies):
-        self.recursive_dependencies = recursive_dependencies
-
 
 class DeploymentUpdateStep(SQLResourceBase):
     __tablename__ = 'deployment_update_steps'
@@ -2077,6 +2075,9 @@ class BaseDeploymentDependencies(CreatedAtMixin, SQLResourceBase):
     _source_cascade = 'all'
     _target_cascade = 'all'
 
+    is_id_unique = False
+    id = db.Column(db.Text, index=True, default=lambda: str(uuid.uuid4()))
+
     @declared_attr
     def source_deployment(cls):
         return one_to_many_relationship(
@@ -2119,27 +2120,40 @@ class BaseDeploymentDependencies(CreatedAtMixin, SQLResourceBase):
         :param dependents: if set, return dependents, ie. children; otherwise,
             return dependencies, ie. parents
         """
-        select_cols = db.session.query(
+        base_cols = db.session.query(
             cls._storage_id,
             cls._source_deployment,
             cls._target_deployment,
+            db.literal(0).label('level')
         )
 
         if dependents:
-            base = select_cols.filter(
+            base = base_cols.filter(
                 cls._target_deployment.in_(deployment_ids))
         else:
-            base = select_cols.filter(
+            base = base_cols.filter(
                 cls._source_deployment.in_(deployment_ids))
-        base = base.cte(name='dependents', recursive=True)
+        base = (
+            base
+            .order_by(cls._storage_id)
+            .cte(name='dependents', recursive=True)
+        )
 
+        recursive_cols = db.session.query(
+            cls._storage_id,
+            cls._source_deployment,
+            cls._target_deployment,
+            base.c.level + 1
+
+        )
         if dependents:
-            recursive = select_cols.join(
+            recursive = recursive_cols.join(
                 base, cls._target_deployment == base.c._source_deployment)
         else:
-            recursive = select_cols.join(
+            recursive = recursive_cols.join(
                 base, cls._source_deployment == base.c._target_deployment)
-        return base.union(recursive)
+        recursive = recursive.order_by(cls._storage_id)
+        return base.union_all(recursive)
 
     @classmethod
     def _join_deployments(cls, adjacency, dependents=True):
@@ -2153,9 +2167,28 @@ class BaseDeploymentDependencies(CreatedAtMixin, SQLResourceBase):
         )
 
     @classmethod
-    def get_dependencies(cls, deployments, dependents=True, locking=False,
+    def get_dependencies(cls, deployment_ids, dependents=True, locking=False,
                          fetch_deployments=True):
-        deployment_ids = [d._storage_id for d in deployments]
+        """Get dependencies of the given deployments.
+
+        Fetch the ancesntors (or descendants) recursively: parents, then
+        grandparents, then...
+
+        This method is most useful behind a utility facade, ie. all
+        the get_x methods on the Deployment model.
+
+        :param deployment_ids: storage ids of deployments to fetch
+            dependencies for
+        :param dependents: if true, fetch dependents; otherwise, fetch
+            dependencies
+        :param fetch_deployments: if true, return deployment objects; otherwise
+            return instances of this class. Dependency objects are mostly
+            useful when only querying for the edges of the graph - when
+            source/target ids are all that's needed
+        :param locking: emit a WITH FOR UPDATE
+        :return: a list of deployments, or of cls instances, based on
+            the fetch_deployments param
+        """
         dependencies = cls._dependencies_adjacency(
             deployment_ids, dependents=dependents)
         if fetch_deployments:
@@ -2164,102 +2197,13 @@ class BaseDeploymentDependencies(CreatedAtMixin, SQLResourceBase):
             query = db.session.query(cls).filter(
                 cls._storage_id == dependencies.c._storage_id
             )
+        query = query.order_by(
+            dependencies.c.level, dependencies.c._storage_id)
         if locking:
-            query = query.with_for_update()
+            query = query.with_for_update(
+                of=(Deployment if fetch_deployments else cls),
+            )
         return query.all()
-
-    @classmethod
-    def _get_update_tree(cls, deployment_ids):
-        """Fetch just enough data to recalculate statuses for a subtree.
-
-        To recalculate the status/sub_counts of each ancestor, we must
-        select all the ancestors in the tree, and all of their direct
-        children: for each ancestor, we must know how many sub-deployments
-        it has, and what are their statuses.
-
-        Eg. when computing the update-tree of a deployment, we fetch that
-        deployment's parent, and ALL of the children of that parent, ie.
-        all of the target deployment's siblings.
-
-        This method is very closely tied to its usage: we only select the
-        columns that are necessarily required; it's only useful for
-        recalculating the status of a subtree of deployments, PLEASE
-        do not use this for anything else.
-
-        Returns a a list of rows that contain:
-            - several columns from each deployment
-            - the edges, ie. source_id/target_id
-            - if the deployment is an environment
-            - the latest execution status for each deployment
-        """
-        select_cols = db.session.query(
-            cls._storage_id,
-            cls._source_deployment,
-            cls._target_deployment,
-        )
-
-        base = select_cols.filter(db.or_(
-            # starting at both source AND target: we want the parents
-            # of the given deployments, but also their _direct_ (only direct)
-            # children
-            cls._target_deployment.in_(deployment_ids),
-            cls._source_deployment.in_(deployment_ids)
-        )).cte(name='dependents', recursive=True)
-
-        recursive = select_cols.join(
-            # recurse up the tree - fetch ancestors
-            base, cls._source_deployment == base.c._target_deployment)
-        cte = base.union(recursive)
-
-        depends = (
-            db.session.query(cte)
-            .union(
-                # for each ancestor, ALSO fetch all of its direct children
-                select_cols
-                .filter(cls._target_deployment == cte.c._target_deployment)
-            )
-            .subquery()
-        )
-
-        return (
-            db.session.query(
-                # these columns just happen to be enough to recalculate
-                # the statuses and counts; we avoid selecting anything
-                # that isn't necessarily required
-                Deployment._storage_id,
-                Deployment.deployment_status,
-                Deployment.installation_status,
-                Deployment.sub_services_count,
-                Deployment.sub_environments_count,
-                Deployment.sub_services_status,
-                Deployment.sub_environments_status,
-                depends.c.dependents__target_deployment.label(
-                    '_target_deployment'),
-                depends.c.dependents__source_deployment.label(
-                    '_source_deployment'),
-                db.session.query(DeploymentLabel.id)
-                .filter_by(_labeled_model_fk=Deployment._storage_id)
-                .filter_by(key='csys-obj-type')
-                .filter_by(value='environment')
-                .exists()
-                .label('is_env'),
-                Execution.status.label('latest_execution_status'),
-            )
-            .select_from(Deployment)
-            .join(depends, db.or_(
-                # we want deployment details for the parents and the children
-                Deployment._storage_id ==
-                depends.c.dependents__target_deployment,
-                Deployment._storage_id ==
-                depends.c.dependents__source_deployment
-            ))
-            .outerjoin(
-                Execution,
-                Deployment._latest_execution_fk == Execution._storage_id
-            )
-            .with_for_update(of=Deployment)
-            .all()
-        )
 
 
 class InterDeploymentDependencies(BaseDeploymentDependencies):
@@ -2280,6 +2224,45 @@ class InterDeploymentDependencies(BaseDeploymentDependencies):
     external_source = db.Column(JSONString, nullable=True)
     external_target = db.Column(JSONString, nullable=True)
 
+    def summarize(self):
+        dep_creator = self.dependency_creator.split('.')
+        dep_type = dep_creator[0] \
+            if dep_creator[0] in ['component', 'sharedresource'] \
+            else 'deployment'
+        dep_node = dep_creator[1]
+        return {
+            'deployment': self.source_deployment.id,
+            'dependency_type': dep_type,
+            'dependent_node': dep_node,
+            'tenant': self.tenant_name
+        }
+
+    def format(self):
+        summary = self.summarize()
+        type_message = {
+            'component': 'contains',
+            'sharedresource': 'uses a shared resource from',
+            'deployment': 'uses capabilities of'
+        }[summary['dependency_type']]
+        dep_node = summary['dependent_node']
+        return (
+            f'Deployment `{self.source_deployment.id}` {type_message} '
+            f'the current deployment in its node `{dep_node}`'
+        )
+
+
+# the _XSummary namedtuples are used as a return type for
+# DLD.get_children_summary
+_ChildSummary = namedtuple('_ChildSummary', [
+    'count',
+    'sub_services_total',
+    'sub_environments_total',
+    'deployment_statuses',
+    'sub_service_statuses',
+    'sub_environment_statuses',
+])
+_DepSummary = namedtuple('_DepSummary', ['environments', 'services'])
+
 
 class DeploymentLabelsDependencies(BaseDeploymentDependencies):
     __tablename__ = 'deployment_labels_dependencies'
@@ -2287,12 +2270,74 @@ class DeploymentLabelsDependencies(BaseDeploymentDependencies):
         db.UniqueConstraint(
             '_source_deployment', '_target_deployment'),
     )
-
+    dependency_creator = ''
     _source_backref_name = 'source_of_dependency_labels'
     _target_backref_name = 'target_of_dependency_labels'
 
     _source_deployment = foreign_key(Deployment._storage_id)
     _target_deployment = foreign_key(Deployment._storage_id)
+
+    def format(self):
+        return (
+            f'Deployment `{self.target_deployment.id}` is the parent of '
+            f'deployment {self.source_deployment.id}'
+        )
+
+    _children_summary_query_cache = None
+
+    @classmethod
+    def get_children_summary(cls, parent):
+        """Get the summary of a deployment's children.
+
+        Return the counts and statuses of all the DIRECT children of a
+        deployment.
+        """
+        if cls._children_summary_query_cache is None:
+            cols = db.session.query(
+                db.func.count(1),
+                db.func.sum(Deployment.sub_services_count),
+                db.func.sum(Deployment.sub_environments_count),
+                # all the enums are casted to text so that this query doesn't
+                # break on them being null
+                db.func.array_agg(db.cast(
+                    Deployment.deployment_status, db.Text).distinct()),
+                db.func.array_agg(db.cast(
+                    Deployment.sub_services_status, db.Text).distinct()),
+                db.func.array_agg(db.cast(
+                    Deployment.sub_environments_status, db.Text).distinct()),
+            )
+            is_env_filter = (
+                db.session.query(DeploymentLabel)
+                .filter(
+                    db.and_(
+                        Deployment._storage_id ==
+                        DeploymentLabel._labeled_model_fk,
+                        DeploymentLabel.key == 'csys-obj-type',
+                        DeploymentLabel.value == 'environment'
+                    )
+                )
+                .exists()
+            )
+            query_part = (
+                cols
+                .join(cls, Deployment._storage_id == cls._source_deployment)
+                .filter(cls._target_deployment == db.bindparam('dep_id'))
+            )
+            cls._children_summary_query_cache = (
+                query_part
+                .filter(is_env_filter)
+                .union_all(
+                    query_part.filter(~is_env_filter)
+                )
+            )
+
+        rows = list(db.session.execute(
+            cls._children_summary_query_cache,
+            {'dep_id': parent._storage_id})
+        )
+        if len(rows) != 2:
+            raise RuntimeError(f'children summary returned {len(rows)} rows')
+        return _DepSummary(_ChildSummary(*rows[0]), _ChildSummary(*rows[1]))
 
 
 class AuditLog(CreatedAtMixin, SQLModelBase):

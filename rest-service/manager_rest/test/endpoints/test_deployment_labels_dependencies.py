@@ -1,7 +1,8 @@
+from manager_rest.storage import models, db
+
 from cloudify_rest_client.exceptions import CloudifyClientError
 from cloudify.models_states import DeploymentState
 
-from manager_rest.storage import models, db
 from manager_rest.test.base_test import BaseServerTestCase
 
 
@@ -38,7 +39,7 @@ class DeploymentLabelsDependenciesTest(BaseServerTestCase):
 
     def test_deploy_blueprint_with_invalid_parent_id(self):
         self._deployment(id='dep')
-        with self.assertRaisesRegex(CloudifyClientError, 'does not exist'):
+        with self.assertRaisesRegex(CloudifyClientError, 'not found'):
             self.client.deployments.set_attributes(
                 'dep',
                 labels=[{'csys-obj-parent': 'parent'}]
@@ -64,7 +65,7 @@ class DeploymentLabelsDependenciesTest(BaseServerTestCase):
     def test_deployment_with_valid_and_invalid_parent_labels(self):
         parent = self._deployment(id='parent')
         self._deployment(id='dep')
-        with self.assertRaisesRegex(CloudifyClientError, 'does not exist'):
+        with self.assertRaisesRegex(CloudifyClientError, 'not found'):
             self.client.deployments.set_attributes(
                 'dep',
                 labels=[
@@ -98,7 +99,7 @@ class DeploymentLabelsDependenciesTest(BaseServerTestCase):
 
     def test_add_invalid_label_parent_to_created_deployment(self):
         self._deployment(id='dep')
-        with self.assertRaisesRegex(CloudifyClientError, 'does not exist'):
+        with self.assertRaisesRegex(CloudifyClientError, 'not found'):
             self.client.deployments.update_labels('dep', [
                 {'csys-obj-parent': 'notexist'}
             ])

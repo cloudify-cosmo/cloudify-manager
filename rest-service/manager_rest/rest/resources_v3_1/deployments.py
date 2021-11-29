@@ -20,7 +20,7 @@ from manager_rest import utils, manager_exceptions, workflow_executor
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import (authorize,
                                                  check_user_action_allowed)
-from manager_rest.storage import db, models, get_storage_manager, storage_utils
+from manager_rest.storage import db, models, get_storage_manager
 from manager_rest.manager_exceptions import (
     DeploymentEnvironmentCreationInProgressError,
     DeploymentCreationError,
@@ -108,67 +108,37 @@ class DeploymentsId(resources_v1.DeploymentsId):
         return deployment
 
     @staticmethod
-    def _update_deployment_counts(rm, graph, dep, new_labels):
-        new_types, deleted_types = \
-            rm.get_deployment_object_types_from_labels(
-                dep, new_labels
-            )
-        is_converted = \
-            rm.update_resource_counts_after_source_conversion(graph, dep,
-                                                              new_types,
-                                                              deleted_types)
-        return is_converted
-
-    @staticmethod
     def _update_labels_for_deployment(rm, deployment, new_labels):
-        graph = None
         sm = get_storage_manager()
         deployment_parents = deployment.deployment_parents
-        parents_labels = rm.get_deployment_parents_from_labels(
-            new_labels
-        )
-        _parents_to_add = set(parents_labels) - set(
-            deployment_parents
-        )
-        _parents_to_remove = set(deployment_parents) - set(
-            parents_labels
-        )
-        if _parents_to_add or _parents_to_remove:
-            graph = rest_utils.RecursiveDeploymentLabelsDependencies(sm)
-            graph.create_dependencies_graph()
+        new_parents = rm.get_deployment_parents_from_labels(new_labels)
 
-        if _parents_to_add:
-            rm.verify_attaching_deployment_to_parents(
-                graph,
-                _parents_to_add,
-                deployment.id
-            )
+        parents_to_remove = [sm.get(models.Deployment, parent_id)
+                             for parent_id in
+                             set(deployment_parents) - set(new_parents)]
+
         rm.update_resource_labels(
             models.DeploymentLabel,
             deployment,
             new_labels
         )
-        if graph:
-            parents = {
-                'parents_to_add': _parents_to_add,
-                'parents_to_remove': _parents_to_remove
-            }
-            rm.handle_deployment_labels_graph(
-                graph, parents, deployment
-            )
+
+        rm.delete_deployment_from_labels_graph([deployment], parents_to_remove)
+        rm.add_deployment_to_labels_graph(
+            [deployment], set(new_parents) - set(deployment_parents))
+        to_upd = set()
+        if parents_to_remove:
+            to_upd |= {p._storage_id for p in parents_to_remove}
+        if new_parents:
+            to_upd.add(deployment._storage_id)
+        return to_upd
 
     def _handle_deployment_labels(self, sm, rm, deployment, raw_labels_list):
         new_labels = rest_utils.get_labels_list(raw_labels_list)
         if self._is_create_execution(deployment):
             self._add_existing_labels(deployment, new_labels)
 
-        graph = rest_utils.RecursiveDeploymentLabelsDependencies(sm)
-        is_updated = self._update_deployment_counts(rm, graph, deployment,
-                                                    new_labels)
-        self._update_labels_for_deployment(rm, deployment, new_labels)
-        if is_updated:
-            for dep in deployment.deployment_parents:
-                graph.propagate_deployment_statuses(dep)
+        return self._update_labels_for_deployment(rm, deployment, new_labels)
 
     def _is_create_execution(self, deployment):
         """Are we running in deployment's create execution?"""
@@ -267,7 +237,6 @@ class DeploymentsId(resources_v1.DeploymentsId):
         sm = get_storage_manager()
         rm = get_resource_manager()
         with sm.transaction():
-            storage_utils.deployments_lock()
             deployment = sm.get(models.Deployment, deployment_id, locking=True)
             allowed_attribs = {
                 'description', 'workflows', 'inputs', 'policy_types',
@@ -293,15 +262,18 @@ class DeploymentsId(resources_v1.DeploymentsId):
                         'deployment-update')
                 deployment.blueprint = sm.get(
                     models.Blueprint, request_dict['blueprint_id'])
+            to_upd = None
             if 'labels' in request_dict:
                 raw_labels_list = request_dict.get('labels', [])
-                self._handle_deployment_labels(
+                to_upd = self._handle_deployment_labels(
                     sm,
                     rm,
                     deployment,
                     raw_labels_list
                 )
             sm.update(deployment)
+        if to_upd:
+            rm.recalc_ancestors(to_upd)
         return deployment
 
     @authorize('deployment_get')
@@ -433,11 +405,13 @@ class InterDeploymentDependencies(SecuredResource):
                 EXTERNAL_SOURCE not in params and
                 EXTERNAL_TARGET not in params):
             # assert no cyclic dependencies are created
-            dep_graph = rest_utils.RecursiveDeploymentDependencies(sm)
-            source_id = str(params[SOURCE_DEPLOYMENT].id)
-            target_id = str(params[TARGET_DEPLOYMENT].id)
-            dep_graph.create_dependencies_graph()
-            dep_graph.assert_no_cyclic_dependencies(source_id, target_id)
+            dependents = params[SOURCE_DEPLOYMENT].get_all_dependents()
+            if params[TARGET_DEPLOYMENT] in dependents:
+                raise manager_exceptions.ConflictError(
+                    f'cyclic dependency between deployments '
+                    f'{params[SOURCE_DEPLOYMENT].id} '
+                    f'and {params[TARGET_DEPLOYMENT].id}'
+                )
 
         source_deployment = None if EXTERNAL_SOURCE in params \
             else params[SOURCE_DEPLOYMENT]
@@ -486,14 +460,11 @@ class InterDeploymentDependencies(SecuredResource):
             source_deployment = sm.get(models.Deployment,
                                        params['source_deployment_id'])
 
-        dep_graph = rest_utils.RecursiveDeploymentDependencies(sm)
-        dep_graph.create_dependencies_graph()
-
         created_ids = []
         with sm.transaction():
             for dependency in dependencies:
                 record = _create_inter_deployment_dependency(
-                    source_deployment, dependency, sm, dep_graph)
+                    source_deployment, dependency, sm)
                 created_ids += [record.id]
 
         return ListResponse(
@@ -718,9 +689,6 @@ class InterDeploymentDependenciesId(SecuredResource):
         else:
             source_deployment = sm.get(models.Deployment, deployment_id)
 
-        dep_graph = rest_utils.RecursiveDeploymentDependencies(sm)
-        dep_graph.create_dependencies_graph()
-
         created_ids = []
         with sm.transaction():
             # Remove all previous dependencies for source_deployment
@@ -730,7 +698,7 @@ class InterDeploymentDependenciesId(SecuredResource):
                 sm.delete(previous_deployment_dependency)
             for dependency in dependencies:
                 record = _create_inter_deployment_dependency(
-                    source_deployment, dependency, sm, dep_graph)
+                    source_deployment, dependency, sm)
                 created_ids += [record.id]
 
         return ListResponse(
@@ -803,9 +771,7 @@ class DeploymentGroupsId(SecuredResource):
             creator = rest_utils.valid_user(request_dict['creator'])
 
         sm = get_storage_manager()
-        graph = rest_utils.RecursiveDeploymentLabelsDependencies(sm)
         with sm.transaction():
-            storage_utils.deployments_lock()
             try:
                 group = sm.get(models.DeploymentGroup, group_id)
             except manager_exceptions.NotFoundError:
@@ -816,17 +782,21 @@ class DeploymentGroupsId(SecuredResource):
             if created_at:
                 group.created_at = created_at
             self._set_group_attributes(sm, group, request_dict)
+            changed_deps = set()
             if request_dict.get('labels') is not None:
-                self._set_group_labels(
-                    graph,
+                changed_deps |= self._set_group_labels(
                     sm,
                     group,
                     request_dict['labels']
                 )
             if self._is_overriding_deployments(request_dict):
                 group.deployments.clear()
-            self._add_group_deployments(sm, group, request_dict)
+            changed_deps |= self._add_group_deployments(
+                sm, group, request_dict)
         self._create_new_deployments(sm, group, request_dict)
+        if changed_deps:
+            rm = get_resource_manager()
+            rm.recalc_ancestors(changed_deps)
         return group
 
     def _is_overriding_deployments(self, request_dict):
@@ -846,10 +816,10 @@ class DeploymentGroupsId(SecuredResource):
         })
         sm = get_storage_manager()
         with sm.transaction():
-            storage_utils.deployments_lock()
             group = sm.get(models.DeploymentGroup, group_id)
+            changed_deps = set()
             if request_dict.get('add'):
-                self._add_group_deployments(
+                changed_deps |= self._add_group_deployments(
                     sm, group, request_dict['add']
                 )
             if request_dict.get('remove'):
@@ -857,51 +827,24 @@ class DeploymentGroupsId(SecuredResource):
                     sm, group, request_dict['remove'])
         if request_dict.get('add'):
             self._create_new_deployments(sm, group, request_dict['add'])
+        if changed_deps:
+            rm = get_resource_manager()
+            rm.recalc_ancestors(changed_deps)
         return group
 
-    def _validate_group_parents_labels(self, graph, group_id, deployment_ids,
-                                       parents):
-        if not (parents or deployment_ids):
-            return
-        rm = get_resource_manager()
-        rm.verify_deployment_parents_existence(
-            parents, group_id, 'deployment group')
-        all_parents = set(parents) | set(graph.find_recursive_deployments(
-            parents))
-        cyclic_dep = deployment_ids & all_parents
-        if cyclic_dep:
-            raise manager_exceptions.ConflictError(
-                'Deployments adding labels'
-                ' results in cyclic deployment-labels dependencies for the '
-                'following deployment(s) {0}'.format(','.join(cyclic_dep))
-            )
-
-    def _add_parents_to_deployments_group(self, graph, deployments, parents):
-        if not (parents or deployments):
-            return
-        if not graph.graph:
-            graph.create_dependencies_graph()
-        rm = get_resource_manager()
-        rm.add_multiple_deployments_to_labels_graph(
-            graph,
-            deployments,
-            parents
-        )
-
     def _delete_parents_from_deployments_group(self,
-                                               graph,
+                                               sm,
                                                deployments,
                                                labels_to_delete):
+        if not deployments:
+            return
         rm = get_resource_manager()
         parents = rm.get_deployment_parents_from_labels(labels_to_delete)
-        if not (parents or deployments):
+        if not parents:
             return
-        graph.create_dependencies_graph()
-        rm.remove_multiple_deployments_from_labels_graph(
-            graph,
-            deployments,
-            parents
-        )
+        parents = sm.list(models.Deployment, filters={'id': parents})
+        rm.delete_deployment_from_labels_graph(deployments, parents)
+        return {p._storage_id for p in parents}
 
     def _set_group_attributes(self, sm, group, request_dict):
         if request_dict.get('visibility') is not None:
@@ -918,23 +861,17 @@ class DeploymentGroupsId(SecuredResource):
                 models.Blueprint, request_dict['blueprint_id'])
 
     def _handle_resource_counts_after_source_conversion(self,
-                                                        graph,
                                                         deployments,
                                                         labels_to_create,
                                                         labels_to_delete):
         rm = get_resource_manager()
-        dep_parents = set()
-        for deployment in deployments:
-            new_types = rm.get_object_types_from_labels(labels_to_create)
-            delete_types = rm.get_object_types_from_labels(labels_to_delete)
-            is_converted = rm.update_resource_counts_after_source_conversion(
-                graph, deployment, new_types, delete_types
-            )
-            if is_converted:
-                dep_parents |= set(deployment.deployment_parents)
-        return dep_parents
+        new_types = rm.get_object_types_from_labels(labels_to_create)
+        delete_types = rm.get_object_types_from_labels(labels_to_delete)
+        if delete_types or new_types:
+            return {d._storage_id for d in deployments}
+        return set()
 
-    def _set_group_labels(self, graph, sm, group, raw_labels):
+    def _set_group_labels(self, sm, group, raw_labels):
         rm = get_resource_manager()
         new_labels = set(rest_utils.get_labels_list(raw_labels))
         labels_to_create = rm.get_labels_to_create(group, new_labels)
@@ -944,44 +881,34 @@ class DeploymentGroupsId(SecuredResource):
                              for label in labels_to_delete]
         # Handle all created label process
         new_parents = rm.get_deployment_parents_from_labels(labels_to_create)
-        if new_parents:
-            deployment_ids = {
-                deployment.id for deployment in group.deployments
-            }
-            if not graph.graph:
-                graph.create_dependencies_graph()
-            self._validate_group_parents_labels(
-                graph,
-                group.id,
-                deployment_ids,
-                new_parents
-            )
+        changed_deps = set()
         converted_deps = self._handle_resource_counts_after_source_conversion(
-            graph, group.deployments,
+            group.deployments,
             labels_to_create,
             _labels_to_delete
         )
+        changed_deps |= converted_deps
         deployments, created_labels = \
             self._get_deployments_and_labels_to_add(
                 sm, group.deployments, labels_to_create
             )
-        self._create_deployments_labels(rm, deployments, created_labels)
-        for _con_dep in converted_deps:
-            graph.propagate_deployment_statuses(_con_dep)
-
         if deployments and created_labels and new_parents:
-            self._add_parents_to_deployments_group(
-                graph, deployments, new_parents
-            )
+            rm.add_deployment_to_labels_graph(deployments, new_parents)
+            changed_deps |= {d._storage_id for d in deployments}
+        self._create_deployments_labels(rm, deployments, created_labels)
+
         # Handle all deletion labels process
         self._delete_deployments_labels(
             sm, group.deployments, labels_to_delete)
-        self._delete_parents_from_deployments_group(
-                graph, group.deployments, _labels_to_delete)
+        deleted_parents = self._delete_parents_from_deployments_group(
+                sm, group.deployments, _labels_to_delete)
+        if deleted_parents:
+            changed_deps |= deleted_parents
         rm.create_resource_labels(
             models.DeploymentGroupLabel, group, labels_to_create)
         for label in labels_to_delete:
             sm.delete(label)
+        return changed_deps
 
     def _get_deployments_and_labels_to_add(self,
                                            sm, deployments,
@@ -1008,10 +935,9 @@ class DeploymentGroupsId(SecuredResource):
 
     def _create_deployments_labels(self, rm, deployments, created_labels):
         """Bulk create the labels for the given deployments"""
-        for key, value in created_labels:
-            for dep in deployments:
-                rm.create_resource_labels(
-                    models.DeploymentLabel, dep, [(key, value)])
+        for dep in deployments:
+            rm.create_resource_labels(
+                models.DeploymentLabel, dep, created_labels)
 
     def _delete_deployments_labels(self, sm, deployments, labels_to_delete):
         """Bulk delete the labels for the given deployments."""
@@ -1035,7 +961,6 @@ class DeploymentGroupsId(SecuredResource):
     def _process_labels_after_adding_deployments_to_group(self,
                                                           sm,
                                                           rm,
-                                                          graph,
                                                           group,
                                                           deployments):
         group_labels = self._get_labels_from_group(group)
@@ -1045,18 +970,13 @@ class DeploymentGroupsId(SecuredResource):
             )
         # Update deployment conversion which could be from service to env or
         # vice versa
-        converted_deps = self._handle_resource_counts_after_source_conversion(
-            graph,
+        self._handle_resource_counts_after_source_conversion(
             _target_deployments,
             labels_to_add,
             []
         )
         # Add new labels
         self._create_deployments_labels(rm, deployments, labels_to_add)
-        # After conversion we need to re-evaluate the parent deployment
-        # statuses
-        for _con_dep in converted_deps:
-            graph.propagate_deployment_statuses(_con_dep)
 
         # Add deployments to group
         for dep in deployments:
@@ -1092,19 +1012,20 @@ class DeploymentGroupsId(SecuredResource):
             group_to_clone = sm.get(models.DeploymentGroup, add_group)
             deployments_to_add |= set(group_to_clone.deployments)
 
+        to_update = set()
         if deployments_to_add:
-            graph = rest_utils.RecursiveDeploymentLabelsDependencies(sm)
             new_labels, target_deployments = \
                 self._process_labels_after_adding_deployments_to_group(
-                    sm, rm, graph, group, deployments_to_add
+                    sm, rm, group, deployments_to_add
                 )
 
             if target_deployments and new_labels:
                 parents = rm.get_deployment_parents_from_labels(new_labels)
                 if parents:
-                    self._add_parents_to_deployments_group(
-                        graph, target_deployments, parents
-                    )
+                    rm.add_deployment_to_labels_graph(
+                        target_deployments, parents)
+                    to_update |= {d._storage_id for d in target_deployments}
+        return to_update
 
     def _create_new_deployments(self, sm, group, request_dict):
         """Create new deployments for the group based on new_deployments"""
@@ -1128,6 +1049,7 @@ class DeploymentGroupsId(SecuredResource):
                 deployment_group=group,
                 workflow_id='create_deployment_environment',
                 visibility=group.visibility,
+                concurrency=10,
             )
             sm.put(create_exec_group)
             self._prepare_sites(sm, new_deployments)
@@ -1335,8 +1257,7 @@ class DeploymentGroupsId(SecuredResource):
 def _create_inter_deployment_dependency(
         source_deployment: models.Deployment,
         dependency: models.InterDeploymentDependencies,
-        sm,
-        dep_graph) -> models.InterDeploymentDependencies:
+        sm) -> models.InterDeploymentDependencies:
     now = utils.get_formatted_timestamp()
 
     if (TARGET_DEPLOYMENT in dependency and
@@ -1348,6 +1269,13 @@ def _create_inter_deployment_dependency(
     else:
         target_deployment = None
 
+    if target_deployment:
+        if target_deployment in source_deployment.get_ancestors(locking=False)\
+                or target_deployment == source_deployment:
+            raise manager_exceptions.ConflictError(
+                f'Cyclic dependency between {source_deployment} and '
+                f'{target_deployment}')
+
     deployment_dependency = models.InterDeploymentDependencies(
         id=str(uuid.uuid4()),
         dependency_creator=dependency[DEPENDENCY_CREATOR],
@@ -1358,12 +1286,4 @@ def _create_inter_deployment_dependency(
         external_target=dependency.get(EXTERNAL_TARGET),
         created_at=now)
     record = sm.put(deployment_dependency)
-
-    if source_deployment and target_deployment:
-        source_id = str(source_deployment.id)
-        target_id = str(target_deployment.id)
-        dep_graph.assert_no_cyclic_dependencies(source_id,
-                                                target_id)
-        dep_graph.add_dependency_to_graph(source_id, target_id)
-
     return record

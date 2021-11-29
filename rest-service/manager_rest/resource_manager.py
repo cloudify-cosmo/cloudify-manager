@@ -41,8 +41,6 @@ from manager_rest.utils import (send_event,
                                 validate_deployment_and_site_visibility,
                                 extract_host_agent_plugins_from_plan)
 from manager_rest.rest.rest_utils import (
-    RecursiveDeploymentDependencies,
-    RecursiveDeploymentLabelsDependencies,
     update_inter_deployment_dependencies,
     verify_blueprint_uploaded_state,
     compute_rule_from_scheduling_params,
@@ -53,73 +51,13 @@ from manager_rest.plugins_update.constants import STATES as PluginsUpdateStates
 from manager_rest.storage import (db,
                                   get_storage_manager,
                                   models,
-                                  get_node,
-                                  storage_utils)
+                                  get_node)
 
 from . import utils
 from . import config
 from . import app_context
 from . import workflow_executor
 from . import manager_exceptions
-
-
-class _SubDepSummary(object):
-    """A container for sub-counts and sub-statuses of a deployment.
-
-    This is only to be used by the recalc_ancestors machinery. This
-    class defines how counts and statuses should be added together.
-    """
-    __slots__ = (
-        'sub_services_count',
-        'sub_environments_count',
-        'sub_services_status',
-        'sub_environments_status'
-    )
-
-    def __init__(
-        self,
-        *,
-        sub_services_count=0,
-        sub_environments_count=0,
-        sub_services_status=None,
-        sub_environments_status=None,
-    ):
-        self.sub_services_count = sub_services_count
-        self.sub_environments_count = sub_environments_count
-        self.sub_services_status = sub_services_status
-        self.sub_environments_status = sub_environments_status
-
-    def __add__(self, other):
-        return self.__class__(
-            sub_services_count=self.sub_services_count +
-            other.sub_services_count,
-            sub_environments_count=self.sub_environments_count +
-            other.sub_environments_count,
-            sub_services_status=models.Deployment.compare_statuses(
-                self.sub_services_status, other.sub_services_status
-            ),
-            sub_environments_status=models.Deployment.compare_statuses(
-                self.sub_environments_status, other.sub_environments_status
-            )
-        )
-
-    def __iadd__(self, other):
-        self.sub_services_count += other.sub_services_count
-        self.sub_environments_count += other.sub_environments_count
-        self.sub_services_status = models.Deployment.compare_statuses(
-            self.sub_services_status, other.sub_services_status
-        )
-        self.sub_environments_status = models.Deployment.compare_statuses(
-            self.sub_environments_status, other.sub_environments_status
-        )
-        return self
-
-    def __repr__(self):
-        return (
-            f'<{self.__class__.__name__}: {self.sub_services_count}, '
-            f'{self.sub_environments_count}, {self.sub_services_status}, '
-            f'{self.sub_environments_status}>'
-        )
 
 
 class ResourceManager(object):
@@ -181,7 +119,6 @@ class ResourceManager(object):
     def update_execution_status(self, execution_id, status, error):
         affected_parent_deployments = set()
         with self.sm.transaction():
-            storage_utils.deployments_lock()
             execution = self.sm.get(models.Execution, execution_id,
                                     locking=True)
             if execution._deployment_fk:
@@ -221,7 +158,9 @@ class ResourceManager(object):
             del execution
 
         if status in ExecutionState.END_STATES:
-            update_inter_deployment_dependencies(self.sm)
+            if deployment and workflow_id != 'delete_deployment_environment':
+                with self.sm.transaction():
+                    update_inter_deployment_dependencies(self.sm, deployment)
             self.start_queued_executions(deployment_storage_id)
 
         # If the execution is a deployment update, and the status we're
@@ -262,9 +201,7 @@ class ResourceManager(object):
             affected_parent_deployments |= self.delete_deployment(deployment)
 
         if affected_parent_deployments:
-            with self.sm.transaction():
-                self.recalc_ancestors(affected_parent_deployments)
-
+            self.recalc_ancestors(affected_parent_deployments)
         return res
 
     def start_queued_executions(self, deployment_storage_id):
@@ -276,7 +213,6 @@ class ResourceManager(object):
         to_run = []
         while True:
             with self.sm.transaction():
-                storage_utils.deployments_lock()
                 dequeued = self._get_queued_executions(deployment_storage_id)
                 all_started = True
                 for execution in dequeued:
@@ -770,38 +706,6 @@ class ResourceManager(object):
 
         return self.sm.delete(blueprint)
 
-    def retrieve_and_display_dependencies(self, deployment,
-                                          skip_components=False):
-        """Retrieve list of deployment's dependencies.
-        A dependency is a deployment with a `csys-obj-parent` label set to
-        deployment.id, or any of its children.
-        :param deployment:      a parent deployment
-        :param skip_components: if True will not report components as
-                                dependencies
-        :returns: a list of strings describing dependencies
-        """
-        dep_graph = RecursiveDeploymentDependencies(self.sm)
-        excluded_ids = self._excluded_component_creator_ids(deployment)
-        deployment_dependencies = \
-            dep_graph.retrieve_and_display_dependencies(
-                deployment.id,
-                excluded_component_creator_ids=excluded_ids)
-
-        if deployment.has_sub_deployments:
-            dep_graph = RecursiveDeploymentLabelsDependencies(self.sm,
-                                                              skip_components)
-            labels_dependencies = \
-                dep_graph.retrieve_and_display_dependencies(
-                    deployment
-                )
-            if deployment_dependencies:
-                deployment_dependencies = deployment_dependencies\
-                                          + labels_dependencies
-            else:
-                deployment_dependencies = labels_dependencies
-
-        return deployment_dependencies
-
     def check_deployment_delete(self, deployment, force=False):
         """Check that deployment can be deleted"""
         executions = self.sm.list(models.Execution, filters={
@@ -810,21 +714,6 @@ class ResourceManager(object):
                 ExecutionState.ACTIVE_STATES + ExecutionState.QUEUED_STATE
             )
         }, get_all_results=True)
-        deployment_dependencies = self.retrieve_and_display_dependencies(
-            deployment)
-        if deployment_dependencies:
-            if force:
-                current_app.logger.warning(
-                    "Force-deleting deployment %s despite having the "
-                    "following existing dependent installations\n%s",
-                    deployment.id, deployment_dependencies
-                )
-            else:
-                raise manager_exceptions.DependentExistsError(
-                    f"Can't delete deployment {deployment.id} - the following "
-                    f"existing installations depend on it:\n"
-                    f"{deployment_dependencies}"
-                )
         if executions:
             running_ids = ','.join(
                 execution.id for execution in executions
@@ -835,6 +724,31 @@ class ResourceManager(object):
                 f"running or queued executions for this deployment. "
                 f"Running executions ids: {running_ids}"
             )
+
+        # Verify deleting the deployment won't affect dependent deployments
+        excluded_ids = self._excluded_component_creator_ids(deployment)
+        idds = [
+            idd for idd in
+            deployment.get_all_dependents(fetch_deployments=False)
+            if idd._source_deployment not in excluded_ids
+        ]
+
+        if idds:
+            formatted_dependencies = '\n'.join(
+                f'[{i}] {idd.format()}' for i, idd in enumerate(idds, 1)
+            )
+            if force:
+                current_app.logger.warning(
+                    "Force-deleting deployment %s despite having the "
+                    "following existing dependent installations\n%s",
+                    deployment.id, formatted_dependencies
+                )
+            else:
+                raise manager_exceptions.DependentExistsError(
+                    f"Can't delete deployment {deployment.id} - the following "
+                    f"existing installations depend on it:\n"
+                    f"{formatted_dependencies}"
+                )
 
         if not force:
             # validate either all nodes for this deployment are still
@@ -870,7 +784,7 @@ class ResourceManager(object):
             models.Deployment, filters={'id': deployment.deployment_parents})
         parent_storage_ids = set()
         if parents:
-            self._remove_deployment_label_dependency([deployment], parents)
+            self.delete_deployment_from_labels_graph([deployment], parents)
             parent_storage_ids = {p._storage_id for p in parents}
 
         deployment_folder = os.path.join(
@@ -1022,8 +936,7 @@ class ResourceManager(object):
                         self.assert_no_snapshot_creation_running_or_queued(exc)
                 elif exc.deployment:
                     self._check_allow_global_execution(exc.deployment)
-                    self._verify_dependencies_not_affected(
-                        exc.workflow_id, exc.deployment, force)
+                    self._verify_dependencies_not_affected(exc, force)
             except Exception as e:
                 errors.append(e)
                 exc.status = ExecutionState.FAILED
@@ -1588,22 +1501,47 @@ class ResourceManager(object):
                              ','.join(missing_parents), resource_type)
             )
 
-    def verify_attaching_deployment_to_parents(self, graph, parents, dep_id):
-        self.verify_deployment_parents_existence(parents, dep_id, 'deployment')
-        graph.assert_cyclic_dependencies_between_targets_and_source(
-            parents, dep_id
-        )
+    def verify_attaching_deployment_to_parents(self, dep, parents):
+        self.verify_deployment_parents_existence(parents, dep, 'deployment')
+        dependent_ids = [d.id for d in dep.get_all_dependents()]
+        for parent_id in parents:
+            if parent_id in dependent_ids:
+                raise manager_exceptions.ConflictError(
+                    f'cyclic dependency between {dep.id} and {parent_id}'
+                )
 
-    def _place_deployment_label_dependency(self, source, target):
-        self.sm.put(
-            models.DeploymentLabelsDependencies(
-                id=str(uuid.uuid4()),
-                source_deployment=source,
-                target_deployment=target,
+    def add_deployment_to_labels_graph(self, deployments, parent_ids):
+        if not deployments or not parent_ids:
+            return
+        parents = self.sm.list(
+            models.Deployment, filters={'id': list(parent_ids)})
+        missing_parents = set(parent_ids) - {d.id for d in parents}
+        if missing_parents:
+            raise manager_exceptions.DeploymentParentNotFound(
+                f'Deployment(s) referenced by `csys-obj-parent` not found: '
+                f'{ ",".join(missing_parents) }'
             )
-        )
+        all_ancestors = models.DeploymentLabelsDependencies\
+            .get_dependencies(
+                [p._storage_id for p in parents], dependents=False)
 
-    def _remove_deployment_label_dependency(self, deployments, parents):
+        cyclic_deps = set(all_ancestors) & set(deployments)
+        cyclic_deps |= (set(deployments) & set(parents))
+        if cyclic_deps:
+            cyclic_ids = {d.id for d in cyclic_deps}
+            raise manager_exceptions.ConflictError(
+                f'cyclic dependencies: { ",".join(cyclic_ids) }'
+            )
+
+        for parent in sorted(parents, key=lambda p: p._storage_id):
+            for dep in sorted(deployments, key=lambda d: d._storage_id):
+                dependency = models.DeploymentLabelsDependencies(
+                    source_deployment=dep,
+                    target_deployment=parent,
+                )
+                self.sm.put(dependency)
+
+    def delete_deployment_from_labels_graph(self, deployments, parents):
         if not parents or not deployments:
             return
         dld = models.DeploymentLabelsDependencies.__table__
@@ -1618,138 +1556,6 @@ class ResourceManager(object):
                 )
             )
         )
-
-    def _insert_deployments_into_label_graph(self, graph, source, target_id):
-        self._place_deployment_label_dependency(
-            source,
-            self.sm.get(models.Deployment, target_id)
-        )
-        graph.add_dependency_to_graph(source.id, target_id)
-
-    def _remove_deployments_from_label_graph(self, graph, source, target):
-        graph.remove_dependency_from_graph(source.id, target.id)
-        self._remove_deployment_label_dependency([source], [target])
-
-    def _get_total_services_and_environments_from_sources(self, deployments):
-        total_services = 0
-        total_environments = 0
-        for dep in deployments:
-            dep_services = dep.sub_services_count
-            dep_environments = dep.sub_environments_count
-            if dep.is_environment:
-                dep_environments = dep_environments + 1
-            else:
-                dep_services = dep_services + 1
-            total_environments += dep_environments
-            total_services += dep_services
-
-        return total_services, total_environments
-
-    def add_deployment_to_labels_graph(self, dep_graph, source, target_id):
-        total_services, total_environments = \
-            self._get_total_services_and_environments_from_sources([source])
-        self._insert_deployments_into_label_graph(dep_graph, source, target_id)
-        dep_graph.increase_deployment_counts_in_graph(
-            [target_id],
-            total_services,
-            total_environments
-        )
-        dep_graph.propagate_deployment_statuses(target_id)
-
-    def delete_deployment_from_labels_graph(self,
-                                            dep_graph,
-                                            source,
-                                            target_id):
-        total_services, total_environments = \
-            self._get_total_services_and_environments_from_sources([source])
-        dep_graph.decrease_deployment_counts_in_graph(
-            [target_id],
-            total_services,
-            total_environments
-        )
-        target = self.sm.get(
-                models.Deployment, target_id
-            )
-        self._remove_deployments_from_label_graph(dep_graph, source, target)
-        dep_graph.propagate_deployment_statuses(target_id)
-
-    def add_multiple_deployments_to_labels_graph(self,
-                                                 graph,
-                                                 sources,
-                                                 target_ids):
-        total_services, total_environments = \
-            self._get_total_services_and_environments_from_sources(sources)
-        for target_id in target_ids:
-            for source in sources:
-                self._insert_deployments_into_label_graph(
-                    graph, source, target_id
-                )
-        graph.increase_deployment_counts_in_graph(
-            target_ids,
-            total_services,
-            total_environments
-        )
-        for target_id in target_ids:
-            graph.propagate_deployment_statuses(target_id)
-
-    def remove_multiple_deployments_from_labels_graph(self,
-                                                      graph,
-                                                      sources,
-                                                      target_ids):
-        total_services, total_environments = \
-            self._get_total_services_and_environments_from_sources(sources)
-        for target_id in target_ids:
-            target = self.sm.get(models.Deployment, target_id)
-            for source in sources:
-                self._remove_deployments_from_label_graph(
-                    graph, source, target
-                )
-        graph.decrease_deployment_counts_in_graph(
-            target_ids,
-            total_services,
-            total_environments
-        )
-        for target_id in target_ids:
-            graph.propagate_deployment_statuses(target_id)
-
-    def handle_deployment_labels_graph(self, graph, parents, new_deployment):
-        if not parents:
-            return
-        parents_to_add = parents.setdefault('parents_to_add', {})
-        parents_to_remove = parents.setdefault('parents_to_remove', {})
-        for parent in parents_to_add:
-            self.add_deployment_to_labels_graph(
-                graph,
-                new_deployment,
-                parent
-            )
-        for parent in parents_to_remove:
-            self.delete_deployment_from_labels_graph(
-                graph,
-                new_deployment,
-                parent
-            )
-
-    @staticmethod
-    def update_resource_counts_after_source_conversion(graph,
-                                                       resource,
-                                                       new_types,
-                                                       deleted_types):
-        if not resource:
-            return False
-        is_converted = False
-        if resource.deployment_parents and (deleted_types or new_types):
-            if not graph.graph:
-                graph.create_dependencies_graph()
-            to_srv = resource.is_environment and 'environment' in deleted_types
-            to_env = not resource.is_environment and 'environment' in new_types
-            _type = 'service' if to_srv else 'environment' if to_env else None
-            if _type:
-                graph.update_deployment_counts_after_source_conversion(
-                    resource, _type
-                )
-                is_converted = True
-        return is_converted
 
     def install_plugin(self, plugin, manager_names=None, agent_names=None):
         """Send the plugin install task to the given managers or agents."""
@@ -2393,37 +2199,41 @@ class ResourceManager(object):
                 deployment.tenant != self.sm.current_tenant and
                 not utils.can_execute_global_workflow(utils.current_tenant)):
             raise manager_exceptions.ForbiddenError(
-                'User `{0}` is not allowed to execute workflows on '
-                'a global deployment {1} from a different tenant'.format(
-                    current_user.username, deployment.id
-                )
+                f'User `{current_user.username}` is not allowed to execute '
+                f'workflows on a global deployment {deployment.id} from a '
+                f'different tenant'
             )
 
-    def _verify_dependencies_not_affected(self,
-                                          workflow_id, deployment, force):
-        if workflow_id not in ['stop', 'uninstall', 'update']:
+    def _verify_dependencies_not_affected(self, execution, force):
+        if execution.workflow_id not in ['stop', 'uninstall', 'update']:
             return
         # if we're in the middle of an execution initiated by the component
         # creator, we'd like to drop the component dependency from the list
-        deployment_dependencies = self.retrieve_and_display_dependencies(
-            deployment, skip_components=True
-        )
-        if not deployment_dependencies:
+        deployment = execution.deployment
+        excluded_ids = self._excluded_component_creator_ids(deployment)
+        idds = [
+            idd for idd in
+            deployment.get_all_dependents(fetch_deployments=False)
+            if idd._source_deployment not in excluded_ids
+        ]
+        if not idds:
             return
+        formatted_dependencies = '\n'.join(
+            f'[{i}] {idd.format()}' for i, idd in enumerate(idds, 1)
+        )
         if force:
             current_app.logger.warning(
-                "Force-executing workflow `{0}` on deployment {1} despite "
-                "having the following existing dependent installations\n"
-                "{2}".format(
-                    workflow_id, deployment.id, deployment_dependencies
-                ))
+                "Force-executing workflow `%s` on deployment %s despite "
+                "having existing dependent installations:\n%s",
+                execution.workflow_id, execution.deployment.id,
+                formatted_dependencies)
             return
         # If part of a deployment update - mark the update as failed
-        if workflow_id == 'update':
+        if execution.workflow_id == 'update':
             dep_update = self.sm.get(
                 models.DeploymentUpdate,
                 None,
-                filters={'deployment_id': deployment.id,
+                filters={'deployment_id': execution.deployment.id,
                          'state': UpdateStates.UPDATING}
             )
             if dep_update:
@@ -2431,40 +2241,39 @@ class ResourceManager(object):
                 self.sm.update(dep_update)
 
         raise manager_exceptions.DependentExistsError(
-            "Can't execute workflow `{0}` on deployment {1} - the "
-            "following existing installations depend on it:\n{2}".format(
-                workflow_id, deployment.id, deployment_dependencies
-            )
-        )
+            f"Can't execute workflow `{execution.workflow_id}` on deployment "
+            f"{execution.deployment.id} - existing installations depend "
+            f"on it:\n{formatted_dependencies}")
 
     def _excluded_component_creator_ids(self, deployment):
-        # collect all deployment which created this deployment as a
-        # component, accounting for nesting component creation
-        component_creator_deployments = []
-        component_deployment = deployment
-        while True:
-            creator_deployment = None
-            for d in component_deployment.target_of_dependency_in:
-                if 'component' in d.dependency_creator.split('.'):
-                    creator_deployment = d.source_deployment
-                    component_creator_deployments.append(creator_deployment)
-                    component_deployment = creator_deployment
-                    break  # a depl. can be a component for only one depl.
-            if not creator_deployment:
-                break
+        """Deployments that should be excluded from the dependency check.
 
-        active_component_creator_deployment_ids = []
-        for deployment in component_creator_deployments:
-            component_creator_executions = self.sm.list(
-                models.Execution, filters={
-                    'deployment_id': deployment.id,
-                    'status': 'started',
-                    'workflow_id': ['stop', 'uninstall', 'update']}
-            )
-            if component_creator_executions:
-                active_component_creator_deployment_ids.append(deployment.id)
-
-        return active_component_creator_deployment_ids
+        Deployments that created the given deployment as a component are
+        excluded if they are currently running a destructive workflow.
+        (then, the given workflow should be allowed to run one too)
+        """
+        components = {
+            idd._target_deployment
+            for idd in deployment.get_dependencies(fetch_deployments=False)
+            if idd.dependency_creator.startswith('component.')
+        }
+        component_creators = [
+            idd._target_deployment
+            for idd in deployment.get_dependencies(fetch_deployments=False)
+            if idd.dependency_creator.startswith('component.')
+        ]
+        component_creator_executions = self.sm.list(
+            models.Execution, filters={
+                '_deployment_fk': component_creators,
+                'status': [
+                    ExecutionState.STARTED,
+                    ExecutionState.PENDING,
+                    ExecutionState.QUEUED
+                ],
+                'workflow_id': ['stop', 'uninstall', 'update']}
+        )
+        return components | {
+            exc._deployment_fk for exc in component_creator_executions}
 
     def _workflow_queued(self, execution):
         execution.status = ExecutionState.QUEUED
@@ -2589,6 +2398,9 @@ class ResourceManager(object):
 
         current_time = datetime.utcnow()
         for key, value in labels_list:
+            if key.startswith('csys-'):
+                key = key.lower()
+                value = value.lower()
             new_label = {'key': key,
                          'value': value,
                          'created_at': created_at or current_time,
@@ -2676,140 +2488,76 @@ class ResourceManager(object):
             return parse_utc_datetime_relative(time_expression, base_datetime)
         return datetime.strptime(time_expression, time_fmt)
 
-    def _reset_sub_deployments(self, deployment_ids):
-        """Set sub-counts to 0 and sub-statuses to None, for deployment_ids.
-
-        Only call this on deployments who we know have no children.
-        This however requires re-evaluation of the deployment status as well.
-        """
-        deployments_to_update = (
-            db.session.query(
-                models.Deployment._storage_id,
-                models.Deployment.installation_status,
-                models.Execution.status.label('latest_execution_status')
-            )
-            .filter(models.Deployment._storage_id.in_(deployment_ids))
-            .outerjoin(
-                models.Execution,
-                models.Deployment._latest_execution_fk
-                == models.Execution._storage_id
-            )
-            .with_for_update(of=models.Deployment)
-        )
-        for dep in deployments_to_update:
-            new_status = models.Deployment.decide_deployment_status(
-                latest_execution_status=dep.latest_execution_status,
-                installation_status=dep.installation_status,
-                sub_services_status=None,
-                sub_environments_status=None
-            )
-            db.session.execute(
-                models.Deployment.__table__.update()
-                .where(models.Deployment.__table__.c._storage_id
-                       == dep._storage_id)
-                .values(
-                    deployment_status=new_status,
-                    sub_services_count=0,
-                    sub_environments_count=0,
-                    sub_services_status=None,
-                    sub_environments_status=None,
-                )
-            )
-
-    def _structure_update_tree(self, update_tree):
-        """Give a structure to the update-tree adjacency list.
-
-        Return two dicts - a mapping from deployment-id to the rows,
-        and a mapping from parent-id to a set of child-ids
-        """
-        deps = {}
-        children = {}
-        for row in update_tree:
-            deps[row._storage_id] = row
-            children.setdefault(row._target_deployment, set()).add(
-                row._source_deployment)
-        return deps, children
-
-    def _summarize_tree(self, deps, children):
-        """Given a tree of deployments, figure out their total sub_x counts.
-
-        Traverse the tree, whose connections are given by `children`, and
-        values are given by `deps`, and return a mapping from deployment ids,
-        to their total counts and statuses of sub-services and sub-envs.
-
-        Eg. if deps gives the details of deployments 1 and 2, and
-        children is {1: {2}}, then this will return a dict saying that
-        1 has one sub-service (and its status), while 2 has zero.
-        """
-        summary = defaultdict(lambda: _SubDepSummary())
-
-        # graph traversal - look at each deployment who has no children
-        # left to examine;
-        # to do this, first reverse the `children` graph, so that we have
-        # a mapping of "who are the parents of this deployment", and then
-        # remove entries from `children`, so that we know when all of
-        # a parents' children have been examined
-        parents = {}
-        for parent_id, child_ids in children.items():
-            for child_id in child_ids:
-                parents.setdefault(child_id, set()).add(parent_id)
-
-        no_children = {dep_id for dep_id in deps if not children.get(dep_id)}
-
-        # we've not fetched any children of those, so we just take whatever
-        # counts they declare
-        for dep_id in no_children:
-            summary[dep_id] += deps[dep_id]
-
-        while no_children:
-            dep_id = no_children.pop()
-            dep = deps[dep_id]
-            if dep.is_env:
-                child_summary = _SubDepSummary(
-                    sub_environments_count=1,
-                    sub_environments_status=dep.deployment_status
-                )
-            else:
-                child_summary = _SubDepSummary(
-                    sub_services_count=1,
-                    sub_services_status=dep.deployment_status
-                )
-            for parent_id in parents.get(dep_id, set()):
-                summary[parent_id] += child_summary + summary[dep_id]
-                children[parent_id].remove(dep_id)
-                if not children[parent_id]:
-                    no_children.add(parent_id)
-        return summary
-
     def recalc_ancestors(self, deployment_ids):
         """Recalculate statuses & counts for all ancestors of deployment_ids"""
         if not deployment_ids:
             return
-        tree = models.DeploymentLabelsDependencies._get_update_tree(
-            deployment_ids)
-        if not tree:
-            return self._reset_sub_deployments(deployment_ids)
-        deps, children = self._structure_update_tree(tree)
-        summary = self._summarize_tree(deps, children)
-        for dep_id, dep_summary in summary.items():
-            dep = deps[dep_id]
-            new_status = models.Deployment.decide_deployment_status(
-                latest_execution_status=dep.latest_execution_status,
-                installation_status=dep.installation_status,
-                sub_services_status=dep_summary.sub_services_status,
-                sub_environments_status=dep_summary.sub_environments_status
-            )
-            db.session.execute(
-                models.Deployment.__table__.update()
-                .where(models.Deployment.__table__.c._storage_id == dep_id)
-                .values(
-                    deployment_status=new_status,
-                    sub_services_count=dep_summary.sub_services_count,
-                    sub_environments_count=dep_summary.sub_environments_count,
-                    sub_services_status=dep_summary.sub_services_status,
-                    sub_environments_status=dep_summary.sub_environments_status
+        with self.sm.transaction():
+            deps = models.DeploymentLabelsDependencies.get_dependencies(
+                deployment_ids, dependents=False, locking=True)
+            if not deps:
+                # no deps, means there's no tree to speak of, we just need to
+                # update deployment_ids only
+                deps = (
+                    db.session.query(models.Deployment)
+                    .filter(models.Deployment._storage_id.in_(deployment_ids))
+                    .with_for_update()
+                    .all()
                 )
-            )
+            for dep in deps:
+                summary = models.DeploymentLabelsDependencies\
+                    .get_children_summary(dep)
+                envs = 0
+                services = 0
+                srv_statuses = []
+                env_statuses = []
+                for source in (summary.environments, summary.services):
+                    if not source.count:
+                        continue
+                    envs += source.sub_environments_total
+                    env_statuses += source.sub_environment_statuses
+                    services += source.sub_services_total
+                    srv_statuses += source.sub_service_statuses
+
+                envs += summary.environments.count
+                services += summary.services.count
+
+                if summary.environments.count:
+                    env_statuses += summary.environments.deployment_statuses
+                if summary.services.count:
+                    srv_statuses += summary.services.deployment_statuses
+
+                if srv_statuses:
+                    srv_status = models.Deployment.compare_statuses(
+                        *srv_statuses)
+                else:
+                    srv_status = None
+
+                if env_statuses:
+                    env_status = models.Deployment.compare_statuses(
+                        *env_statuses)
+                else:
+                    env_status = None
+
+                new_status = \
+                    models.Deployment.decide_deployment_status(
+                        latest_execution_status=dep.latest_execution_status,
+                        installation_status=dep.installation_status,
+                        sub_services_status=srv_status,
+                        sub_environments_status=env_status,
+                    )
+                db.session.execute(
+                    models.Deployment.__table__.update()
+                    .where(models.Deployment.__table__.c._storage_id ==
+                           dep._storage_id)
+                    .values(
+                        deployment_status=new_status,
+                        sub_services_count=services,
+                        sub_environments_count=envs,
+                        sub_services_status=srv_status,
+                        sub_environments_status=env_status
+                    )
+                )
 
 
 # What we need to access this manager in Flask
