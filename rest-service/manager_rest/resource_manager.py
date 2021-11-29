@@ -41,8 +41,6 @@ from manager_rest.utils import (send_event,
                                 validate_deployment_and_site_visibility,
                                 extract_host_agent_plugins_from_plan)
 from manager_rest.rest.rest_utils import (
-    RecursiveDeploymentDependencies,
-    RecursiveDeploymentLabelsDependencies,
     update_inter_deployment_dependencies,
     verify_blueprint_uploaded_state,
     compute_rule_from_scheduling_params,
@@ -53,8 +51,7 @@ from manager_rest.plugins_update.constants import STATES as PluginsUpdateStates
 from manager_rest.storage import (db,
                                   get_storage_manager,
                                   models,
-                                  get_node,
-                                  storage_utils)
+                                  get_node)
 
 from . import utils
 from . import config
@@ -174,7 +171,6 @@ class ResourceManager(object):
                                      filters={'execution_id': execution_id})
             dep_update.state = UpdateStates.FAILED
             self.sm.update(dep_update)
-
 
         # Similarly for a plugin update
         if workflow_id == 'update_plugin' and \
@@ -1553,8 +1549,10 @@ class ResourceManager(object):
             dld.delete()
             .where(
                 db.and_(
-                    dld.c._target_deployment.in_({d._storage_id for d in parents}),
-                    dld.c._source_deployment.in_({d._storage_id for d in deployments})
+                    dld.c._target_deployment.in_(
+                        {d._storage_id for d in parents}),
+                    dld.c._source_deployment.in_(
+                        {d._storage_id for d in deployments})
                 )
             )
         )
@@ -2267,10 +2265,15 @@ class ResourceManager(object):
         component_creator_executions = self.sm.list(
             models.Execution, filters={
                 '_deployment_fk': component_creators,
-                'status': [ExecutionState.STARTED, ExecutionState.PENDING, ExecutionState.QUEUED],
+                'status': [
+                    ExecutionState.STARTED,
+                    ExecutionState.PENDING,
+                    ExecutionState.QUEUED
+                ],
                 'workflow_id': ['stop', 'uninstall', 'update']}
         )
-        return components |  {exc._deployment_fk for exc in component_creator_executions}
+        return components | {
+            exc._deployment_fk for exc in component_creator_executions}
 
     def _workflow_queued(self, execution):
         execution.status = ExecutionState.QUEUED

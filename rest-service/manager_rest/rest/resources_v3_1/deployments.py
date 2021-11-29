@@ -20,7 +20,7 @@ from manager_rest import utils, manager_exceptions, workflow_executor
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import (authorize,
                                                  check_user_action_allowed)
-from manager_rest.storage import db, models, get_storage_manager, storage_utils
+from manager_rest.storage import db, models, get_storage_manager
 from manager_rest.manager_exceptions import (
     DeploymentEnvironmentCreationInProgressError,
     DeploymentCreationError,
@@ -791,7 +791,8 @@ class DeploymentGroupsId(SecuredResource):
                 )
             if self._is_overriding_deployments(request_dict):
                 group.deployments.clear()
-            changed_deps |= self._add_group_deployments(sm, group, request_dict)
+            changed_deps |= self._add_group_deployments(
+                sm, group, request_dict)
         self._create_new_deployments(sm, group, request_dict)
         if changed_deps:
             rm = get_resource_manager()
@@ -864,7 +865,6 @@ class DeploymentGroupsId(SecuredResource):
                                                         labels_to_create,
                                                         labels_to_delete):
         rm = get_resource_manager()
-        dep_parents = set()
         new_types = rm.get_object_types_from_labels(labels_to_create)
         delete_types = rm.get_object_types_from_labels(labels_to_delete)
         if delete_types or new_types:
@@ -881,11 +881,6 @@ class DeploymentGroupsId(SecuredResource):
                              for label in labels_to_delete]
         # Handle all created label process
         new_parents = rm.get_deployment_parents_from_labels(labels_to_create)
-        if new_parents:
-            deployment_ids = {
-                deployment.id for deployment in group.deployments
-            }
-
         changed_deps = set()
         converted_deps = self._handle_resource_counts_after_source_conversion(
             group.deployments,
@@ -975,7 +970,7 @@ class DeploymentGroupsId(SecuredResource):
             )
         # Update deployment conversion which could be from service to env or
         # vice versa
-        converted_deps = self._handle_resource_counts_after_source_conversion(
+        self._handle_resource_counts_after_source_conversion(
             _target_deployments,
             labels_to_add,
             []
@@ -1275,7 +1270,7 @@ def _create_inter_deployment_dependency(
         target_deployment = None
 
     if target_deployment:
-        if target_deployment in source_deployment.get_ancestors(locking=False) \
+        if target_deployment in source_deployment.get_ancestors(locking=False)\
                 or target_deployment == source_deployment:
             raise manager_exceptions.ConflictError(
                 f'Cyclic dependency between {source_deployment} and '

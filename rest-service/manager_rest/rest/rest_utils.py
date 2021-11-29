@@ -1,8 +1,6 @@
 import re
 import unicodedata
-from collections import defaultdict, deque
 
-from ast import literal_eval
 from contextlib import contextmanager
 from dateutil import rrule
 from datetime import datetime
@@ -30,7 +28,6 @@ from cloudify.models_states import (
     VisibilityState,
     BlueprintUploadState,
     ExecutionState,
-    DeploymentState,
 )
 
 from manager_rest.storage import db, models, user_datastore

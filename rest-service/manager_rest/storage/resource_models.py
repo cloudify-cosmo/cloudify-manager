@@ -2286,12 +2286,17 @@ class DeploymentLabelsDependencies(BaseDeploymentDependencies):
                 db.func.array_agg(db.cast(
                     Deployment.sub_environments_status, db.Text).distinct()),
             )
-            is_env_filter = (db.session.query(DeploymentLabel)
-                .filter(db.and_(
-                    Deployment._storage_id==DeploymentLabel._labeled_model_fk,
-                    DeploymentLabel.key == 'csys-obj-type',
-                    DeploymentLabel.value == 'environment'
-                )).exists()
+            is_env_filter = (
+                db.session.query(DeploymentLabel)
+                .filter(
+                    db.and_(
+                        Deployment._storage_id ==
+                        DeploymentLabel._labeled_model_fk,
+                        DeploymentLabel.key == 'csys-obj-type',
+                        DeploymentLabel.value == 'environment'
+                    )
+                )
+                .exists()
             )
             query_part = (
                 cols

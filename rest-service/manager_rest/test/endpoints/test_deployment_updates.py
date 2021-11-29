@@ -1,39 +1,17 @@
-#########
-# Copyright (c) 2017-2019 Cloudify Platform Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 import os
 import re
 import uuid
 import datetime
-import unittest
 
 from pytest import mark
-from mock import patch, MagicMock, call
+from mock import patch
 
-from dsl_parser.constants import INTER_DEPLOYMENT_FUNCTIONS
 from dsl_parser import exceptions as parser_exceptions, constants
 
 from cloudify_rest_client.exceptions import CloudifyClientError
-from cloudify.deployment_dependencies import (DEPENDENCY_CREATOR,
-                                              SOURCE_DEPLOYMENT,
-                                              TARGET_DEPLOYMENT,
-                                              create_deployment_dependency)
 
 from manager_rest.storage import models
 from manager_rest.test import base_test
-from manager_rest.deployment_update import handlers
 from manager_rest.test.utils import get_resource as resource
 
 
