@@ -10,7 +10,6 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 from cloudify.models_states import DeploymentState
 
 from manager_rest.storage import db, models
-from manager_rest.rest.rest_utils import RecursiveDeploymentLabelsDependencies
 from manager_rest.test.base_test import BaseServerTestCase
 
 
