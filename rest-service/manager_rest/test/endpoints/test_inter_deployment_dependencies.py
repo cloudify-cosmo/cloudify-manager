@@ -30,8 +30,6 @@ from manager_rest.test.base_test import BaseServerTestCase
 class _DependencyTestUtils(object):
     def setUp(self):
         super().setUp()
-        self.tenant = models.Tenant()
-        self.user = models.User()
         self.bp1 = models.Blueprint(tenant=self.tenant, creator=self.user)
 
     def _deployment(self, **kwargs):
