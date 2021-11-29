@@ -2169,6 +2169,26 @@ class BaseDeploymentDependencies(CreatedAtMixin, SQLResourceBase):
     @classmethod
     def get_dependencies(cls, deployment_ids, dependents=True, locking=False,
                          fetch_deployments=True):
+        """Get dependencies of the given deployments.
+
+        Fetch the ancesntors (or descendants) recursively: parents, then
+        grandparents, then...
+
+        This method is most useful behind a utility facade, ie. all
+        the get_x methods on the Deployment model.
+
+        :param deployment_ids: storage ids of deployments to fetch
+            dependencies for
+        :param dependents: if true, fetch dependents; otherwise, fetch
+            dependencies
+        :param fetch_deployments: if true, return deployment objects; otherwise
+            return instances of this class. Dependency objects are mostly
+            useful when only querying for the edges of the graph - when
+            source/target ids are all that's needed
+        :param locking: emit a WITH FOR UPDATE
+        :return: a list of deployments, or of cls instances, based on
+            the fetch_deployments param
+        """
         dependencies = cls._dependencies_adjacency(
             deployment_ids, dependents=dependents)
         if fetch_deployments:
