@@ -330,7 +330,7 @@ class DeploymentUpdatesTestCase(DeploymentUpdatesBase):
         self.put_deployment(deployment_id='parent', blueprint_id='parent')
         self._deploy_base('child', 'one_node.yaml')
         response = self._update('child', 'invalid_one_label.yaml')
-        self.assertEqual(400, response.status_code)
+        self.assertEqual(404, response.status_code)
         self.assertEqual('deployment_parent_not_found_error',
                          response.json['error_code'])
 

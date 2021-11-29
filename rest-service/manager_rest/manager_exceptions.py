@@ -94,7 +94,7 @@ class DependentExistsError(ManagerException):
 
 class DeploymentParentNotFound(ManagerException):
     error_code = 'deployment_parent_not_found_error'
-    status_code = 400
+    status_code = 404
 
 
 class NonexistentWorkflowError(ManagerException):
