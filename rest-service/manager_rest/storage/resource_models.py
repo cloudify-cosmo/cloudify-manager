@@ -2077,6 +2077,7 @@ class BaseDeploymentDependencies(CreatedAtMixin, SQLResourceBase):
     _source_cascade = 'all'
     _target_cascade = 'all'
 
+    is_id_unique = False
     @declared_attr
     def source_deployment(cls):
         return one_to_many_relationship(
