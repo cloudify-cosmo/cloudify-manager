@@ -205,9 +205,7 @@ class ResourceManager(object):
             affected_parent_deployments |= self.delete_deployment(deployment)
 
         if affected_parent_deployments:
-            with self.sm.transaction():
-                self.recalc_ancestors(affected_parent_deployments)
-
+            self.recalc_ancestors(affected_parent_deployments)
         return res
 
     def start_queued_executions(self, deployment_storage_id):
