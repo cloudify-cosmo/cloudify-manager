@@ -2078,6 +2078,8 @@ class BaseDeploymentDependencies(CreatedAtMixin, SQLResourceBase):
     _target_cascade = 'all'
 
     is_id_unique = False
+    id = db.Column(db.Text, index=True, default=lambda: str(uuid.uuid4()))
+
     @declared_attr
     def source_deployment(cls):
         return one_to_many_relationship(
