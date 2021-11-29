@@ -710,38 +710,6 @@ class ResourceManager(object):
 
         return self.sm.delete(blueprint)
 
-    def retrieve_and_display_dependencies(self, deployment,
-                                          skip_components=False):
-        """Retrieve list of deployment's dependencies.
-        A dependency is a deployment with a `csys-obj-parent` label set to
-        deployment.id, or any of its children.
-        :param deployment:      a parent deployment
-        :param skip_components: if True will not report components as
-                                dependencies
-        :returns: a list of strings describing dependencies
-        """
-        dep_graph = RecursiveDeploymentDependencies(self.sm)
-        excluded_ids = self._excluded_component_creator_ids(deployment)
-        deployment_dependencies = \
-            dep_graph.retrieve_and_display_dependencies(
-                deployment.id,
-                excluded_component_creator_ids=excluded_ids)
-
-        if deployment.has_sub_deployments:
-            dep_graph = RecursiveDeploymentLabelsDependencies(self.sm,
-                                                              skip_components)
-            labels_dependencies = \
-                dep_graph.retrieve_and_display_dependencies(
-                    deployment
-                )
-            if deployment_dependencies:
-                deployment_dependencies = deployment_dependencies\
-                                          + labels_dependencies
-            else:
-                deployment_dependencies = labels_dependencies
-
-        return deployment_dependencies
-
     def check_deployment_delete(self, deployment, force=False):
         """Check that deployment can be deleted"""
         executions = self.sm.list(models.Execution, filters={
@@ -750,21 +718,6 @@ class ResourceManager(object):
                 ExecutionState.ACTIVE_STATES + ExecutionState.QUEUED_STATE
             )
         }, get_all_results=True)
-        deployment_dependencies = self.retrieve_and_display_dependencies(
-            deployment)
-        if deployment_dependencies:
-            if force:
-                current_app.logger.warning(
-                    "Force-deleting deployment %s despite having the "
-                    "following existing dependent installations\n%s",
-                    deployment.id, deployment_dependencies
-                )
-            else:
-                raise manager_exceptions.DependentExistsError(
-                    f"Can't delete deployment {deployment.id} - the following "
-                    f"existing installations depend on it:\n"
-                    f"{deployment_dependencies}"
-                )
         if executions:
             running_ids = ','.join(
                 execution.id for execution in executions
@@ -775,6 +728,31 @@ class ResourceManager(object):
                 f"running or queued executions for this deployment. "
                 f"Running executions ids: {running_ids}"
             )
+
+        # Verify deleting the deployment won't affect dependent deployments
+        excluded_ids = self._excluded_component_creator_ids(deployment)
+        idds = [
+            idd for idd in
+            deployment.get_all_dependents(fetch_deployments=False)
+            if idd._source_deployment not in excluded_ids
+        ]
+
+        if idds:
+            formatted_dependencies = '\n'.join(
+                f'[{i}] {idd.format()}' for i, idd in enumerate(idds, 1)
+            )
+            if force:
+                current_app.logger.warning(
+                    "Force-deleting deployment %s despite having the "
+                    "following existing dependent installations\n%s",
+                    deployment.id, formatted_dependencies
+                )
+            else:
+                raise manager_exceptions.DependentExistsError(
+                    f"Can't delete deployment {deployment.id} - the following "
+                    f"existing installations depend on it:\n"
+                    f"{formatted_dependencies}"
+                )
 
         if not force:
             # validate either all nodes for this deployment are still
@@ -2333,37 +2311,41 @@ class ResourceManager(object):
                 deployment.tenant != self.sm.current_tenant and
                 not utils.can_execute_global_workflow(utils.current_tenant)):
             raise manager_exceptions.ForbiddenError(
-                'User `{0}` is not allowed to execute workflows on '
-                'a global deployment {1} from a different tenant'.format(
-                    current_user.username, deployment.id
-                )
+                f'User `{current_user.username}` is not allowed to execute '
+                f'workflows on a global deployment {deployment.id} from a '
+                f'different tenant'
             )
 
-    def _verify_dependencies_not_affected(self,
-                                          workflow_id, deployment, force):
-        if workflow_id not in ['stop', 'uninstall', 'update']:
+    def _verify_dependencies_not_affected(self, execution, force):
+        if execution.workflow_id not in ['stop', 'uninstall', 'update']:
             return
         # if we're in the middle of an execution initiated by the component
         # creator, we'd like to drop the component dependency from the list
-        deployment_dependencies = self.retrieve_and_display_dependencies(
-            deployment, skip_components=True
-        )
-        if not deployment_dependencies:
+        deployment = execution.deployment
+        excluded_ids = self._excluded_component_creator_ids(deployment)
+        idds = [
+            idd for idd in
+            deployment.get_all_dependents(fetch_deployments=False)
+            if idd._source_deployment not in excluded_ids
+        ]
+        if not idds:
             return
+        formatted_dependencies = '\n'.join(
+            f'[{i}] {idd.format()}' for i, idd in enumerate(idds, 1)
+        )
         if force:
             current_app.logger.warning(
-                "Force-executing workflow `{0}` on deployment {1} despite "
-                "having the following existing dependent installations\n"
-                "{2}".format(
-                    workflow_id, deployment.id, deployment_dependencies
-                ))
+                "Force-executing workflow `%s` on deployment %s despite "
+                "having existing dependent installations:\n%s",
+                execution.workflow_id, execution.deployment.id,
+                formatted_dependencies)
             return
         # If part of a deployment update - mark the update as failed
-        if workflow_id == 'update':
+        if execution.workflow_id == 'update':
             dep_update = self.sm.get(
                 models.DeploymentUpdate,
                 None,
-                filters={'deployment_id': deployment.id,
+                filters={'deployment_id': execution.deployment.id,
                          'state': UpdateStates.UPDATING}
             )
             if dep_update:
@@ -2371,40 +2353,34 @@ class ResourceManager(object):
                 self.sm.update(dep_update)
 
         raise manager_exceptions.DependentExistsError(
-            "Can't execute workflow `{0}` on deployment {1} - the "
-            "following existing installations depend on it:\n{2}".format(
-                workflow_id, deployment.id, deployment_dependencies
-            )
-        )
+            f"Can't execute workflow `{execution.workflow_id}` on deployment "
+            f"{execution.deployment.id} - existing installations depend "
+            f"on it:\n{formatted_dependencies}")
 
     def _excluded_component_creator_ids(self, deployment):
-        # collect all deployment which created this deployment as a
-        # component, accounting for nesting component creation
-        component_creator_deployments = []
-        component_deployment = deployment
-        while True:
-            creator_deployment = None
-            for d in component_deployment.target_of_dependency_in:
-                if 'component' in d.dependency_creator.split('.'):
-                    creator_deployment = d.source_deployment
-                    component_creator_deployments.append(creator_deployment)
-                    component_deployment = creator_deployment
-                    break  # a depl. can be a component for only one depl.
-            if not creator_deployment:
-                break
+        """Deployments that should be excluded from the dependency check.
 
-        active_component_creator_deployment_ids = []
-        for deployment in component_creator_deployments:
-            component_creator_executions = self.sm.list(
-                models.Execution, filters={
-                    'deployment_id': deployment.id,
-                    'status': 'started',
-                    'workflow_id': ['stop', 'uninstall', 'update']}
-            )
-            if component_creator_executions:
-                active_component_creator_deployment_ids.append(deployment.id)
-
-        return active_component_creator_deployment_ids
+        Deployments that created the given deployment as a component are
+        excluded if they are currently running a destructive workflow.
+        (then, the given workflow should be allowed to run one too)
+        """
+        components = {
+            idd._target_deployment
+            for idd in deployment.get_dependencies(fetch_deployments=False)
+            if idd.dependency_creator.startswith('component.')
+        }
+        component_creators = [
+            idd._target_deployment
+            for idd in deployment.get_dependencies(fetch_deployments=False)
+            if idd.dependency_creator.startswith('component.')
+        ]
+        component_creator_executions = self.sm.list(
+            models.Execution, filters={
+                '_deployment_fk': component_creators,
+                'status': [ExecutionState.STARTED, ExecutionState.PENDING, ExecutionState.QUEUED],
+                'workflow_id': ['stop', 'uninstall', 'update']}
+        )
+        return components |  {exc._deployment_fk for exc in component_creator_executions}
 
     def _workflow_queued(self, execution):
         execution.status = ExecutionState.QUEUED

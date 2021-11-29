@@ -2207,6 +2207,32 @@ class InterDeploymentDependencies(BaseDeploymentDependencies):
     external_source = db.Column(JSONString, nullable=True)
     external_target = db.Column(JSONString, nullable=True)
 
+    def summarize(self):
+        dep_creator = self.dependency_creator.split('.')
+        dep_type = dep_creator[0] \
+            if dep_creator[0] in ['component', 'sharedresource'] \
+            else 'deployment'
+        dep_node = dep_creator[1]
+        return {
+            'deployment': self.source_deployment.id,
+            'dependency_type': dep_type,
+            'dependent_node': dep_node,
+            'tenant': self.tenant_name
+        }
+
+    def format(self):
+        summary = self.summarize()
+        type_message = {
+            'component': 'contains',
+            'sharedresource': 'uses a shared resource from',
+            'deployment': 'uses capabilities of'
+        }[summary['dependency_type']]
+        dep_node = summary['dependent_node']
+        return (
+            f'Deployment `{self.source_deployment.id}` {type_message} '
+            f'the current deployment in its node `{dep_node}`'
+        )
+
 
 # the _XSummary namedtuples are used as a return type for
 # DLD.get_children_summary
@@ -2227,13 +2253,18 @@ class DeploymentLabelsDependencies(BaseDeploymentDependencies):
         db.UniqueConstraint(
             '_source_deployment', '_target_deployment'),
     )
-
+    dependency_creator = ''
     _source_backref_name = 'source_of_dependency_labels'
     _target_backref_name = 'target_of_dependency_labels'
 
     _source_deployment = foreign_key(Deployment._storage_id)
     _target_deployment = foreign_key(Deployment._storage_id)
 
+    def format(self):
+        return (
+            f'Deployment `{self.target_deployment.id}` is the parent of '
+            f'deployment {self.source_deployment.id}'
+        )
     _children_summary_query_cache = None
 
     @classmethod
