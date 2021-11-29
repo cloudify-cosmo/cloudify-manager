@@ -2497,7 +2497,7 @@ class ResourceManager(object):
                 deployment_ids, dependents=False, locking=True)
             if not deps:
                 # no deps, means there's no tree to speak of, we just need to
-                # only update deployment_ids
+                # update deployment_ids only
                 deps = (
                     db.session.query(models.Deployment)
                     .filter(models.Deployment._storage_id.in_(deployment_ids))
