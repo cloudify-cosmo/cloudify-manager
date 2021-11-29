@@ -2122,27 +2122,40 @@ class BaseDeploymentDependencies(CreatedAtMixin, SQLResourceBase):
         :param dependents: if set, return dependents, ie. children; otherwise,
             return dependencies, ie. parents
         """
-        select_cols = db.session.query(
+        base_cols = db.session.query(
             cls._storage_id,
             cls._source_deployment,
             cls._target_deployment,
+            db.literal(0).label('level')
         )
 
         if dependents:
-            base = select_cols.filter(
+            base = base_cols.filter(
                 cls._target_deployment.in_(deployment_ids))
         else:
-            base = select_cols.filter(
+            base = base_cols.filter(
                 cls._source_deployment.in_(deployment_ids))
-        base = base.cte(name='dependents', recursive=True)
+        base = (
+            base
+            .order_by(cls._storage_id)
+            .cte(name='dependents', recursive=True)
+        )
 
+        recursive_cols = db.session.query(
+            cls._storage_id,
+            cls._source_deployment,
+            cls._target_deployment,
+            base.c.level + 1
+
+        )
         if dependents:
-            recursive = select_cols.join(
+            recursive = recursive_cols.join(
                 base, cls._target_deployment == base.c._source_deployment)
         else:
-            recursive = select_cols.join(
+            recursive = recursive_cols.join(
                 base, cls._source_deployment == base.c._target_deployment)
-        return base.union(recursive)
+        recursive = recursive.order_by(cls._storage_id)
+        return base.union_all(recursive)
 
     @classmethod
     def _join_deployments(cls, adjacency, dependents=True):
