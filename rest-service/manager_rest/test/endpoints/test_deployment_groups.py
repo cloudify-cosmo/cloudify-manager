@@ -936,11 +936,14 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
                     {'csys-obj-type': 'environment'}],
         )
 
+        group_deployment = self.client.deployments.list(
+            deployment_group_id='group1')[0]
         parent1 = self.client.deployments.get('parent_1')
         assert parent1.sub_environments_count == 1
         assert parent1.sub_services_count == 0
         assert parent1.sub_services_status is None
-        assert parent1.sub_environments_status == 'good'
+        assert parent1.sub_environments_status \
+            == group_deployment.deployment_status
 
         self.client.deployment_groups.put(
             'group1',
@@ -952,7 +955,8 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         assert parent1.sub_environments_count == 0
         assert parent1.sub_services_count == 1
         assert parent1.sub_environments_status is None
-        assert parent1.sub_services_status == 'good'
+        assert parent1.sub_services_status \
+            == group_deployment.deployment_status
 
     def test_invalid_inputs(self):
         self.put_blueprint(
