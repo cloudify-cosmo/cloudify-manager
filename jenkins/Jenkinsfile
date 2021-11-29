@@ -103,7 +103,7 @@ pipeline {
           steps {
             container('rpmbuild'){
               sh """
-                cd && mkdir rpmbuild && cd rpmbuild
+                cd ~/rpmbuild
                 git clone --single-branch --branch ${env.BRANCH} https://github.com/cloudify-cosmo/cloudify-manager.git SOURCES && cd SOURCES
               """
 
