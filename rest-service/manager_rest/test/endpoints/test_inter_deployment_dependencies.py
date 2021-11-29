@@ -405,12 +405,9 @@ class InterDeploymentDependenciesTest(BaseServerTestCase):
         self.put_mock_deployments(self.source_deployment,
                                   self.target_deployment)
 
-    @patch('manager_rest.rest.rest_utils.RecursiveDeploymentDependencies'
-           '.assert_no_cyclic_dependencies')
-    def test_adds_dependency_and_retrieves_it(self, mock_assert_no_cycles):
+    def test_adds_dependency_and_retrieves_it(self):
         dependency = self.client.inter_deployment_dependencies.create(
             **self.dependency)
-        mock_assert_no_cycles.assert_called()
         response = self.client.inter_deployment_dependencies.list()
         if response:
             self.assertDictEqual(dependency, response[0])
