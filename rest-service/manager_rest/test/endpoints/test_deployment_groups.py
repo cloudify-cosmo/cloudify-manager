@@ -20,9 +20,31 @@ from manager_rest.test import base_test
 class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
     def setUp(self):
         super(DeploymentGroupsTestCase, self).setUp()
-        self.put_blueprint()
-        self.client.deployments.create('blueprint', 'dep1')
-        self.client.deployments.create('blueprint', 'dep2')
+        self.blueprint = models.Blueprint(
+            id='blueprint',
+            creator=self.user,
+            tenant=self.tenant,
+            plan={'inputs': {}},
+        )
+        for dep_id in ['dep1', 'dep2']:
+            db.session.add(models.Deployment(
+                id=dep_id,
+                creator=self.user,
+                display_name='',
+                tenant=self.tenant,
+                blueprint=self.blueprint,
+                workflows={'install': {'operation': ''}}
+            ))
+    def _deployment(self, **kwargs):
+        dep_params = {
+            'creator': self.user,
+            'tenant': self.tenant,
+            'blueprint': self.blueprint
+        }
+        dep_params.update(kwargs)
+        dep = models.Deployment(**dep_params)
+        db.session.add(dep)
+        return dep
 
     def test_get_empty(self):
         result = self.client.deployment_groups.list()
@@ -159,14 +181,12 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         assert len(group.deployment_ids) == 3
 
     def test_create_from_spec(self):
-        self.put_blueprint(
-            blueprint_file_name='blueprint_with_inputs.yaml',
-            blueprint_id='bp_with_inputs')
+        self.blueprint.plan['inputs'] = {'http_web_server_port': {}}
         inputs = {'http_web_server_port': 1234}
         labels = [{'label1': 'label-value'}]
         group = self.client.deployment_groups.put(
             'group1',
-            blueprint_id='bp_with_inputs',
+            blueprint_id='blueprint',
             new_deployments=[
                 {
                     'id': 'spec_dep1',
@@ -359,7 +379,6 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         # dep hasnt been deleted _yet_, but check that delete-dep-env for it
         # was run
         dep = self.sm.get(models.Deployment, 'dep1')
-        assert len(dep.executions) == 2
         assert any(exc.workflow_id == 'delete_deployment_environment'
                    for exc in dep.executions)
 
@@ -538,14 +557,16 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         )
         dep_id = group.deployment_ids[0]
         dep = self.sm.get(models.Deployment, dep_id)
-        self.create_deployment_environment(dep)
-        client_dep = self.client.deployments.get(dep_id)
-        self.assert_resource_labels(client_dep.labels, [
-            # labels from both the group, and the deployment
-            # (note that label1=value1 occurs in both places)
-            {'label1': 'value1'}, {'label1': 'value2'}, {'label2': 'value2'},
-            {'label3': 'value4'},
-        ])
+        assert set(dep.create_execution.parameters['labels']) == {
+            # from new_deployments:
+            ('label1', 'value1'),
+            ('label1', 'value2'),
+            ('label3', 'value4'),
+            # from the group:
+            # ('label1', 'value1') - not present - deduplicated
+            ('label2', 'value2')
+
+        }
 
     def test_delete_group_label(self):
         """Deleting a label from the group, deletes it from its deps"""
@@ -723,13 +744,12 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             deployment_ids=['dep1', 'dep2']
         )
 
-        self.put_deployment(deployment_id='parent_1', blueprint_id='parent_1')
+        parent = self._deployment(id='parent_1')
         self.client.deployment_groups.put(
             'group1',
             labels=[{'csys-obj-parent': 'parent_1'}],
         )
-        dep = self.client.deployments.get('parent_1')
-        self.assertEqual(dep.sub_services_count, 2)
+        self.assertEqual(parent.sub_services_count, 2)
 
     def test_add_multiple_parents(self):
         self.client.deployment_groups.put(
@@ -737,22 +757,19 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             deployment_ids=['dep1', 'dep2']
         )
 
-        self.put_deployment(deployment_id='parent_1', blueprint_id='parent_1')
-        self.put_deployment(deployment_id='parent_2', blueprint_id='parent_2')
-
+        parent1 = self._deployment(id='parent_1')
+        parent2 = self._deployment(id='parent_2')
         self.client.deployment_groups.put(
             'group1',
             labels=[{'csys-obj-parent': 'parent_1'},
                     {'csys-obj-parent': 'parent_2'}],
         )
-        dep1 = self.client.deployments.get('parent_1')
-        dep2 = self.client.deployments.get('parent_2')
-        self.assertEqual(dep1.sub_services_count, 2)
-        self.assertEqual(dep2.sub_services_count, 2)
+        self.assertEqual(parent1.sub_services_count, 2)
+        self.assertEqual(parent2.sub_services_count, 2)
 
     def test_add_parents_before_adding_deployment(self):
-        self.put_deployment(deployment_id='parent_1', blueprint_id='parent_1')
-        self.put_deployment(deployment_id='parent_2', blueprint_id='parent_2')
+        parent1 = self._deployment(id='parent_1')
+        parent2 = self._deployment(id='parent_2')
         self.client.deployment_groups.put('group1')
         self.client.deployment_groups.put(
             'group1',
@@ -763,18 +780,15 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             'group1',
             deployment_ids=['dep1', 'dep2']
         )
-        dep1 = self.client.deployments.get('parent_1')
-        dep2 = self.client.deployments.get('parent_2')
-        self.assertEqual(dep1.sub_services_count, 2)
-        self.assertEqual(dep2.sub_services_count, 2)
+        self.assertEqual(parent1.sub_services_count, 2)
+        self.assertEqual(parent2.sub_services_count, 2)
 
     def test_add_parents_before_adding_deployments_from_groups(self):
-        self.put_deployment(deployment_id='parent_1', blueprint_id='parent_1')
-        self.put_deployment(deployment_id='parent_2', blueprint_id='parent_2')
-        self.put_deployment(deployment_id='parent_3', blueprint_id='parent_3')
-        self.put_deployment(deployment_id='group2_1', blueprint_id='group2_1')
+        parent1 = self._deployment(id='parent_1')
+        parent2 = self._deployment(id='parent_2')
+        parent3 = self._deployment(id='parent_3')
+        group2_1 = self._deployment(id='group2_1')
 
-        self.client.deployment_groups.put('group1')
         self.client.deployment_groups.put(
             'group1',
             labels=[{'csys-obj-parent': 'parent_1'},
@@ -800,19 +814,15 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             'group1',
             deployments_from_group='group3'
         )
-
-        dep1 = self.client.deployments.get('parent_1')
-        dep2 = self.client.deployments.get('parent_2')
-        dep3 = self.client.deployments.get('parent_3')
-        self.assertEqual(dep1.sub_services_count, 6)
-        self.assertEqual(dep2.sub_services_count, 6)
-        self.assertEqual(dep3.sub_services_count, 6)
+        self.assertEqual(parent1.sub_services_count, 6)
+        self.assertEqual(parent2.sub_services_count, 6)
+        self.assertEqual(parent3.sub_services_count, 6)
 
     def test_add_parents_to_multiple_source_of_deployments(self):
-        self.put_deployment(deployment_id='parent_1', blueprint_id='parent_1')
-        self.put_deployment(deployment_id='dep3', blueprint_id='dep3')
-        self.put_deployment(deployment_id='dep4', blueprint_id='dep4')
-        self.put_deployment(deployment_id='dep5', blueprint_id='dep5')
+        parent1 = self._deployment(id='parent_1')
+        dep3 = self._deployment(id='dep3')
+        dep4 = self._deployment(id='dep4')
+        dep5 = self._deployment(id='dep5')
 
         self.client.deployment_groups.put('group1', blueprint_id='blueprint')
         self.client.deployment_groups.put('group2', blueprint_id='blueprint')
@@ -841,11 +851,10 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             deployment_ids=['dep5'],
             deployments_from_group='group2'
         )
-        dep = self.client.deployments.get('parent_1')
-        self.assertEqual(dep.sub_services_count, 5)
+        self.assertEqual(parent1.sub_services_count, 5)
 
     def test_add_parents_to_environment_deployments(self):
-        self.put_deployment(deployment_id='parent_1', blueprint_id='parent_1')
+        parent1 = self._deployment(id='parent_1')
 
         self.client.deployment_groups.put('group1', blueprint_id='blueprint')
         self.client.deployment_groups.add_deployments(
@@ -857,11 +866,10 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             labels=[{'csys-obj-parent': 'parent_1'},
                     {'csys-obj-type': 'environment'}],
         )
-        dep = self.client.deployments.get('parent_1')
-        self.assertEqual(dep.sub_environments_count, 4)
+        self.assertEqual(parent1.sub_environments_count, 4)
 
     def test_convert_service_to_environment_for_deployments(self):
-        self.put_deployment(deployment_id='parent_1', blueprint_id='parent_1')
+        parent1 = self._deployment(id='parent_1')
         self.client.deployment_groups.put('group1', blueprint_id='blueprint')
         self.client.deployment_groups.add_deployments(
             'group1',
@@ -871,18 +879,16 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             'group1',
             labels=[{'csys-obj-parent': 'parent_1'}],
         )
-        dep = self.client.deployments.get('parent_1')
-        self.assertEqual(dep.sub_services_count, 4)
+        self.assertEqual(parent1.sub_services_count, 4)
         self.client.deployment_groups.put(
             'group1',
             labels=[{'csys-obj-parent': 'parent_1'},
                     {'csys-obj-type': 'environment'}],
         )
-        dep = self.client.deployments.get('parent_1')
-        self.assertEqual(dep.sub_environments_count, 4)
+        self.assertEqual(parent1.sub_environments_count, 4)
 
     def test_convert_environment_to_service_for_deployments(self):
-        self.put_deployment(deployment_id='parent_1', blueprint_id='parent_1')
+        parent1 = self._deployment(id='parent_1')
         self.client.deployment_groups.put('group1', blueprint_id='blueprint')
         self.client.deployment_groups.add_deployments(
             'group1',
@@ -893,17 +899,15 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             labels=[{'csys-obj-parent': 'parent_1'},
                     {'csys-obj-type': 'environment'}],
         )
-        dep = self.client.deployments.get('parent_1')
-        self.assertEqual(dep.sub_environments_count, 4)
+        self.assertEqual(parent1.sub_environments_count, 4)
         self.client.deployment_groups.put(
             'group1',
             labels=[{'csys-obj-parent': 'parent_1'}],
         )
-        dep = self.client.deployments.get('parent_1')
-        self.assertEqual(dep.sub_services_count, 4)
+        self.assertEqual(parent1.sub_services_count, 4)
 
     def test_delete_parents_labels_from_deployments(self):
-        self.put_deployment(deployment_id='parent_1', blueprint_id='parent_1')
+        parent1 = self._deployment(id='parent_1')
         self.client.deployment_groups.put(
             'group1',
             labels=[{'csys-obj-parent': 'parent_1'}],
@@ -913,18 +917,16 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             'group1',
             deployment_ids=['dep1', 'dep2']
         )
-        dep = self.client.deployments.get('parent_1')
-        self.assertEqual(dep.sub_services_count, 2)
+        self.assertEqual(parent1.sub_services_count, 2)
         self.client.deployment_groups.put(
             'group1',
             labels=[],
             blueprint_id='blueprint'
         )
-        dep = self.client.deployments.get('parent_1')
-        self.assertEqual(dep.sub_services_count, 0)
+        self.assertEqual(parent1.sub_services_count, 0)
 
     def test_validate_update_deployment_statuses_after_conversion(self):
-        self.put_deployment(deployment_id='parent_1', blueprint_id='parent_1')
+        parent1 = self._deployment(id='parent_1')
         self.client.deployment_groups.put('group1', blueprint_id='blueprint')
         self.client.deployment_groups.add_deployments(
             'group1',
@@ -935,10 +937,8 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             labels=[{'csys-obj-parent': 'parent_1'},
                     {'csys-obj-type': 'environment'}],
         )
-
-        group_deployment = self.client.deployments.list(
-            deployment_group_id='group1')[0]
-        parent1 = self.client.deployments.get('parent_1')
+        group_deployment = self.sm.get(
+            models.DeploymentGroup, 'group1').deployments[0]
         assert parent1.sub_environments_count == 1
         assert parent1.sub_services_count == 0
         assert parent1.sub_services_status is None
@@ -951,7 +951,6 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
                     {'csys-obj-parent': 'parent_1'}],
         )
 
-        parent1 = self.client.deployments.get('parent_1')
         assert parent1.sub_environments_count == 0
         assert parent1.sub_services_count == 1
         assert parent1.sub_environments_status is None
@@ -959,13 +958,10 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             == group_deployment.deployment_status
 
     def test_invalid_inputs(self):
-        self.put_blueprint(
-            blueprint_file_name='blueprint_with_inputs.yaml',
-            blueprint_id='bp-inputs',
-        )
+        self.blueprint.plan['inputs'] = {'http_web_server_port': {}}
         self.client.deployment_groups.put(
                 'group1',
-                blueprint_id='bp-inputs',
+                blueprint_id='blueprint',
                 new_deployments=[
                     {'inputs': {'http_web_server_port': 8080}}
                 ])
