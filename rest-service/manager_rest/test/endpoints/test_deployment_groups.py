@@ -698,9 +698,9 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         group = self.client.deployment_groups.get('group1')
         dep1 = self.client.deployments.get('dep1')
         dep2 = self.client.deployments.get('dep2')
-        self.assertEqual(len(group.labels), 0)
-        self.assertEqual(len(dep1.labels), 0)
-        self.assertEqual(len(dep2.labels), 0)
+        assert len(group.labels) == 0
+        assert len(dep1.labels) == 0
+        assert len(dep2.labels) == 0
 
     def test_add_cyclic_parent_labels_in_group(self):
         self.client.deployments.update_labels(
@@ -718,9 +718,9 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         group = self.client.deployment_groups.get('group1')
         dep1 = self.client.deployments.get('dep1')
         dep2 = self.client.deployments.get('dep2')
-        self.assertEqual(len(group.labels), 0)
-        self.assertEqual(len(dep1.labels), 0)
-        self.assertEqual(len(dep2.labels), 1)
+        assert len(group.labels) == 0
+        assert len(dep1.labels) == 0
+        assert len(dep2.labels) == 1
 
     def test_add_self_deployment_as_parent(self):
         self.client.deployment_groups.put(
@@ -735,8 +735,8 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             )
         group = self.client.deployment_groups.get('group1')
         dep1 = self.client.deployments.get('dep1')
-        self.assertEqual(len(group.labels), 0)
-        self.assertEqual(len(dep1.labels), 0)
+        assert len(group.labels) == 0
+        assert len(dep1.labels) == 0
 
     def test_add_single_parent(self):
         self.client.deployment_groups.put(
@@ -749,7 +749,7 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             'group1',
             labels=[{'csys-obj-parent': 'parent_1'}],
         )
-        self.assertEqual(parent.sub_services_count, 2)
+        assert parent.sub_services_count == 2
 
     def test_add_multiple_parents(self):
         self.client.deployment_groups.put(
@@ -764,8 +764,8 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             labels=[{'csys-obj-parent': 'parent_1'},
                     {'csys-obj-parent': 'parent_2'}],
         )
-        self.assertEqual(parent1.sub_services_count, 2)
-        self.assertEqual(parent2.sub_services_count, 2)
+        assert parent1.sub_services_count == 2
+        assert parent2.sub_services_count == 2
 
     def test_add_parents_before_adding_deployment(self):
         parent1 = self._deployment(id='parent_1')
@@ -780,8 +780,8 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             'group1',
             deployment_ids=['dep1', 'dep2']
         )
-        self.assertEqual(parent1.sub_services_count, 2)
-        self.assertEqual(parent2.sub_services_count, 2)
+        assert parent1.sub_services_count == 2
+        assert parent2.sub_services_count == 2
 
     def test_add_parents_before_adding_deployments_from_groups(self):
         parent1 = self._deployment(id='parent_1')
@@ -814,9 +814,9 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             'group1',
             deployments_from_group='group3'
         )
-        self.assertEqual(parent1.sub_services_count, 6)
-        self.assertEqual(parent2.sub_services_count, 6)
-        self.assertEqual(parent3.sub_services_count, 6)
+        assert parent1.sub_services_count == 6
+        assert parent2.sub_services_count == 6
+        assert parent3.sub_services_count == 6
 
     def test_add_parents_to_multiple_source_of_deployments(self):
         parent1 = self._deployment(id='parent_1')
@@ -851,7 +851,7 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             deployment_ids=['dep5'],
             deployments_from_group='group2'
         )
-        self.assertEqual(parent1.sub_services_count, 5)
+        assert parent1.sub_services_count == 5
 
     def test_add_parents_to_environment_deployments(self):
         parent1 = self._deployment(id='parent_1')
@@ -866,7 +866,7 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             labels=[{'csys-obj-parent': 'parent_1'},
                     {'csys-obj-type': 'environment'}],
         )
-        self.assertEqual(parent1.sub_environments_count, 4)
+        assert parent1.sub_environments_count == 4
 
     def test_convert_service_to_environment_for_deployments(self):
         parent1 = self._deployment(id='parent_1')
@@ -879,13 +879,13 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             'group1',
             labels=[{'csys-obj-parent': 'parent_1'}],
         )
-        self.assertEqual(parent1.sub_services_count, 4)
+        assert parent1.sub_services_count == 4
         self.client.deployment_groups.put(
             'group1',
             labels=[{'csys-obj-parent': 'parent_1'},
                     {'csys-obj-type': 'environment'}],
         )
-        self.assertEqual(parent1.sub_environments_count, 4)
+        assert parent1.sub_environments_count == 4
 
     def test_convert_environment_to_service_for_deployments(self):
         parent1 = self._deployment(id='parent_1')
@@ -899,12 +899,12 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             labels=[{'csys-obj-parent': 'parent_1'},
                     {'csys-obj-type': 'environment'}],
         )
-        self.assertEqual(parent1.sub_environments_count, 4)
+        assert parent1.sub_environments_count == 4
         self.client.deployment_groups.put(
             'group1',
             labels=[{'csys-obj-parent': 'parent_1'}],
         )
-        self.assertEqual(parent1.sub_services_count, 4)
+        assert parent1.sub_services_count == 4
 
     def test_delete_parents_labels_from_deployments(self):
         parent1 = self._deployment(id='parent_1')
@@ -917,13 +917,13 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             'group1',
             deployment_ids=['dep1', 'dep2']
         )
-        self.assertEqual(parent1.sub_services_count, 2)
+        assert parent1.sub_services_count == 2
         self.client.deployment_groups.put(
             'group1',
             labels=[],
             blueprint_id='blueprint'
         )
-        self.assertEqual(parent1.sub_services_count, 0)
+        assert parent1.sub_services_count == 0
 
     def test_validate_update_deployment_statuses_after_conversion(self):
         parent1 = self._deployment(id='parent_1')
