@@ -326,7 +326,7 @@ class UploadedBlueprintsManager(UploadedDataManager):
         args = get_args_and_verify_arguments([
             Argument('private_resource', type=boolean),
             Argument('application_file_name', default=''),
-            Argument('skip_execution', type=boolean, default=True),
+            Argument('skip_execution', type=boolean, default=False),
             Argument('state', default=None),
         ])
 
