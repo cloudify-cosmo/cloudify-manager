@@ -692,7 +692,6 @@ class InstallParameters:
                 modified_ids[entity_type].append(entity_id)
         return modified_ids
 
-
     def _split_by_modification(self, items, modification):
         first, second = [], []
         if not items:
