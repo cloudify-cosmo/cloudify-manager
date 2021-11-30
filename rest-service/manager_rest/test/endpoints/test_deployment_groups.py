@@ -35,6 +35,7 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
                 blueprint=self.blueprint,
                 workflows={'install': {'operation': ''}}
             ))
+
     def _deployment(self, **kwargs):
         dep_params = {
             'creator': self.user,
@@ -787,7 +788,6 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         parent1 = self._deployment(id='parent_1')
         parent2 = self._deployment(id='parent_2')
         parent3 = self._deployment(id='parent_3')
-        group2_1 = self._deployment(id='group2_1')
 
         self.client.deployment_groups.put(
             'group1',
@@ -820,9 +820,9 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
 
     def test_add_parents_to_multiple_source_of_deployments(self):
         parent1 = self._deployment(id='parent_1')
-        dep3 = self._deployment(id='dep3')
-        dep4 = self._deployment(id='dep4')
-        dep5 = self._deployment(id='dep5')
+        self._deployment(id='dep3')
+        self._deployment(id='dep4')
+        self._deployment(id='dep5')
 
         self.client.deployment_groups.put('group1', blueprint_id='blueprint')
         self.client.deployment_groups.put('group2', blueprint_id='blueprint')
