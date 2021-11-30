@@ -1171,11 +1171,7 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
 
     def test_delete_deployment(self):
         """It's still possible to delete a deployment used in an exec-group"""
-        exc_group = self.client.execution_groups.start(
-            deployment_group_id='group1',
-            workflow_id='install'
-        )
-        exc_group = models.ExecutionGroup(
+        models.ExecutionGroup(
             id='gr1',
             workflow_id='',
             tenant=self.tenant,
@@ -1333,7 +1329,7 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
             ([ExecutionState.STARTED], ExecutionState.STARTED),
             ([ExecutionState.FAILED], ExecutionState.FAILED),
             ([ExecutionState.TERMINATED, ExecutionState.FAILED],
-              ExecutionState.FAILED),
+             ExecutionState.FAILED),
             ([ExecutionState.STARTED, ExecutionState.PENDING,
               ExecutionState.TERMINATED],
              ExecutionState.STARTED),
