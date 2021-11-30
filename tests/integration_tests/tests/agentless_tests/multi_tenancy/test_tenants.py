@@ -4,9 +4,6 @@ from collections import namedtuple
 
 from cloudify.cryptography_utils import decrypt
 
-from manager_rest.constants import (DEFAULT_TENANT_NAME,
-                                    DEFAULT_TENANT_ROLE,
-                                    SECURITY_FILE_LOCATION)
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.constants import USER_ROLE, USER_IN_TENANT_ROLE
 from integration_tests.tests.utils import get_resource as resource
@@ -21,7 +18,7 @@ class TenantsTest(AgentlessTestCase):
         self.assertEqual(len(tenants), 1)
         self.assertDictContainsSubset(
             {
-                'name': DEFAULT_TENANT_NAME,
+                'name': 'default_tenant',
                 'groups': 0,
                 'users': 1,
                 'user_roles': None
@@ -32,7 +29,7 @@ class TenantsTest(AgentlessTestCase):
         self.assertEqual(len(tenants), 1)
         self.assertDictContainsSubset(
             {
-                'name': DEFAULT_TENANT_NAME,
+                'name': 'default_tenant',
                 'groups': {},
                 'users': {
                     'admin': {
@@ -76,12 +73,12 @@ class TenantsTest(AgentlessTestCase):
             self.client.tenants.add_user_group(
                 user_groups[i],
                 tenant_name,
-                DEFAULT_TENANT_ROLE,
+                'user',
             )
             self.client.tenants.add_user(
                 users[i],
                 tenant_name,
-                DEFAULT_TENANT_ROLE,
+                'user',
             )
 
         tenant = self.client.tenants.get(tenant_name)
@@ -92,7 +89,7 @@ class TenantsTest(AgentlessTestCase):
         self.assertDictEqual(
             tenant.groups,
             {
-                user_group: DEFAULT_TENANT_ROLE
+                user_group: 'user'
                 for user_group in user_groups
             },
         )
@@ -100,8 +97,8 @@ class TenantsTest(AgentlessTestCase):
             tenant.users,
             {
                 user: {
-                    'tenant-role': DEFAULT_TENANT_ROLE,
-                    'roles': [DEFAULT_TENANT_ROLE],
+                    'tenant-role': 'user',
+                    'roles': ['user'],
                 }
                 for user in users
             },
@@ -126,10 +123,10 @@ class TenantsTest(AgentlessTestCase):
 
         self.client.tenants.add_user(user_1.username,
                                      tenant_1,
-                                     DEFAULT_TENANT_ROLE)
+                                     'user')
         self.client.tenants.add_user(user_2.username,
                                      tenant_2,
-                                     DEFAULT_TENANT_ROLE)
+                                     'user')
 
         user_1_client = self.create_rest_client(
             username=user_1.username,
@@ -172,7 +169,7 @@ class TenantsTest(AgentlessTestCase):
         self.client.tenants.create('test_tenant_2')
         self.client.tenants.add_user(fred.username,
                                      'test_tenant_1',
-                                     DEFAULT_TENANT_ROLE)
+                                     'user')
 
         fred_client = self.create_rest_client(
             username=fred.username,
@@ -189,12 +186,12 @@ class TenantsTest(AgentlessTestCase):
         self.client.tenants.create('test_tenant_2')
         self.client.tenants.add_user(fred.username,
                                      'test_tenant_1',
-                                     DEFAULT_TENANT_ROLE)
+                                     'user')
         self.client.user_groups.create('test_group', USER_ROLE)
         self.client.tenants.add_user_group(
             'test_group',
             'test_tenant_2',
-            DEFAULT_TENANT_ROLE,
+            'user',
         )
         self.client.user_groups.add_user(fred.username, 'test_group')
 
@@ -214,7 +211,8 @@ class TenantsTest(AgentlessTestCase):
         password_encrypted = self._select(
             "SELECT rabbitmq_password FROM tenants WHERE name='tenant_1'"
         )[0][0]
-        security_conf = self.read_manager_file(SECURITY_FILE_LOCATION)
+        security_conf = self.read_manager_file(
+            '/opt/manager/rest-security.conf')
         security_conf = json.loads(security_conf)
 
         # Validate the rabbitmq_password is being stored encrypted in the DB
