@@ -1,7 +1,6 @@
 import os
 import subprocess
 import logging
-import platform
 import pytest
 import wagon
 
@@ -38,7 +37,7 @@ def pytest_addoption(parser):
     parser.addoption(
         '--image-name',
         help='Name of the Cloudify Manager AIO docker image',
-        default=f'cloudify-manager-aio-{platform.machine()}:latest'
+        default='cloudify-manager-aio:latest'
     )
     parser.addoption(
         '--keep-container',
