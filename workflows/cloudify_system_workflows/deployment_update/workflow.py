@@ -632,6 +632,7 @@ class InstallParameters:
     def __init__(self, ctx, update_params, dep_update):
         self._update_instances = dep_update['deployment_update_node_instances']
         self.update_id = dep_update.id
+        self.steps = dep_update.steps
 
         for kind in ['added', 'removed', 'extended', 'reduced']:
             changed, related = self._split_by_modification(
@@ -661,6 +662,37 @@ class InstallParameters:
         ]:
             setattr(self, param, update_params.get(param, default))
 
+    def _modified_entity_ids(self):
+        modified_ids = {
+            'node': [],
+            'relationship': {},
+            'property': [],
+            'operation': [],
+            'workflow': [],
+            'output': [],
+            'description': [],
+            'group': [],
+            'policy_type': [],
+            'policy_trigger': [],
+            'plugin': [],
+            'rel_mappings': {}
+        }
+        for step in self.steps:
+            entity_type = step['entity_type']
+            parts = step['entity_id'].split(':')
+            if len(parts) < 2:
+                continue
+            entity_id = parts[1]
+
+            if step['entity_type'] == 'relationship':
+                relationship = parts[3]
+                modified_ids[entity_type].setdefault(entity_id, []).append(
+                    relationship)
+            elif entity_type in modified_ids:
+                modified_ids[entity_type].append(entity_id)
+        return modified_ids
+
+
     def _split_by_modification(self, items, modification):
         first, second = [], []
         if not items:
@@ -672,15 +704,10 @@ class InstallParameters:
                 second.append(instance)
         return first, second
 
-    @property
-    def modified_entity_ids(self):
-        # TODO: compute this (RD-3523)
-        return []
-
     def as_workflow_parameters(self):
         return {
             'update_id': self.update_id,
-            'modified_entity_ids': self.modified_entity_ids,
+            'modified_entity_ids': self._modified_entity_ids(),
             'added_instance_ids': self.added_ids,
             'added_target_instances_ids': self.added_target_ids,
             'removed_instance_ids': self.removed_ids,
