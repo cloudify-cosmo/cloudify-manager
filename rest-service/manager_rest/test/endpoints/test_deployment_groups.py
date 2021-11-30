@@ -11,7 +11,7 @@ from cloudify_rest_client.exceptions import (
 )
 
 from manager_rest.manager_exceptions import SQLStorageException, ConflictError
-from manager_rest.storage import models
+from manager_rest.storage import models, db
 from manager_rest.rest.resources_v3_1.deployments import DeploymentGroupsId
 
 from manager_rest.test import base_test
@@ -982,15 +982,29 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
 
 class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
     def setUp(self):
-        super(ExecutionGroupsTestCase, self).setUp()
-        self.put_blueprint()
-        dep = self.client.deployments.create('blueprint', 'dep1')
-        self.create_deployment_environment(dep, None)
-        self.client.deployment_groups.put(
-            'group1',
-            deployment_ids=['dep1'],
-            blueprint_id='blueprint',
+        super().setUp()
+        bp = models.Blueprint(
+            id='bp1',
+            creator=self.user,
+            tenant=self.tenant,
+            plan={'inputs': {}},
         )
+        self.deployment = models.Deployment(
+            id='dep1',
+            creator=self.user,
+            display_name='',
+            tenant=self.tenant,
+            blueprint=bp,
+            workflows={'install': {'operation': ''}}
+        )
+        self.dep_group = models.DeploymentGroup(
+            id='group1',
+            default_blueprint=bp,
+            tenant=self.tenant,
+            creator=self.user,
+        )
+        self.dep_group.deployments.append(self.deployment)
+        db.session.add(self.deployment)
 
     def test_get_empty(self):
         result = self.client.execution_groups.list()
@@ -1161,21 +1175,24 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
             deployment_group_id='group1',
             workflow_id='install'
         )
-        group_execs = self.sm.get(
-            models.ExecutionGroup, exc_group.id).executions
-        for exc in group_execs:
-            exc.status = ExecutionState.QUEUED
-            self.sm.update(exc)
-
+        exc_group = models.ExecutionGroup(
+            id='gr1',
+            workflow_id='',
+            tenant=self.tenant,
+            creator=self.user,
+        )
+        exc1 = models.Execution(
+            id='gr1',
+            workflow_id='install',
+            deployment=self.deployment,
+            status=ExecutionState.QUEUED,
+            tenant=self.tenant,
+            creator=self.user,
+        )
         with self.assertRaisesRegex(CloudifyClientError, 'running or queued'):
             self.client.deployments.delete('dep1')
 
-        group_execs = self.sm.get(
-            models.ExecutionGroup, exc_group.id).executions
-        for exc in group_execs:
-            exc.status = ExecutionState.TERMINATED
-            self.sm.update(exc)
-
+        exc1.status = ExecutionState.TERMINATED
         self.client.deployments.delete('dep1')
 
         delete_exec = self.sm.get(models.Execution, None, filters={
@@ -1186,78 +1203,102 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
         # via the restclient to terminated, which actually deletes
         # the deployment from the db
         delete_exec.status = ExecutionState.STARTED
-        self.sm.update(delete_exec)
         self.client.executions.update(
             delete_exec.id, ExecutionState.TERMINATED)
 
-        deps = self.client.deployments.list()
-        assert len(deps) == 0
+        assert db.session.query(models.Deployment).count() == 0
 
     def test_queues_over_concurrency(self):
-        dep_ids = []
-        for ix in range(5):
-            dep_id = f'd{ix}'
-            dep = self.client.deployments.create('blueprint', dep_id)
-            self.create_deployment_environment(dep, None)
-            dep_ids.append(dep_id)
-        self.client.deployment_groups.put('group2', deployment_ids=dep_ids)
-        exc_group = self.client.execution_groups.start(
-            deployment_group_id='group2',
-            workflow_id='install',
-            concurrency=3,
+        exc_group = models.ExecutionGroup(
+            id='gr1',
+            workflow_id='',
+            tenant=self.tenant,
+            creator=self.user,
         )
-        group_execs = self.sm.get(
-            models.ExecutionGroup, exc_group.id).executions
-        pending_execs = sum(
-            exc.status == ExecutionState.TERMINATED for exc in group_execs)
-        queued_execs = sum(
-            exc.status == ExecutionState.QUEUED for exc in group_execs)
-        assert pending_execs == exc_group.concurrency
-        assert queued_execs == len(group_execs) - exc_group.concurrency
+        for _ in range(5):
+            exc_group.executions.append(models.Execution(
+                workflow_id='create_deployment_environment',
+                tenant=self.tenant,
+                creator=self.user,
+                status=ExecutionState.PENDING,
+                parameters={}
+            ))
+        exc_group.concurrency = 3
+        messages = exc_group.start_executions(self.sm, self.rm)
+        assert len(messages) == exc_group.concurrency
+        assert sum(exc.status == ExecutionState.PENDING
+                   for exc in exc_group.executions) == exc_group.concurrency
+        assert sum(exc.status == ExecutionState.QUEUED
+                   for exc in exc_group.executions) == 2
 
-    # these test want a no-op mock, because the default mock in this
-    # test would just set the executions to TERMINATED
-    @mock.patch('manager_rest.workflow_executor.execute_workflow', mock.Mock())
+    def test_doesnt_start_finished(self):
+        exc_group = models.ExecutionGroup(
+            id='gr1',
+            workflow_id='',
+            tenant=self.tenant,
+            creator=self.user,
+        )
+        for exc_status in [ExecutionState.FAILED, ExecutionState.TERMINATED]:
+            exc_group.executions.append(models.Execution(
+                workflow_id='create_deployment_environment',
+                tenant=self.tenant,
+                creator=self.user,
+                status=exc_status,
+            ))
+        messages = exc_group.start_executions(self.sm, self.rm)
+        assert len(messages) == 0
+
     def test_cancel_group(self):
-        self.client.deployment_groups.add_deployments(
-            'group1',
-            count=2
+        exc_group = models.ExecutionGroup(
+            id='gr1',
+            workflow_id='',
+            tenant=self.tenant,
+            creator=self.user,
         )
-        for dep in self.client.deployments.list():
-            if dep.id != 'dep1':
-                self.create_deployment_environment(dep)
-        exc_group = self.client.execution_groups.start(
-            deployment_group_id='group1',
-            workflow_id='install',
+        ex1 = models.Execution(
+            workflow_id='',
+            tenant=self.tenant,
+            creator=self.user,
+            status=ExecutionState.STARTED,
         )
+        ex2 = models.Execution(
+            workflow_id='',
+            tenant=self.tenant,
+            creator=self.user,
+            status=ExecutionState.STARTED,
+        )
+        exc_group.executions = [ex1, ex2]
         self.client.execution_groups.cancel(exc_group.id)
-        group = self.sm.get(models.ExecutionGroup, exc_group.id)
 
-        for exc in group.executions:
+        for exc in exc_group.executions:
             assert exc.status in (
                 ExecutionState.CANCELLED, ExecutionState.CANCELLING
             )
 
-    @mock.patch('manager_rest.workflow_executor.execute_workflow', mock.Mock())
-    def test_resume_group(self):
+    @mock.patch('manager_rest.workflow_executor.execute_workflow')
+    def test_resume_group(self, mock_execute):
         """After all executions have been cancelled, resume them"""
-        self.client.deployment_groups.add_deployments(
-            'group1',
-            count=2
+        exc_group = models.ExecutionGroup(
+            id='gr1',
+            workflow_id='',
+            tenant=self.tenant,
+            creator=self.user,
         )
-        for dep in self.client.deployments.list():
-            if dep.id != 'dep1':
-                self.create_deployment_environment(dep)
-        exc_group = self.client.execution_groups.start(
-            deployment_group_id='group1',
-            workflow_id='install',
+        ex1 = models.Execution(
+            workflow_id='create_deployment_environment',
+            parameters={},
+            tenant=self.tenant,
+            creator=self.user,
+            status=ExecutionState.CANCELLED,
         )
-        group = self.sm.get(models.ExecutionGroup, exc_group.id)
-
-        for exc in group.executions:
-            exc.status = ExecutionState.CANCELLED
-            self.sm.update(exc)
-
+        ex2 = models.Execution(
+            workflow_id='create_deployment_environment',
+            parameters={},
+            tenant=self.tenant,
+            creator=self.user,
+            status=ExecutionState.CANCELLED,
+        )
+        exc_group.executions = [ex1, ex2]
         self.client.execution_groups.resume(exc_group.id)
 
         group = self.sm.get(models.ExecutionGroup, exc_group.id)
@@ -1265,6 +1306,7 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
             assert exc.status in (
                 ExecutionState.PENDING, ExecutionState.QUEUED
             )
+        mock_execute.assert_called()
 
     def test_invalid_parameters(self):
         with self.assertRaises(IllegalExecutionParametersError):
@@ -1282,40 +1324,38 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
                 default_parameters={'invalid-input': 42}
             )
 
-    @mock.patch('manager_rest.workflow_executor.execute_workflow', mock.Mock())
-    def test_group_status_queued(self):
-        self.client.deployment_groups.add_deployments('group1', count=2)
-        for dep in self.client.deployments.list():
-            if dep.id.startswith('group1'):
-                self.create_deployment_environment(dep)
-        exc_group = self.client.execution_groups.start(
-            deployment_group_id='group1',
-            workflow_id='install',
-            concurrency=1,
-        )
-
-        group = self.sm.get(models.ExecutionGroup, exc_group.id)
-        for exc in group.executions:
-            assert exc.status in (
-                ExecutionState.PENDING, ExecutionState.QUEUED,
-            )
-        assert group.status == ExecutionState.QUEUED
-
-    @mock.patch('manager_rest.workflow_executor.execute_workflow', mock.Mock())
-    def test_group_status_pending(self):
-        self.client.deployment_groups.add_deployments('group1', count=2)
-        for dep in self.client.deployments.list():
-            if dep.id.startswith('group1'):
-                self.create_deployment_environment(dep)
-        exc_group = self.client.execution_groups.start(
-            deployment_group_id='group1',
-            workflow_id='install',
-        )
-
-        group = self.sm.get(models.ExecutionGroup, exc_group.id)
-        for exc in group.executions:
-            assert exc.status == ExecutionState.PENDING
-        assert group.status == ExecutionState.PENDING
+    def test_group_status(self):
+        for execution_statuses, expected_group_status in [
+            ([], None),
+            ([ExecutionState.PENDING], ExecutionState.PENDING),
+            ([ExecutionState.QUEUED], ExecutionState.QUEUED),
+            ([ExecutionState.TERMINATED], ExecutionState.TERMINATED),
+            ([ExecutionState.STARTED], ExecutionState.STARTED),
+            ([ExecutionState.FAILED], ExecutionState.FAILED),
+            ([ExecutionState.TERMINATED, ExecutionState.FAILED],
+              ExecutionState.FAILED),
+            ([ExecutionState.STARTED, ExecutionState.PENDING,
+              ExecutionState.TERMINATED],
+             ExecutionState.STARTED),
+            ([ExecutionState.TERMINATED, ExecutionState.STARTED],
+             ExecutionState.STARTED)
+        ]:
+            with self.subTest():
+                exc_group = models.ExecutionGroup(
+                    id='gr1',
+                    workflow_id='',
+                    tenant=self.tenant,
+                    creator=self.user,
+                )
+                for exc_status in execution_statuses:
+                    exc = models.Execution(
+                        workflow_id='',
+                        tenant=self.tenant,
+                        creator=self.user,
+                        status=exc_status
+                    )
+                    exc_group.executions.append(exc)
+                assert exc_group.status == expected_group_status
 
     @mock.patch('manager_rest.workflow_executor.execute_workflow', mock.Mock())
     def test_success_group(self):
