@@ -211,9 +211,12 @@ class ResourceManager(object):
         any of those fail to run, try running more.
         """
         to_run = []
-        while True:
+        for retry in range(5):
             with self.sm.transaction():
-                dequeued = self._get_queued_executions(deployment_storage_id)
+                dequeued = list(self._get_queued_executions(
+                    deployment_storage_id))
+                if not dequeued:
+                    break
                 all_started = True
                 for execution in dequeued:
                     refreshed, messages = self._refresh_execution(execution)
