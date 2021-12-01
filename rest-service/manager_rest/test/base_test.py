@@ -276,6 +276,7 @@ class BaseServerTestCase(unittest.TestCase):
         cls._create_temp_files_and_folders()
         cls._mock_amqp_modules()
         cls._mock_swagger()
+        cls._mock_external_auth()
 
         cls._create_config_and_reset_app()
         cls._mock_get_encryption_key()
@@ -324,6 +325,15 @@ class BaseServerTestCase(unittest.TestCase):
     def _mock_verify_role(cls):
         cls._original_verify_role = rest_utils.verify_role
         rest_utils.verify_role = MagicMock()
+
+    @classmethod
+    def _mock_external_auth(cls):
+        """No need for external auth loading; we're not gonna be using ldap!"""
+        if premium_enabled:
+            auth_path = patch(
+                'manager_rest.server.configure_auth',
+                return_value=None)
+            cls._patchers.append(auth_path)
 
     @classmethod
     def _mock_swagger(cls):
