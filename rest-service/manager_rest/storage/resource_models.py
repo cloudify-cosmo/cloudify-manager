@@ -1363,6 +1363,8 @@ class ExecutionGroup(CreatedAtMixin, SQLResourceBase):
                 some might have been cancelled)
         """
         states = {e.status for e in self.executions}
+        if not states:
+            return None
 
         if all(s == ExecutionState.PENDING for s in states):
             return ExecutionState.PENDING
