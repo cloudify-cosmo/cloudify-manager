@@ -868,14 +868,6 @@ class LabelBase(CreatedAtMixin, SQLModelBase):
     def creator(cls):
         return one_to_many_relationship(cls, User, cls._creator_id, 'id')
 
-    @declared_attr
-    def visibility(cls):
-        return cls.labeled_model.visibility
-
-    @declared_attr
-    def _tenant_id(cls):
-        return cls.labeled_model._tenant_id
-
 
 class DeploymentLabel(LabelBase):
     __tablename__ = 'deployments_labels'
@@ -890,8 +882,11 @@ class DeploymentLabel(LabelBase):
     @declared_attr
     def deployment(cls):
         return db.relationship(
-            'Deployment', lazy='joined',
+            Deployment, lazy='joined',
             backref=db.backref('labels', cascade='all, delete-orphan'))
+
+    visibility = association_proxy('deployment', 'visibility')
+    _tenant_id = association_proxy('deployment', '_tenant_id')
 
 
 class BlueprintLabel(LabelBase):
@@ -910,6 +905,9 @@ class BlueprintLabel(LabelBase):
             'Blueprint', lazy='joined',
             backref=db.backref('labels', cascade='all, delete-orphan'))
 
+    visibility = association_proxy('blueprint', 'visibility')
+    _tenant_id = association_proxy('blueprint', '_tenant_id')
+
 
 class DeploymentGroupLabel(LabelBase):
     __tablename__ = 'deployment_groups_labels'
@@ -926,6 +924,9 @@ class DeploymentGroupLabel(LabelBase):
         return db.relationship(
             DeploymentGroup, lazy='joined',
             backref=db.backref('labels', cascade='all, delete-orphan'))
+
+    visibility = association_proxy('deployment_group', 'visibility')
+    _tenant_id = association_proxy('deployment_group', '_tenant_id')
 
 
 class FilterBase(CreatedAtMixin, SQLResourceBase):
