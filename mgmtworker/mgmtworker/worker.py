@@ -8,7 +8,7 @@ import logging
 import argparse
 from contextlib import contextmanager
 
-from cloudify import broker_config, dispatch
+from cloudify import broker_config
 from cloudify.logs import setup_agent_logger
 from cloudify.utils import get_admin_api_token, get_tenant
 from cloudify.constants import MGMTWORKER_QUEUE
@@ -60,7 +60,6 @@ class MgmtworkerOperationConsumer(CloudifyOperationConsumer):
 
 class CloudifyWorkflowConsumer(CloudifyOperationConsumer):
     routing_key = 'workflow'
-    handler = dispatch.WorkflowHandler
     late_ack = True
 
     @contextmanager
