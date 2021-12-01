@@ -34,7 +34,7 @@ import requests
 import traceback
 
 from flask_migrate import Migrate, upgrade
-from mock import MagicMock, patch
+from mock import Mock, patch
 from flask.testing import FlaskClient
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
@@ -325,7 +325,7 @@ class BaseServerTestCase(unittest.TestCase):
     @classmethod
     def _mock_verify_role(cls):
         cls._original_verify_role = rest_utils.verify_role
-        rest_utils.verify_role = MagicMock()
+        rest_utils.verify_role = Mock()
 
     @classmethod
     def _mock_external_auth(cls):
@@ -367,7 +367,7 @@ class BaseServerTestCase(unittest.TestCase):
         """ Mock the _get_encryption_key_patcher function for all unittests """
         get_encryption_key_patcher = patch(
             'cloudify.cryptography_utils._get_encryption_key',
-            MagicMock(return_value=base64.b64encode(os.urandom(64)))
+            Mock(return_value=base64.b64encode(os.urandom(64)))
         )
         cls._patchers.append(get_encryption_key_patcher)
 
@@ -455,7 +455,7 @@ class BaseServerTestCase(unittest.TestCase):
         default_tenant = create_default_user_tenant_and_roles(
             admin_username=admin_user['username'],
             admin_password=admin_user['password'],
-            amqp_manager=MagicMock()
+            amqp_manager=Mock()
         )
         default_tenant.rabbitmq_username = \
             'rabbitmq_username_default_tenant'
@@ -499,7 +499,7 @@ class BaseServerTestCase(unittest.TestCase):
         """
         admin_user = set_admin_current_user(server.app)
         login_manager = server.app.extensions['security'].login_manager
-        login_manager.anonymous_user = MagicMock(return_value=admin_user)
+        login_manager.anonymous_user = Mock(return_value=admin_user)
 
     @classmethod
     def tearDownClass(cls):
@@ -809,7 +809,7 @@ class BaseServerTestCase(unittest.TestCase):
     def create_deployment_environment(self, deployment, client=None):
         from cloudify_system_workflows.deployment_environment import create
         client = client or self.client
-        m = MagicMock()
+        m = Mock()
         deployment = self.sm.get(models.Deployment, deployment.id)
         blueprint = client.blueprints.get(deployment.blueprint_id)
         m.deployment = client.deployments.get(deployment.id)
@@ -998,7 +998,7 @@ class BaseServerTestCase(unittest.TestCase):
             raise Exception(f'No `upload_blueprint` execution was found for '
                             f'the blueprint {blueprint_id}')
 
-        m = MagicMock()
+        m = Mock()
         with patch('cloudify_system_workflows.blueprint.get_rest_client',
                    return_value=client):
             try:
