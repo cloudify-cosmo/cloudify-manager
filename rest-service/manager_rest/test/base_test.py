@@ -278,6 +278,9 @@ class BaseServerTestCase(unittest.TestCase):
         cls._mock_swagger()
         cls._mock_external_auth()
 
+        for patcher in cls._patchers:
+            patcher.start()
+
         cls._create_config_and_reset_app()
         cls._mock_get_encryption_key()
         cls._handle_flask_app_and_db()
@@ -285,9 +288,6 @@ class BaseServerTestCase(unittest.TestCase):
         cls.sm = get_storage_manager()
         cls.rm = get_resource_manager()
         cls._mock_verify_role()
-
-        for patcher in cls._patchers:
-            patcher.start()
 
     def setUp(self):
         self._handle_default_db_config()
