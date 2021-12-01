@@ -17,7 +17,6 @@ import os
 import json
 import time
 import uuid
-import base64
 import shutil
 import logging
 import zipfile
@@ -273,18 +272,19 @@ class BaseServerTestCase(unittest.TestCase):
     def setUpClass(cls):
         super(BaseServerTestCase, cls).setUpClass()
 
-        cls._patchers = []
         cls._create_temp_files_and_folders()
+        cls.server_configuration = cls.create_configuration()
+
+        cls._patchers = []
         cls._mock_amqp_modules()
         cls._mock_swagger()
         cls._mock_external_auth()
         cls._mock_get_encryption_key()
         cls._mock_verify_role()
-
         for patcher in cls._patchers:
             patcher.start()
 
-        cls._create_config_and_reset_app()
+        cls._reset_app()
         cls._handle_flask_app_and_db()
         cls.client = cls.create_client()
         cls.sm = get_storage_manager()
@@ -367,7 +367,7 @@ class BaseServerTestCase(unittest.TestCase):
         """ Mock the _get_encryption_key_patcher function for all unittests """
         get_encryption_key_patcher = patch(
             'cloudify.cryptography_utils._get_encryption_key',
-            Mock(return_value=base64.b64encode(os.urandom(64)))
+            Mock(return_value=config.instance.security_encryption_key)
         )
         cls._patchers.append(get_encryption_key_patcher)
 
@@ -381,10 +381,7 @@ class BaseServerTestCase(unittest.TestCase):
         os.close(fd)
 
     @classmethod
-    def _create_config_and_reset_app(cls):
-        """Create config, and reset Flask app
-        """
-        cls.server_configuration = cls.create_configuration()
+    def _reset_app(cls):
         utils.copy_resources(cls.server_configuration.file_server_root)
         server.reset_app(cls.server_configuration)
 
