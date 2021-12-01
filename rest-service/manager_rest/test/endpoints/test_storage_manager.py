@@ -255,6 +255,16 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         self.assertEqual({secret.id for secret in secrets_list},
                          {'secret_0', 'secret_2'})
 
+    def test_list_with_empty_filter(self):
+        secret = models.Secret(id='secret',
+                               value='value',
+                               tenant=self.tenant,
+                               creator=self.user,
+                               visibility=VisibilityState.TENANT)
+        db.session.add(secret)
+        retrieved = self.sm.list(models.Secret, filters={'_storage_id': []})
+        assert len(retrieved) == 0
+
 
 class TestTransactions(base_test.BaseServerTestCase):
     def _make_secret(self, id, value):
