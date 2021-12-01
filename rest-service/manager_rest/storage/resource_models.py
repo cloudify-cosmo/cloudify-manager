@@ -1,18 +1,3 @@
-########
-# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#        http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#    * See the License for the specific language governing permissions and
-#    * limitations under the License.
-
 import hashlib
 import typing
 import uuid
@@ -37,6 +22,7 @@ from cloudify.models_states import (AgentState,
                                     ExecutionState,
                                     DeploymentModificationState,
                                     DeploymentState)
+from cloudify.cryptography_utils import decrypt
 from dsl_parser.constants import WORKFLOW_PLUGINS_TO_INSTALL
 from dsl_parser.constraints import extract_constraints, validate_input_value
 from dsl_parser import exceptions as dsl_exceptions
@@ -2015,8 +2001,14 @@ class Agent(CreatedAtMixin, SQLResourceBase):
     def to_response(self, include=None, **kwargs):
         include = include or self.response_fields
         agent_dict = super(Agent, self).to_response(include, **kwargs)
-        agent_dict.pop('rabbitmq_username', None)
-        agent_dict.pop('rabbitmq_password', None)
+        if 'rabbitmq_username' not in include:
+            agent_dict.pop('rabbitmq_username', None)
+        if 'rabbitmq_password' in include:
+            agent_dict['rabbitmq_password'] = decrypt(
+                agent_dict['rabbitmq_password']
+            )
+        else:
+            agent_dict.pop('rabbitmq_password', None)
         return agent_dict
 
 
