@@ -216,7 +216,6 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                 'config.instance.default_page_size',
                 10)
     def test_all_results_query(self):
-        now = utils.get_formatted_timestamp()
         for i in range(20):
             secret = models.Secret(id='secret_{}'.format(i),
                                    value='value',
