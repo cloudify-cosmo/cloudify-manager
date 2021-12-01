@@ -52,7 +52,6 @@ from cloudify.cluster_status import (
 )
 
 from manager_rest import server
-from manager_rest.rest import rest_utils
 from manager_rest.storage.models_base import db
 from manager_rest.rest.filters_utils import FilterRule
 from manager_rest.resource_manager import get_resource_manager
