@@ -17,6 +17,7 @@ import os
 import json
 import time
 import uuid
+import base64
 import shutil
 import logging
 import zipfile
@@ -277,12 +278,12 @@ class BaseServerTestCase(unittest.TestCase):
         cls._mock_amqp_modules()
         cls._mock_swagger()
         cls._mock_external_auth()
+        cls._mock_get_encryption_key()
 
         for patcher in cls._patchers:
             patcher.start()
 
         cls._create_config_and_reset_app()
-        cls._mock_get_encryption_key()
         cls._handle_flask_app_and_db()
         cls.client = cls.create_client()
         cls.sm = get_storage_manager()
@@ -366,7 +367,7 @@ class BaseServerTestCase(unittest.TestCase):
         """ Mock the _get_encryption_key_patcher function for all unittests """
         get_encryption_key_patcher = patch(
             'cloudify.cryptography_utils._get_encryption_key',
-            MagicMock(return_value=config.instance.security_encryption_key)
+            MagicMock(return_value=base64.b64encode(os.urandom(64)))
         )
         cls._patchers.append(get_encryption_key_patcher)
 
