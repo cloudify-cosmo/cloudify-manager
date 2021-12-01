@@ -902,7 +902,7 @@ class BlueprintLabel(LabelBase):
     @declared_attr
     def blueprint(cls):
         return db.relationship(
-            'Blueprint', lazy='joined',
+            Blueprint, lazy='joined',
             backref=db.backref('labels', cascade='all, delete-orphan'))
 
     visibility = association_proxy('blueprint', 'visibility')
