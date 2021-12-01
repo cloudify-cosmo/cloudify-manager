@@ -917,11 +917,14 @@ class DeploymentGroupsId(SecuredResource):
         target_deployments = set()
         created_labels = set()
         for key, value in labels_to_create:
-            existing_labels = sm.list(models.DeploymentLabel, filters={
-                'key': key,
-                'value': value,
-                '_labeled_model_fk': deployment_ids
-            }, get_all_results=True)
+            if not deployment_ids:
+                existing_labels = []
+            else:
+                existing_labels = sm.list(models.DeploymentLabel, filters={
+                    'key': key,
+                    'value': value,
+                    '_labeled_model_fk': deployment_ids
+                }, get_all_results=True)
             skip_deployments = {
                 label._labeled_model_fk for label in existing_labels
             }
