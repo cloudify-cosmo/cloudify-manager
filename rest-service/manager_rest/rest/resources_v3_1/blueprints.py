@@ -104,7 +104,7 @@ class BlueprintsId(resources_v2.BlueprintsId):
             created_at = rest_utils.parse_datetime_string(args.created_at)
 
         if args.owner:
-            check_user_action_allowed('set_creator', None, True)
+            check_user_action_allowed('set_owner', None, True)
             owner = rest_utils.valid_user(args.owner)
 
         async_upload = args.async_upload
