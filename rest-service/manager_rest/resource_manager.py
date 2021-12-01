@@ -213,8 +213,10 @@ class ResourceManager(object):
         to_run = []
         for retry in range(5):
             with self.sm.transaction():
-                dequeued = self._get_queued_executions(
-                    deployment_storage_id, offset=retry)
+                dequeued = list(self._get_queued_executions(
+                    deployment_storage_id))
+                if not dequeued:
+                    break
                 all_started = True
                 for execution in dequeued:
                     refreshed, messages = self._refresh_execution(execution)
@@ -269,7 +271,7 @@ class ResourceManager(object):
                 execution, e)
             return []
 
-    def _get_queued_executions(self, deployment_storage_id, offset=0):
+    def _get_queued_executions(self, deployment_storage_id):
         sort_by = {'created_at': 'asc'}
         system_executions = self.sm.list(
             models.Execution, filters={
@@ -311,7 +313,6 @@ class ResourceManager(object):
             .outerjoin(executions.execution_groups)
             .order_by(executions.created_at.asc())
             .limit(5)
-            .offset(offset * 5)
             .with_for_update(of=executions)
             .all()
         )
