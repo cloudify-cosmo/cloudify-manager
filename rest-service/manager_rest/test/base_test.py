@@ -279,6 +279,7 @@ class BaseServerTestCase(unittest.TestCase):
         cls._mock_swagger()
         cls._mock_external_auth()
         cls._mock_get_encryption_key()
+        cls._mock_verify_role()
 
         for patcher in cls._patchers:
             patcher.start()
@@ -288,7 +289,6 @@ class BaseServerTestCase(unittest.TestCase):
         cls.client = cls.create_client()
         cls.sm = get_storage_manager()
         cls.rm = get_resource_manager()
-        cls._mock_verify_role()
 
     def setUp(self):
         self._handle_default_db_config()
@@ -324,8 +324,8 @@ class BaseServerTestCase(unittest.TestCase):
 
     @classmethod
     def _mock_verify_role(cls):
-        cls._original_verify_role = rest_utils.verify_role
-        rest_utils.verify_role = Mock()
+        mock_verify_role = patch('manager_rest.rest.rest_utils.verify_role')
+        cls._patchers.append(mock_verify_role)
 
     @classmethod
     def _mock_external_auth(cls):
