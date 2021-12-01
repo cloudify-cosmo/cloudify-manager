@@ -220,10 +220,10 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         for i in range(20):
             secret = models.Secret(id='secret_{}'.format(i),
                                    value='value',
-                                   created_at=now,
-                                   updated_at=now,
+                                   tenant=self.tenant,
+                                   creator=self.user,
                                    visibility=VisibilityState.TENANT)
-            self.sm.put(secret)
+            db.session.add(secret)
 
         secret_list = self.sm.list(
             models.Secret,
