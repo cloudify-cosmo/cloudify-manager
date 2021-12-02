@@ -1016,7 +1016,7 @@ class ExecutionsTest(AgentlessTestCase):
         self.client.execution_schedules.delete(schedule.id, dep_id)
         self.wait_for_execution_to_end(exc)
 
-    @retry(wait_fixed=1000, stop_max_attempt_number=120)
+    @retry(wait_fixed=1000, stop_max_attempt_number=140)
     def wait_for_scheduled_execution_to_fire(self, deployment_id):
         # The execution must fire within 2 minutes.
         # if the 1st check_schedules occurs between the creation time and the
