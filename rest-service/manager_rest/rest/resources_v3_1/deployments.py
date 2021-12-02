@@ -234,6 +234,9 @@ class DeploymentsId(resources_v1.DeploymentsId):
             raise IllegalActionError('Update a deployment request must include'
                                      ' at least one parameter to update')
         request_dict = request.json
+        if 'creator' in request_dict:
+            check_user_action_allowed('set_owner', None, True)
+            creator = rest_utils.valid_user(request_dict['creator'])
         sm = get_storage_manager()
         rm = get_resource_manager()
         with sm.transaction():
@@ -262,6 +265,8 @@ class DeploymentsId(resources_v1.DeploymentsId):
                         'deployment-update')
                 deployment.blueprint = sm.get(
                     models.Blueprint, request_dict['blueprint_id'])
+            if 'creator' in request_dict and creator:
+                deployment.creator = creator
             to_upd = None
             if 'labels' in request_dict:
                 raw_labels_list = request_dict.get('labels', [])
