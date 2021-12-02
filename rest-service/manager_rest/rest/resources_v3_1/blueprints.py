@@ -266,6 +266,8 @@ class BlueprintsId(resources_v2.BlueprintsId):
             blueprint.description = request_dict['description']
         if 'main_file_name' in request_dict:
             blueprint.main_file_name = request_dict['main_file_name']
+        if 'creator' in request_dict:
+            blueprint.creator = creator
         provided_labels = request_dict.get('labels')
 
         if request_dict.get('plan'):
