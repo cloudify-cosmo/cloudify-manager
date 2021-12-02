@@ -21,7 +21,6 @@ import pytest
 from functools import wraps
 
 import integration_tests_plugins
-from manager_rest.plugins_update.constants import STATES
 
 from integration_tests import AgentTestWithPlugins
 from integration_tests.tests.utils import (
@@ -167,14 +166,14 @@ class TestPluginUpdate(AgentTestWithPlugins):
         self._assert_host_values(self.versions[0])
 
         plugins_update = self._perform_plugins_update()
-        self.assertEqual(plugins_update.state, STATES.SUCCESSFUL)
+        self.assertEqual(plugins_update.state, 'successful')
 
         # Execute mod (V 2.0) workflows
         self._execute_workflows()
         self._assert_host_values(self.versions[1])
 
         plugins_update = self._perform_plugins_update()
-        self.assertEqual(plugins_update.state, STATES.NO_CHANGES_REQUIRED)
+        self.assertEqual(plugins_update.state, 'no_changes_required')
 
         # Execute mod (V 2.0) workflows
         self._execute_workflows()
@@ -209,7 +208,7 @@ class TestPluginUpdate(AgentTestWithPlugins):
             self._assert_host_values(self.versions[0])
 
         plugins_update = self._perform_plugins_update()
-        self.assertEqual(plugins_update.state, STATES.SUCCESSFUL)
+        self.assertEqual(plugins_update.state, 'successful')
 
         # Execute mod (V 2.0) workflows
         for dep_id in self.setup_deployment_ids:
@@ -236,21 +235,21 @@ class TestPluginUpdate(AgentTestWithPlugins):
 
         # Update a different (non-existent) plugin - nothing should change
         plugins_update = self._perform_plugins_update(plugin_names=['asd'])
-        self.assertEqual(plugins_update.state, STATES.NO_CHANGES_REQUIRED)
+        self.assertEqual(plugins_update.state, 'no_changes_required')
         self._execute_workflows()
         self._assert_host_values(self.versions[0])
 
         # Update only minor version - nothing should change
         plugins_update = self._perform_plugins_update(all_to_minor=True,
                                                       all_to_latest=False)
-        self.assertEqual(plugins_update.state, STATES.NO_CHANGES_REQUIRED)
+        self.assertEqual(plugins_update.state, 'no_changes_required')
         self._execute_workflows()
         self._assert_host_values(self.versions[0])
 
         # This should do the update
         plugins_update = self._perform_plugins_update(
             to_latest=[self.plugin_name])
-        self.assertEqual(plugins_update.state, STATES.SUCCESSFUL)
+        self.assertEqual(plugins_update.state, 'successful')
         self._execute_workflows()
         self._assert_host_values(self.versions[1])
 

@@ -29,8 +29,6 @@ from integration_tests import AgentlessTestCase
 from cloudify.snapshots import STATES
 from cloudify.models_states import AgentState
 
-from manager_rest.constants import DEFAULT_TENANT_NAME
-
 from cloudify_rest_client.executions import Execution
 from cloudify_rest_client.exceptions import CloudifyClientError
 
@@ -319,7 +317,7 @@ class TestSnapshot(AgentlessTestCase):
 
     def _assert_4_4_0_plugins_restored_bad_plugin(
             self,
-            tenant_name=DEFAULT_TENANT_NAME,
+            tenant_name='default_tenant',
             number_of_deployments=0):
         with self.client_using_tenant(self.client, tenant_name):
             plugins = self.client.plugins.list()
@@ -376,7 +374,7 @@ class TestSnapshot(AgentlessTestCase):
     def _upload_and_restore_snapshot(
             self,
             snapshot_path,
-            tenant_name=DEFAULT_TENANT_NAME,
+            tenant_name='default_tenant',
             snapshot_id=None,
             desired_execution_status=Execution.TERMINATED,
             error_execution_status=Execution.FAILED,

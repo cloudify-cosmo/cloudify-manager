@@ -2,7 +2,6 @@ import pytest
 import requests
 
 from cloudify_cli.env import get_auth_header
-from manager_rest.constants import DEFAULT_TENANT_ROLE
 
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.constants import USER_ROLE
@@ -22,7 +21,7 @@ class ResourcesAvailableTest(AgentlessTestCase):
         self.client.tenants.create(tenant_name='t')
         self.client.tenants.add_user(username='u',
                                      tenant_name='t',
-                                     role=DEFAULT_TENANT_ROLE)
+                                     role='user')
         tenant_t_client = self.create_rest_client(tenant='t')
         tenant_t_client.blueprints.upload(resource('dsl/empty_blueprint.yaml'),
                                           entity_id='blu')
