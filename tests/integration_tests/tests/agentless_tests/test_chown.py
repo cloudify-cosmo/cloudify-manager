@@ -21,14 +21,8 @@ class BlueprintChownTest(AgentlessTestCase):
 
         blueprint = self.client.blueprints.get(self.BLUEPRINT_ID)
         assert blueprint.get('created_by') == 'user1'
-
-        try:
+        with self.assertRaisesRegex(CloudifyClientError, 'has blueprints'):
             self.client.users.delete('user1')
-        except CloudifyClientError as ex:
-            assert ex.status_code == 400
-            assert 'cannot delete user' in str(ex).lower()
-        else:
-            assert False
 
         self.client.blueprints.update(self.BLUEPRINT_ID, {'creator': 'admin'})
         self.client.users.delete('user1')
@@ -44,14 +38,8 @@ class BlueprintChownTest(AgentlessTestCase):
         a_client.blueprints.upload(
             resource('dsl/{}'.format(self.BLUEPRINT_FILENAME)),
             entity_id=self.BLUEPRINT_ID)
-        try:
+        with self.assertRaisesRegex(ForbiddenError, 'set_owner'):
             a_client.blueprints.update(self.BLUEPRINT_ID, {'creator': 'admin'})
-        except ForbiddenError as ex:
-            assert ex.status_code == 403
-            assert 'not permitted' in str(ex).lower()
-            assert 'set_owner' in str(ex).lower()
-        else:
-            assert False
 
         a_client.blueprints.delete(self.BLUEPRINT_ID)
         self.client.tenants.remove_user('user1', 'test_tenant')
