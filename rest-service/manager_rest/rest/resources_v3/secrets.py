@@ -171,6 +171,9 @@ class SecretsKey(SecuredResource):
         request_dict = rest_utils.get_json_and_verify_params({
             'creator': {'type': text_type, 'optional': True}
         })
+        creator_username = request_dict.get('creator')
+        if not creator_username:
+            return
         creator = rest_utils.valid_user(request_dict.get('creator'))
         if creator:
             secret.creator = creator
