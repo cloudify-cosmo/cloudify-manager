@@ -105,6 +105,7 @@ class SecretsKey(SecuredResource):
         self._update_is_hidden_value(secret)
         self._update_visibility(secret)
         self._update_value(secret)
+        self._update_owner(secret)
         secret.updated_at = utils.get_formatted_timestamp()
         return get_storage_manager().update(secret, validate_global=True)
 
@@ -165,6 +166,14 @@ class SecretsKey(SecuredResource):
         value = request_dict.get('value')
         if value:
             secret.value = encrypt(value)
+
+    def _update_owner(self, secret):
+        request_dict = rest_utils.get_json_and_verify_params({
+            'creator': {'type': text_type, 'optional': True}
+        })
+        creator = rest_utils.valid_user(request_dict.get('creator'))
+        if creator:
+            secret.creator = creator
 
 
 class Secrets(SecuredResource):
