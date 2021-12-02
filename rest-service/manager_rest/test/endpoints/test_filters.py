@@ -2,7 +2,6 @@ from cloudify.models_states import VisibilityState
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from manager_rest.test import base_test
-from manager_rest.test.attribute import attr
 from manager_rest.utils import get_formatted_timestamp
 from manager_rest.manager_exceptions import BadFilterRule
 from manager_rest.storage import models, get_storage_manager
@@ -166,7 +165,6 @@ class FiltersFunctionalityBaseCase(base_test.BaseServerTestCase):
                                          self.resource_model)
 
 
-@attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
 class BlueprintsFiltersFunctionalityCase(FiltersFunctionalityBaseCase):
     __test__ = True
 
@@ -209,7 +207,6 @@ class BlueprintsFiltersFunctionalityCase(FiltersFunctionalityBaseCase):
         )
 
 
-@attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
 class DeploymentFiltersFunctionalityCase(FiltersFunctionalityBaseCase):
     __test__ = True
 
@@ -482,7 +479,6 @@ class FiltersBaseCase(base_test.BaseServerTestCase):
         sm.put(new_filter)
 
 
-@attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
 class BlueprintsFiltersCase(FiltersBaseCase):
     __test__ = True
 
@@ -491,7 +487,6 @@ class BlueprintsFiltersCase(FiltersBaseCase):
                       LEGAL_FILTER_RULES + BLUEPRINT_SPECIFIC_FILTER_RULES)
 
 
-@attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
 class DeploymentsFiltersCase(FiltersBaseCase):
     __test__ = True
 

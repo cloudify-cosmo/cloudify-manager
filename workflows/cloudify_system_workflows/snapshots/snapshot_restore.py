@@ -190,6 +190,7 @@ class SnapshotRestore(object):
             if self._restore_certificates:
                 self._restore_certificate()
 
+            shutil.rmtree(self._get_snapshot_dir())
         finally:
             self._trigger_post_restore_commands()
             ctx.logger.debug('Removing temp dir: {0}'.format(self._tempdir))
@@ -685,17 +686,19 @@ class SnapshotRestore(object):
         return metadata
 
     def _get_snapshot_path(self):
-        """Calculate the snapshot path from the config + snapshot ID
-        """
-        file_server_root = self._config.file_server_root
-        snapshots_dir = os.path.join(
-            file_server_root,
-            FILE_SERVER_SNAPSHOTS_FOLDER
-        )
+        """Calculate the snapshot path from the config + snapshot ID"""
         return os.path.join(
-            snapshots_dir,
-            self._snapshot_id,
+            self._get_snapshot_dir(),
             '{0}.zip'.format(self._snapshot_id)
+         )
+
+    def _get_snapshot_dir(self):
+        """Get the snapshot base path (the directory it is put in)."""
+        file_server_root = self._config.file_server_root
+        return os.path.join(
+            file_server_root,
+            FILE_SERVER_SNAPSHOTS_FOLDER,
+            self._snapshot_id,
         )
 
     def _restore_credentials(self, postgres):

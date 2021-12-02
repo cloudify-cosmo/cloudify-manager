@@ -15,12 +15,9 @@
 
 from json import loads
 
-from manager_rest.test.attribute import attr
-
 from manager_rest.test import base_test
 
 
-@attr(client_min_version=3, client_max_version=base_test.LATEST_API_VERSION)
 class UserTestCase(base_test.BaseServerTestCase):
 
     def test_get_user(self):

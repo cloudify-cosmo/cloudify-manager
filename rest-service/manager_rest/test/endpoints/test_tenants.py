@@ -21,13 +21,11 @@ from manager_rest.storage import models
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from manager_rest.test import base_test
-from manager_rest.test.attribute import attr
 
 
 CREDENTIALS_PERMISSION = 'tenant_rabbitmq_credentials'
 
 
-@attr(client_min_version=3, client_max_version=base_test.LATEST_API_VERSION)
 @patch('manager_rest.security.secured_resource.premium_enabled', False)
 class TenantsCommunityTestCase(base_test.BaseServerTestCase):
     def test_list_tenants(self):

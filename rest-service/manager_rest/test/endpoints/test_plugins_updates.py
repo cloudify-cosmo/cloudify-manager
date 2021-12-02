@@ -25,8 +25,6 @@ from dsl_parser.constants import (PLUGIN_NAME_KEY,
                                   DEPLOYMENT_PLUGINS_TO_INSTALL,
                                   HOST_AGENT_PLUGINS_TO_INSTALL)
 
-from manager_rest.test import base_test
-from manager_rest.test.attribute import attr
 from manager_rest.test.base_test import BaseServerTestCase
 
 from manager_rest.plugins_update.constants import STATES
@@ -37,7 +35,6 @@ from manager_rest.plugins_update.manager import \
 from manager_rest.plugins_update.constants import STATES as PluginsUpdateStates
 
 
-@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
 class PluginsUpdatesBaseTest(BaseServerTestCase):
     def setUp(self):
         super(PluginsUpdatesBaseTest, self).setUp()
@@ -54,8 +51,6 @@ class PluginsUpdatesBaseTest(BaseServerTestCase):
         self.addCleanup(plugin_change_cleanup)
 
 
-@attr(client_min_version=3.1,
-      client_max_version=base_test.LATEST_API_VERSION)
 class PluginsUpdatesTest(PluginsUpdatesBaseTest):
 
     def test_returns_relevant_plugins_updates(self):
@@ -82,8 +77,6 @@ class PluginsUpdatesTest(PluginsUpdatesBaseTest):
         self.assertEqual(0, len(self.client.plugins_update.list().items))
 
 
-@attr(client_min_version=3.1,
-      client_max_version=base_test.LATEST_API_VERSION)
 class PluginsUpdateIdTest(PluginsUpdatesBaseTest):
 
     def test_raises_when_plugins_update_doesnt_exist(self):
@@ -105,8 +98,6 @@ class PluginsUpdateIdTest(PluginsUpdatesBaseTest):
         self.assertEqual(plugins_update.id, response_plugins_update.id)
 
 
-@attr(client_min_version=3.1,
-      client_max_version=base_test.LATEST_API_VERSION)
 class PluginsUpdateTest(PluginsUpdatesBaseTest):
     """
     Test plugins update.
@@ -345,8 +336,6 @@ class PluginsUpdateTest(PluginsUpdatesBaseTest):
             self._sm.update(deployment)
 
 
-@attr(client_min_version=3.1,
-      client_max_version=base_test.LATEST_API_VERSION)
 class PluginsToInstallUpdateTest(unittest.TestCase):
 
     def test_detects_no_addition_identical_plan(self):

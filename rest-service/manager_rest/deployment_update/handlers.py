@@ -946,7 +946,7 @@ class DeploymentDependencies(UpdateHandler):
             keep_old_deployment_dependencies,
             dep_plan_filter_func=is_node)
 
-        update_inter_deployment_dependencies(self.sm)
+        update_inter_deployment_dependencies(self.sm, dep_update.deployment)
 
 
 def _handle_version(version):

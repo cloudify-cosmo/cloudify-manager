@@ -14,13 +14,11 @@
 #  * limitations under the License.
 
 import uuid
-from manager_rest.test.attribute import attr
 
 from manager_rest.test import base_test
 from cloudify_rest_client.exceptions import FunctionsEvaluationError
 
 
-@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
 class AttributesTestCase(base_test.BaseServerTestCase):
 
     def setUp(self):
@@ -109,9 +107,7 @@ class AttributesTestCase(base_test.BaseServerTestCase):
             self.client.evaluate.functions(self.id_, {}, payload)
 
 
-@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
 class MultiInstanceAttributesTestCase(base_test.BaseServerTestCase):
-
     def test_multi_instance_attributes(self):
         # The actual multi instance resolution logic is tested in the dsl
         # parser unit tests. This test serves only to have an end to end path

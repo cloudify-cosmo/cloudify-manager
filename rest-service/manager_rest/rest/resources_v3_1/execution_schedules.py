@@ -12,10 +12,13 @@ from manager_rest.rest.rest_utils import (
     validate_inputs,
     get_args_and_verify_arguments,
     parse_datetime_multiple_formats,
-    compute_rule_from_scheduling_params
+    parse_datetime_string,
+    compute_rule_from_scheduling_params,
+    valid_user,
 )
 from manager_rest.security import SecuredResource
-from manager_rest.security.authorization import authorize
+from manager_rest.security.authorization import (authorize,
+                                                 check_user_action_allowed)
 from manager_rest.storage import get_storage_manager, models
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.utils import get_formatted_timestamp
@@ -55,10 +58,19 @@ class ExecutionSchedulesId(SecuredResource):
 
         validate_inputs({'schedule_id': schedule_id})
         deployment_id = get_args_and_verify_arguments([
-            Argument('deployment_id', type=text_type, required=True)
+            Argument('deployment_id', type=text_type, required=True),
         ])['deployment_id']
         request_dict = get_json_and_verify_params({'workflow_id',
                                                    'since'})
+
+        created_at = creator = None
+        if request_dict.get('created_at'):
+            check_user_action_allowed('set_timestamp', None, True)
+            created_at = parse_datetime_string(request_dict['created_at'])
+
+        if request_dict.get('creator'):
+            check_user_action_allowed('set_owner', None, True)
+            creator = valid_user(request_dict['creator'])
 
         workflow_id = request_dict['workflow_id']
         execution_arguments = self._get_execution_arguments(request_dict)
@@ -87,7 +99,7 @@ class ExecutionSchedulesId(SecuredResource):
         schedule = models.ExecutionSchedule(
             id=schedule_id,
             deployment=deployment,
-            created_at=now,
+            created_at=created_at or now,
             since=since,
             until=until,
             rule=rule,
@@ -97,6 +109,8 @@ class ExecutionSchedulesId(SecuredResource):
             execution_arguments=execution_arguments,
             stop_on_fail=stop_on_fail,
         )
+        if creator:
+            schedule.creator = creator
         schedule.next_occurrence = schedule.compute_next_occurrence()
         return rm.sm.put(schedule), 201
 
@@ -120,10 +134,13 @@ class ExecutionSchedulesId(SecuredResource):
 
         since = request.json.get('since')
         until = request.json.get('until')
+        workflow_id = request.json.get('workflow_id')
         if since:
             schedule.since = parse_datetime_multiple_formats(since)
         if until:
             schedule.until = parse_datetime_multiple_formats(until)
+        if workflow_id:
+            schedule.workflow_id = workflow_id
         if slip is not None:
             schedule.slip = slip
         if stop_on_fail is not None:

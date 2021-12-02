@@ -8,6 +8,7 @@ from cloudify.workflows import events as common_events
 from manager_rest.rest.rest_utils import (
     get_args_and_verify_arguments,
     get_json_and_verify_params,
+    parse_datetime_string,
 )
 from manager_rest.rest.rest_decorators import (
     marshal_with,
@@ -17,7 +18,7 @@ from manager_rest.rest.rest_decorators import (
 from manager_rest.storage import (
     get_storage_manager,
     models,
-    db
+    db,
 )
 from manager_rest.security.authorization import authorize
 from manager_rest.resource_manager import get_resource_manager
@@ -257,16 +258,30 @@ class TasksGraphsId(SecuredResource):
     @marshal_with(models.TasksGraph)
     def post(self, **kwargs):
         params = get_json_and_verify_params({
-            'name': {'type': text_type, 'required': True},
-            'execution_id': {'type': text_type, 'required': True},
-            'operations': {'required': False}
+            'name': {'type': text_type},
+            'execution_id': {'type': text_type},
+            'operations': {'optional': True},
+            'created_at': {'optional': True},
+            'graph_id': {'optional': True},
         })
+        created_at = params.get('created_at')
+        operations = params.get('operations', [])
+        if params.get('graph_id'):
+            check_user_action_allowed('set_execution_details')
+        if created_at or any(op.get('created_at') for op in operations):
+            check_user_action_allowed('set_timestamp')
+            created_at = parse_datetime_string(params.get('created_at'))
+            for op in operations:
+                if op.get('created_at'):
+                    op['created_at'] = parse_datetime_string(op['created_at'])
         sm = get_storage_manager()
         with sm.transaction():
             tasks_graph = get_resource_manager().create_tasks_graph(
                 name=params['name'],
                 execution_id=params['execution_id'],
-                operations=params.get('operations', [])
+                operations=params.get('operations', []),
+                created_at=created_at,
+                graph_id=params.get('graph_id')
             )
         return tasks_graph, 201
 

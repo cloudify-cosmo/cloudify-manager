@@ -1,18 +1,3 @@
-#########
-# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 import os
 import uuid
 import shutil
@@ -102,14 +87,15 @@ class PluginsUpdateManager(object):
         temp_blueprint.is_hidden = True
         return self.sm.update(temp_blueprint)
 
-    def _stage_plugin_update(self, blueprint, forced):
-        update_id = str(uuid.uuid4())
+    def stage_plugin_update(self, blueprint, forced,
+                            update_id=None, created_at=None):
+        update_id = update_id or str(uuid.uuid4())
         plugins_update = models.PluginsUpdate(
             id=update_id,
-            created_at=utils.get_formatted_timestamp(),
+            created_at=created_at or utils.get_formatted_timestamp(),
             forced=forced)
         plugins_update.set_blueprint(blueprint)
-        return self.sm.put(plugins_update)
+        return plugins_update
 
     def reevaluate_updates_statuses_per_blueprint(self, blueprint_id: str):
         for plugins_update in self.list_plugins_updates(
@@ -146,8 +132,9 @@ class PluginsUpdateManager(object):
 
         changes_required = _did_plugins_to_install_change(temp_plan,
                                                           blueprint.plan)
-        plugins_update = self._stage_plugin_update(blueprint,
-                                                   filters.get('force', False))
+        plugins_update = self.stage_plugin_update(blueprint,
+                                                  filters.get('force', False))
+        self.sm.put(plugins_update)
         if changes_required:
             plugins_update.deployments_to_update = [
                 dep.id for dep in self._get_deployments_to_update(blueprint_id)

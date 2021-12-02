@@ -116,9 +116,6 @@ class FileServerAuth(SecuredResource):
         """
         uri = request.headers['X-Original-Uri'].strip('/')
         method = request.headers['X-Original-Method']
-        with open('/tmp/ilikecake', 'w') as fh:
-            fh.write('%s\n' % uri)
-            fh.write('%s\n' % method)
         if uri.startswith('api/'):
             resource = uri.split('/')[2]
 

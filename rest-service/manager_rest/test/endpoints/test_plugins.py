@@ -14,9 +14,7 @@
 #  * limitations under the License.
 
 import os
-from manager_rest.test.attribute import attr
 
-from manager_rest.test import base_test
 from manager_rest.test.base_test import BaseServerTestCase
 
 from cloudify_rest_client import exceptions
@@ -37,7 +35,6 @@ TEST_PACKAGE_INCONSISTENT_YAML_FILE = \
 OLD_TEST_PACKAGE_VERSION = '1.2'
 
 
-@attr(client_min_version=2, client_max_version=base_test.LATEST_API_VERSION)
 class PluginsTest(BaseServerTestCase):
     """
     Test plugins upload and download.
@@ -77,8 +74,6 @@ class PluginsTest(BaseServerTestCase):
                          'expecting 0 plugin result, '
                          'got {0}'.format(len(plugins_list)))
 
-    @attr(client_min_version=3,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_sort_list_plugins(self):
         self.upload_plugin(TEST_PACKAGE_NAME, OLD_TEST_PACKAGE_VERSION)
         self.upload_plugin(TEST_PACKAGE_NAME, TEST_PACKAGE_VERSION)
@@ -120,8 +115,6 @@ class PluginsTest(BaseServerTestCase):
         self.assertNotEqual(response_a.json.get('archive_name'),
                             response_b.json.get('archive_name'))
 
-    @attr(client_min_version=2.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_delete_force_with_cda_plugin(self):
         self.upload_plugin(TEST_PACKAGE_NAME, TEST_PACKAGE_VERSION)
         self.put_deployment(blueprint_file_name='uses_script_plugin.yaml')
@@ -132,8 +125,6 @@ class PluginsTest(BaseServerTestCase):
         self.client.plugins.delete(plugin_id=plugin.id, force=True)
         self.assertEqual(0, len(self.client.plugins.list()))
 
-    @attr(client_min_version=2.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_delete_force_with_host_agent_plugin(self):
         self.upload_plugin(TEST_PACKAGE_NAME,
                            TEST_PACKAGE_VERSION,
@@ -146,8 +137,6 @@ class PluginsTest(BaseServerTestCase):
         self.client.plugins.delete(plugin_id=plugin.id, force=True)
         self.assertEqual(0, len(self.client.plugins.list()))
 
-    @attr(client_min_version=3,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_plugin_upload_progress(self):
         tmp_file_path = self.create_wheel('cloudify-script-plugin', '1.5.3')
         yaml_path = self.get_full_path('mock_blueprint/plugin.yaml')
@@ -162,8 +151,6 @@ class PluginsTest(BaseServerTestCase):
         finally:
             self.quiet_delete(tmp_file_path)
 
-    @attr(client_min_version=3,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_plugin_upload_without_yaml(self):
         tmp_file_path = self.create_wheel('wagon', '0.6.1')
         try:
@@ -171,8 +158,6 @@ class PluginsTest(BaseServerTestCase):
         finally:
             self.quiet_delete(tmp_file_path)
 
-    @attr(client_min_version=3,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_plugin_download_progress(self):
         tmp_file_path = self.create_wheel(
             TEST_PACKAGE_NAME,
@@ -194,8 +179,6 @@ class PluginsTest(BaseServerTestCase):
             self.quiet_delete(tmp_file_path)
             self.quiet_delete(tmp_local_path)
 
-    @attr(client_min_version=3,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_caravan_upload(self):
         self.upload_caravan(
             {
@@ -208,8 +191,6 @@ class PluginsTest(BaseServerTestCase):
         plugins_list = self.client.plugins.list()
         self.assertEqual(len(plugins_list), 2)
 
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_plugin_upload_with_title(self):
         tmp_file_path = self.create_wheel(
             TEST_PACKAGE_NAME,
@@ -222,8 +203,6 @@ class PluginsTest(BaseServerTestCase):
         self.assertIsNotNone(get_plugin_by_id_response)
         self.assertEqual(get_plugin_by_id_response.title, 'test')
 
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_plugin_upload_check_default_title(self):
         uploaded_plugin = self.upload_plugin(TEST_PACKAGE_NAME,
                                              TEST_PACKAGE_VERSION).json

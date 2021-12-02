@@ -72,7 +72,6 @@ pipeline {
                   pytest \
                     -sv \
                     -n 3 \
-                    -a '(client_min_version is None or client_min_version <= 3.1) and (client_max_version is None or 3.1 <= client_max_version)' \
                     rest-service/manager_rest
                 ''', label: "restservice tests"
                 echo 'Running pytest <<workflows>>'
@@ -114,12 +113,9 @@ pipeline {
           steps {
             container('rpmbuild'){
               sh """
-                cd && mkdir rpmbuild && cd rpmbuild
+                cd ~/rpmbuild
                 git clone --single-branch --branch ${env.BRANCH} https://github.com/cloudify-cosmo/cloudify-manager.git SOURCES && cd SOURCES
               """
-
-              echo 'Download sources for RPM spec file & Build RPM'
-              sh "yum install rpmdevtools -y"
 
               echo 'Build Rest Service RPM'
               buildRpm('~/rpmbuild/SOURCES', 'cloudify-rest-service.spec', "${env.VERSION}", "${env.PRERELEASE}")

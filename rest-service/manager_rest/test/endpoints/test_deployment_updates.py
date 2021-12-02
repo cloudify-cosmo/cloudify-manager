@@ -1,40 +1,17 @@
-#########
-# Copyright (c) 2017-2019 Cloudify Platform Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 import os
 import re
 import uuid
 import datetime
-import unittest
 
 from pytest import mark
-from mock import patch, MagicMock, call
+from mock import patch
 
-from dsl_parser.constants import INTER_DEPLOYMENT_FUNCTIONS
 from dsl_parser import exceptions as parser_exceptions, constants
 
 from cloudify_rest_client.exceptions import CloudifyClientError
-from cloudify.deployment_dependencies import (DEPENDENCY_CREATOR,
-                                              SOURCE_DEPLOYMENT,
-                                              TARGET_DEPLOYMENT,
-                                              create_deployment_dependency)
 
 from manager_rest.storage import models
 from manager_rest.test import base_test
-from manager_rest.test.attribute import attr
-from manager_rest.deployment_update import handlers
 from manager_rest.test.utils import get_resource as resource
 
 
@@ -55,7 +32,6 @@ class DeploymentUpdatesBase(base_test.BaseServerTestCase):
         )
 
 
-@attr(client_min_version=2.1, client_max_version=base_test.LATEST_API_VERSION)
 class DeploymentUpdatesTestCase(DeploymentUpdatesBase):
 
     execution_parameters = {
@@ -198,8 +174,6 @@ class DeploymentUpdatesTestCase(DeploymentUpdatesBase):
                                        "%Y-%m-%dT%H:%M:%S.%fZ")
         self.assertGreater(timestamp_after_update, timestamp_before_update)
 
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     @patch('manager_rest.deployment_update.handlers.'
            'DeploymentUpdateNodeHandler.finalize')
     @patch('manager_rest.deployment_update.handlers.'
@@ -334,7 +308,7 @@ class DeploymentUpdatesTestCase(DeploymentUpdatesBase):
         self.put_deployment(deployment_id='parent', blueprint_id='parent')
         self._deploy_base('child', 'one_node.yaml')
         response = self._update('child', 'invalid_one_label.yaml')
-        self.assertEqual(400, response.status_code)
+        self.assertEqual(404, response.status_code)
         self.assertEqual('deployment_parent_not_found_error',
                          response.json['error_code'])
 
@@ -463,7 +437,6 @@ class DeploymentUpdatesStepAndStageTestCase(base_test.BaseServerTestCase):
                                **step)
 
 
-@attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
 class DeploymentUpdatesSourcePluginsTestCase(DeploymentUpdatesBase):
 
     def _deploy_base(self,
@@ -576,264 +549,3 @@ class DeploymentUpdatesSourcePluginsTestCase(DeploymentUpdatesBase):
             execution.parameters['central_plugins_to_install'], [])
         self.assertListEqual(
             execution.parameters['central_plugins_to_uninstall'], [])
-
-
-class TestDeploymentDependencies(unittest.TestCase):
-    class MockDependency(dict):
-        def __init__(self, dependency):
-            self.update(dependency)
-
-        @property
-        def dependency_creator(self):
-            return self[DEPENDENCY_CREATOR]
-
-        @property
-        def source_deployment(self):
-            return self[SOURCE_DEPLOYMENT]
-
-        @property
-        def target_deployment(self):
-            return self[TARGET_DEPLOYMENT]
-
-        @property
-        def target_deployment_func(self):
-            return self['target_deployment_func']
-
-        @target_deployment.setter
-        def target_deployment(self, value):
-            self[TARGET_DEPLOYMENT] = value
-
-        @target_deployment_func.setter
-        def target_deployment_func(self, value):
-            self['target_deployment_func'] = value
-
-    def setUp(self):
-        self.mock_get_rm = patch('manager_rest.deployment_update.handlers'
-                                 '.get_resource_manager')
-        self.mock_get_rm.start()
-        self.mock_sm = MagicMock()
-        self.handler = handlers.DeploymentDependencies(self.mock_sm)
-        self.mock_inter_deployment_dependency = patch(
-            'manager_rest.storage.models.InterDeploymentDependencies')
-        self.mock_inter_deployment_dependency.start(
-        ).side_effect = lambda **_: self.MockDependency(_)
-        self.mock_dep_update = MagicMock()
-        self.mock_dep_update.deployment_plan = {INTER_DEPLOYMENT_FUNCTIONS: {}}
-        self.mock_dep_update.deployment_id = 'test_deployment_id'
-
-    def tearDown(self):
-        self.mock_get_rm.stop()
-        self.mock_inter_deployment_dependency.stop()
-        super(TestDeploymentDependencies, self).tearDown()
-
-    def _assert_sm_calls(self,
-                         put_calls=None,
-                         update_calls=None,
-                         delete_calls=None):
-        def assert_function_calls(sm_func, calls):
-            if calls is None:
-                sm_func.assert_not_called()
-            else:
-                sm_func.assert_has_calls(calls, any_order=True)
-        self._remove_unnecessary_keys_from_put()
-        assert_function_calls(self.mock_sm.put, put_calls)
-        assert_function_calls(self.mock_sm.update, update_calls)
-        assert_function_calls(self.mock_sm.delete, delete_calls)
-
-    def _remove_unnecessary_keys_from_put(self):
-        for call_args in self.mock_sm.put.call_args_list:
-            for call_obj in call_args.args:
-                if all(k in call_obj for k in ('id', 'created_at')):
-                    call_obj.pop('id')
-                    call_obj.pop('created_at')
-
-    @staticmethod
-    def _as_calls(_list):
-        return [call(i) for i in _list]
-
-    def _build_mock_dependency(self,
-                               dependency_creator,
-                               target_deployment=None,
-                               target_deployment_func=None):
-        mock_dependency = self.MockDependency(
-            create_deployment_dependency(dependency_creator,
-                                         self.mock_dep_update.deployment_id,
-                                         target_deployment))
-        if target_deployment_func:
-            mock_dependency.update(
-                {'target_deployment_func': target_deployment_func})
-
-        return mock_dependency
-
-    def test_does_nothing_with_empty_new_and_old_dependencies(self):
-        curr_dependencies = []
-        self.mock_sm.list.return_value = curr_dependencies
-        self.handler._handle_dependency_changes(self.mock_dep_update,
-                                                {},
-                                                dep_plan_filter_func=_true)
-        self._assert_sm_calls()
-
-    def test_only_deletes_current_dependencies(self):
-        curr_dependencies = [self._build_mock_dependency('creator_1')]
-        self.mock_sm.list.return_value = curr_dependencies
-        self.handler._handle_dependency_changes(self.mock_dep_update,
-                                                {},
-                                                dep_plan_filter_func=_true)
-        self._assert_sm_calls(
-            delete_calls=self._as_calls(curr_dependencies))
-
-    def test_doesnt_delete_current_dependencies(self):
-        curr_dependencies = [self._build_mock_dependency('creator_1')]
-        self.mock_sm.list.return_value = curr_dependencies
-        self.handler._handle_dependency_changes(
-            self.mock_dep_update,
-            {},
-            dep_plan_filter_func=_true,
-            keep_outdated_dependencies=True)
-        self._assert_sm_calls()
-
-    def test_only_adds_new_dependencies(self):
-        curr_dependencies = []
-        self.mock_sm.list.return_value = curr_dependencies
-        dependency_creating_functions = {'creator_1': ('target_1', 'target_1')}
-        self.mock_dep_update.deployment_plan[
-            INTER_DEPLOYMENT_FUNCTIONS] = dependency_creating_functions
-        self.mock_sm.get.side_effect = ['test_deployment_id', 'target_1']
-        self.handler._handle_dependency_changes(self.mock_dep_update,
-                                                {},
-                                                dep_plan_filter_func=_true)
-        put_calls = self._as_calls(
-            [self._build_mock_dependency('creator_1', 'target_1', 'target_1')]
-        )
-        self._assert_sm_calls(put_calls=put_calls)
-
-    def test_creates_new_dependencies_and_deletes_current(self):
-        curr_dependencies = [self._build_mock_dependency('creator_1')]
-        self.mock_sm.list.return_value = curr_dependencies
-        dependency_creating_functions = {'creator_2': ('target_1', 'target_1')}
-        self.mock_dep_update.deployment_plan[
-            INTER_DEPLOYMENT_FUNCTIONS] = dependency_creating_functions
-        self.mock_sm.get.side_effect = ['test_deployment_id', 'target_1']
-        self.handler._handle_dependency_changes(self.mock_dep_update,
-                                                {},
-                                                dep_plan_filter_func=_true)
-        put_calls = self._as_calls(
-            [self._build_mock_dependency('creator_2', 'target_1', 'target_1')]
-        )
-        delete_calls = self._as_calls(curr_dependencies)
-        self._assert_sm_calls(put_calls=put_calls,
-                              delete_calls=delete_calls)
-
-    def test_creates_new_deletes_current_updates_common_ignores_filtered(self):
-        def ignores_ignore_me(dependency_creator):
-            return dependency_creator != 'ignore_me'
-
-        common_dependency_updated = self._build_mock_dependency(
-            'creator_common_updated', 'target_old')
-        common_dependency_isnt_updated = self._build_mock_dependency(
-            'creator_common2', 'target_old')
-        should_be_ignored = self._build_mock_dependency(
-            'ignore_me', 'doesnt_matter')
-        should_be_deleted = self._build_mock_dependency(
-            'creator_1', 'target_old')
-        curr_dependencies = [
-            common_dependency_updated,
-            common_dependency_isnt_updated,
-            should_be_ignored,
-            should_be_deleted
-        ]
-        self.mock_sm.list.return_value = curr_dependencies
-        dependency_creating_functions = {
-            'creator_2': ('target_1', 'target_1'),
-            common_dependency_updated.dependency_creator: (
-                'target_new', 'target_new'),
-            common_dependency_isnt_updated.dependency_creator:
-                ('target_old', 'target_old')
-        }
-        get_dict = {
-            (models.Deployment, 'test_deployment_id'): 'test_deployment_id',
-            (models.Deployment, 'target_1'): 'target_1',
-            (models.Deployment, 'target_new'): 'target_new',
-            (models.Deployment, 'target_old'): 'target_old',
-        }
-
-        def side_effect(*args, **kwargs):
-            return get_dict[args]
-
-        self.mock_sm.get = MagicMock(side_effect=side_effect)
-        self.mock_dep_update.deployment_plan[
-            INTER_DEPLOYMENT_FUNCTIONS] = dependency_creating_functions
-        self.handler._handle_dependency_changes(
-            self.mock_dep_update,
-            {},
-            dep_plan_filter_func=ignores_ignore_me)
-        put_calls = self._as_calls(
-            [
-                self._build_mock_dependency(
-                    'creator_2', 'target_1', 'target_1')
-            ]
-        )
-        update_calls = self._as_calls(
-            [
-                self._build_mock_dependency(
-                    common_dependency_updated.dependency_creator,
-                    'target_new', 'target_new')
-            ]
-        )
-        delete_calls = self._as_calls([should_be_deleted])
-        self._assert_sm_calls(put_calls=put_calls,
-                              update_calls=update_calls,
-                              delete_calls=delete_calls)
-        missing_update_calls = self._as_calls([common_dependency_isnt_updated])
-        try:
-            self.mock_sm.update.assert_has_calls(missing_update_calls)
-        except AssertionError:
-            pass
-        else:
-            raise AssertionError("The calls {0} shouldn't have been used."
-                                 "".format(missing_update_calls))
-
-    def test_updates_all(self):
-        common_dependency1 = self._build_mock_dependency(
-            'creator_common_1', 'target_old_1')
-        common_dependency2 = self._build_mock_dependency(
-            'creator_common_2', 'target_old_2')
-        curr_dependencies = [common_dependency1, common_dependency2]
-        self.mock_sm.list.return_value = curr_dependencies
-        dependency_creating_functions = {
-            common_dependency1.dependency_creator: (
-                'target_1_new', 'target_1_new'),
-            common_dependency2.dependency_creator: (
-                'target_2_new', 'target_2_new')
-        }
-        self.mock_dep_update.deployment_plan[
-            INTER_DEPLOYMENT_FUNCTIONS] = dependency_creating_functions
-
-        get_dict = {
-            (models.Deployment, 'test_deployment_id'): 'test_deployment_id',
-            (models.Deployment, 'target_1_new'): 'target_1_new',
-            (models.Deployment, 'target_2_new'): 'target_2_new',
-        }
-
-        def side_effect(*args, **kwargs):
-            return get_dict[args]
-
-        self.mock_sm.get = MagicMock(side_effect=side_effect)
-        self.handler._handle_dependency_changes(self.mock_dep_update,
-                                                {},
-                                                dep_plan_filter_func=_true)
-        update_calls = self._as_calls(
-            [
-                self._build_mock_dependency(
-                    common_dependency1.dependency_creator,
-                    'target_1_new', 'target_1_new'),
-                self._build_mock_dependency(
-                    common_dependency2.dependency_creator,
-                    'target_2_new', 'target_2_new')
-            ]
-        )
-        self._assert_sm_calls(update_calls=update_calls)
-
-
-def _true(*_, **__):
-    return True

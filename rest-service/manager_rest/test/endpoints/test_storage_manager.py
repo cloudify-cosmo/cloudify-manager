@@ -23,10 +23,8 @@ from cloudify.models_states import VisibilityState
 from manager_rest import manager_exceptions, utils
 from manager_rest.test import base_test
 from manager_rest.storage import models, db
-from manager_rest.test.attribute import attr
 
 
-@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
 class StorageManagerTests(base_test.BaseServerTestCase):
 
     def test_store_load_delete_blueprint(self):
@@ -218,14 +216,13 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                 'config.instance.default_page_size',
                 10)
     def test_all_results_query(self):
-        now = utils.get_formatted_timestamp()
         for i in range(20):
             secret = models.Secret(id='secret_{}'.format(i),
                                    value='value',
-                                   created_at=now,
-                                   updated_at=now,
+                                   tenant=self.tenant,
+                                   creator=self.user,
                                    visibility=VisibilityState.TENANT)
-            self.sm.put(secret)
+            db.session.add(secret)
 
         secret_list = self.sm.list(
             models.Secret,
@@ -256,6 +253,16 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         )
         self.assertEqual({secret.id for secret in secrets_list},
                          {'secret_0', 'secret_2'})
+
+    def test_list_with_empty_filter(self):
+        secret = models.Secret(id='secret',
+                               value='value',
+                               tenant=self.tenant,
+                               creator=self.user,
+                               visibility=VisibilityState.TENANT)
+        db.session.add(secret)
+        retrieved = self.sm.list(models.Secret, filters={'_storage_id': []})
+        assert len(retrieved) == 0
 
 
 class TestTransactions(base_test.BaseServerTestCase):

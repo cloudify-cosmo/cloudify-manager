@@ -16,6 +16,7 @@ from flask import request, current_app
 from flask_restful.reqparse import Argument
 from flask_restful.inputs import boolean
 
+from cloudify._compat import unquote
 from cloudify.models_states import SnapshotState, BlueprintUploadState
 from manager_rest.manager_exceptions import ArchiveTypeError
 from manager_rest.constants import (FILE_SERVER_PLUGINS_FOLDER,
@@ -324,7 +325,9 @@ class UploadedBlueprintsManager(UploadedDataManager):
 
         args = get_args_and_verify_arguments([
             Argument('private_resource', type=boolean),
-            Argument('application_file_name', default='')
+            Argument('application_file_name', default=''),
+            Argument('skip_execution', type=boolean, default=False),
+            Argument('state', default=None),
         ])
 
         # Handle importing blueprint through url
@@ -349,13 +352,18 @@ class UploadedBlueprintsManager(UploadedDataManager):
             override_failed_blueprint=override_failed_blueprint,
             labels=labels,
             created_at=kwargs.get('created_at'),
-            owner=kwargs.get('owner'))
+            owner=kwargs.get('owner'),
+            state=args.state,
+            skip_execution=args.skip_execution)
         return new_blueprint, 201
 
     def _prepare_and_process_doc(self, data_id, visibility, blueprint_url,
                                  application_file_name,
                                  override_failed_blueprint,
-                                 labels=None, created_at=None, owner=None):
+                                 labels=None, created_at=None, owner=None,
+                                 state=None, skip_execution=False):
+        application_file_name = unquote(application_file_name)
+        state = state or BlueprintUploadState.PENDING
         # Put a new blueprint entry in DB
         now = get_formatted_timestamp()
         rm = get_resource_manager()
@@ -365,9 +373,9 @@ class UploadedBlueprintsManager(UploadedDataManager):
             new_blueprint.description = None
             new_blueprint.created_at = now
             new_blueprint.updated_at = now
-            new_blueprint.main_file_name = None
+            new_blueprint.main_file_name = application_file_name
             new_blueprint.visibility = visibility
-            new_blueprint.state = BlueprintUploadState.PENDING
+            new_blueprint.state = state
             rm.sm.update(new_blueprint)
         else:
             blueprint = Blueprint(
@@ -376,9 +384,9 @@ class UploadedBlueprintsManager(UploadedDataManager):
                 description=None,
                 created_at=created_at or now,
                 updated_at=now,
-                main_file_name=None,
+                main_file_name=application_file_name,
                 visibility=visibility,
-                state=BlueprintUploadState.PENDING
+                state=state,
             )
             if owner:
                 blueprint.creator = owner
@@ -389,13 +397,16 @@ class UploadedBlueprintsManager(UploadedDataManager):
             rm.sm.update(new_blueprint)
             self.upload_archive_to_file_server(data_id)
 
+        if skip_execution:
+            return new_blueprint
+
         try:
             new_blueprint.upload_execution, messages = rm.upload_blueprint(
                 data_id,
                 application_file_name,
                 blueprint_url,
                 config.instance.file_server_root,   # for the import resolver
-                labels=labels
+                labels=labels,
             )
             rm.sm.update(new_blueprint)
             workflow_executor.execute_workflow(messages)
@@ -612,6 +623,7 @@ class UploadedBlueprintsValidator(UploadedBlueprintsManager):
 
     def _prepare_and_process_doc(self, data_id, blueprint_url,
                                  application_file_name):
+        application_file_name = unquote(application_file_name)
         # Put a temporary blueprint entry in DB
         rm = get_resource_manager()
         now = get_formatted_timestamp()

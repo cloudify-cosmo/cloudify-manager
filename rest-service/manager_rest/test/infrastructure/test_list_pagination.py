@@ -13,14 +13,9 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 #
-from manager_rest.test.attribute import attr
-
-from manager_rest.test import base_test
 from manager_rest.test.infrastructure.base_list_test import BaseListTest
 
 
-@attr(client_min_version=2,
-      client_max_version=base_test.LATEST_API_VERSION)
 class ResourceListTestCase(BaseListTest):
 
     def _test_pagination(self, list_func, total, sort_keys=None):

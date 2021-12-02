@@ -13,15 +13,12 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from manager_rest.test.attribute import attr
-
 from manager_rest import utils
 from manager_rest.version import get_version_data
 from manager_rest.test.security_utils import get_admin_user
-from manager_rest.test.base_test import BaseServerTestCase, LATEST_API_VERSION
+from manager_rest.test.base_test import BaseServerTestCase
 
 
-@attr(client_min_version=1, client_max_version=LATEST_API_VERSION)
 class VersionTestCase(BaseServerTestCase):
     def setUp(self):
         super(VersionTestCase, self).setUp()

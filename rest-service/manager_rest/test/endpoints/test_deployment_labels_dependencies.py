@@ -1,616 +1,425 @@
-
-from mock import patch
+from manager_rest.storage import models, db
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 from cloudify.models_states import DeploymentState
 
-from manager_rest.rest.rest_utils import RecursiveDeploymentLabelsDependencies
-from manager_rest.test import base_test
-from manager_rest.test.attribute import attr
 from manager_rest.test.base_test import BaseServerTestCase
 
 
-@attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
 class DeploymentLabelsDependenciesTest(BaseServerTestCase):
 
-    def _create_deployment_objects(self, parent_name, deployment_type, size):
-        for service in range(1, size + 1):
-            self.put_deployment_with_labels(
-                [
-                    {
-                        'csys-obj-parent': parent_name
-                    },
-                    {
-                        'csys-obj-type': deployment_type,
-                    }
-                ],
-                resource_id='{0}_{1}_{2}'.format(
-                    deployment_type, service, parent_name)
-            )
-
-    def _populate_deployment_labels_dependencies(self):
-        self.put_mock_deployments('dep_0', 'dep_1')
-        self.put_mock_deployments('dep_2', 'dep_3')
-        self.put_mock_deployments('dep_4', 'dep_5')
-
-        self.client.deployments.update_labels('dep_0', [
-                {
-                    'csys-obj-parent': 'dep_1'
-                }
-            ]
+    def setUp(self):
+        super().setUp()
+        self.blueprint = models.Blueprint(
+            tenant=self.tenant,
+            creator=self.user,
         )
 
-        self.client.deployments.update_labels('dep_2', [
-                {
-                    'csys-obj-parent': 'dep_3'
-                }
-            ]
-        )
-
-        self.client.deployments.update_labels('dep_4', [
-                {
-                    'csys-obj-parent': 'dep_5'
-                }
-            ]
-        )
-
-    @patch('manager_rest.resource_manager.ResourceManager'
-           '.handle_deployment_labels_graph')
-    @patch('manager_rest.resource_manager.ResourceManager'
-           '.verify_attaching_deployment_to_parents')
-    def test_deployment_with_empty_labels(self,
-                                          verify_parents_mock,
-                                          handle_labels_graph_mock):
-        self.put_deployment('deployment_with_no_labels')
-        verify_parents_mock.assert_not_called()
-        handle_labels_graph_mock.assert_not_called()
-
-    @patch('manager_rest.resource_manager.ResourceManager'
-           '.handle_deployment_labels_graph')
-    @patch('manager_rest.resource_manager.ResourceManager'
-           '.verify_attaching_deployment_to_parents')
-    def test_deployment_with_non_parent_labels(self,
-                                               verify_parents_mock,
-                                               handle_labels_graph_mock):
-        self.put_deployment_with_labels([{'env': 'aws'}, {'arch': 'k8s'}])
-        verify_parents_mock.assert_not_called()
-        handle_labels_graph_mock.assert_not_called()
+    def _deployment(self, **kwargs):
+        dep_attrs = {
+            'blueprint': self.blueprint,
+            'tenant': self.tenant,
+            'creator': self.user
+        }
+        dep_attrs.update(kwargs)
+        dep = models.Deployment(**dep_attrs)
+        db.session.add(dep)
+        return dep
 
     def test_deployment_with_single_parent_label(self):
-        self.put_deployment('parent')
-        self.put_deployment_with_labels([{'csys-obj-parent': 'parent'}])
+        parent = self._deployment(id='parent')
+        self._deployment(id='dep')
 
-        # deployment response
-        deployment = self.client.deployments.get('parent')
-        self.assertEqual(deployment.sub_services_count, 1)
-        self.assertEqual(deployment.sub_environments_count, 0)
-
-    def test_deploy_blueprint_with_invalid_parent_id_on_dsl(self):
-        with self.assertRaisesRegex(
-                CloudifyClientError,
-                'using label `csys-obj-parent` that does not exist'):
-            self.put_deployment(
-                blueprint_id='bp1',
-                blueprint_file_name='blueprint_with_invalid_parent_labels.yaml'
-            )
-
-    def test_upload_blueprint_with_valid_parent_id_on_dsl(self):
-        self.put_deployment('valid-id')
-        self.put_blueprint(
-            blueprint_id='bp1',
-            blueprint_file_name='blueprint_with_valid_parent_labels.yaml'
+        self.client.deployments.set_attributes(
+            'dep',
+            labels=[{'csys-obj-parent': 'parent'}]
         )
+        assert parent.sub_services_count == 1
+        assert parent.sub_environments_count == 0
+
+    def test_deploy_blueprint_with_invalid_parent_id(self):
+        self._deployment(id='dep')
+        with self.assertRaisesRegex(CloudifyClientError, 'not found'):
+            self.client.deployments.set_attributes(
+                'dep',
+                labels=[{'csys-obj-parent': 'parent'}]
+            )
 
     def test_deployment_with_multiple_parent_labels(self):
-        self.put_deployment(deployment_id='parent_1',
-                            blueprint_id='blueprint_1')
-        self.put_deployment(deployment_id='parent_2',
-                            blueprint_id='blueprint_2')
-        self.put_deployment_with_labels(
-            [
-                {
-                    'csys-obj-parent': 'parent_1'
-                },
-                {
-                    'csys-obj-parent': 'parent_2'
-                }
+        parent1 = self._deployment(id='parent1')
+        parent2 = self._deployment(id='parent2')
+        self._deployment(id='dep')
+
+        self.client.deployments.set_attributes(
+            'dep',
+            labels=[
+                {'csys-obj-parent': 'parent1'},
+                {'csys-obj-parent': 'parent2'}
             ]
         )
-        deployment_1 = self.client.deployments.get('parent_1')
-        deployment_2 = self.client.deployments.get('parent_2')
-        self.assertEqual(deployment_1.sub_services_count, 1)
-        self.assertEqual(deployment_1.sub_environments_count, 0)
-        self.assertEqual(deployment_2.sub_services_count, 1)
-        self.assertEqual(deployment_2.sub_environments_count, 0)
-
-    def test_deployment_with_invalid_parent_label(self):
-        error_message = 'label `csys-obj-parent` that does not exist'
-        with self.assertRaisesRegex(CloudifyClientError, error_message):
-            self.put_deployment_with_labels(
-                [
-                    {
-                        'csys-obj-parent': 'notexist'
-                    }
-                ],
-                resource_id='invalid_label_dep'
-            )
+        assert parent1.sub_services_count == 1
+        assert parent1.sub_environments_count == 0
+        assert parent2.sub_services_count == 1
+        assert parent2.sub_environments_count == 0
 
     def test_deployment_with_valid_and_invalid_parent_labels(self):
-        self.put_deployment(deployment_id='parent_1')
-        error_message = 'label `csys-obj-parent` that does not exist'
-        with self.assertRaisesRegex(CloudifyClientError, error_message):
-            self.put_deployment_with_labels(
-                [
-                    {
-                        'csys-obj-parent': 'parent_1'
-                    },
-                    {
-                        'csys-obj-parent': 'notexist'
-                    }
-                ],
-                resource_id='invalid_label_dep'
-            )
-
-    def test_add_valid_label_parent_to_created_deployment(self):
-        self.put_deployment(deployment_id='parent_1',
-                            blueprint_id='blueprint_1')
-        self.put_deployment(deployment_id='parent_2',
-                            blueprint_id='blueprint_2')
-        self.put_deployment_with_labels([{'csys-obj-parent': 'parent_1'}],
-                                        resource_id='label_dep')
-
-        self.client.deployments.update_labels('label_dep', [
-                {
-                    'csys-obj-parent': 'parent_1'
-                },
-                {
-                    'csys-obj-parent': 'parent_2'
-                }
-            ]
-        )
-        deployment_1 = self.client.deployments.get('parent_1')
-        deployment_2 = self.client.deployments.get('parent_2')
-        self.assertEqual(deployment_1.sub_services_count, 1)
-        self.assertEqual(deployment_1.sub_environments_count, 0)
-        self.assertEqual(deployment_2.sub_services_count, 1)
-        self.assertEqual(deployment_2.sub_environments_count, 0)
-
-    def test_add_invalid_label_parent_to_created_deployment(self):
-        error_message = 'label `csys-obj-parent` that does not exist'
-        self.put_deployment(deployment_id='parent_1',
-                            blueprint_id='blueprint_1')
-        self.put_deployment_with_labels([{'csys-obj-parent': 'parent_1'}],
-                                        resource_id='invalid_label_dep')
-
-        with self.assertRaisesRegex(CloudifyClientError, error_message):
-            self.client.deployments.update_labels('invalid_label_dep', [
-                    {
-                        'csys-obj-parent': 'parent_1'
-                    },
-                    {
-                        'csys-obj-parent': 'notexist'
-                    }
+        parent = self._deployment(id='parent')
+        self._deployment(id='dep')
+        with self.assertRaisesRegex(CloudifyClientError, 'not found'):
+            self.client.deployments.set_attributes(
+                'dep',
+                labels=[
+                    {'csys-obj-parent': 'parent'},
+                    {'csys-obj-parent': 'nonexistent'}
                 ]
             )
+        assert parent.sub_services_count == 0
+        assert parent.sub_environments_count == 0
 
-    def test_cyclic_dependencies_between_deployments(self):
-        error_message = 'cyclic deployment-labels dependencies.'
-        self.put_deployment(deployment_id='deployment_1',
-                            blueprint_id='deployment_1')
-        self.put_deployment_with_labels(
-            [
-                {
-                    'csys-obj-parent': 'deployment_1'
-                }
-            ],
-            resource_id='deployment_2'
+    def test_add_valid_label_parent_to_created_deployment(self):
+        parent1 = self._deployment(id='parent1')
+        parent2 = self._deployment(id='parent2')
+        self._deployment(id='dep')
+
+        self.client.deployments.set_attributes(
+            'dep',
+            labels=[{'csys-obj-parent': 'parent1'}]
         )
-        with self.assertRaisesRegex(CloudifyClientError, error_message):
-            self.client.deployments.update_labels('deployment_1', [
-                {
-                    'csys-obj-parent': 'deployment_2'
-                }
+        assert parent1.sub_services_count == 1
+        assert parent1.sub_environments_count == 0
+
+        self.client.deployments.update_labels('dep', [
+            {'csys-obj-parent': 'parent1'},
+            {'csys-obj-parent': 'parent2'}
+        ])
+        assert parent1.sub_services_count == 1
+        assert parent1.sub_environments_count == 0
+        assert parent2.sub_services_count == 1
+        assert parent2.sub_environments_count == 0
+
+    def test_add_invalid_label_parent_to_created_deployment(self):
+        self._deployment(id='dep')
+        with self.assertRaisesRegex(CloudifyClientError, 'not found'):
+            self.client.deployments.update_labels('dep', [
+                {'csys-obj-parent': 'notexist'}
             ])
 
-        deployment_1 = self.client.deployments.get('deployment_1')
-        deployment_2 = self.client.deployments.get('deployment_2')
-        self.assertEqual(deployment_1.sub_services_count, 1)
-        self.assertEqual(deployment_2.sub_services_count, 0)
-        self.assertEqual(len(deployment_1.labels), 0)
+    def test_cyclic_dependencies_between_deployments(self):
+        dep1 = self._deployment(id='dep1')
+        dep2 = self._deployment(id='dep2')
+        self.client.deployments.set_attributes(
+            'dep2',
+            labels=[{'csys-obj-parent': 'dep1'}]
+        )
+        with self.assertRaisesRegex(CloudifyClientError, 'cyclic'):
+            self.client.deployments.update_labels('dep1', [
+                {'csys-obj-parent': 'dep2'}
+            ])
+        assert dep1.sub_services_count == 1
+        assert dep2.sub_services_count == 0
+        assert len(dep1.labels) == 0
 
     def test_number_of_direct_services_deployed_inside_environment(self):
-        self.put_deployment(deployment_id='env',
-                            blueprint_id='env')
-        self._create_deployment_objects('env', 'service', 2)
+        self._deployment(id='env')
+        self._deployment(id='dep1')
+        self._deployment(id='dep2')
+        for dep_name in ['dep1', 'dep2']:
+            self.client.deployments.set_attributes(
+                dep_name,
+                labels=[{'csys-obj-parent': 'env'}]
+            )
         deployment = self.client.deployments.get(
             'env', all_sub_deployments=False)
-        self.assertEqual(deployment.sub_services_count, 2)
+        assert deployment.sub_services_count == 2
 
     def test_number_of_total_services_deployed_inside_environment(self):
-        self.put_deployment(deployment_id='env',
-                            blueprint_id='env')
-        self._create_deployment_objects('env', 'service', 2)
-        self.put_deployment_with_labels(
-            [
-                {
-                    'csys-obj-parent': 'env'
-                },
-                {
-                    'csys-obj-type': 'environment',
-                }
-            ],
-            resource_id='env_1'
+        env1 = self._deployment(id='env1')
+        self._deployment(id='env2')
+        self._deployment(id='dep1')
+        self._deployment(id='dep2')
+        self._deployment(id='dep3')
+        self._deployment(id='dep4')
+        self.client.deployments.update_labels(
+            'env1',
+            labels=[{'csys-obj-type': 'environment'}]
         )
+        self.client.deployments.update_labels(
+            'env2',
+            labels=[
+                {'csys-obj-type': 'environment'},
+                {'csys-obj-parent': 'env1'}
+            ]
+        )
+        for dep_name in ['dep1', 'dep2']:
+            self.client.deployments.update_labels(
+                dep_name,
+                labels=[{'csys-obj-parent': 'env1'}]
+            )
+        for dep_name in ['dep3', 'dep4']:
+            self.client.deployments.update_labels(
+                dep_name,
+                labels=[{'csys-obj-parent': 'env2'}]
+            )
 
-        self._create_deployment_objects('env_1', 'service', 2)
-        deployment = self.client.deployments.get('env')
-        self.assertEqual(deployment.sub_services_count, 4)
-        deployment = self.client.deployments.get('env',
+        assert env1.sub_services_count == 4
+        deployment = self.client.deployments.get('env1')
+        assert deployment.sub_services_count == 4
+        deployment = self.client.deployments.get('env1',
                                                  all_sub_deployments=False)
-        self.assertEqual(deployment.sub_services_count, 2)
+        assert deployment.sub_services_count == 2
 
     def test_number_of_direct_environments_deployed_inside_environment(self):
-        self.put_deployment(deployment_id='env',
-                            blueprint_id='env')
-        self._create_deployment_objects('env', 'environment', 2)
+        self._deployment(id='env1')
+        self._deployment(id='env2')
+        self._deployment(id='env3')
+        self.client.deployments.update_labels(
+            'env1',
+            labels=[{'csys-obj-type': 'environment'}]
+        )
+        for env_name in ['env2', 'env3']:
+            self.client.deployments.update_labels(
+                env_name,
+                labels=[
+                    {'csys-obj-type': 'environment'},
+                    {'csys-obj-parent': 'env1'}
+                ]
+            )
         deployment = self.client.deployments.get(
-            'env', all_sub_deployments=False)
-        self.assertEqual(deployment.sub_environments_count, 2)
+            'env1', all_sub_deployments=False)
+        assert deployment.sub_environments_count == 2
 
     def test_number_of_total_environments_deployed_inside_environment(self):
-        self.put_deployment(deployment_id='env',
-                            blueprint_id='env')
-        self._create_deployment_objects('env', 'environment', 2)
-        self.put_deployment_with_labels(
-            [
-                {
-                    'csys-obj-parent': 'env'
-                },
-                {
-                    'csys-obj-type': 'environment',
-                }
-            ],
-            resource_id='env_1'
+        self._deployment(id='env1')
+        self._deployment(id='env2')
+        self._deployment(id='env3')
+        self._deployment(id='env4')
+        self.client.deployments.update_labels(
+            'env1',
+            labels=[{'csys-obj-type': 'environment'}]
         )
-
-        self._create_deployment_objects('env_1', 'environment', 2)
-        deployment = self.client.deployments.get('env')
-        self.assertEqual(deployment.sub_environments_count, 5)
-        deployment = self.client.deployments.get('env',
-                                                 all_sub_deployments=False)
+        for env_name in ['env2', 'env3']:
+            self.client.deployments.update_labels(
+                env_name,
+                labels=[
+                    {'csys-obj-type': 'environment'},
+                    {'csys-obj-parent': 'env1'}
+                ]
+            )
+        self.client.deployments.update_labels(
+            'env4',
+            labels=[
+                {'csys-obj-type': 'environment'},
+                {'csys-obj-parent': 'env2'}
+            ]
+        )
+        deployment = self.client.deployments.get('env1')
         self.assertEqual(deployment.sub_environments_count, 3)
-
-    def test_add_sub_deployments_after_deployment_update(self):
-        _, _, _, deployment = self.put_deployment(
-            deployment_id='env',
-            blueprint_id='env'
-        )
-        _, _, _, deployment_1 = self.put_deployment(
-            deployment_id='env_1',
-            blueprint_id='env_1'
-        )
-
-        self.assertEqual(deployment.sub_services_count, 0)
-        self.assertEqual(deployment.sub_services_count, 0)
-        self.assertEqual(deployment_1.sub_environments_count, 0)
-        self.assertEqual(deployment_1.sub_environments_count, 0)
-
-        self.put_deployment(deployment_id='sub_srv', blueprint_id='srv')
-        self.put_deployment_with_labels(
-            [
-                {
-                    'csys-obj-type': 'environment',
-                }
-            ],
-            resource_id='sub_env'
-        )
-
-        self.put_blueprint(
-            blueprint_id='update_sub_srv',
-            blueprint_file_name='blueprint_with_parent_labels.yaml'
-        )
-        self.put_blueprint(
-            blueprint_id='update_sub_env',
-            blueprint_file_name='blueprint_with_parent_labels.yaml'
-        )
-
-        self.client.deployment_updates.update_with_existing_blueprint(
-            'sub_srv', blueprint_id='update_sub_srv'
-        )
-        self.client.deployment_updates.update_with_existing_blueprint(
-            'sub_env', blueprint_id='update_sub_env'
-        )
-        deployment = self.client.deployments.get('env')
-        deployment_1 = self.client.deployments.get('env_1')
-        self.assertEqual(deployment.sub_services_count, 1)
-        self.assertEqual(deployment.sub_services_count, 1)
-        self.assertEqual(deployment_1.sub_environments_count, 1)
-        self.assertEqual(deployment_1.sub_environments_count, 1)
+        deployment = self.client.deployments.get('env1',
+                                                 all_sub_deployments=False)
+        self.assertEqual(deployment.sub_environments_count, 2)
 
     def test_detach_all_services_from_deployment(self):
-        self.put_deployment(
-            deployment_id='env',
-            blueprint_id='env'
-        )
-        self._create_deployment_objects('env', 'service', 2)
-        self._create_deployment_objects('env', 'environment', 2)
-
-        deployment = self.client.deployments.get('env')
-        self.assertEqual(deployment.sub_services_count, 2)
-        self.assertEqual(deployment.sub_environments_count, 2)
-
+        env1 = self._deployment(id='env1')
+        self._deployment(id='env2')
+        self._deployment(id='srv1')
         self.client.deployments.update_labels(
-            'service_1_env',
-            [
-                {
-                    'csys-obj-type': 'service'
-                },
-
+            'env2',
+            labels=[
+                {'csys-obj-type': 'environment'},
+                {'csys-obj-parent': 'env1'}
             ]
         )
         self.client.deployments.update_labels(
-            'service_2_env',
-            [
-                {
-                    'csys-obj-type': 'service'
-                },
-
+            'srv1',
+            labels=[
+                {'csys-obj-parent': 'env1'}
             ]
         )
+        assert env1.sub_services_count == 1
+        assert env1.sub_environments_count == 1
 
-        deployment = self.client.deployments.get('env')
-        self.assertEqual(deployment.sub_services_count, 0)
-        self.assertEqual(deployment.sub_environments_count, 2)
+        self.client.deployments.update_labels(
+            'srv1',
+            labels=[{'csys-obj-type': 'service'}]
+        )
+        assert env1.sub_services_count == 0
+        assert env1.sub_environments_count == 1
 
     def test_detach_all_environments_from_deployment(self):
-        self.put_deployment(
-            deployment_id='env',
-            blueprint_id='env'
-        )
-        self._create_deployment_objects('env', 'service', 2)
-        self._create_deployment_objects('env', 'environment', 2)
-
-        deployment = self.client.deployments.get('env')
-        self.assertEqual(deployment.sub_services_count, 2)
-        self.assertEqual(deployment.sub_environments_count, 2)
-
+        env1 = self._deployment(id='env1')
+        self._deployment(id='env2')
+        self._deployment(id='srv1')
         self.client.deployments.update_labels(
-            'environment_1_env',
-            [
-                {
-                    'csys-obj-type': 'environment'
-                }
+            'env2',
+            labels=[
+                {'csys-obj-type': 'environment'},
+                {'csys-obj-parent': 'env1'}
             ]
         )
         self.client.deployments.update_labels(
-            'environment_2_env',
-            [
-                {
-                    'csys-obj-type': 'environment'
-                }
+            'srv1',
+            labels=[
+                {'csys-obj-parent': 'env1'}
             ]
         )
+        assert env1.sub_services_count == 1
+        assert env1.sub_environments_count == 1
 
-        deployment = self.client.deployments.get('env')
-        self.assertEqual(deployment.sub_services_count, 2)
-        self.assertEqual(deployment.sub_environments_count, 0)
+        self.client.deployments.update_labels(
+            'env2',
+            labels=[{'csys-obj-type': 'service'}]
+        )
+        assert env1.sub_services_count == 1
+        assert env1.sub_environments_count == 0
 
     def test_deployment_statuses_after_creation_without_sub_deployments(self):
-        self.put_deployment('dep1')
-        deployment = self.client.deployments.get('dep1')
-        self.assertEqual(
-            deployment.deployment_status,
-            DeploymentState.REQUIRE_ATTENTION
+        bp = models.Blueprint(
+            id='bp1', creator=self.user, tenant=self.tenant, plan={})
+        db.session.add(bp)
+        self.client.deployments.create('bp1', 'dep1')
+        dep1 = db.session.query(models.Deployment).filter_by(id='dep1').one()
+
+        assert dep1.deployment_status == DeploymentState.REQUIRE_ATTENTION
+        assert dep1.sub_services_status is None
+        assert dep1.sub_environments_status is None
+
+        exc = models.Execution(
+            id='exc1',
+            _deployment_fk=dep1._storage_id,
+            workflow_id='create_deployment_environment',
+            tenant=self.tenant,
+            creator=self.user,
         )
-        self.assertIsNone(deployment.sub_services_status)
-        self.assertIsNone(deployment.sub_environments_status)
+        db.session.add(exc)
+        self.client.executions.update(exc.id, status='terminated')
+        assert dep1.deployment_status == DeploymentState.GOOD
 
     def test_deployment_statuses_after_creation_with_sub_deployments(self):
-        self.put_deployment('parent')
-        self._create_deployment_objects('parent', 'environment', 2)
-        self._create_deployment_objects('parent', 'service', 2)
-        deployment = self.client.deployments.get('parent')
-        self.assertEqual(
-            deployment.deployment_status,
-            DeploymentState.REQUIRE_ATTENTION
+        env1 = self._deployment(id='env1')
+        env2 = self._deployment(id='env2')
+        srv1 = self._deployment(id='srv1')
+        self.client.deployments.update_labels(
+            'env2',
+            labels=[
+                {'csys-obj-type': 'environment'},
+                {'csys-obj-parent': 'env1'}
+            ]
         )
-        self.assertEqual(
-            deployment.sub_environments_status,
-            DeploymentState.REQUIRE_ATTENTION
+        self.client.deployments.update_labels(
+            'srv1',
+            labels=[{'csys-obj-parent': 'env1'}]
         )
-        self.assertEqual(
-            deployment.sub_services_status,
-            DeploymentState.REQUIRE_ATTENTION
-        )
+        for dep in [env1, env2, srv1]:
+            exc = models.Execution(
+                id=f'create_{dep.id}',
+                _deployment_fk=dep._storage_id,
+                workflow_id='create_deployment_environment',
+                tenant=self.tenant,
+                creator=self.user,
+            )
+            db.session.add(exc)
+            self.client.executions.update(exc.id, status='terminated')
+        assert env1.deployment_status == DeploymentState.GOOD
+        assert env1.sub_services_status == DeploymentState.GOOD
+        assert env1.sub_environments_status == DeploymentState.GOOD
 
     def test_delete_deployment_with_sub_deployments(self):
-        self.put_deployment('parent')
-        self._create_deployment_objects('parent', 'service', 2)
-        with self.assertRaisesRegex(
-                CloudifyClientError, 'Can\'t delete deployment'):
-            self.client.deployments.delete('parent')
+        self._deployment(id='env1')
+        self._deployment(id='srv1')
+        self.client.deployments.update_labels(
+            'srv1',
+            labels=[{'csys-obj-parent': 'env1'}]
+        )
+        with self.assertRaises(CloudifyClientError):
+            self.client.deployments.delete('env1')
 
     def test_stop_deployment_with_sub_deployments(self):
-        self.put_deployment('parent')
-        self._create_deployment_objects('parent', 'service', 2)
-        with self.assertRaisesRegex(
-                CloudifyClientError, 'Can\'t execute workflow `stop`'):
+        self._deployment(id='env1')
+        self._deployment(id='srv1')
+        self.client.deployments.update_labels(
+            'srv1',
+            labels=[{'csys-obj-parent': 'env1'}]
+        )
+        with self.assertRaises(CloudifyClientError):
             self.client.executions.start('parent', 'stop')
 
     def test_uninstall_deployment_with_sub_deployments(self):
-        self.put_deployment('parent')
-        self._create_deployment_objects('parent', 'service', 2)
-        with self.assertRaisesRegex(
-                CloudifyClientError, 'Can\'t execute workflow `uninstall`'):
+        self._deployment(id='env1')
+        self._deployment(id='srv1')
+        self.client.deployments.update_labels(
+            'srv1',
+            labels=[{'csys-obj-parent': 'env1'}]
+        )
+        with self.assertRaises(CloudifyClientError):
             self.client.executions.start('parent', 'uninstall')
 
-    def test_create_deployment_labels_dependencies_graph(self):
-        self._populate_deployment_labels_dependencies()
-        dep_graph = RecursiveDeploymentLabelsDependencies(self.sm)
-        dep_graph.create_dependencies_graph()
-        self.assertEqual(dep_graph.graph['dep_1'], {'dep_0'})
-        self.assertEqual(dep_graph.graph['dep_3'], {'dep_2'})
-        self.assertEqual(dep_graph.graph['dep_5'], {'dep_4'})
-
-    def test_add_to_deployment_labels_dependencies_graph(self):
-        self._populate_deployment_labels_dependencies()
-        dep_graph = RecursiveDeploymentLabelsDependencies(self.sm)
-        dep_graph.create_dependencies_graph()
-        dep_graph.add_dependency_to_graph('dep_00', 'dep_1')
-        dep_graph.add_dependency_to_graph('dep_1', 'dep_6')
-        self.assertEqual(dep_graph.graph['dep_1'], {'dep_0', 'dep_00'})
-        self.assertEqual(dep_graph.graph['dep_6'], {'dep_1'})
-
-    def test_remove_deployment_labels_dependencies_from_graph(self):
-        self._populate_deployment_labels_dependencies()
-        dep_graph = RecursiveDeploymentLabelsDependencies(self.sm)
-        dep_graph.create_dependencies_graph()
-        dep_graph.remove_dependency_from_graph('dep_0', 'dep_1')
-        self.assertNotIn('dep_1', dep_graph.graph)
-
-    def test_find_recursive_deployments_from_graph(self):
-        self._populate_deployment_labels_dependencies()
-
-        self.client.deployments.update_labels('dep_0', [
-                {
-                    'csys-obj-parent': 'dep_1'
-                }
-            ]
-        )
-
-        self.put_deployment(deployment_id='dep_11', blueprint_id='dep_11')
-        self.put_deployment(deployment_id='dep_12', blueprint_id='dep_12')
-        self.put_deployment(deployment_id='dep_13', blueprint_id='dep_13')
-        self.put_deployment(deployment_id='dep_14', blueprint_id='dep_14')
-
-        self.client.deployments.update_labels('dep_1', [
-                {
-                    'csys-obj-parent': 'dep_11'
-                }
-            ]
-        )
-
-        self.client.deployments.update_labels('dep_11', [
-                {
-                    'csys-obj-parent': 'dep_12'
-                }
-            ]
-        )
-
-        self.client.deployments.update_labels('dep_12', [
-                {
-                    'csys-obj-parent': 'dep_13'
-                }
-            ]
-        )
-
-        self.client.deployments.update_labels('dep_13', [
-                {
-                    'csys-obj-parent': 'dep_14'
-                }
-            ]
-        )
-        dep_graph = RecursiveDeploymentLabelsDependencies(self.sm)
-        dep_graph.create_dependencies_graph()
-        targets = dep_graph.find_recursive_deployments(['dep_0'])
-        self.assertEqual(len(targets), 5)
-        self.assertIn('dep_1', targets)
-        self.assertIn('dep_11', targets)
-        self.assertIn('dep_12', targets)
-        self.assertIn('dep_13', targets)
-        self.assertIn('dep_14', targets)
-
     def test_sub_deployments_counts_after_convert_to_service(self):
-        self.put_deployment(deployment_id='env',
-                            blueprint_id='env')
-
-        self._create_deployment_objects('env', 'environment', 2)
-        self.put_deployment_with_labels(
-            [
-                {
-                    'csys-obj-parent': 'env'
-                },
-                {
-                    'csys-obj-type': 'environment',
-                }
-            ],
-            resource_id='env_1'
-        )
-        self._create_deployment_objects('env_1', 'environment', 2)
-        deployment = self.client.deployments.get('env')
-        self.assertEqual(deployment.sub_environments_count, 5)
-
-        # Remove the csys-obj-type and convert it to service instead
-        self.client.deployments.update_labels('env_1', [
-                {
-                    'csys-obj-parent': 'env'
-                }
+        env1 = self._deployment(id='env1')
+        self._deployment(id='env2')
+        self._deployment(id='srv1')
+        self.client.deployments.update_labels(
+            'env2',
+            labels=[
+                {'csys-obj-type': 'environment'},
+                {'csys-obj-parent': 'env1'}
             ]
         )
-        deployment = self.client.deployments.get('env')
-        self.assertEqual(deployment.sub_environments_count, 4)
-        self.assertEqual(deployment.sub_services_count, 1)
+        self.client.deployments.update_labels(
+            'srv1',
+            labels=[
+                {'csys-obj-parent': 'env1'}
+            ]
+        )
+        assert env1.sub_services_count == 1
+        assert env1.sub_environments_count == 1
+
+        self.client.deployments.update_labels(
+            'env2',
+            labels=[
+                {'csys-obj-type': 'service'},
+                {'csys-obj-parent': 'env1'}
+            ]
+        )
+        assert env1.sub_services_count == 2
+        assert env1.sub_environments_count == 0
 
     def test_sub_deployments_counts_after_convert_to_environment(self):
-        self.put_deployment(deployment_id='env',
-                            blueprint_id='env')
-
-        self._create_deployment_objects('env', 'environment', 2)
-        self.put_deployment_with_labels(
-            [
-                {
-                    'csys-obj-parent': 'env'
-                }
-            ],
-            resource_id='srv_1'
+        env1 = self._deployment(id='env1')
+        self._deployment(id='env2')
+        self._deployment(id='srv1')
+        self.client.deployments.update_labels(
+            'env2',
+            labels=[
+                {'csys-obj-type': 'environment'},
+                {'csys-obj-parent': 'env1'}
+            ]
         )
-        self._create_deployment_objects('srv_1', 'service', 2)
-        deployment = self.client.deployments.get('env')
-        self.assertEqual(deployment.sub_environments_count, 2)
-        self.assertEqual(deployment.sub_services_count, 3)
+        self.client.deployments.update_labels(
+            'srv1',
+            labels=[
+                {'csys-obj-parent': 'env1'}
+            ]
+        )
+        assert env1.sub_services_count == 1
+        assert env1.sub_environments_count == 1
 
-        # Add the csys-obj-type and convert it to environment instead
-        self.client.deployments.update_labels('srv_1', [
-            {
-                'csys-obj-parent': 'env'
-            },
-            {
-                'csys-obj-type': 'environment'
-            }
-        ]
-                                              )
-        deployment = self.client.deployments.get('env')
-        self.assertEqual(deployment.sub_environments_count, 3)
-        self.assertEqual(deployment.sub_services_count, 2)
+        self.client.deployments.update_labels(
+            'srv1',
+            labels=[
+                {'csys-obj-type': 'environment'},
+                {'csys-obj-parent': 'env1'}
+            ]
+        )
+        assert env1.sub_services_count == 0
+        assert env1.sub_environments_count == 2
 
     def test_csys_env_type(self):
-        dep1 = self.put_deployment_with_labels([{'key1': 'val1'},
-                                                {'key2': 'val3'},
-                                                {'key3': 'val3'}],
-                                               'dep1')
-        self.assertEqual(dep1.environment_type, '')
-
-        subcloud = self.put_deployment_with_labels(
-            [{'csys-env-type': 'subcloud'},
-             {'key1': 'val1'},
-             {'key2': 'val2'}],
-            'subcloud')
-        self.assertEqual(subcloud.environment_type, 'subcloud')
-
-        basic = self.put_deployment_with_labels(
-            [{'csys-env-type': 'basic'},
-             {'key2': 'val2'},
-             {'key3': 'val3'}],
-            'basic')
-        self.assertEqual(basic.environment_type, 'basic')
-
-        controller = self.put_deployment_with_labels(
-            [{'csys-env-type': 'controller'},
-             {'key1': 'val1'},
-             {'key3': 'val3'}],
-            'controller')
-        self.assertEqual(controller.environment_type, 'controller')
-
-        deployments = self.client.deployments.list(sort='environment_type')
-        self.assertEqual([dep.id for dep in deployments],
-                         ['dep1', 'basic', 'controller', 'subcloud'])
+        dep1 = self._deployment(id='dep1')
+        assert dep1.environment_type == ''
+        self.client.deployments.update_labels(
+            'dep1',
+            labels=[
+                {'csys-env-type': 'subcloud'}
+            ]
+        )
+        assert dep1.environment_type == 'subcloud'

@@ -1,20 +1,4 @@
-#########
-# Copyright (c) 2016 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 from flask import request
-from flask_security import current_user
 
 from cloudify._compat import text_type
 from cloudify.models_states import VisibilityState
@@ -26,7 +10,7 @@ from manager_rest import manager_exceptions
 from manager_rest.utils import current_tenant
 from manager_rest.flask_utils import get_tenant_by_name
 from manager_rest.security.authorization import (authorize,
-                                                 is_user_action_allowed)
+                                                 check_user_action_allowed)
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.resource_manager import (create_secret,
                                            update_secret,
@@ -123,16 +107,18 @@ class SecretsExport(SecuredResource):
     @rest_decorators.search('id')
     def get(self, filters=None, all_tenants=None, search=None):
         passphrase = request.args.get('_passphrase')
+        include_metadata = request.args.get('_include_metadata')
         secrets = get_storage_manager().list(
             models.Secret,
             filters=filters,
             substr_filters=search,
             all_tenants=all_tenants,
-            get_all_results=True
+            get_all_results=True,
         )
-        return self._create_export_response(secrets, passphrase)
+        return self._create_export_response(secrets, passphrase,
+                                            include_metadata)
 
-    def _create_export_response(self, secrets, password):
+    def _create_export_response(self, secrets, password, include_metadata):
         secrets_list = []
         for secret in secrets.items:
             if secret.is_hidden_value and not \
@@ -144,6 +130,10 @@ class SecretsExport(SecuredResource):
                           'tenant_name': secret.tenant_name,
                           'is_hidden_value': secret.is_hidden_value,
                           'encrypted': False}
+            if include_metadata:
+                new_secret['creator'] = secret.created_by
+                new_secret['created_at'] = secret.created_at
+                new_secret['updated_at'] = secret.updated_at
             secrets_list.append(new_secret)
         if password:
             self._encrypt_values(secrets_list, password)
@@ -203,6 +193,7 @@ class SecretsImport(SecuredResource):
                                             secret_errors)
             self._handle_secret_tenant(secret, tenant_map, existing_tenants,
                                        missing_fields, secret_errors)
+            self._check_timestamp_and_owner(secret, secret_errors)
             self._handle_encryption(secret, encryption_key, missing_fields,
                                     secret_errors)
             if missing_fields:
@@ -212,6 +203,25 @@ class SecretsImport(SecuredResource):
             else:
                 self._import_secret(secret, colliding_secrets, override)
         return all_secrets_errors
+
+    def _check_timestamp_and_owner(self, secret, secret_errors):
+        if 'created_at' in secret or 'updated_at' in secret:
+            try:
+                check_user_action_allowed('set_timestamp',
+                                          secret['tenant_name'])
+            except manager_exceptions.ForbiddenError as err:
+                secret_errors['timestamp'] = str(err)
+        if 'creator' in secret:
+            try:
+                check_user_action_allowed('set_owner',
+                                          secret['tenant_name'])
+            except manager_exceptions.ForbiddenError as err:
+                secret_errors['creator'] = str(err)
+            try:
+                secret['creator'] = rest_utils.valid_user(
+                    secret['creator'])
+            except manager_exceptions.BadParametersError as err:
+                secret_errors['creator_valid'] = str(err)
 
     def _validate_is_hidden_field(self, secret, missing_fields, secret_errors):
         if self._is_missing_field(secret, 'is_hidden_value', missing_fields):
@@ -261,11 +271,11 @@ class SecretsImport(SecuredResource):
         if tenant_name not in existing_tenants:
             secret_errors['tenant_name'] = 'The tenant `{0}` was not' \
                                            ' found'.format(str(tenant_name))
-        elif not is_user_action_allowed('secret_create', tenant_name):
-            secret_errors['tenant_name'] =\
-                'User `{0}` is not permitted to perform the action ' \
-                '`secrets_create` in tenant: ' \
-                '`{1}`'.format(current_user.username, str(tenant_name))
+        else:
+            try:
+                check_user_action_allowed('secret_create', tenant_name)
+            except manager_exceptions.ForbiddenError as err:
+                secret_errors['tenant_name'] = str(err)
 
     def _handle_encryption(self, secret, encryption_key,
                            missing_fields, secret_errors):
@@ -293,7 +303,10 @@ class SecretsImport(SecuredResource):
     def _import_secret(self, secret, colliding_secrets, override_collisions):
         try:
             tenant = get_tenant_by_name(secret['tenant_name'])
-            create_secret(key=secret['key'], secret=secret, tenant=tenant)
+            create_secret(key=secret['key'], secret=secret, tenant=tenant,
+                          created_at=secret.get('created_at'),
+                          updated_at=secret.get('updated_at'),
+                          creator=secret.get('creator'))
         except manager_exceptions.ConflictError:
             if override_collisions:
                 existing_secret = self._get_secret_object(secret)

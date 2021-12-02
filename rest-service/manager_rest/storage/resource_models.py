@@ -1,24 +1,10 @@
-########
-# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#        http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#    * See the License for the specific language governing permissions and
-#    * limitations under the License.
-
 import hashlib
 import typing
 import uuid
 
 from os import path
 from datetime import datetime
+from collections import namedtuple
 
 from flask_restful import fields as flask_fields
 
@@ -36,6 +22,7 @@ from cloudify.models_states import (AgentState,
                                     ExecutionState,
                                     DeploymentModificationState,
                                     DeploymentState)
+from cloudify.cryptography_utils import decrypt
 from dsl_parser.constants import WORKFLOW_PLUGINS_TO_INSTALL
 from dsl_parser.constraints import extract_constraints, validate_input_value
 from dsl_parser import exceptions as dsl_exceptions
@@ -553,46 +540,24 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                          parameters=wf.get('parameters', dict()))
                 for wf_name, wf in deployment_workflows.items()]
 
-    def compare_between_statuses(
-            self,
-            first_status,
-            second_status
-    ):
-        """
-        Compare between two deployment statuses so that we can tell which
-        one is worst than others. If first_status > second_status then
-        return the first status otherwise return the second_status
-        :param first_status: The first deployment status
-        :rtype str
-        :param second_status: The second deployment status
-        :rtype str
-        :return: Return the end result status
-        :rtype str
-        """
-        class _DeploymentStatus(object):
-            def __init__(self, status):
-                self.status = status
+    @classmethod
+    def compare_statuses(
+                cls, *statuses: typing.Optional[str]
+            ) -> typing.Optional[str]:
+        """Unify multiple DeploymentStates into a single state.
 
-            def __gt__(self, other):
-                if not self.status:
-                    return False
-                elif self.status and not other.status:
-                    return True
-                elif (self.status == DeploymentState.REQUIRE_ATTENTION and
-                      other.status in [
-                          DeploymentState.GOOD,
-                          DeploymentState.IN_PROGRESS
-                      ]):
-                    return True
-                elif (
-                        self.status == DeploymentState.IN_PROGRESS
-                        and other.status == DeploymentState.GOOD):
-                    return True
-                return False
-
-        _source = _DeploymentStatus(first_status)
-        _target = _DeploymentStatus(second_status)
-        return _source.status if _source > _target else _target.status
+        Choose the "worst" possible outcome based on the given states,
+        ie. if there's one that requires attention, then the overall status
+        is also "requires attention".
+        """
+        if not statuses:
+            return None
+        importance = {
+            DeploymentState.GOOD: 1,
+            DeploymentState.IN_PROGRESS: 2,
+            DeploymentState.REQUIRE_ATTENTION: 3
+        }
+        return max(statuses, key=lambda st: importance.get(st, 0))
 
     def evaluate_sub_deployments_statuses(self):
         """
@@ -611,14 +576,14 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         _sub_services_status = self.sub_services_status
         if self.is_environment:
             _sub_environments_status = \
-                self.compare_between_statuses(
+                self.compare_statuses(
                     self.sub_environments_status,
                     self.deployment_status
                 )
 
         else:
             _sub_services_status = \
-                self.compare_between_statuses(
+                self.compare_statuses(
                     self.sub_services_status,
                     self.deployment_status
                 )
@@ -630,35 +595,46 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         and latest execution object
         :return: deployment_status: Overall deployment status
         """
+        deployment_status = self.decide_deployment_status(
+            self.latest_execution_status,
+            self.installation_status,
+            self.sub_services_status,
+            self.sub_environments_status
+        )
+        self.deployment_status = deployment_status
+        return deployment_status
+
+    @classmethod
+    def decide_deployment_status(
+        cls,
+        latest_execution_status,
+        installation_status,
+        sub_services_status,
+        sub_environments_status,
+    ):
         latest_status = DeploymentState.EXECUTION_STATES_SUMMARY.get(
-            self.latest_execution_status)
+            latest_execution_status)
         if latest_status == DeploymentState.IN_PROGRESS:
             deployment_status = DeploymentState.IN_PROGRESS
         elif latest_status == DeploymentState.FAILED \
-                or self.installation_status == DeploymentState.INACTIVE:
+                or installation_status == DeploymentState.INACTIVE:
             deployment_status = DeploymentState.REQUIRE_ATTENTION
         else:
             deployment_status = DeploymentState.GOOD
 
-        has_sub_sts = self.sub_services_status or self.sub_environments_status
-        if not has_sub_sts or exclude_sub_deployments:
-            return deployment_status
-
         # Check whether or not deployment has services or environments
         # attached to it, so that we can consider that while evaluating the
         # deployment status
-        if self.sub_services_status:
-            deployment_status = \
-                self.compare_between_statuses(
-                    self.sub_services_status,
-                    deployment_status
-                )
-        if self.sub_environments_status:
-            deployment_status = \
-                self.compare_between_statuses(
-                    self.sub_environments_status,
-                    deployment_status
-                )
+        if sub_services_status:
+            deployment_status = cls.compare_statuses(
+                sub_services_status,
+                deployment_status
+            )
+        if sub_environments_status:
+            deployment_status = cls.compare_statuses(
+                sub_environments_status,
+                deployment_status
+            )
         return deployment_status
 
     @property
@@ -749,6 +725,75 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
     def has_sub_deployments(self):
         return (self.sub_services_count + self.sub_environments_count) > 0
 
+    def get_dependencies(self, fetch_deployments=True, locking=False):
+        """Dependency deployments of this deployment.
+
+        Those are dependencies as defined by InterDeploymentDependencies.
+
+        :param fetch_deployments: if set (the default), return deployments;
+            otherwise return the InterDeploymentDependency objects
+        :param locking: select using a `WITH FOR UPDATE`
+        """
+        return InterDeploymentDependencies.get_dependencies(
+            deployment_ids=[self._storage_id],
+            dependents=False,
+            fetch_deployments=fetch_deployments,
+            locking=locking,
+        )
+
+    def get_dependents(self, fetch_deployments=True, locking=False):
+        """Dependent deployments of this deployment.
+
+        Those are dependents as defined by InterDeploymentDependencies.
+        See get_dependencies for the explanation of parameters.
+        """
+        return InterDeploymentDependencies.get_dependencies(
+            deployment_ids=[self._storage_id],
+            dependents=True,
+            fetch_deployments=fetch_deployments,
+            locking=locking,
+        )
+
+    def get_ancestors(self, fetch_deployments=True, locking=False):
+        """Ancestor deployments of this deployment.
+
+        Those are ancestors as defined by DeploymentLabelsDependencies.
+        See get_dependencies for the explanation of parameters.
+        """
+        return DeploymentLabelsDependencies.get_dependencies(
+            deployment_ids=[self._storage_id],
+            dependents=False,
+            fetch_deployments=fetch_deployments,
+            locking=locking,
+        )
+
+    def get_descendants(self, fetch_deployments=True, locking=False):
+        """Descendant deployments of this deployment.
+
+        Those are descendants as defined by DeploymentLabelsDependencies.
+        See get_dependencies for the explanation of parameters.
+        """
+        return DeploymentLabelsDependencies.get_dependencies(
+            deployment_ids=[self._storage_id],
+            dependents=True,
+            fetch_deployments=fetch_deployments,
+            locking=locking,
+        )
+
+    def get_all_dependencies(self, *args, **kwargs):
+        """Both dependencies, and ancestors, of this deployment"""
+        return set(
+            self.get_ancestors(*args, **kwargs) +
+            self.get_dependencies(*args, **kwargs)
+        )
+
+    def get_all_dependents(self, *args, **kwargs):
+        """Both dependents, and descendants, of this deployment"""
+        return set(
+            self.get_dependents(*args, **kwargs) +
+            self.get_descendants(*args, **kwargs)
+        )
+
 
 class DeploymentGroup(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'deployment_groups'
@@ -809,14 +854,6 @@ class LabelBase(CreatedAtMixin, SQLModelBase):
     def creator(cls):
         return one_to_many_relationship(cls, User, cls._creator_id, 'id')
 
-    @declared_attr
-    def visibility(cls):
-        return cls.labeled_model.visibility
-
-    @declared_attr
-    def _tenant_id(cls):
-        return cls.labeled_model._tenant_id
-
 
 class DeploymentLabel(LabelBase):
     __tablename__ = 'deployments_labels'
@@ -831,8 +868,11 @@ class DeploymentLabel(LabelBase):
     @declared_attr
     def deployment(cls):
         return db.relationship(
-            'Deployment', lazy='joined',
+            Deployment, lazy='joined',
             backref=db.backref('labels', cascade='all, delete-orphan'))
+
+    visibility = association_proxy('deployment', 'visibility')
+    _tenant_id = association_proxy('deployment', '_tenant_id')
 
 
 class BlueprintLabel(LabelBase):
@@ -848,8 +888,11 @@ class BlueprintLabel(LabelBase):
     @declared_attr
     def blueprint(cls):
         return db.relationship(
-            'Blueprint', lazy='joined',
+            Blueprint, lazy='joined',
             backref=db.backref('labels', cascade='all, delete-orphan'))
+
+    visibility = association_proxy('blueprint', 'visibility')
+    _tenant_id = association_proxy('blueprint', '_tenant_id')
 
 
 class DeploymentGroupLabel(LabelBase):
@@ -867,6 +910,9 @@ class DeploymentGroupLabel(LabelBase):
         return db.relationship(
             DeploymentGroup, lazy='joined',
             backref=db.backref('labels', cascade='all, delete-orphan'))
+
+    visibility = association_proxy('deployment_group', 'visibility')
+    _tenant_id = association_proxy('deployment_group', '_tenant_id')
 
 
 class FilterBase(CreatedAtMixin, SQLResourceBase):
@@ -1185,6 +1231,8 @@ class Execution(CreatedAtMixin, SQLResourceBase):
         }
         if self.deployment is not None:
             context['deployment_id'] = self.deployment.id
+            context['deployment_display_name'] = self.deployment.display_name
+            context['deployment_creator'] = self.deployment.creator.username
             context['blueprint_id'] = self.blueprint_id
             context['runtime_only_evaluation'] = \
                 self.deployment.runtime_only_evaluation
@@ -1302,6 +1350,8 @@ class ExecutionGroup(CreatedAtMixin, SQLResourceBase):
                 some might have been cancelled)
         """
         states = {e.status for e in self.executions}
+        if not states:
+            return None
 
         if all(s == ExecutionState.PENDING for s in states):
             return ExecutionState.PENDING
@@ -1697,9 +1747,6 @@ class DeploymentUpdate(CreatedAtMixin, SQLResourceBase):
         self._set_parent(deployment)
         self.deployment = deployment
 
-    def set_recursive_dependencies(self, recursive_dependencies):
-        self.recursive_dependencies = recursive_dependencies
-
 
 class DeploymentUpdateStep(SQLResourceBase):
     __tablename__ = 'deployment_update_steps'
@@ -1954,8 +2001,14 @@ class Agent(CreatedAtMixin, SQLResourceBase):
     def to_response(self, include=None, **kwargs):
         include = include or self.response_fields
         agent_dict = super(Agent, self).to_response(include, **kwargs)
-        agent_dict.pop('rabbitmq_username', None)
-        agent_dict.pop('rabbitmq_password', None)
+        if 'rabbitmq_username' not in include:
+            agent_dict.pop('rabbitmq_username', None)
+        if 'rabbitmq_password' in include:
+            agent_dict['rabbitmq_password'] = decrypt(
+                agent_dict['rabbitmq_password']
+            )
+        else:
+            agent_dict.pop('rabbitmq_password', None)
         return agent_dict
 
 
@@ -2017,6 +2070,9 @@ class BaseDeploymentDependencies(CreatedAtMixin, SQLResourceBase):
     _source_cascade = 'all'
     _target_cascade = 'all'
 
+    is_id_unique = False
+    id = db.Column(db.Text, index=True, default=lambda: str(uuid.uuid4()))
+
     @declared_attr
     def source_deployment(cls):
         return one_to_many_relationship(
@@ -2044,6 +2100,106 @@ class BaseDeploymentDependencies(CreatedAtMixin, SQLResourceBase):
     source_deployment_id = association_proxy('source_deployment', 'id')
     target_deployment_id = association_proxy('target_deployment', 'id')
 
+    @classmethod
+    def _dependencies_adjacency(cls, deployment_ids, dependents=True):
+        """Select a dependency subgraph in an adjacency-list form.
+
+        Returns a query yielding (idd_id, source_id, target_id), which mean
+        "IDD with id idd_id, says that deployment source_id depends on the
+        deployment target_id".
+
+        This is recursive, so will return parents, then parents of parents,
+        etc. (or children, then children of children, etc).
+
+        :param deployment_ids: storage_ids of the root deployments
+        :param dependents: if set, return dependents, ie. children; otherwise,
+            return dependencies, ie. parents
+        """
+        base_cols = db.session.query(
+            cls._storage_id,
+            cls._source_deployment,
+            cls._target_deployment,
+            db.literal(0).label('level')
+        )
+
+        if dependents:
+            base = base_cols.filter(
+                cls._target_deployment.in_(deployment_ids))
+        else:
+            base = base_cols.filter(
+                cls._source_deployment.in_(deployment_ids))
+        base = (
+            base
+            .order_by(cls._storage_id)
+            .cte(name='dependents', recursive=True)
+        )
+
+        recursive_cols = db.session.query(
+            cls._storage_id,
+            cls._source_deployment,
+            cls._target_deployment,
+            base.c.level + 1
+
+        )
+        if dependents:
+            recursive = recursive_cols.join(
+                base, cls._target_deployment == base.c._source_deployment)
+        else:
+            recursive = recursive_cols.join(
+                base, cls._source_deployment == base.c._target_deployment)
+        recursive = recursive.order_by(cls._storage_id)
+        return base.union_all(recursive)
+
+    @classmethod
+    def _join_deployments(cls, adjacency, dependents=True):
+        if dependents:
+            join_column = adjacency.c._source_deployment
+        else:
+            join_column = adjacency.c._target_deployment
+        return (
+            db.session.query(Deployment)
+            .join(adjacency, Deployment._storage_id == join_column)
+        )
+
+    @classmethod
+    def get_dependencies(cls, deployment_ids, dependents=True, locking=False,
+                         fetch_deployments=True):
+        """Get dependencies of the given deployments.
+
+        Fetch the ancesntors (or descendants) recursively: parents, then
+        grandparents, then...
+
+        This method is most useful behind a utility facade, ie. all
+        the get_x methods on the Deployment model.
+
+        :param deployment_ids: storage ids of deployments to fetch
+            dependencies for
+        :param dependents: if true, fetch dependents; otherwise, fetch
+            dependencies
+        :param fetch_deployments: if true, return deployment objects; otherwise
+            return instances of this class. Dependency objects are mostly
+            useful when only querying for the edges of the graph - when
+            source/target ids are all that's needed
+        :param locking: emit a WITH FOR UPDATE
+        :return: a list of deployments, or of cls instances, based on
+            the fetch_deployments param
+        """
+        dependencies = cls._dependencies_adjacency(
+            deployment_ids, dependents=dependents)
+        if fetch_deployments:
+            query = cls._join_deployments(dependencies, dependents)
+        else:
+            query = db.session.query(cls).filter(
+                cls._storage_id == dependencies.c._storage_id
+            )
+        query = query.order_by(
+            dependencies.c.level, dependencies.c._storage_id)
+        if locking:
+            query = query.with_for_update(
+                of=(Deployment if fetch_deployments else cls),
+            )
+        return query.all()
+
 
 class InterDeploymentDependencies(BaseDeploymentDependencies):
     __tablename__ = 'inter_deployment_dependencies'
@@ -2063,6 +2219,45 @@ class InterDeploymentDependencies(BaseDeploymentDependencies):
     external_source = db.Column(JSONString, nullable=True)
     external_target = db.Column(JSONString, nullable=True)
 
+    def summarize(self):
+        dep_creator = self.dependency_creator.split('.')
+        dep_type = dep_creator[0] \
+            if dep_creator[0] in ['component', 'sharedresource'] \
+            else 'deployment'
+        dep_node = dep_creator[1]
+        return {
+            'deployment': self.source_deployment.id,
+            'dependency_type': dep_type,
+            'dependent_node': dep_node,
+            'tenant': self.tenant_name
+        }
+
+    def format(self):
+        summary = self.summarize()
+        type_message = {
+            'component': 'contains',
+            'sharedresource': 'uses a shared resource from',
+            'deployment': 'uses capabilities of'
+        }[summary['dependency_type']]
+        dep_node = summary['dependent_node']
+        return (
+            f'Deployment `{self.source_deployment.id}` {type_message} '
+            f'the current deployment in its node `{dep_node}`'
+        )
+
+
+# the _XSummary namedtuples are used as a return type for
+# DLD.get_children_summary
+_ChildSummary = namedtuple('_ChildSummary', [
+    'count',
+    'sub_services_total',
+    'sub_environments_total',
+    'deployment_statuses',
+    'sub_service_statuses',
+    'sub_environment_statuses',
+])
+_DepSummary = namedtuple('_DepSummary', ['environments', 'services'])
+
 
 class DeploymentLabelsDependencies(BaseDeploymentDependencies):
     __tablename__ = 'deployment_labels_dependencies'
@@ -2070,12 +2265,74 @@ class DeploymentLabelsDependencies(BaseDeploymentDependencies):
         db.UniqueConstraint(
             '_source_deployment', '_target_deployment'),
     )
-
+    dependency_creator = ''
     _source_backref_name = 'source_of_dependency_labels'
     _target_backref_name = 'target_of_dependency_labels'
 
     _source_deployment = foreign_key(Deployment._storage_id)
     _target_deployment = foreign_key(Deployment._storage_id)
+
+    def format(self):
+        return (
+            f'Deployment `{self.target_deployment.id}` is the parent of '
+            f'deployment {self.source_deployment.id}'
+        )
+
+    _children_summary_query_cache = None
+
+    @classmethod
+    def get_children_summary(cls, parent):
+        """Get the summary of a deployment's children.
+
+        Return the counts and statuses of all the DIRECT children of a
+        deployment.
+        """
+        if cls._children_summary_query_cache is None:
+            cols = db.session.query(
+                db.func.count(1),
+                db.func.sum(Deployment.sub_services_count),
+                db.func.sum(Deployment.sub_environments_count),
+                # all the enums are casted to text so that this query doesn't
+                # break on them being null
+                db.func.array_agg(db.cast(
+                    Deployment.deployment_status, db.Text).distinct()),
+                db.func.array_agg(db.cast(
+                    Deployment.sub_services_status, db.Text).distinct()),
+                db.func.array_agg(db.cast(
+                    Deployment.sub_environments_status, db.Text).distinct()),
+            )
+            is_env_filter = (
+                db.session.query(DeploymentLabel)
+                .filter(
+                    db.and_(
+                        Deployment._storage_id ==
+                        DeploymentLabel._labeled_model_fk,
+                        DeploymentLabel.key == 'csys-obj-type',
+                        DeploymentLabel.value == 'environment'
+                    )
+                )
+                .exists()
+            )
+            query_part = (
+                cols
+                .join(cls, Deployment._storage_id == cls._source_deployment)
+                .filter(cls._target_deployment == db.bindparam('dep_id'))
+            )
+            cls._children_summary_query_cache = (
+                query_part
+                .filter(is_env_filter)
+                .union_all(
+                    query_part.filter(~is_env_filter)
+                )
+            )
+
+        rows = list(db.session.execute(
+            cls._children_summary_query_cache,
+            {'dep_id': parent._storage_id})
+        )
+        if len(rows) != 2:
+            raise RuntimeError(f'children summary returned {len(rows)} rows')
+        return _DepSummary(_ChildSummary(*rows[0]), _ChildSummary(*rows[1]))
 
 
 class AuditLog(CreatedAtMixin, SQLModelBase):

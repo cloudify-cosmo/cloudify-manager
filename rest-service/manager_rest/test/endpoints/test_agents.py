@@ -23,7 +23,6 @@ from cloudify.rabbitmq_client import USERNAME_PATTERN
 
 from manager_rest.test import base_test
 from manager_rest import manager_exceptions
-from manager_rest.test.attribute import attr
 from manager_rest.test.mocks import put_node_instance
 from manager_rest.utils import get_formatted_timestamp
 from manager_rest.storage.models import Agent, NodeInstance
@@ -31,7 +30,6 @@ from manager_rest.storage.models import Agent, NodeInstance
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 
-@attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
 class AgentsTest(base_test.BaseServerTestCase):
     agent_data = {
         'install_method': 'remote',

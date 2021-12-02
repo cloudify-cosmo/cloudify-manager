@@ -11,7 +11,7 @@ from cloudify_rest_client.exceptions import (
 )
 
 from manager_rest.manager_exceptions import SQLStorageException, ConflictError
-from manager_rest.storage import models
+from manager_rest.storage import models, db
 from manager_rest.rest.resources_v3_1.deployments import DeploymentGroupsId
 
 from manager_rest.test import base_test
@@ -20,9 +20,32 @@ from manager_rest.test import base_test
 class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
     def setUp(self):
         super(DeploymentGroupsTestCase, self).setUp()
-        self.put_blueprint()
-        self.client.deployments.create('blueprint', 'dep1')
-        self.client.deployments.create('blueprint', 'dep2')
+        self.blueprint = models.Blueprint(
+            id='blueprint',
+            creator=self.user,
+            tenant=self.tenant,
+            plan={'inputs': {}},
+        )
+        for dep_id in ['dep1', 'dep2']:
+            db.session.add(models.Deployment(
+                id=dep_id,
+                creator=self.user,
+                display_name='',
+                tenant=self.tenant,
+                blueprint=self.blueprint,
+                workflows={'install': {'operation': ''}}
+            ))
+
+    def _deployment(self, **kwargs):
+        dep_params = {
+            'creator': self.user,
+            'tenant': self.tenant,
+            'blueprint': self.blueprint
+        }
+        dep_params.update(kwargs)
+        dep = models.Deployment(**dep_params)
+        db.session.add(dep)
+        return dep
 
     def test_get_empty(self):
         result = self.client.deployment_groups.list()
@@ -159,14 +182,12 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         assert len(group.deployment_ids) == 3
 
     def test_create_from_spec(self):
-        self.put_blueprint(
-            blueprint_file_name='blueprint_with_inputs.yaml',
-            blueprint_id='bp_with_inputs')
+        self.blueprint.plan['inputs'] = {'http_web_server_port': {}}
         inputs = {'http_web_server_port': 1234}
         labels = [{'label1': 'label-value'}]
         group = self.client.deployment_groups.put(
             'group1',
-            blueprint_id='bp_with_inputs',
+            blueprint_id='blueprint',
             new_deployments=[
                 {
                     'id': 'spec_dep1',
@@ -359,7 +380,6 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         # dep hasnt been deleted _yet_, but check that delete-dep-env for it
         # was run
         dep = self.sm.get(models.Deployment, 'dep1')
-        assert len(dep.executions) == 2
         assert any(exc.workflow_id == 'delete_deployment_environment'
                    for exc in dep.executions)
 
@@ -538,14 +558,16 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         )
         dep_id = group.deployment_ids[0]
         dep = self.sm.get(models.Deployment, dep_id)
-        self.create_deployment_environment(dep)
-        client_dep = self.client.deployments.get(dep_id)
-        self.assert_resource_labels(client_dep.labels, [
-            # labels from both the group, and the deployment
-            # (note that label1=value1 occurs in both places)
-            {'label1': 'value1'}, {'label1': 'value2'}, {'label2': 'value2'},
-            {'label3': 'value4'},
-        ])
+        assert set(dep.create_execution.parameters['labels']) == {
+            # from new_deployments:
+            ('label1', 'value1'),
+            ('label1', 'value2'),
+            ('label3', 'value4'),
+            # from the group:
+            # ('label1', 'value1') - not present - deduplicated
+            ('label2', 'value2')
+
+        }
 
     def test_delete_group_label(self):
         """Deleting a label from the group, deletes it from its deps"""
@@ -665,12 +687,11 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         self.assert_resource_labels(dep1.labels, labels)
 
     def test_add_invalid_label_parent(self):
-        error_message = 'using label `csys-obj-parent` that does not exist'
         self.client.deployment_groups.put(
             'group1',
             deployment_ids=['dep1', 'dep2']
         )
-        with self.assertRaisesRegex(CloudifyClientError, error_message):
+        with self.assertRaisesRegex(CloudifyClientError, 'not found'):
             self.client.deployment_groups.put(
                 'group1',
                 labels=[{'csys-obj-parent': 'value2'}],
@@ -678,12 +699,11 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         group = self.client.deployment_groups.get('group1')
         dep1 = self.client.deployments.get('dep1')
         dep2 = self.client.deployments.get('dep2')
-        self.assertEqual(len(group.labels), 0)
-        self.assertEqual(len(dep1.labels), 0)
-        self.assertEqual(len(dep2.labels), 0)
+        assert len(group.labels) == 0
+        assert len(dep1.labels) == 0
+        assert len(dep2.labels) == 0
 
     def test_add_cyclic_parent_labels_in_group(self):
-        error_message = 'results in cyclic deployment-labels dependencies'
         self.client.deployments.update_labels(
             'dep2', [{'csys-obj-parent': 'dep1'}])
         self.client.deployment_groups.put(
@@ -691,7 +711,7 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             deployment_ids=['dep1', 'dep2']
         )
 
-        with self.assertRaisesRegex(CloudifyClientError, error_message):
+        with self.assertRaisesRegex(CloudifyClientError, 'cyclic'):
             self.client.deployment_groups.put(
                 'group1',
                 labels=[{'csys-obj-parent': 'dep2'}],
@@ -699,26 +719,25 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         group = self.client.deployment_groups.get('group1')
         dep1 = self.client.deployments.get('dep1')
         dep2 = self.client.deployments.get('dep2')
-        self.assertEqual(len(group.labels), 0)
-        self.assertEqual(len(dep1.labels), 0)
-        self.assertEqual(len(dep2.labels), 1)
+        assert len(group.labels) == 0
+        assert len(dep1.labels) == 0
+        assert len(dep2.labels) == 1
 
     def test_add_self_deployment_as_parent(self):
-        error_message = 'results in cyclic deployment-labels dependencies'
         self.client.deployment_groups.put(
             'group1',
             deployment_ids=['dep1']
         )
 
-        with self.assertRaisesRegex(CloudifyClientError, error_message):
+        with self.assertRaisesRegex(CloudifyClientError, 'cyclic'):
             self.client.deployment_groups.put(
                 'group1',
                 labels=[{'csys-obj-parent': 'dep1'}],
             )
         group = self.client.deployment_groups.get('group1')
         dep1 = self.client.deployments.get('dep1')
-        self.assertEqual(len(group.labels), 0)
-        self.assertEqual(len(dep1.labels), 0)
+        assert len(group.labels) == 0
+        assert len(dep1.labels) == 0
 
     def test_add_single_parent(self):
         self.client.deployment_groups.put(
@@ -726,13 +745,12 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             deployment_ids=['dep1', 'dep2']
         )
 
-        self.put_deployment(deployment_id='parent_1', blueprint_id='parent_1')
+        parent = self._deployment(id='parent_1')
         self.client.deployment_groups.put(
             'group1',
             labels=[{'csys-obj-parent': 'parent_1'}],
         )
-        dep = self.client.deployments.get('parent_1')
-        self.assertEqual(dep.sub_services_count, 2)
+        assert parent.sub_services_count == 2
 
     def test_add_multiple_parents(self):
         self.client.deployment_groups.put(
@@ -740,22 +758,19 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             deployment_ids=['dep1', 'dep2']
         )
 
-        self.put_deployment(deployment_id='parent_1', blueprint_id='parent_1')
-        self.put_deployment(deployment_id='parent_2', blueprint_id='parent_2')
-
+        parent1 = self._deployment(id='parent_1')
+        parent2 = self._deployment(id='parent_2')
         self.client.deployment_groups.put(
             'group1',
             labels=[{'csys-obj-parent': 'parent_1'},
                     {'csys-obj-parent': 'parent_2'}],
         )
-        dep1 = self.client.deployments.get('parent_1')
-        dep2 = self.client.deployments.get('parent_2')
-        self.assertEqual(dep1.sub_services_count, 2)
-        self.assertEqual(dep2.sub_services_count, 2)
+        assert parent1.sub_services_count == 2
+        assert parent2.sub_services_count == 2
 
     def test_add_parents_before_adding_deployment(self):
-        self.put_deployment(deployment_id='parent_1', blueprint_id='parent_1')
-        self.put_deployment(deployment_id='parent_2', blueprint_id='parent_2')
+        parent1 = self._deployment(id='parent_1')
+        parent2 = self._deployment(id='parent_2')
         self.client.deployment_groups.put('group1')
         self.client.deployment_groups.put(
             'group1',
@@ -766,18 +781,14 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             'group1',
             deployment_ids=['dep1', 'dep2']
         )
-        dep1 = self.client.deployments.get('parent_1')
-        dep2 = self.client.deployments.get('parent_2')
-        self.assertEqual(dep1.sub_services_count, 2)
-        self.assertEqual(dep2.sub_services_count, 2)
+        assert parent1.sub_services_count == 2
+        assert parent2.sub_services_count == 2
 
     def test_add_parents_before_adding_deployments_from_groups(self):
-        self.put_deployment(deployment_id='parent_1', blueprint_id='parent_1')
-        self.put_deployment(deployment_id='parent_2', blueprint_id='parent_2')
-        self.put_deployment(deployment_id='parent_3', blueprint_id='parent_3')
-        self.put_deployment(deployment_id='group2_1', blueprint_id='group2_1')
+        parent1 = self._deployment(id='parent_1')
+        parent2 = self._deployment(id='parent_2')
+        parent3 = self._deployment(id='parent_3')
 
-        self.client.deployment_groups.put('group1')
         self.client.deployment_groups.put(
             'group1',
             labels=[{'csys-obj-parent': 'parent_1'},
@@ -803,19 +814,15 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             'group1',
             deployments_from_group='group3'
         )
-
-        dep1 = self.client.deployments.get('parent_1')
-        dep2 = self.client.deployments.get('parent_2')
-        dep3 = self.client.deployments.get('parent_3')
-        self.assertEqual(dep1.sub_services_count, 6)
-        self.assertEqual(dep2.sub_services_count, 6)
-        self.assertEqual(dep3.sub_services_count, 6)
+        assert parent1.sub_services_count == 6
+        assert parent2.sub_services_count == 6
+        assert parent3.sub_services_count == 6
 
     def test_add_parents_to_multiple_source_of_deployments(self):
-        self.put_deployment(deployment_id='parent_1', blueprint_id='parent_1')
-        self.put_deployment(deployment_id='dep3', blueprint_id='dep3')
-        self.put_deployment(deployment_id='dep4', blueprint_id='dep4')
-        self.put_deployment(deployment_id='dep5', blueprint_id='dep5')
+        parent1 = self._deployment(id='parent_1')
+        self._deployment(id='dep3')
+        self._deployment(id='dep4')
+        self._deployment(id='dep5')
 
         self.client.deployment_groups.put('group1', blueprint_id='blueprint')
         self.client.deployment_groups.put('group2', blueprint_id='blueprint')
@@ -844,11 +851,10 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             deployment_ids=['dep5'],
             deployments_from_group='group2'
         )
-        dep = self.client.deployments.get('parent_1')
-        self.assertEqual(dep.sub_services_count, 5)
+        assert parent1.sub_services_count == 5
 
     def test_add_parents_to_environment_deployments(self):
-        self.put_deployment(deployment_id='parent_1', blueprint_id='parent_1')
+        parent1 = self._deployment(id='parent_1')
 
         self.client.deployment_groups.put('group1', blueprint_id='blueprint')
         self.client.deployment_groups.add_deployments(
@@ -860,11 +866,10 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             labels=[{'csys-obj-parent': 'parent_1'},
                     {'csys-obj-type': 'environment'}],
         )
-        dep = self.client.deployments.get('parent_1')
-        self.assertEqual(dep.sub_environments_count, 4)
+        assert parent1.sub_environments_count == 4
 
     def test_convert_service_to_environment_for_deployments(self):
-        self.put_deployment(deployment_id='parent_1', blueprint_id='parent_1')
+        parent1 = self._deployment(id='parent_1')
         self.client.deployment_groups.put('group1', blueprint_id='blueprint')
         self.client.deployment_groups.add_deployments(
             'group1',
@@ -874,18 +879,16 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             'group1',
             labels=[{'csys-obj-parent': 'parent_1'}],
         )
-        dep = self.client.deployments.get('parent_1')
-        self.assertEqual(dep.sub_services_count, 4)
+        assert parent1.sub_services_count == 4
         self.client.deployment_groups.put(
             'group1',
             labels=[{'csys-obj-parent': 'parent_1'},
                     {'csys-obj-type': 'environment'}],
         )
-        dep = self.client.deployments.get('parent_1')
-        self.assertEqual(dep.sub_environments_count, 4)
+        assert parent1.sub_environments_count == 4
 
     def test_convert_environment_to_service_for_deployments(self):
-        self.put_deployment(deployment_id='parent_1', blueprint_id='parent_1')
+        parent1 = self._deployment(id='parent_1')
         self.client.deployment_groups.put('group1', blueprint_id='blueprint')
         self.client.deployment_groups.add_deployments(
             'group1',
@@ -896,17 +899,15 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             labels=[{'csys-obj-parent': 'parent_1'},
                     {'csys-obj-type': 'environment'}],
         )
-        dep = self.client.deployments.get('parent_1')
-        self.assertEqual(dep.sub_environments_count, 4)
+        assert parent1.sub_environments_count == 4
         self.client.deployment_groups.put(
             'group1',
             labels=[{'csys-obj-parent': 'parent_1'}],
         )
-        dep = self.client.deployments.get('parent_1')
-        self.assertEqual(dep.sub_services_count, 4)
+        assert parent1.sub_services_count == 4
 
     def test_delete_parents_labels_from_deployments(self):
-        self.put_deployment(deployment_id='parent_1', blueprint_id='parent_1')
+        parent1 = self._deployment(id='parent_1')
         self.client.deployment_groups.put(
             'group1',
             labels=[{'csys-obj-parent': 'parent_1'}],
@@ -916,46 +917,51 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             'group1',
             deployment_ids=['dep1', 'dep2']
         )
-        dep = self.client.deployments.get('parent_1')
-        self.assertEqual(dep.sub_services_count, 2)
+        assert parent1.sub_services_count == 2
         self.client.deployment_groups.put(
             'group1',
             labels=[],
             blueprint_id='blueprint'
         )
-        dep = self.client.deployments.get('parent_1')
-        self.assertEqual(dep.sub_services_count, 0)
+        assert parent1.sub_services_count == 0
 
-    @mock.patch(
-        'manager_rest.rest.rest_utils.RecursiveDeploymentLabelsDependencies'
-        '.propagate_deployment_statuses')
-    def test_validate_update_deployment_statuses_after_conversion(self,
-                                                                  mock_status):
-        self.put_deployment(deployment_id='parent_1', blueprint_id='parent_1')
+    def test_validate_update_deployment_statuses_after_conversion(self):
+        parent1 = self._deployment(id='parent_1')
         self.client.deployment_groups.put('group1', blueprint_id='blueprint')
         self.client.deployment_groups.add_deployments(
             'group1',
-            count=4
+            count=1
         )
         self.client.deployment_groups.put(
             'group1',
             labels=[{'csys-obj-parent': 'parent_1'},
                     {'csys-obj-type': 'environment'}],
         )
+        group_deployment = self.sm.get(
+            models.DeploymentGroup, 'group1').deployments[0]
+        assert parent1.sub_environments_count == 1
+        assert parent1.sub_services_count == 0
+        assert parent1.sub_services_status is None
+        assert parent1.sub_environments_status \
+            == group_deployment.deployment_status
+
         self.client.deployment_groups.put(
             'group1',
-            labels=[{'csys-obj-parent': 'parent_1'}],
+            labels=[{'csys-obj-type': 'service'},
+                    {'csys-obj-parent': 'parent_1'}],
         )
-        mock_status.assert_called()
+
+        assert parent1.sub_environments_count == 0
+        assert parent1.sub_services_count == 1
+        assert parent1.sub_environments_status is None
+        assert parent1.sub_services_status \
+            == group_deployment.deployment_status
 
     def test_invalid_inputs(self):
-        self.put_blueprint(
-            blueprint_file_name='blueprint_with_inputs.yaml',
-            blueprint_id='bp-inputs',
-        )
+        self.blueprint.plan['inputs'] = {'http_web_server_port': {}}
         self.client.deployment_groups.put(
                 'group1',
-                blueprint_id='bp-inputs',
+                blueprint_id='blueprint',
                 new_deployments=[
                     {'inputs': {'http_web_server_port': 8080}}
                 ])
@@ -972,15 +978,29 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
 
 class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
     def setUp(self):
-        super(ExecutionGroupsTestCase, self).setUp()
-        self.put_blueprint()
-        dep = self.client.deployments.create('blueprint', 'dep1')
-        self.create_deployment_environment(dep, None)
-        self.client.deployment_groups.put(
-            'group1',
-            deployment_ids=['dep1'],
-            blueprint_id='blueprint',
+        super().setUp()
+        bp = models.Blueprint(
+            id='bp1',
+            creator=self.user,
+            tenant=self.tenant,
+            plan={'inputs': {}},
         )
+        self.deployment = models.Deployment(
+            id='dep1',
+            creator=self.user,
+            display_name='',
+            tenant=self.tenant,
+            blueprint=bp,
+            workflows={'install': {'operation': ''}}
+        )
+        self.dep_group = models.DeploymentGroup(
+            id='group1',
+            default_blueprint=bp,
+            tenant=self.tenant,
+            creator=self.user,
+        )
+        self.dep_group.deployments.append(self.deployment)
+        db.session.add(self.deployment)
 
     def test_get_empty(self):
         result = self.client.execution_groups.list()
@@ -1147,25 +1167,24 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
 
     def test_delete_deployment(self):
         """It's still possible to delete a deployment used in an exec-group"""
-        exc_group = self.client.execution_groups.start(
-            deployment_group_id='group1',
-            workflow_id='install'
+        models.ExecutionGroup(
+            id='gr1',
+            workflow_id='',
+            tenant=self.tenant,
+            creator=self.user,
         )
-        group_execs = self.sm.get(
-            models.ExecutionGroup, exc_group.id).executions
-        for exc in group_execs:
-            exc.status = ExecutionState.QUEUED
-            self.sm.update(exc)
-
+        exc1 = models.Execution(
+            id='gr1',
+            workflow_id='install',
+            deployment=self.deployment,
+            status=ExecutionState.QUEUED,
+            tenant=self.tenant,
+            creator=self.user,
+        )
         with self.assertRaisesRegex(CloudifyClientError, 'running or queued'):
             self.client.deployments.delete('dep1')
 
-        group_execs = self.sm.get(
-            models.ExecutionGroup, exc_group.id).executions
-        for exc in group_execs:
-            exc.status = ExecutionState.TERMINATED
-            self.sm.update(exc)
-
+        exc1.status = ExecutionState.TERMINATED
         self.client.deployments.delete('dep1')
 
         delete_exec = self.sm.get(models.Execution, None, filters={
@@ -1176,78 +1195,102 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
         # via the restclient to terminated, which actually deletes
         # the deployment from the db
         delete_exec.status = ExecutionState.STARTED
-        self.sm.update(delete_exec)
         self.client.executions.update(
             delete_exec.id, ExecutionState.TERMINATED)
 
-        deps = self.client.deployments.list()
-        assert len(deps) == 0
+        assert db.session.query(models.Deployment).count() == 0
 
     def test_queues_over_concurrency(self):
-        dep_ids = []
-        for ix in range(5):
-            dep_id = f'd{ix}'
-            dep = self.client.deployments.create('blueprint', dep_id)
-            self.create_deployment_environment(dep, None)
-            dep_ids.append(dep_id)
-        self.client.deployment_groups.put('group2', deployment_ids=dep_ids)
-        exc_group = self.client.execution_groups.start(
-            deployment_group_id='group2',
-            workflow_id='install',
-            concurrency=3,
+        exc_group = models.ExecutionGroup(
+            id='gr1',
+            workflow_id='',
+            tenant=self.tenant,
+            creator=self.user,
         )
-        group_execs = self.sm.get(
-            models.ExecutionGroup, exc_group.id).executions
-        pending_execs = sum(
-            exc.status == ExecutionState.TERMINATED for exc in group_execs)
-        queued_execs = sum(
-            exc.status == ExecutionState.QUEUED for exc in group_execs)
-        assert pending_execs == exc_group.concurrency
-        assert queued_execs == len(group_execs) - exc_group.concurrency
+        for _ in range(5):
+            exc_group.executions.append(models.Execution(
+                workflow_id='create_deployment_environment',
+                tenant=self.tenant,
+                creator=self.user,
+                status=ExecutionState.PENDING,
+                parameters={}
+            ))
+        exc_group.concurrency = 3
+        messages = exc_group.start_executions(self.sm, self.rm)
+        assert len(messages) == exc_group.concurrency
+        assert sum(exc.status == ExecutionState.PENDING
+                   for exc in exc_group.executions) == exc_group.concurrency
+        assert sum(exc.status == ExecutionState.QUEUED
+                   for exc in exc_group.executions) == 2
 
-    # these test want a no-op mock, because the default mock in this
-    # test would just set the executions to TERMINATED
-    @mock.patch('manager_rest.workflow_executor.execute_workflow', mock.Mock())
+    def test_doesnt_start_finished(self):
+        exc_group = models.ExecutionGroup(
+            id='gr1',
+            workflow_id='',
+            tenant=self.tenant,
+            creator=self.user,
+        )
+        for exc_status in [ExecutionState.FAILED, ExecutionState.TERMINATED]:
+            exc_group.executions.append(models.Execution(
+                workflow_id='create_deployment_environment',
+                tenant=self.tenant,
+                creator=self.user,
+                status=exc_status,
+            ))
+        messages = exc_group.start_executions(self.sm, self.rm)
+        assert len(messages) == 0
+
     def test_cancel_group(self):
-        self.client.deployment_groups.add_deployments(
-            'group1',
-            count=2
+        exc_group = models.ExecutionGroup(
+            id='gr1',
+            workflow_id='',
+            tenant=self.tenant,
+            creator=self.user,
         )
-        for dep in self.client.deployments.list():
-            if dep.id != 'dep1':
-                self.create_deployment_environment(dep)
-        exc_group = self.client.execution_groups.start(
-            deployment_group_id='group1',
-            workflow_id='install',
+        ex1 = models.Execution(
+            workflow_id='',
+            tenant=self.tenant,
+            creator=self.user,
+            status=ExecutionState.STARTED,
         )
+        ex2 = models.Execution(
+            workflow_id='',
+            tenant=self.tenant,
+            creator=self.user,
+            status=ExecutionState.STARTED,
+        )
+        exc_group.executions = [ex1, ex2]
         self.client.execution_groups.cancel(exc_group.id)
-        group = self.sm.get(models.ExecutionGroup, exc_group.id)
 
-        for exc in group.executions:
+        for exc in exc_group.executions:
             assert exc.status in (
                 ExecutionState.CANCELLED, ExecutionState.CANCELLING
             )
 
-    @mock.patch('manager_rest.workflow_executor.execute_workflow', mock.Mock())
-    def test_resume_group(self):
+    @mock.patch('manager_rest.workflow_executor.execute_workflow')
+    def test_resume_group(self, mock_execute):
         """After all executions have been cancelled, resume them"""
-        self.client.deployment_groups.add_deployments(
-            'group1',
-            count=2
+        exc_group = models.ExecutionGroup(
+            id='gr1',
+            workflow_id='',
+            tenant=self.tenant,
+            creator=self.user,
         )
-        for dep in self.client.deployments.list():
-            if dep.id != 'dep1':
-                self.create_deployment_environment(dep)
-        exc_group = self.client.execution_groups.start(
-            deployment_group_id='group1',
-            workflow_id='install',
+        ex1 = models.Execution(
+            workflow_id='create_deployment_environment',
+            parameters={},
+            tenant=self.tenant,
+            creator=self.user,
+            status=ExecutionState.CANCELLED,
         )
-        group = self.sm.get(models.ExecutionGroup, exc_group.id)
-
-        for exc in group.executions:
-            exc.status = ExecutionState.CANCELLED
-            self.sm.update(exc)
-
+        ex2 = models.Execution(
+            workflow_id='create_deployment_environment',
+            parameters={},
+            tenant=self.tenant,
+            creator=self.user,
+            status=ExecutionState.CANCELLED,
+        )
+        exc_group.executions = [ex1, ex2]
         self.client.execution_groups.resume(exc_group.id)
 
         group = self.sm.get(models.ExecutionGroup, exc_group.id)
@@ -1255,6 +1298,7 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
             assert exc.status in (
                 ExecutionState.PENDING, ExecutionState.QUEUED
             )
+        mock_execute.assert_called()
 
     def test_invalid_parameters(self):
         with self.assertRaises(IllegalExecutionParametersError):
@@ -1272,40 +1316,38 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
                 default_parameters={'invalid-input': 42}
             )
 
-    @mock.patch('manager_rest.workflow_executor.execute_workflow', mock.Mock())
-    def test_group_status_queued(self):
-        self.client.deployment_groups.add_deployments('group1', count=2)
-        for dep in self.client.deployments.list():
-            if dep.id.startswith('group1'):
-                self.create_deployment_environment(dep)
-        exc_group = self.client.execution_groups.start(
-            deployment_group_id='group1',
-            workflow_id='install',
-            concurrency=1,
-        )
-
-        group = self.sm.get(models.ExecutionGroup, exc_group.id)
-        for exc in group.executions:
-            assert exc.status in (
-                ExecutionState.PENDING, ExecutionState.QUEUED,
-            )
-        assert group.status == ExecutionState.QUEUED
-
-    @mock.patch('manager_rest.workflow_executor.execute_workflow', mock.Mock())
-    def test_group_status_pending(self):
-        self.client.deployment_groups.add_deployments('group1', count=2)
-        for dep in self.client.deployments.list():
-            if dep.id.startswith('group1'):
-                self.create_deployment_environment(dep)
-        exc_group = self.client.execution_groups.start(
-            deployment_group_id='group1',
-            workflow_id='install',
-        )
-
-        group = self.sm.get(models.ExecutionGroup, exc_group.id)
-        for exc in group.executions:
-            assert exc.status == ExecutionState.PENDING
-        assert group.status == ExecutionState.PENDING
+    def test_group_status(self):
+        for execution_statuses, expected_group_status in [
+            ([], None),
+            ([ExecutionState.PENDING], ExecutionState.PENDING),
+            ([ExecutionState.QUEUED], ExecutionState.QUEUED),
+            ([ExecutionState.TERMINATED], ExecutionState.TERMINATED),
+            ([ExecutionState.STARTED], ExecutionState.STARTED),
+            ([ExecutionState.FAILED], ExecutionState.FAILED),
+            ([ExecutionState.TERMINATED, ExecutionState.FAILED],
+             ExecutionState.FAILED),
+            ([ExecutionState.STARTED, ExecutionState.PENDING,
+              ExecutionState.TERMINATED],
+             ExecutionState.STARTED),
+            ([ExecutionState.TERMINATED, ExecutionState.STARTED],
+             ExecutionState.STARTED)
+        ]:
+            with self.subTest():
+                exc_group = models.ExecutionGroup(
+                    id='gr1',
+                    workflow_id='',
+                    tenant=self.tenant,
+                    creator=self.user,
+                )
+                for exc_status in execution_statuses:
+                    exc = models.Execution(
+                        workflow_id='',
+                        tenant=self.tenant,
+                        creator=self.user,
+                        status=exc_status
+                    )
+                    exc_group.executions.append(exc)
+                assert exc_group.status == expected_group_status
 
     @mock.patch('manager_rest.workflow_executor.execute_workflow', mock.Mock())
     def test_success_group(self):

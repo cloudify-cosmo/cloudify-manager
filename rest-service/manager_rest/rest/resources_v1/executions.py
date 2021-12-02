@@ -21,10 +21,12 @@ from manager_rest.rest.rest_utils import (
     get_args_and_verify_arguments,
     get_json_and_verify_params,
     verify_and_convert_bool,
-    parse_datetime_string
+    parse_datetime_string,
+    valid_user,
 )
 from manager_rest.security import SecuredResource
-from manager_rest.security.authorization import authorize
+from manager_rest.security.authorization import (authorize,
+                                                 check_user_action_allowed)
 from manager_rest.storage import (
     get_storage_manager,
     models,
@@ -74,8 +76,16 @@ class Executions(SecuredResource):
     @marshal_with(models.Execution)
     def post(self, **kwargs):
         """Execute a workflow"""
-        request_dict = get_json_and_verify_params({'deployment_id',
-                                                   'workflow_id'})
+        request_dict = get_json_and_verify_params({
+            'deployment_id': {'type': str},
+            'workflow_id': {'type': str},
+            'creator': {'optional': True},
+            'created_at': {'optional': True},
+            'started_at': {'optional': True},
+            'ended_at': {'optional': True},
+            'status': {'optional': True},
+            'id': {'optional': True},
+        })
 
         allow_custom_parameters = verify_and_convert_bool(
             'allow_custom_parameters',
@@ -96,6 +106,27 @@ class Executions(SecuredResource):
         wait_after_fail = request_dict.get('wait_after_fail', 600)
         scheduled_time = request_dict.get('scheduled_time', None)
         force_status = request_dict.get('force_status', None)
+        creator = request_dict.get('creator')
+        created_at = request_dict.get('created_at')
+        started_at = request_dict.get('started_at')
+        ended_at = request_dict.get('ended_at')
+        execution_id = request_dict.get('id')
+
+        if creator:
+            check_user_action_allowed('set_owner', None, True)
+            creator = valid_user(creator)
+
+        if created_at or started_at or ended_at:
+            check_user_action_allowed('set_timestamp', None, True)
+            if created_at:
+                created_at = parse_datetime_string(created_at)
+            if started_at:
+                started_at = parse_datetime_string(started_at)
+            if ended_at:
+                ended_at = parse_datetime_string(ended_at)
+
+        if force_status or execution_id:
+            check_user_action_allowed('set_execution_details', None, True)
 
         if force_status and scheduled_time:
             raise manager_exceptions.BadParametersError(
@@ -152,6 +183,16 @@ class Executions(SecuredResource):
                 status=force_status or ExecutionState.PENDING,
                 allow_custom_parameters=allow_custom_parameters,
             )
+            if creator:
+                execution.creator = creator
+            if created_at:
+                execution.created_at = created_at
+            if started_at:
+                execution.started_at = started_at
+            if ended_at:
+                execution.ended_at = ended_at
+            if execution_id:
+                execution.id = execution_id
             sm.put(execution)
             messages = []
             if not force_status:

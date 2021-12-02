@@ -14,7 +14,7 @@ from dsl_parser import constants
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import (
     authorize,
-    is_user_action_allowed,
+    check_user_action_allowed,
 )
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.upload_manager import (UploadedBlueprintsManager,
@@ -23,7 +23,7 @@ from manager_rest.rest import (rest_utils,
                                resources_v1,
                                resources_v2,
                                rest_decorators)
-from manager_rest.storage import models, get_storage_manager, user_datastore
+from manager_rest.storage import models, get_storage_manager
 from manager_rest.utils import get_formatted_timestamp, remove
 from manager_rest.rest.rest_utils import (get_labels_from_plan,
                                           get_args_and_verify_arguments)
@@ -83,16 +83,6 @@ class BlueprintsIcon(SecuredResource):
         return blueprint
 
 
-def valid_user(input_value):
-    """Convert a user name to a User object, or raise an exception if the user
-    does not exist.
-    """
-    user = user_datastore.get_user(input_value)
-    if not user:
-        raise BadParametersError('User {} does not exist.'.format(input_value))
-    return user
-
-
 class BlueprintsId(resources_v2.BlueprintsId):
     @authorize('blueprint_upload')
     @rest_decorators.marshal_with(models.Blueprint)
@@ -110,12 +100,12 @@ class BlueprintsId(resources_v2.BlueprintsId):
 
         created_at = owner = None
         if args.created_at:
-            if is_user_action_allowed('set_timestamp', None, True):
-                created_at = rest_utils.parse_datetime_string(args.created_at)
+            check_user_action_allowed('set_timestamp', None, True)
+            created_at = rest_utils.parse_datetime_string(args.created_at)
 
         if args.owner:
-            if is_user_action_allowed('set_creator', None, True):
-                owner = valid_user(args.owner)
+            check_user_action_allowed('set_owner', None, True)
+            owner = rest_utils.valid_user(args.owner)
 
         async_upload = args.async_upload
         visibility = rest_utils.get_visibility_parameter(
@@ -222,9 +212,21 @@ class BlueprintsId(resources_v2.BlueprintsId):
             'state': {'type': text_type, 'optional': True},
             'error': {'type': text_type, 'optional': True},
             'error_traceback': {'type': text_type, 'optional': True},
-            'labels': {'type': list, 'optional': True}
+            'labels': {'type': list, 'optional': True},
+            'creator': {'type': text_type, 'optional': True},
+            'created_at': {'type': text_type, 'optional': True},
         }
         request_dict = rest_utils.get_json_and_verify_params(request_schema)
+
+        created_at = creator = None
+        if request_dict.get('created_at'):
+            check_user_action_allowed('set_timestamp', None, True)
+            created_at = rest_utils.parse_datetime_string(
+                request_dict['created_at'])
+
+        if request_dict.get('creator'):
+            check_user_action_allowed('set_owner', None, True)
+            creator = rest_utils.valid_user(request_dict['creator'])
 
         invalid_params = set(request_dict.keys()) - set(request_schema.keys())
         if invalid_params:
@@ -264,6 +266,8 @@ class BlueprintsId(resources_v2.BlueprintsId):
             blueprint.description = request_dict['description']
         if 'main_file_name' in request_dict:
             blueprint.main_file_name = request_dict['main_file_name']
+        if 'creator' in request_dict:
+            blueprint.creator = creator
         provided_labels = request_dict.get('labels')
 
         if request_dict.get('plan'):
@@ -316,7 +320,9 @@ class BlueprintsId(resources_v2.BlueprintsId):
                 labels_list = rest_utils.get_labels_list(provided_labels)
                 rm.update_resource_labels(models.BlueprintLabel,
                                           blueprint,
-                                          labels_list)
+                                          labels_list,
+                                          creator=creator,
+                                          created_at=created_at)
 
         blueprint.updated_at = get_formatted_timestamp()
         return sm.update(blueprint)
