@@ -11,11 +11,14 @@ from manager_rest.security import SecuredResource
 from manager_rest.amqp_manager import AMQPManager
 from manager_rest import utils, manager_exceptions
 from manager_rest.rest.responses_v3 import AgentResponse
-from manager_rest.security.authorization import authorize
+from manager_rest.security.authorization import (authorize,
+                                                 check_user_action_allowed)
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.rest.rest_utils import (validate_inputs,
                                           verify_and_convert_bool,
-                                          get_json_and_verify_params)
+                                          get_json_and_verify_params,
+                                          parse_datetime_string,
+                                          valid_user)
 from manager_rest.workflow_executor import get_amqp_client
 
 
@@ -180,10 +183,25 @@ class AgentsName(SecuredResource):
         return self._update_agent(name, state)
 
     def _create_agent(self, name, state, request_dict):
-        timestamp = utils.get_formatted_timestamp()
+        created_at = owner = None
+        if request_dict.get('created_at'):
+            check_user_action_allowed('set_timestamp', None, True)
+            created_at = parse_datetime_string(request_dict['created_at'])
+
+        if request_dict.get('owner'):
+            check_user_action_allowed('set_owner', None, True)
+            owner = valid_user(request_dict['owner'])
+
+        now = utils.get_formatted_timestamp()
         rabbitmq_password = request_dict.get('rabbitmq_password')
         rabbitmq_password = encrypt(rabbitmq_password) if rabbitmq_password \
             else rabbitmq_password
+
+        storage_manager = get_storage_manager()
+        node_instance = storage_manager.get(
+            models.NodeInstance,
+            request_dict.get('node_instance_id')
+        )
 
         # TODO: remove these fields from the runtime properties
         new_agent = models.Agent(
@@ -197,15 +215,14 @@ class AgentsName(SecuredResource):
             rabbitmq_username=request_dict.get('rabbitmq_username'),
             rabbitmq_password=rabbitmq_password,
             rabbitmq_exchange=request_dict.get('rabbitmq_exchange'),
-            created_at=timestamp,
-            updated_at=timestamp,
+            created_at=created_at or now,
+            updated_at=now,
+            node_instance=node_instance
         )
-        storage_manager = get_storage_manager()
-        node_instance = storage_manager.get(
-            models.NodeInstance,
-            request_dict.get('node_instance_id')
-        )
-        new_agent.node_instance = node_instance
+        if owner:
+            new_agent.creator = owner
+        if request_dict.get('visibility'):
+            new_agent.visibility = request_dict['visibility']
         return storage_manager.put(new_agent)
 
     def _update_agent(self, name, state):
