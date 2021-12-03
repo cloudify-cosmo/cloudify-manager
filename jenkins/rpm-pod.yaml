@@ -9,7 +9,7 @@ spec:
         cpu: 0.3
         memory: 256Mi
   - name: rpmbuild
-    image: rpmbuild/centos7
+    image: 263721492972.dkr.ecr.eu-west-1.amazonaws.com/cloudify-rpmbuild
     command:
     - cat
     tty: true
