@@ -108,7 +108,8 @@ class DeploymentsId(resources_v1.DeploymentsId):
         return deployment
 
     @staticmethod
-    def _update_labels_for_deployment(rm, deployment, new_labels):
+    def _update_labels_for_deployment(rm, deployment, new_labels,
+                                      creator=None, created_at=None):
         sm = get_storage_manager()
         deployment_parents = deployment.deployment_parents
         new_parents = rm.get_deployment_parents_from_labels(new_labels)
@@ -120,7 +121,9 @@ class DeploymentsId(resources_v1.DeploymentsId):
         rm.update_resource_labels(
             models.DeploymentLabel,
             deployment,
-            new_labels
+            new_labels,
+            creator=creator,
+            created_at=created_at,
         )
 
         rm.delete_deployment_from_labels_graph([deployment], parents_to_remove)
@@ -133,12 +136,15 @@ class DeploymentsId(resources_v1.DeploymentsId):
             to_upd.add(deployment._storage_id)
         return to_upd
 
-    def _handle_deployment_labels(self, sm, rm, deployment, raw_labels_list):
+    def _handle_deployment_labels(self, sm, rm, deployment, raw_labels_list,
+                                  creator=None, created_at=None):
         new_labels = rest_utils.get_labels_list(raw_labels_list)
         if self._is_create_execution(deployment):
             self._add_existing_labels(deployment, new_labels)
 
-        return self._update_labels_for_deployment(rm, deployment, new_labels)
+        return self._update_labels_for_deployment(rm, deployment, new_labels,
+                                                  creator=creator,
+                                                  created_at=created_at)
 
     def _is_create_execution(self, deployment):
         """Are we running in deployment's create execution?"""
@@ -234,9 +240,15 @@ class DeploymentsId(resources_v1.DeploymentsId):
             raise IllegalActionError('Update a deployment request must include'
                                      ' at least one parameter to update')
         request_dict = request.json
+        creator = None
         if 'creator' in request_dict:
             check_user_action_allowed('set_owner', None, True)
             creator = rest_utils.valid_user(request_dict['creator'])
+        created_at = None
+        if request_dict.get('created_at'):
+            check_user_action_allowed('set_timestamp', None, True)
+            created_at = rest_utils.parse_datetime_string(
+                request_dict['created_at'])
         sm = get_storage_manager()
         rm = get_resource_manager()
         with sm.transaction():
@@ -265,7 +277,7 @@ class DeploymentsId(resources_v1.DeploymentsId):
                         'deployment-update')
                 deployment.blueprint = sm.get(
                     models.Blueprint, request_dict['blueprint_id'])
-            if 'creator' in request_dict and creator:
+            if creator:
                 deployment.creator = creator
             to_upd = None
             if 'labels' in request_dict:
@@ -274,7 +286,9 @@ class DeploymentsId(resources_v1.DeploymentsId):
                     sm,
                     rm,
                     deployment,
-                    raw_labels_list
+                    raw_labels_list,
+                    creator=creator,
+                    created_at=created_at,
                 )
             sm.update(deployment)
         if to_upd:
