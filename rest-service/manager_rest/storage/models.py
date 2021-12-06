@@ -55,6 +55,7 @@ from .resource_models import (
     TasksGraph,
     Site,
     PluginsUpdate,
+    BaseDeploymentDependencies,
     InterDeploymentDependencies,
     DeploymentLabelsDependencies,
     _PluginState,
