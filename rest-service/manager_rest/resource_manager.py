@@ -2207,6 +2207,66 @@ class ResourceManager(object):
                 f'different tenant'
             )
 
+    def _get_blocking_dependencies(
+            self,
+            deployment: models.Deployment,
+            skip_component_children: bool,
+            limit=3) -> typing.List[models.BaseDeploymentDependencies]:
+        """Get dependencies that would block destructive actions on deployment
+
+        This returns dependencies that cause deployment to not be able to
+        be uninstalled, stopped, or deleted.
+        Those dependencies are:
+            - children of this deployment: cannot delete a parent who has
+              existing children - that would orphan them
+            - compoent creators: cannot delete a deployment if it is a
+              component of another deployment, UNLESS that another deployment
+              is currently being uninstalled as well
+
+        :param skip_component_children: do not include children who are
+            components of the given deployment. Components are also children,
+            so this has to be used to allow uninstalling a deployment that
+            uses some components.
+        :param limit: only return up to this many DLDs and this many IDDs
+        :return: a list of dependencies blocking destructive actions on
+            the given deployment
+        """
+        dld = aliased(models.DeploymentLabelsDependencies)
+        idd = aliased(models.InterDeploymentDependencies)
+        children = (
+            db.session.query(dld)
+            .filter_by(target_deployment=deployment)
+        )
+        if skip_component_children:
+            children = children.filter(
+                ~db.session.query(idd)
+                .filter(dld._target_deployment == idd._source_deployment)
+                .filter(idd.dependency_creator.like('component.%'))
+                .exists()
+            )
+
+        children = children.limit(limit)
+        component_creators = (
+            db.session.query(idd)
+            .filter_by(target_deployment=deployment)
+            .filter(
+                ~db.session.query(models.Execution)
+                .filter(
+                    models.Execution._deployment_fk == idd._source_deployment,
+                    models.Execution.status.in_([
+                        ExecutionState.STARTED,
+                        ExecutionState.PENDING,
+                        ExecutionState.QUEUED
+                    ]),
+                    models.Execution.workflow_id.in_([
+                        'stop', 'uninstall', 'update'
+                    ])
+                )
+                .exists()
+            )
+            .limit(limit)
+        )
+        return children.all() + component_creators.all()
     def _verify_dependencies_not_affected(self, execution, force):
         if execution.workflow_id not in ['stop', 'uninstall', 'update']:
             return
