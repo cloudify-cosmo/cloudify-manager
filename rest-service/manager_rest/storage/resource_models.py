@@ -2221,10 +2221,14 @@ class InterDeploymentDependencies(BaseDeploymentDependencies):
 
     def summarize(self):
         dep_creator = self.dependency_creator.split('.')
-        dep_type = dep_creator[0] \
-            if dep_creator[0] in ['component', 'sharedresource'] \
-            else 'deployment'
-        dep_node = dep_creator[1]
+        if len(dep_creator) > 1:
+            dep_type = dep_creator[0] \
+                if dep_creator[0] in ['component', 'sharedresource'] \
+                else 'deployment'
+            dep_node = dep_creator[1]
+        else:
+            dep_type = 'deployment'
+            dep_node = '<unknown node>'
         return {
             'deployment': self.source_deployment.id,
             'dependency_type': dep_type,
