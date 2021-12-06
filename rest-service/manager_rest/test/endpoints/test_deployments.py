@@ -18,7 +18,7 @@ import os
 import uuid
 from datetime import datetime
 
-from cloudify.models_states import VisibilityState
+from cloudify.models_states import VisibilityState, ExecutionState
 from dsl_parser import exceptions as dsl_exceptions
 
 from manager_rest.test import base_test
@@ -36,6 +36,355 @@ from cloudify_rest_client.exceptions import (
 
 TEST_PACKAGE_NAME = 'cloudify-script-plugin'
 TEST_PACKAGE_VERSION = '1.2'
+
+
+class TestCheckDeploymentDelete(base_test.BaseServerTestCase):
+    def setUp(self):
+        super().setUp()
+        self._bp = models.Blueprint(
+            id='bp1',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+
+    def _deployment(self, **kwargs):
+        params = {
+            'blueprint': self._bp,
+            'creator': self.user,
+            'tenant': self.tenant
+        }
+        params.update(kwargs)
+        return models.Deployment(**params)
+
+    def test_allowed_delete(self):
+        dep = self._deployment(id='dep1')
+        self.rm.check_deployment_delete(dep)  # doesn't throw
+
+    def test_existing_execution_status(self):
+        dep = self._deployment(id='dep1')
+        for exc_status in [
+            ExecutionState.STARTED,
+            ExecutionState.PENDING,
+            ExecutionState.QUEUED,
+        ]:
+            with self.subTest():
+                exc_id = str(uuid.uuid4())
+                models.Execution(
+                    id=exc_id,
+                    workflow_id='',
+                    deployment=dep,
+                    status=exc_status,
+                    tenant=self.tenant,
+                    creator=self.user,
+                )
+                with self.assertRaisesRegex(
+                        manager_exceptions.DependentExistsError, exc_id):
+                    self.rm.check_deployment_delete(dep)
+
+    def test_finished_execution(self):
+        dep = self._deployment(id='dep1')
+        for exc_status in [
+            ExecutionState.TERMINATED,
+            ExecutionState.FAILED,
+            ExecutionState.CANCELLED,
+        ]:
+            with self.subTest():
+                models.Execution(
+                    id='exc1',
+                    workflow_id='',
+                    deployment=dep,
+                    status=exc_status,
+                    tenant=self.tenant,
+                    creator=self.user,
+                )
+                self.rm.check_deployment_delete(dep)  # doesn't throw
+
+    def test_dependent_exist(self):
+        # dep2 is used inside dep1
+        dep1 = self._deployment(id='dep1')
+        dep2 = self._deployment(id='dep2')
+        models.InterDeploymentDependencies(
+            source_deployment=dep1,
+            target_deployment=dep2,
+            dependency_creator='',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        self.rm.check_deployment_delete(dep1)  # doesnt throw
+        with self.assertRaises(manager_exceptions.DependentExistsError):
+            # you can't just delete a component, dep1 uses it; it must be
+            # deleted by deleting dep1 as well
+            self.rm.check_deployment_delete(dep2)
+
+    def test_allowed_component_delete(self):
+        # dep2 is a component used inside dep1
+        dep1 = self._deployment(id='dep1')
+        dep2 = self._deployment(id='dep2')
+        models.InterDeploymentDependencies(
+            source_deployment=dep1,
+            target_deployment=dep2,
+            dependency_creator='component.x',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        models.Execution(
+            id='exc1',
+            workflow_id='uninstall',
+            status=ExecutionState.STARTED,
+            deployment=dep1,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        self.rm.check_deployment_delete(dep2)  # doesnt throw
+
+    def test_parent_child(self):
+        # dep2 is dep1's parent
+        dep1 = self._deployment(id='dep1')
+        dep2 = self._deployment(id='dep2')
+        models.DeploymentLabelsDependencies(
+            source_deployment=dep1,
+            target_deployment=dep2,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        self.rm.check_deployment_delete(dep1)  # doesnt throw
+        with self.assertRaises(manager_exceptions.DependentExistsError):
+            # you can't delete parents whose children still exist
+            self.rm.check_deployment_delete(dep2)
+
+    def test_parent_component(self):
+        # dep2 is dep1's parent AND dep1 is a component used inside of dep2
+        dep1 = self._deployment(id='dep1')
+        dep2 = self._deployment(id='dep2')
+        models.DeploymentLabelsDependencies(
+            source_deployment=dep1,
+            target_deployment=dep2,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        models.InterDeploymentDependencies(
+            source_deployment=dep2,
+            target_deployment=dep1,
+            dependency_creator='component.x',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+
+        with self.assertRaises(manager_exceptions.DependentExistsError):
+            self.rm.check_deployment_delete(dep1)
+        with self.assertRaises(manager_exceptions.DependentExistsError):
+            self.rm.check_deployment_delete(dep2)
+
+        models.Execution(
+            id='exc1',
+            workflow_id='uninstall',
+            status=ExecutionState.STARTED,
+            deployment=dep2,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+
+        self.rm.check_deployment_delete(dep1)  # doesnt throw
+        with self.assertRaises(manager_exceptions.DependentExistsError):
+            # you can't delete parents whose children still exist
+            self.rm.check_deployment_delete(dep2)
+
+    def test_started_instance(self):
+        # dep2 is dep1's parent
+        dep1 = self._deployment(id='dep1')
+        node = models.Node(
+            deployment=dep1,
+            type='',
+            number_of_instances=1,
+            planned_number_of_instances=1,
+            deploy_number_of_instances=1,
+            min_number_of_instances=1,
+            max_number_of_instances=1,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        node_instance = models.NodeInstance(
+            id='ni_1',
+            state='started',
+            node=node,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        with self.assertRaisesRegex(
+                manager_exceptions.DependentExistsError, node_instance.id):
+            self.rm.check_deployment_delete(dep1)
+
+    def test_uninitialized_instance(self):
+        # dep2 is dep1's parent
+        dep1 = self._deployment(id='dep1')
+        node = models.Node(
+            deployment=dep1,
+            type='',
+            number_of_instances=1,
+            planned_number_of_instances=1,
+            deploy_number_of_instances=1,
+            min_number_of_instances=1,
+            max_number_of_instances=1,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        models.NodeInstance(
+            id='ni_1',
+            state='uninitialized',
+            node=node,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        self.rm.check_deployment_delete(dep1)  # doesnt throw
+
+
+class TestValidateExecutionDependencies(base_test.BaseServerTestCase):
+    def setUp(self):
+        super().setUp()
+        self._bp = models.Blueprint(
+            id='bp1',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+
+    def _deployment(self, **kwargs):
+        params = {
+            'blueprint': self._bp,
+            'creator': self.user,
+            'tenant': self.tenant
+        }
+        params.update(kwargs)
+        dep = models.Deployment(**params)
+        return dep
+
+    def test_non_destructive_workflow(self):
+        dep = self._deployment(id='dep1')
+        exc = models.Execution(
+            id='exc1',
+            workflow_id='execute_operation',
+            deployment=dep,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        self.rm._verify_dependencies_not_affected(exc, False)  # doesn't throw
+
+    def test_no_dependencies(self):
+        dep = self._deployment(id='dep1')
+        exc = models.Execution(
+            id='exc1',
+            workflow_id='uninstall',
+            deployment=dep,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        self.rm._verify_dependencies_not_affected(exc, False)  # doesn't throw
+
+    def test_uninstall_parent(self):
+        # dep2 is dep1's parent
+        dep1 = self._deployment(id='dep1')
+        dep2 = self._deployment(id='dep2')
+        models.DeploymentLabelsDependencies(
+            source_deployment=dep1,
+            target_deployment=dep2,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        exc = models.Execution(
+            id='exc1',
+            workflow_id='uninstall',
+            deployment=dep2,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        with self.assertRaises(manager_exceptions.DependentExistsError):
+            # you can't uninstall parents whose children still exist
+            self.rm._verify_dependencies_not_affected(exc, False)
+
+    def test_uninstall_child(self):
+        # dep2 is dep1's parent
+        dep1 = self._deployment(id='dep1')
+        dep2 = self._deployment(id='dep2')
+        models.DeploymentLabelsDependencies(
+            source_deployment=dep1,
+            target_deployment=dep2,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        exc = models.Execution(
+            id='exc1',
+            workflow_id='uninstall',
+            deployment=dep1,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        self.rm._verify_dependencies_not_affected(exc, False)
+
+    def test_uninstall_dependency(self):
+        # dep2 is a component used inside dep1
+        dep1 = self._deployment(id='dep1')
+        dep2 = self._deployment(id='dep2')
+        models.InterDeploymentDependencies(
+            source_deployment=dep1,
+            target_deployment=dep2,
+            dependency_creator='component.x',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        exc = models.Execution(
+            id='exc1',
+            workflow_id='uninstall',
+            deployment=dep2,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        with self.assertRaises(manager_exceptions.DependentExistsError):
+            self.rm._verify_dependencies_not_affected(exc, False)
+
+    def test_uninstall_dependent(self):
+        # dep2 is a component used inside dep1
+        dep1 = self._deployment(id='dep1')
+        dep2 = self._deployment(id='dep2')
+        models.InterDeploymentDependencies(
+            source_deployment=dep1,
+            target_deployment=dep2,
+            dependency_creator='component.x',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        exc = models.Execution(
+            id='exc1',
+            workflow_id='uninstall',
+            deployment=dep1,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        self.rm._verify_dependencies_not_affected(exc, False)  # doesnt throw
+
+    def test_uninstall_parent_component(self):
+        # dep2 is dep1's parent AND dep1 is a component used inside of dep2
+        dep1 = self._deployment(id='dep1')
+        dep2 = self._deployment(id='dep2')
+        models.DeploymentLabelsDependencies(
+            source_deployment=dep1,
+            target_deployment=dep2,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        models.InterDeploymentDependencies(
+            source_deployment=dep2,
+            target_deployment=dep1,
+            dependency_creator='component.x',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        exc = models.Execution(
+            id='exc1',
+            workflow_id='uninstall',
+            deployment=dep2,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        self.rm._verify_dependencies_not_affected(exc, False)  # doesnt throw
 
 
 class DeploymentsTestCase(base_test.BaseServerTestCase):
