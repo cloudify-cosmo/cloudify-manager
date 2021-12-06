@@ -3,6 +3,7 @@ import uuid
 import yaml
 import json
 import shutil
+import typing
 import itertools
 from copy import deepcopy
 from datetime import datetime
@@ -728,14 +729,8 @@ class ResourceManager(object):
                 f"Running executions ids: {running_ids}"
             )
 
-        # Verify deleting the deployment won't affect dependent deployments
-        excluded_ids = self._excluded_component_creator_ids(deployment)
-        idds = [
-            idd for idd in
-            deployment.get_all_dependents(fetch_deployments=False)
-            if idd._source_deployment not in excluded_ids
-        ]
-
+        idds = self._get_blocking_dependencies(
+            deployment, skip_component_children=False)
         if idds:
             formatted_dependencies = '\n'.join(
                 f'[{i}] {idd.format()}' for i, idd in enumerate(idds, 1)
@@ -2267,18 +2262,15 @@ class ResourceManager(object):
             .limit(limit)
         )
         return children.all() + component_creators.all()
+
     def _verify_dependencies_not_affected(self, execution, force):
         if execution.workflow_id not in ['stop', 'uninstall', 'update']:
             return
         # if we're in the middle of an execution initiated by the component
         # creator, we'd like to drop the component dependency from the list
         deployment = execution.deployment
-        excluded_ids = self._excluded_component_creator_ids(deployment)
-        idds = [
-            idd for idd in
-            deployment.get_all_dependents(fetch_deployments=False)
-            if idd._source_deployment not in excluded_ids
-        ]
+        idds = self._get_blocking_dependencies(
+            deployment, skip_component_children=True)
         if not idds:
             return
         formatted_dependencies = '\n'.join(
@@ -2302,41 +2294,10 @@ class ResourceManager(object):
             if dep_update:
                 dep_update.state = UpdateStates.FAILED
                 self.sm.update(dep_update)
-
         raise manager_exceptions.DependentExistsError(
             f"Can't execute workflow `{execution.workflow_id}` on deployment "
             f"{execution.deployment.id} - existing installations depend "
             f"on it:\n{formatted_dependencies}")
-
-    def _excluded_component_creator_ids(self, deployment):
-        """Deployments that should be excluded from the dependency check.
-
-        Deployments that created the given deployment as a component are
-        excluded if they are currently running a destructive workflow.
-        (then, the given workflow should be allowed to run one too)
-        """
-        components = {
-            idd._target_deployment
-            for idd in deployment.get_dependencies(fetch_deployments=False)
-            if idd.dependency_creator.startswith('component.')
-        }
-        component_creators = [
-            idd._target_deployment
-            for idd in deployment.get_dependencies(fetch_deployments=False)
-            if idd.dependency_creator.startswith('component.')
-        ]
-        component_creator_executions = self.sm.list(
-            models.Execution, filters={
-                '_deployment_fk': component_creators,
-                'status': [
-                    ExecutionState.STARTED,
-                    ExecutionState.PENDING,
-                    ExecutionState.QUEUED
-                ],
-                'workflow_id': ['stop', 'uninstall', 'update']}
-        )
-        return components | {
-            exc._deployment_fk for exc in component_creator_executions}
 
     def _workflow_queued(self, execution):
         execution.status = ExecutionState.QUEUED
