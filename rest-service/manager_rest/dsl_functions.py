@@ -211,6 +211,17 @@ class FunctionEvaluationStorage(object):
             return [caps for dep_id, caps in
                     sorted(capabilities.items(), key=lambda item: item[0])]
 
+    def get_sys(self, entity, prop):
+        deployment = self.sm.get(Deployment, self._deployment_id)
+        if (entity, prop) == ('tenant', 'name'):
+            return deployment.tenant.name
+        elif (entity, prop) == ('deployment', 'blueprint'):
+            return deployment.blueprint.id
+        elif (entity, prop) == ('deployment', 'id'):
+            return self._deployment_id
+        elif (entity, prop) == ('deployment', 'owner'):
+            return deployment.creator.username
+
     def _normalize_group_cap_element_id(self, element_ids):
         get_with_ids = False
         if not isinstance(element_ids, list):
