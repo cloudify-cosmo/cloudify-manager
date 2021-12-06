@@ -3,6 +3,7 @@ import uuid
 import yaml
 import json
 import shutil
+import typing
 import itertools
 from copy import deepcopy
 from datetime import datetime
@@ -728,14 +729,8 @@ class ResourceManager(object):
                 f"Running executions ids: {running_ids}"
             )
 
-        # Verify deleting the deployment won't affect dependent deployments
-        excluded_ids = self._excluded_component_creator_ids(deployment)
-        idds = [
-            idd for idd in
-            deployment.get_all_dependents(fetch_deployments=False)
-            if idd._source_deployment not in excluded_ids
-        ]
-
+        idds = self._get_blocking_dependencies(
+            deployment, skip_component_children=False)
         if idds:
             formatted_dependencies = '\n'.join(
                 f'[{i}] {idd.format()}' for i, idd in enumerate(idds, 1)
@@ -2207,18 +2202,75 @@ class ResourceManager(object):
                 f'different tenant'
             )
 
+    def _get_blocking_dependencies(
+            self,
+            deployment: models.Deployment,
+            skip_component_children: bool,
+            limit=3) -> typing.List[models.BaseDeploymentDependencies]:
+        """Get dependencies that would block destructive actions on deployment
+
+        This returns dependencies that cause deployment to not be able to
+        be uninstalled, stopped, or deleted.
+        Those dependencies are:
+            - children of this deployment: cannot delete a parent who has
+              existing children - that would orphan them
+            - compoent creators: cannot delete a deployment if it is a
+              component of another deployment, UNLESS that another deployment
+              is currently being uninstalled as well
+
+        :param skip_component_children: do not include children who are
+            components of the given deployment. Components are also children,
+            so this has to be used to allow uninstalling a deployment that
+            uses some components.
+        :param limit: only return up to this many DLDs and this many IDDs
+        :return: a list of dependencies blocking destructive actions on
+            the given deployment
+        """
+        dld = aliased(models.DeploymentLabelsDependencies)
+        idd = aliased(models.InterDeploymentDependencies)
+        children = (
+            db.session.query(dld)
+            .filter_by(target_deployment=deployment)
+        )
+        if skip_component_children:
+            children = children.filter(
+                ~db.session.query(idd)
+                .filter(dld._target_deployment == idd._source_deployment)
+                .filter(idd.dependency_creator.like('component.%'))
+                .exists()
+            )
+
+        children = children.limit(limit)
+        component_creators = (
+            db.session.query(idd)
+            .filter_by(target_deployment=deployment)
+            .filter(
+                ~db.session.query(models.Execution)
+                .filter(
+                    models.Execution._deployment_fk == idd._source_deployment,
+                    models.Execution.status.in_([
+                        ExecutionState.STARTED,
+                        ExecutionState.PENDING,
+                        ExecutionState.QUEUED
+                    ]),
+                    models.Execution.workflow_id.in_([
+                        'stop', 'uninstall', 'update'
+                    ])
+                )
+                .exists()
+            )
+            .limit(limit)
+        )
+        return children.all() + component_creators.all()
+
     def _verify_dependencies_not_affected(self, execution, force):
         if execution.workflow_id not in ['stop', 'uninstall', 'update']:
             return
         # if we're in the middle of an execution initiated by the component
         # creator, we'd like to drop the component dependency from the list
         deployment = execution.deployment
-        excluded_ids = self._excluded_component_creator_ids(deployment)
-        idds = [
-            idd for idd in
-            deployment.get_all_dependents(fetch_deployments=False)
-            if idd._source_deployment not in excluded_ids
-        ]
+        idds = self._get_blocking_dependencies(
+            deployment, skip_component_children=True)
         if not idds:
             return
         formatted_dependencies = '\n'.join(
@@ -2242,41 +2294,10 @@ class ResourceManager(object):
             if dep_update:
                 dep_update.state = UpdateStates.FAILED
                 self.sm.update(dep_update)
-
         raise manager_exceptions.DependentExistsError(
             f"Can't execute workflow `{execution.workflow_id}` on deployment "
             f"{execution.deployment.id} - existing installations depend "
             f"on it:\n{formatted_dependencies}")
-
-    def _excluded_component_creator_ids(self, deployment):
-        """Deployments that should be excluded from the dependency check.
-
-        Deployments that created the given deployment as a component are
-        excluded if they are currently running a destructive workflow.
-        (then, the given workflow should be allowed to run one too)
-        """
-        components = {
-            idd._target_deployment
-            for idd in deployment.get_dependencies(fetch_deployments=False)
-            if idd.dependency_creator.startswith('component.')
-        }
-        component_creators = [
-            idd._target_deployment
-            for idd in deployment.get_dependencies(fetch_deployments=False)
-            if idd.dependency_creator.startswith('component.')
-        ]
-        component_creator_executions = self.sm.list(
-            models.Execution, filters={
-                '_deployment_fk': component_creators,
-                'status': [
-                    ExecutionState.STARTED,
-                    ExecutionState.PENDING,
-                    ExecutionState.QUEUED
-                ],
-                'workflow_id': ['stop', 'uninstall', 'update']}
-        )
-        return components | {
-            exc._deployment_fk for exc in component_creator_executions}
 
     def _workflow_queued(self, execution):
         execution.status = ExecutionState.QUEUED
