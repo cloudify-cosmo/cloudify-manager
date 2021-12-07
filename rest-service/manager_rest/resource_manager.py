@@ -272,6 +272,60 @@ class ResourceManager(object):
                 execution, e)
             return []
 
+    def _queued_executions_query(self, with_deployment_id):
+        executions = aliased(models.Execution)
+
+        queued_non_system_filter = db.and_(
+            executions.status == ExecutionState.QUEUED,
+            executions.is_system_workflow.is_(False)
+        )
+
+        # fetch only execution that:
+        # - are either create-dep-env (priority!)
+        # - belong to deployments that have none of:
+        #   - active executions
+        #   - queued create-dep-env executions
+        other_execs_in_deployment_filter = db.or_(
+            executions.workflow_id == 'create_deployment_environment',
+            ~models.Execution.query
+            .filter(
+                models.Execution._deployment_fk ==
+                executions._deployment_fk,
+            )
+            .filter(
+                db.or_(
+                    models.Execution.status.in_(
+                        ExecutionState.ACTIVE_STATES),
+                    db.and_(
+                        models.Execution.status == ExecutionState.QUEUED,
+                        models.Execution.workflow_id ==
+                        'create_deployment_environment'
+                    )
+                )
+            )
+            .exists()
+        )
+
+        queued_query = (
+            db.session.query(executions)
+            .filter(queued_non_system_filter)
+            .filter(other_execs_in_deployment_filter)
+            .outerjoin(executions.execution_groups)
+            .with_for_update(of=executions)
+        )
+
+        if with_deployment_id:
+            return (
+                queued_query
+                .order_by(executions._deployment_fk != db.bindparam('dep_id'))
+                .order_by(executions.created_at.asc())
+            )
+        else:
+            return (
+                queued_query
+                .order_by(executions.created_at.asc())
+            )
+
     def _get_queued_executions(self, deployment_storage_id):
         sort_by = {'created_at': 'asc'}
         system_executions = self.sm.list(
@@ -288,35 +342,13 @@ class ResourceManager(object):
             yield system_executions[0]
             return
 
-        executions = aliased(models.Execution)
-        queued_query = (
-            db.session.query(executions)
-            .filter_by(
-                status=ExecutionState.QUEUED,
-                is_system_workflow=False,
-            )
-            .filter(
-                # fetch only execution belonging to deployments who have
-                # no active executions
-                ~models.Execution.query.filter(
-                    models.Execution._deployment_fk == \
-                    executions._deployment_fk,
-                    models.Execution.status.in_(ExecutionState.ACTIVE_STATES)
-                ).exists()
-            )
-        )
-        if deployment_storage_id:
-            queued_query = queued_query.order_by(
-                executions._deployment_fk != deployment_storage_id
-            )
         queued_executions = (
-            queued_query
-            .outerjoin(executions.execution_groups)
-            .order_by(executions.created_at.asc())
+            self._queued_executions_query(deployment_storage_id is not None)
             .limit(5)
-            .with_for_update(of=executions)
+            .params(dep_id=deployment_storage_id)
             .all()
         )
+
         # deployments we've already emitted an execution for - only emit 1
         # execution per deployment
         seen_deployments = set()
