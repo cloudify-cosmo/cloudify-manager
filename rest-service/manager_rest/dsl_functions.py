@@ -221,6 +221,8 @@ class FunctionEvaluationStorage(object):
             return self._deployment_id
         elif (entity, prop) == ('deployment', 'owner'):
             return deployment.creator.username
+        raise FunctionsEvaluationError('Cannot retrieve this entity-property '
+                                       f'pair: {entity}-{prop}')
 
     def _normalize_group_cap_element_id(self, element_ids):
         get_with_ids = False
