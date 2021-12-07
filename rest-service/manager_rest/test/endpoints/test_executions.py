@@ -879,23 +879,25 @@ class TestExecutionModelValidationTests(unittest.TestCase):
 class ExecutionQueueingTests(BaseServerTestCase):
     def setUp(self):
         super().setUp()
-        bp = models.Blueprint(id='abc')
-        self.sm.put(bp)
-        self.deployment1 = models.Deployment(id='dep1',
-                                             display_name='dep1',
-                                             blueprint=bp)
-        self.sm.put(self.deployment1)
-        self.deployment2 = models.Deployment(id='dep2',
-                                             display_name='dep2',
-                                             blueprint=bp)
-        self.sm.put(self.deployment2)
-        self.execution1 = models.Execution(
-            deployment=self.deployment1,
-            workflow_id='install',
-            parameters={},
-            status=ExecutionState.TERMINATED,
-        )
-        self.sm.put(self.execution1)
+        with self.sm.transaction():
+            bp = models.Blueprint(id='abc')
+            self.sm.put(bp)
+            self.deployment1 = models.Deployment(id='dep1',
+                                                 display_name='dep1',
+                                                 blueprint=bp)
+            self.sm.put(self.deployment1)
+            self.deployment2 = models.Deployment(id='dep2',
+                                                 display_name='dep2',
+                                                 blueprint=bp)
+            self.sm.put(self.deployment2)
+            self.execution1 = models.Execution(
+                deployment=self.deployment1,
+                workflow_id='install',
+                parameters={},
+                status=ExecutionState.TERMINATED,
+            )
+            self.sm.put(self.execution1)
+            self.bp = bp
 
     def _get_queued(self):
         return list(
@@ -1050,3 +1052,62 @@ class ExecutionQueueingTests(BaseServerTestCase):
         assert 'nonexistent' in sm_exc.error
         assert sm_exc2.status in (
             ExecutionState.PENDING, ExecutionState.TERMINATED)
+
+    def test_install_before_create(self):
+        # make a create_dep_env execution, and an install execution; the
+        # create_dep_env for the new deployment cannot run, because it's in
+        # an exec-group that is already full. The install for the new dep
+        # could run, but we check that it MUST NOT run, because create-dep-env
+        # hasn't finished yet (or even started)
+        create_group = models.ExecutionGroup(
+            id='create_group',
+            workflow_id='create_deployment_environment',
+            concurrency=1,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        old_dep = models.Deployment(
+            id='old_dep',
+            blueprint=self.bp,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        create_exc = models.Execution(
+            id=f'create_{old_dep.id}',
+            workflow_id='create_deployment_environment',
+            deployment=old_dep,
+            status=ExecutionState.STARTED,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        old_dep.create_execution = create_exc
+        old_dep.latest_execution = create_exc
+        create_group.executions.append(create_exc)
+
+        new_dep = models.Deployment(
+            id='new_dep',
+            blueprint=self.bp,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        create_exc = models.Execution(
+            id=f'create_{new_dep.id}',
+            workflow_id='create_deployment_environment',
+            deployment=new_dep,
+            status=ExecutionState.QUEUED,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        new_dep.create_execution = create_exc
+        new_dep.latest_execution = create_exc
+        create_group.executions.append(create_exc)
+        models.Execution(
+            id=f'install_{new_dep.id}',
+            workflow_id='install',
+            deployment=new_dep,
+            status=ExecutionState.QUEUED,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+
+        assert self._get_queued() == []
