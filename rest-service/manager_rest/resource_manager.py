@@ -2419,10 +2419,10 @@ class ResourceManager(object):
         """
         if not labels_list:
             return
-
+        lowercase_labels = {'csys-obj-type'}
         current_time = datetime.utcnow()
         for key, value in labels_list:
-            if key.startswith('csys-'):
+            if key.lower() in lowercase_labels:
                 key = key.lower()
                 value = value.lower()
             new_label = {'key': key,
