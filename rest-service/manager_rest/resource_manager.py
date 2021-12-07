@@ -65,6 +65,8 @@ class ResourceManager(object):
 
     def __init__(self, sm=None):
         self.sm = sm or get_storage_manager()
+        self._cached_executions_query = None
+        self._cached_executions_query_with_deployment = None
 
     def list_executions(self, include=None, is_include_system_workflows=False,
                         filters=None, pagination=None, sort=None,
@@ -272,6 +274,45 @@ class ResourceManager(object):
                 execution, e)
             return []
 
+    def _queued_executions_query(self, with_deployment_id):
+        if (
+            self._cached_executions_query is None or
+            self._cached_executions_query_with_deployment is None
+        ):
+            executions = aliased(models.Execution)
+            queued_query = (
+                db.session.query(executions)
+                .filter_by(
+                    status=ExecutionState.QUEUED,
+                    is_system_workflow=False,
+                )
+                .filter(
+                    # fetch only execution belonging to deployments who have
+                    # no active executions
+                    ~models.Execution.query.filter(
+                        models.Execution._deployment_fk == \
+                        executions._deployment_fk,
+                        models.Execution.status.in_(ExecutionState.ACTIVE_STATES)
+                    ).exists()
+                )
+                .outerjoin(executions.execution_groups)
+                .with_for_update(of=executions)
+            )
+            self._cached_executions_query = (
+                queued_query
+                .order_by(executions.created_at.asc())
+            )
+            self._cached_executions_query_with_deployment = (
+                queued_query
+                .order_by(executions._deployment_fk != db.bindparam('dep_id'))
+                .order_by(executions.created_at.asc())
+
+            )
+        if with_deployment_id:
+            return self._cached_executions_query_with_deployment
+        else:
+            return self._cached_executions_query
+
     def _get_queued_executions(self, deployment_storage_id):
         sort_by = {'created_at': 'asc'}
         system_executions = self.sm.list(
@@ -288,35 +329,13 @@ class ResourceManager(object):
             yield system_executions[0]
             return
 
-        executions = aliased(models.Execution)
-        queued_query = (
-            db.session.query(executions)
-            .filter_by(
-                status=ExecutionState.QUEUED,
-                is_system_workflow=False,
-            )
-            .filter(
-                # fetch only execution belonging to deployments who have
-                # no active executions
-                ~models.Execution.query.filter(
-                    models.Execution._deployment_fk == \
-                    executions._deployment_fk,
-                    models.Execution.status.in_(ExecutionState.ACTIVE_STATES)
-                ).exists()
-            )
-        )
-        if deployment_storage_id:
-            queued_query = queued_query.order_by(
-                executions._deployment_fk != deployment_storage_id
-            )
         queued_executions = (
-            queued_query
-            .outerjoin(executions.execution_groups)
-            .order_by(executions.created_at.asc())
+            self._queued_executions_query(deployment_storage_id is not None)
             .limit(5)
-            .with_for_update(of=executions)
+            .params(dep_id=deployment_storage_id)
             .all()
         )
+
         # deployments we've already emitted an execution for - only emit 1
         # execution per deployment
         seen_deployments = set()
