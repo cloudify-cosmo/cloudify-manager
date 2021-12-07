@@ -283,17 +283,33 @@ class ResourceManager(object):
 
             queued_non_system_filter = db.and_(
                 executions.status == ExecutionState.QUEUED,
-                executions.is_system_workflow == False
+                executions.is_system_workflow.is_(False)
             )
 
-            # fetch only execution belonging to deployments who have
-            # no active executions
-            other_execs_in_deployment_filter = (
-                ~models.Execution.query.filter(
-                    models.Execution._deployment_fk == \
+            # fetch only execution that:
+            # - are either create-dep-env (priority!)
+            # - belong to deployments that have none of:
+            #   - active executions
+            #   - queued create-dep-env executions
+            other_execs_in_deployment_filter = db.or_(
+                executions.workflow_id == 'create_deployment_environment',
+                ~models.Execution.query
+                .filter(
+                    models.Execution._deployment_fk ==
                     executions._deployment_fk,
-                    models.Execution.status.in_(ExecutionState.ACTIVE_STATES)
-                ).exists()
+                )
+                .filter(
+                    db.or_(
+                        models.Execution.status.in_(
+                            ExecutionState.ACTIVE_STATES),
+                        db.and_(
+                            models.Execution.status == ExecutionState.QUEUED,
+                            models.Execution.workflow_id ==
+                            'create_deployment_environment'
+                        )
+                    )
+                )
+                .exists()
             )
 
             queued_query = (

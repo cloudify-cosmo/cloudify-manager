@@ -16,7 +16,6 @@
 import mock
 import uuid
 import hashlib
-import pytest
 import unittest
 from itertools import dropwhile
 from datetime import datetime, timedelta
@@ -1118,7 +1117,6 @@ class ExecutionQueueingTests(BaseServerTestCase):
         assert sm_exc2.status in (
             ExecutionState.PENDING, ExecutionState.TERMINATED)
 
-    @pytest.mark.xfail
     def test_install_before_create(self):
         # make a create_dep_env execution, and an install execution; the
         # create_dep_env for the new deployment cannot run, because it's in
@@ -1167,7 +1165,7 @@ class ExecutionQueueingTests(BaseServerTestCase):
         new_dep.create_execution = create_exc
         new_dep.latest_execution = create_exc
         create_group.executions.append(create_exc)
-        install_exc = models.Execution(
+        models.Execution(
             id=f'install_{new_dep.id}',
             workflow_id='install',
             deployment=new_dep,
