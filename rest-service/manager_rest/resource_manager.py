@@ -280,24 +280,30 @@ class ResourceManager(object):
             self._cached_executions_query_with_deployment is None
         ):
             executions = aliased(models.Execution)
+
+            queued_non_system_filter = db.and_(
+                executions.status == ExecutionState.QUEUED,
+                executions.is_system_workflow == False
+            )
+
+            # fetch only execution belonging to deployments who have
+            # no active executions
+            other_execs_in_deployment_filter = (
+                ~models.Execution.query.filter(
+                    models.Execution._deployment_fk == \
+                    executions._deployment_fk,
+                    models.Execution.status.in_(ExecutionState.ACTIVE_STATES)
+                ).exists()
+            )
+
             queued_query = (
                 db.session.query(executions)
-                .filter_by(
-                    status=ExecutionState.QUEUED,
-                    is_system_workflow=False,
-                )
-                .filter(
-                    # fetch only execution belonging to deployments who have
-                    # no active executions
-                    ~models.Execution.query.filter(
-                        models.Execution._deployment_fk == \
-                        executions._deployment_fk,
-                        models.Execution.status.in_(ExecutionState.ACTIVE_STATES)
-                    ).exists()
-                )
+                .filter(queued_non_system_filter)
+                .filter(other_execs_in_deployment_filter)
                 .outerjoin(executions.execution_groups)
                 .with_for_update(of=executions)
             )
+
             self._cached_executions_query = (
                 queued_query
                 .order_by(executions.created_at.asc())
