@@ -299,6 +299,8 @@ class BaseServerTestCase(unittest.TestCase):
         self.initialize_provider_context()
         self._setup_current_user()
         self.addCleanup(self._drop_db, keep_tables=['config'])
+        self.user = db.session.query(models.User).first()
+        self.tenant = db.session.query(models.Tenant).first()
 
     @staticmethod
     def _drop_db(keep_tables=None):
