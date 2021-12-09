@@ -7,7 +7,7 @@ import typing
 import itertools
 from copy import deepcopy
 from datetime import datetime
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 
 from flask import current_app
 from flask_security import current_user
@@ -59,6 +59,11 @@ from . import config
 from . import app_context
 from . import workflow_executor
 from . import manager_exceptions
+
+
+# used for keeping track how many executions are currently active, and how
+# many can the group still run
+_ExecGroupStats = namedtuple('ExecGroupStats', ['active', 'concurrency'])
 
 
 class ResourceManager(object):
@@ -381,8 +386,10 @@ class ResourceManager(object):
             if group_id is None:
                 continue
             if group_id not in groups:
-                groups[group_id] = [0, 0]
-            groups[group_id] = [groups[group_id][0] + 1, concurrency]
+                groups[group_id] = _ExecGroupStats(
+                    active=0, concurrency=concurrency)
+            groups[group_id] = groups[group_id]._replace(
+                active=groups[group_id].active + 1)
         return total_running, groups
 
     def _get_queued_executions(self, deployment_storage_id):
@@ -426,10 +433,14 @@ class ResourceManager(object):
                 break
             for group in execution.execution_groups:
                 if group._storage_id not in groups:
-                    groups[group._storage_id] = [0, group.concurrency]
+                    groups[group._storage_id] = _ExecGroupStats(
+                        active=0, concurrency=group.concurrency)
 
-            if any(groups[g._storage_id][0] >= groups[g._storage_id][1]
-                   for g in execution.execution_groups):
+            if any(
+                groups[g._storage_id].active >=
+                groups[g._storage_id].concurrency
+                for g in execution.execution_groups
+            ):
                 # this execution cannot run, because it would exceed one
                 # of its' groups concurrency limit
                 continue
@@ -437,7 +448,8 @@ class ResourceManager(object):
                 continue
 
             for g in execution.execution_groups:
-                groups[g._storage_id][0] += 1
+                groups[g._storage_id] = groups[g._storage_id]._replace(
+                    active=groups[g._storage_id].active + 1)
             seen_deployments.add(execution._deployment_fk)
             total += 1
             yield execution
