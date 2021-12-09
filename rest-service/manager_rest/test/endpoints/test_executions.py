@@ -1175,3 +1175,84 @@ class ExecutionQueueingTests(BaseServerTestCase):
         )
 
         assert self._get_queued() == []
+
+    def test_checks_other_groups(self):
+        models.Execution(
+            id='install_nongroup',
+            workflow_id='install',
+            deployment=self.deployment1,
+            status=ExecutionState.PENDING,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+
+        started_groups = [
+            models.ExecutionGroup(
+                id=f'group_started_{i}',
+                workflow_id='install',
+                concurrency=1,
+                creator=self.user,
+                tenant=self.tenant,
+            ) for i in range(5)]
+        # each of the "started" groups will have one started execution, and
+        # 4 queued executions
+        exc_states = [ExecutionState.STARTED] + [ExecutionState.QUEUED] * 4
+        for group in started_groups:
+            for i, exc_state in enumerate(exc_states):
+                dep = models.Deployment(
+                    id=f'dep_{group.id}_{i}',
+                    blueprint=self.bp,
+                    creator=self.user,
+                    tenant=self.tenant,
+                )
+                exc = models.Execution(
+                    id=f'install_{dep.id}',
+                    workflow_id='install',
+                    deployment=dep,
+                    status=exc_state,
+                    creator=self.user,
+                    tenant=self.tenant,
+                )
+                group.executions.append(exc)
+
+        queued_groups = [
+            models.ExecutionGroup(
+                id=f'group_queued_{i}',
+                workflow_id='install',
+                concurrency=1,
+                creator=self.user,
+                tenant=self.tenant,
+            ) for i in range(5)]
+        # each of the "queued" groups will have five queued executions
+        exc_states = [ExecutionState.QUEUED] * 5
+        for group in queued_groups:
+            for i, exc_state in enumerate(exc_states):
+                dep = models.Deployment(
+                    id=f'dep_{group.id}_{i}',
+                    blueprint=self.bp,
+                    creator=self.user,
+                    tenant=self.tenant,
+                )
+                exc = models.Execution(
+                    id=f'install_{dep.id}',
+                    workflow_id='install',
+                    deployment=dep,
+                    status=exc_state,
+                    creator=self.user,
+                    tenant=self.tenant,
+                )
+                group.executions.append(exc)
+
+        # if we just go ordered by storage_id, then we'll only fetch the queued
+        # executions for the groups that are already over concurrency, and
+        # we won't be able to start them. We must make sure that the "queued"
+        # groups are checked
+        dequeued = list(self._get_queued())
+
+        # this will probably be just 1, because we'll only dequeue one queued
+        # group up to its concurrency, but it's correct to dequeue more
+        assert len(dequeued) > 0
+
+        # hopefully we didn't dequeue anything from the "started" groups!
+        for exc in dequeued:
+            assert all(gr in queued_groups for gr in exc.execution_groups)
