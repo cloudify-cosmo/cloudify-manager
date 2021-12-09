@@ -64,6 +64,7 @@ from .resource_models import (
     BlueprintsFilter,
     DeploymentGroup,
     ExecutionGroup,
+    executions_groups_executions_table,
     ExecutionSchedule,
     BlueprintLabel,
     DeploymentGroupLabel,
