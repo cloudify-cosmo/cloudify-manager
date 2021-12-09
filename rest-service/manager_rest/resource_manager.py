@@ -7,7 +7,7 @@ import typing
 import itertools
 from copy import deepcopy
 from datetime import datetime
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 
 from flask import current_app
 from flask_security import current_user
@@ -61,10 +61,17 @@ from . import workflow_executor
 from . import manager_exceptions
 
 
+# used for keeping track how many executions are currently active, and how
+# many can the group still run
+_ExecGroupStats = namedtuple('ExecGroupStats', ['active', 'concurrency'])
+
+
 class ResourceManager(object):
 
     def __init__(self, sm=None):
         self.sm = sm or get_storage_manager()
+        self._cached_queued_execs_query = None
+        self._cached_queued_execs_with_deployment_query = None
 
     def list_executions(self, include=None, is_include_system_workflows=False,
                         filters=None, pagination=None, sort=None,
@@ -273,58 +280,117 @@ class ResourceManager(object):
             return []
 
     def _queued_executions_query(self, with_deployment_id):
-        executions = aliased(models.Execution)
+        if (
+            self._cached_queued_execs_query is None or
+            self._cached_queued_execs_with_deployment_query is None
+        ):
+            executions = aliased(models.Execution)
 
-        queued_non_system_filter = db.and_(
-            executions.status == ExecutionState.QUEUED,
-            executions.is_system_workflow.is_(False)
-        )
-
-        # fetch only execution that:
-        # - are either create-dep-env (priority!)
-        # - belong to deployments that have none of:
-        #   - active executions
-        #   - queued create-dep-env executions
-        other_execs_in_deployment_filter = db.or_(
-            executions.workflow_id == 'create_deployment_environment',
-            ~models.Execution.query
-            .filter(
-                models.Execution._deployment_fk ==
-                executions._deployment_fk,
+            queued_non_system_filter = db.and_(
+                executions.status == ExecutionState.QUEUED,
+                executions.is_system_workflow.is_(False)
             )
-            .filter(
-                db.or_(
-                    models.Execution.status.in_(
-                        ExecutionState.ACTIVE_STATES),
-                    db.and_(
-                        models.Execution.status == ExecutionState.QUEUED,
-                        models.Execution.workflow_id ==
-                        'create_deployment_environment'
+
+            exgrs = models.executions_groups_executions_table
+            group_concurrency_filter = (
+                ~db.Query(exgrs)
+                .filter(exgrs.c.execution_group_id.in_(
+                    db.bindparam('excluded_groups'))
+                )
+                .filter(exgrs.c.execution_id == executions._storage_id)
+                .exists()
+            )
+
+            # fetch only execution that:
+            # - are either create-dep-env (priority!)
+            # - belong to deployments that have none of:
+            #   - active executions
+            #   - queued create-dep-env executions
+            other_execs_in_deployment_filter = db.or_(
+                executions.workflow_id == 'create_deployment_environment',
+                ~db.Query(models.Execution)
+                .filter(
+                    models.Execution._deployment_fk ==
+                    executions._deployment_fk,
+                )
+                .filter(
+                    db.or_(
+                        models.Execution.status.in_(
+                            ExecutionState.ACTIVE_STATES),
+                        db.and_(
+                            models.Execution.status == ExecutionState.QUEUED,
+                            models.Execution.workflow_id ==
+                            'create_deployment_environment'
+                        )
                     )
                 )
+                .exists()
             )
-            .exists()
-        )
 
-        queued_query = (
-            db.session.query(executions)
-            .filter(queued_non_system_filter)
-            .filter(other_execs_in_deployment_filter)
-            .outerjoin(executions.execution_groups)
-            .with_for_update(of=executions)
-        )
+            queued_query = (
+                db.Query(executions)
+                .filter(queued_non_system_filter)
+                .filter(other_execs_in_deployment_filter)
+                .filter(group_concurrency_filter)
+                .outerjoin(executions.execution_groups)
+                .options(db.joinedload(executions.deployment))
+                .with_for_update(of=executions)
+            )
 
-        if with_deployment_id:
-            return (
+            self._cached_queued_execs_with_deployment_query = (
                 queued_query
                 .order_by(executions._deployment_fk != db.bindparam('dep_id'))
-                .order_by(executions.created_at.asc())
+                .order_by(executions._storage_id)
+                .limit(5)
             )
-        else:
-            return (
+            self._cached_queued_execs_query = (
                 queued_query
-                .order_by(executions.created_at.asc())
+                .order_by(executions._storage_id)
+                .limit(5)
             )
+        if with_deployment_id:
+            return self._cached_queued_execs_with_deployment_query
+        else:
+            return self._cached_queued_execs_query
+
+    def _report_running(self):
+        """Report currently-running executions.
+
+        This returns the amount of currently-running executions total,
+        and a dict of {group_id: [active in the group, group concurrency]}
+        """
+        exgrs = models.executions_groups_executions_table
+        active_execs = (
+            db.session.query(
+                models.Execution._storage_id,
+                exgrs.c.execution_group_id,
+                models.ExecutionGroup.concurrency,
+            )
+            .select_from(models.Execution)
+            .outerjoin(
+                exgrs,
+                models.Execution._storage_id == exgrs.c.execution_id
+            )
+            .outerjoin(
+                models.ExecutionGroup,
+                models.ExecutionGroup._storage_id == exgrs.c.execution_group_id
+            )
+            .filter(models.Execution.status.in_(ExecutionState.ACTIVE_STATES))
+            .order_by(models.Execution._storage_id)
+            .all()
+        )
+        total_running = 0
+        groups = {}
+        for exc_id, group_id, concurrency in active_execs:
+            total_running += 1
+            if group_id is None:
+                continue
+            if group_id not in groups:
+                groups[group_id] = _ExecGroupStats(
+                    active=0, concurrency=concurrency)
+            groups[group_id] = groups[group_id]._replace(
+                active=groups[group_id].active + 1)
+        return total_running, groups
 
     def _get_queued_executions(self, deployment_storage_id):
         sort_by = {'created_at': 'asc'}
@@ -342,34 +408,50 @@ class ResourceManager(object):
             yield system_executions[0]
             return
 
+        total, groups = self._report_running()
+        excluded_groups = [
+            group_id
+            for group_id, (active, concurrency) in groups.items()
+            if active >= concurrency
+        ]
         queued_executions = (
-            self._queued_executions_query(deployment_storage_id is not None)
-            .limit(5)
-            .params(dep_id=deployment_storage_id)
+            db.session.query(models.Execution)
+            .from_statement(self._queued_executions_query(
+                deployment_storage_id is not None))
+            .params(
+                dep_id=deployment_storage_id,
+                excluded_groups=excluded_groups,
+            )
             .all()
         )
-
         # deployments we've already emitted an execution for - only emit 1
         # execution per deployment
         seen_deployments = set()
-        # {group: how many executions can it still run}
-        group_can_run = {}
-        for execution in queued_executions:
-            for group in execution.execution_groups:
-                if group not in group_can_run:
-                    group_can_run[group] = group.concurrency -\
-                        len(group.currently_running_executions())
 
-            if any(group_can_run[g] <= 0 for g in execution.execution_groups):
+        for execution in queued_executions:
+            if total >= config.instance.max_concurrent_workflows:
+                break
+            for group in execution.execution_groups:
+                if group._storage_id not in groups:
+                    groups[group._storage_id] = _ExecGroupStats(
+                        active=0, concurrency=group.concurrency)
+
+            if any(
+                groups[g._storage_id].active >=
+                groups[g._storage_id].concurrency
+                for g in execution.execution_groups
+            ):
                 # this execution cannot run, because it would exceed one
                 # of its' groups concurrency limit
                 continue
             if execution._deployment_fk in seen_deployments:
                 continue
 
-            for group in execution.execution_groups:
-                group_can_run[group] -= 1
+            for g in execution.execution_groups:
+                groups[g._storage_id] = groups[g._storage_id]._replace(
+                    active=groups[g._storage_id].active + 1)
             seen_deployments.add(execution._deployment_fk)
+            total += 1
             yield execution
 
     def _validate_execution_update(self, current_status, future_status):

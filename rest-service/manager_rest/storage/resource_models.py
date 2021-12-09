@@ -1401,6 +1401,14 @@ class ExecutionGroup(CreatedAtMixin, SQLResourceBase):
             executions[:self.concurrency], force=force, queue=True)
 
 
+# re-declaring the table for the group.executions m2m, for easy access
+executions_groups_executions_table = db.table(
+    'execution_groups_executions',
+    db.Column('execution_group_id', db.Integer),
+    db.Column('execution_id', db.Integer)
+)
+
+
 class ExecutionSchedule(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'execution_schedules'
     __table_args__ = (
