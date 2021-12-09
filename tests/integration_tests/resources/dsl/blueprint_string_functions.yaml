@@ -1,0 +1,67 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - cloudify/types/types.yaml
+
+inputs:
+  a_haystack:
+    type: string
+    required: true
+  a_needle:
+    type: string
+    required: true
+  a_replacement:
+    type: string
+    required: true
+  an_index:
+    type: string
+    required: true
+
+node_types:
+  test_node:
+    derived_from: cloudify.nodes.Root
+    properties:
+      found_string_index:
+        type: integer
+      replaced_string:
+        type: string
+      lower_string:
+        type: string
+      upper_string:
+        type: string
+      split_string:
+        type: string
+      a_list:
+        type: list
+
+
+node_templates:
+  x:
+    type: test_node
+    properties:
+      found_string_index: { string_find: [ { get_input: a_haystack }, { get_input: a_needle } ] }
+      replaced_string: { string_replace: [ { get_input: a_haystack }, { get_input: a_needle }, { get_input: a_replacement }] }
+      lower_string: { string_lower: { get_input: a_haystack } }
+      upper_string: { string_upper: { get_input: a_haystack } }
+      split_string: { string_split: [ { get_input: a_haystack }, { get_input: a_needle }, { get_input: an_index } ] }
+      a_list: { string_split: [ { get_input: a_haystack }, { get_input: a_needle } ] }
+
+capabilities:
+  x_found_string_index:
+    description: Test for string_find
+    value: { get_property: [ x, found_string_index ] }
+  x_replaced_string:
+    description: Test for string_replace
+    value: { get_property: [ x, replaced_string ] }
+  x_lower_string:
+    description: Test for string_lower
+    value: { get_property: [ x, lower_string ] }
+  x_upper_string:
+    description: Test for string_upper
+    value: { get_property: [ x, upper_string ] }
+  x_split_string:
+    description: Test for string_split
+    value: { get_property: [ x, split_string ] }
+  x_a_list:
+    description: Test for string_split
+    value: { get_property: [ x, a_list ] }
