@@ -417,27 +417,25 @@ class ResourceManager(object):
             )
             .all()
         )
-
         # deployments we've already emitted an execution for - only emit 1
         # execution per deployment
         seen_deployments = set()
-        # {group: how many executions can it still run}
-        group_can_run = {}
+
         for execution in queued_executions:
             for group in execution.execution_groups:
-                if group not in group_can_run:
-                    group_can_run[group] = group.concurrency -\
-                        len(group.currently_running_executions())
+                if group._storage_id not in groups:
+                    groups[group._storage_id] = [0, group.concurrency]
 
-            if any(group_can_run[g] <= 0 for g in execution.execution_groups):
+            if any(groups[g._storage_id][0] >= groups[g._storage_id][1]
+                   for g in execution.execution_groups):
                 # this execution cannot run, because it would exceed one
                 # of its' groups concurrency limit
                 continue
             if execution._deployment_fk in seen_deployments:
                 continue
 
-            for group in execution.execution_groups:
-                group_can_run[group] -= 1
+            for g in execution.execution_groups:
+                groups[g._storage_id][0] += 1
             seen_deployments.add(execution._deployment_fk)
             yield execution
 
