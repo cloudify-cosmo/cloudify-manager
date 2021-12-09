@@ -286,6 +286,16 @@ class ResourceManager(object):
                 executions.is_system_workflow.is_(False)
             )
 
+            exgrs = models.executions_groups_executions_table
+            group_concurrency_filter = (
+                ~db.Query(exgrs)
+                .filter(exgrs.c.execution_group_id.in_(
+                    db.bindparam('excluded_groups'))
+                )
+                .filter(exgrs.c.execution_id == executions._storage_id)
+                .exists()
+            )
+
             # fetch only execution that:
             # - are either create-dep-env (priority!)
             # - belong to deployments that have none of:
@@ -316,6 +326,7 @@ class ResourceManager(object):
                 db.Query(executions)
                 .filter(queued_non_system_filter)
                 .filter(other_execs_in_deployment_filter)
+                .filter(group_concurrency_filter)
                 .outerjoin(executions.execution_groups)
                 .options(db.joinedload(executions.deployment))
                 .with_for_update(of=executions)
@@ -391,12 +402,18 @@ class ResourceManager(object):
             return
 
         total, groups = self._report_running()
+        excluded_groups = [
+            group_id
+            for group_id, (active, concurrency) in groups.items()
+            if active >= concurrency
+        ]
         queued_executions = (
             db.session.query(models.Execution)
             .from_statement(self._queued_executions_query(
                 deployment_storage_id is not None))
             .params(
                 dep_id=deployment_storage_id,
+                excluded_groups=excluded_groups,
             )
             .all()
         )
