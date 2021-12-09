@@ -65,6 +65,8 @@ class ResourceManager(object):
 
     def __init__(self, sm=None):
         self.sm = sm or get_storage_manager()
+        self._cached_queued_execs_query = None
+        self._cached_queued_execs_with_deployment_query = None
 
     def list_executions(self, include=None, is_include_system_workflows=False,
                         filters=None, pagination=None, sort=None,
@@ -273,58 +275,67 @@ class ResourceManager(object):
             return []
 
     def _queued_executions_query(self, with_deployment_id):
-        executions = aliased(models.Execution)
+        if (
+            self._cached_queued_execs_query is None or
+            self._cached_queued_execs_with_deployment_query is None
+        ):
+            executions = aliased(models.Execution)
 
-        queued_non_system_filter = db.and_(
-            executions.status == ExecutionState.QUEUED,
-            executions.is_system_workflow.is_(False)
-        )
-
-        # fetch only execution that:
-        # - are either create-dep-env (priority!)
-        # - belong to deployments that have none of:
-        #   - active executions
-        #   - queued create-dep-env executions
-        other_execs_in_deployment_filter = db.or_(
-            executions.workflow_id == 'create_deployment_environment',
-            ~models.Execution.query
-            .filter(
-                models.Execution._deployment_fk ==
-                executions._deployment_fk,
+            queued_non_system_filter = db.and_(
+                executions.status == ExecutionState.QUEUED,
+                executions.is_system_workflow.is_(False)
             )
-            .filter(
-                db.or_(
-                    models.Execution.status.in_(
-                        ExecutionState.ACTIVE_STATES),
-                    db.and_(
-                        models.Execution.status == ExecutionState.QUEUED,
-                        models.Execution.workflow_id ==
-                        'create_deployment_environment'
+
+            # fetch only execution that:
+            # - are either create-dep-env (priority!)
+            # - belong to deployments that have none of:
+            #   - active executions
+            #   - queued create-dep-env executions
+            other_execs_in_deployment_filter = db.or_(
+                executions.workflow_id == 'create_deployment_environment',
+                ~db.Query(models.Execution)
+                .filter(
+                    models.Execution._deployment_fk ==
+                    executions._deployment_fk,
+                )
+                .filter(
+                    db.or_(
+                        models.Execution.status.in_(
+                            ExecutionState.ACTIVE_STATES),
+                        db.and_(
+                            models.Execution.status == ExecutionState.QUEUED,
+                            models.Execution.workflow_id ==
+                            'create_deployment_environment'
+                        )
                     )
                 )
+                .exists()
             )
-            .exists()
-        )
 
-        queued_query = (
-            db.session.query(executions)
-            .filter(queued_non_system_filter)
-            .filter(other_execs_in_deployment_filter)
-            .outerjoin(executions.execution_groups)
-            .with_for_update(of=executions)
-        )
+            queued_query = (
+                db.Query(executions)
+                .filter(queued_non_system_filter)
+                .filter(other_execs_in_deployment_filter)
+                .outerjoin(executions.execution_groups)
+                .options(db.joinedload(executions.deployment))
+                .with_for_update(of=executions)
+            )
 
-        if with_deployment_id:
-            return (
+            self._cached_queued_execs_with_deployment_query = (
                 queued_query
                 .order_by(executions._deployment_fk != db.bindparam('dep_id'))
-                .order_by(executions.created_at.asc())
+                .order_by(executions._storage_id)
+                .limit(5)
             )
-        else:
-            return (
+            self._cached_queued_execs_query = (
                 queued_query
-                .order_by(executions.created_at.asc())
+                .order_by(executions._storage_id)
+                .limit(5)
             )
+        if with_deployment_id:
+            return self._cached_queued_execs_with_deployment_query
+        else:
+            return self._cached_queued_execs_query
 
     def _get_queued_executions(self, deployment_storage_id):
         sort_by = {'created_at': 'asc'}
@@ -343,9 +354,12 @@ class ResourceManager(object):
             return
 
         queued_executions = (
-            self._queued_executions_query(deployment_storage_id is not None)
-            .limit(5)
-            .params(dep_id=deployment_storage_id)
+            db.session.query(models.Execution)
+            .from_statement(self._queued_executions_query(
+                deployment_storage_id is not None))
+            .params(
+                dep_id=deployment_storage_id,
+            )
             .all()
         )
 
