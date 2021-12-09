@@ -162,7 +162,7 @@ class Config(object):
 
     # max number of threads that will be used in a `restore snapshot` wf
     snapshot_restore_threads = Setting('snapshot_restore_threads', default=15)
-
+    max_concurrent_workflows = Setting('max_concurrent_workflows', default=20)
     warnings = Setting('warnings', default=[])
 
     _logger = None

@@ -73,6 +73,7 @@ def upgrade():
     _add_config_manager_service_log()
     _add_audit_log_indexes()
     _add_audit_log_notify()
+    _add_max_concurrent_config()
 
 
 def downgrade():
@@ -81,6 +82,7 @@ def downgrade():
     _drop_config_manager_service_log()
     _drop_audit_triggers()
     _drop_functions_write_audit_log()
+    _drop_max_concurrent_config()
 
 
 # flake8: noqa
@@ -282,3 +284,30 @@ def _add_audit_log_notify():
 def _drop_audit_log_notify():
     op.execute("""DROP TRIGGER audit_log_inserted ON audit_log;""")
     op.execute("""DROP FUNCTION notify_new_audit_log();""")
+
+
+def _add_max_concurrent_config():
+    op.bulk_insert(
+        config_table,
+        [
+            dict(
+                name='max_concurrent_workflows',
+                value=20,
+                scope='rest',
+                schema={'type': 'number', 'minimum': 1, 'maximum': 1000},
+                is_editable=True
+            ),
+        ]
+    )
+
+
+def _drop_max_concurrent_config():
+    op.execute(
+        config_table
+        .delete()
+        .where(
+            (config_table.c.name == op.inline_literal(
+                'max_concurrent_workflows')) &  # NOQA
+            (config_table.c.scope == op.inline_literal('rest'))
+        )
+    )

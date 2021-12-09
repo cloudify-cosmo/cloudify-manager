@@ -422,6 +422,8 @@ class ResourceManager(object):
         seen_deployments = set()
 
         for execution in queued_executions:
+            if total >= config.instance.max_concurrent_workflows:
+                break
             for group in execution.execution_groups:
                 if group._storage_id not in groups:
                     groups[group._storage_id] = [0, group.concurrency]
@@ -437,6 +439,7 @@ class ResourceManager(object):
             for g in execution.execution_groups:
                 groups[g._storage_id][0] += 1
             seen_deployments.add(execution._deployment_fk)
+            total += 1
             yield execution
 
     def _validate_execution_update(self, current_status, future_status):
