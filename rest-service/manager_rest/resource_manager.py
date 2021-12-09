@@ -1069,6 +1069,14 @@ class ResourceManager(object):
                 self._workflow_queued(exc)
                 continue
 
+            if exc.deployment \
+                    and exc.workflow_id != 'create_deployment_environment':
+                # refresh in case create-dep-env JUST finished, between the
+                # time we fetched the deployment, and checked that we don't
+                # need to queue. No need for create-dep-env, because the
+                # deployment is not persistent yet in that case
+                self.sm.refresh(exc.deployment)
+
             message = exc.render_message(
                 wait_after_fail=wait_after_fail,
                 bypass_maintenance=bypass_maintenance
