@@ -337,6 +337,43 @@ class ResourceManager(object):
         else:
             return self._cached_queued_execs_query
 
+    def _report_running(self):
+        """Report currently-running executions.
+
+        This returns the amount of currently-running executions total,
+        and a dict of {group_id: [active in the group, group concurrency]}
+        """
+        exgrs = models.executions_groups_executions_table
+        active_execs = (
+            db.session.query(
+                models.Execution._storage_id,
+                exgrs.c.execution_group_id,
+                models.ExecutionGroup.concurrency,
+            )
+            .select_from(models.Execution)
+            .outerjoin(
+                exgrs,
+                models.Execution._storage_id == exgrs.c.execution_id
+            )
+            .outerjoin(
+                models.ExecutionGroup,
+                models.ExecutionGroup._storage_id == exgrs.c.execution_group_id
+            )
+            .filter(models.Execution.status.in_(ExecutionState.ACTIVE_STATES))
+            .order_by(models.Execution._storage_id)
+            .all()
+        )
+        total_running = 0
+        groups = {}
+        for exc_id, group_id, concurrency in active_execs:
+            total_running += 1
+            if group_id is None:
+                continue
+            if group_id not in groups:
+                groups[group_id] = [0, 0]
+            groups[group_id] = [groups[group_id][0] + 1, concurrency]
+        return total_running, groups
+
     def _get_queued_executions(self, deployment_storage_id):
         sort_by = {'created_at': 'asc'}
         system_executions = self.sm.list(
@@ -353,6 +390,7 @@ class ResourceManager(object):
             yield system_executions[0]
             return
 
+        total, groups = self._report_running()
         queued_executions = (
             db.session.query(models.Execution)
             .from_statement(self._queued_executions_query(
