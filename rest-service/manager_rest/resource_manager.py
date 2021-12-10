@@ -71,7 +71,6 @@ class ResourceManager(object):
     def __init__(self, sm=None):
         self.sm = sm or get_storage_manager()
         self._cached_queued_execs_query = None
-        self._cached_queued_execs_with_deployment_query = None
 
     def list_executions(self, include=None, is_include_system_workflows=False,
                         filters=None, pagination=None, sort=None,
@@ -134,7 +133,6 @@ class ResourceManager(object):
                 deployment = execution.deployment
             else:
                 deployment = None
-            deployment_storage_id = execution._deployment_fk
             workflow_id = execution.workflow_id
             if not self._validate_execution_update(execution.status, status):
                 raise manager_exceptions.InvalidExecutionUpdateStatus(
@@ -169,7 +167,7 @@ class ResourceManager(object):
             if deployment and workflow_id != 'delete_deployment_environment':
                 with self.sm.transaction():
                     update_inter_deployment_dependencies(self.sm, deployment)
-            self.start_queued_executions(deployment_storage_id)
+            self.start_queued_executions()
 
         # If the execution is a deployment update, and the status we're
         # updating to is one which should cause the update to fail - do it here
@@ -212,7 +210,7 @@ class ResourceManager(object):
             self.recalc_ancestors(affected_parent_deployments)
         return res
 
-    def start_queued_executions(self, deployment_storage_id):
+    def start_queued_executions(self):
         """Dequeue and start executions.
 
         Attempt to fetch and run as many executions as we can, and if
@@ -221,8 +219,7 @@ class ResourceManager(object):
         to_run = []
         for retry in range(5):
             with self.sm.transaction():
-                dequeued = list(self._get_queued_executions(
-                    deployment_storage_id))
+                dequeued = list(self._get_queued_executions())
                 if not dequeued:
                     break
                 all_started = True
@@ -279,11 +276,8 @@ class ResourceManager(object):
                 execution, e)
             return []
 
-    def _queued_executions_query(self, with_deployment_id):
-        if (
-            self._cached_queued_execs_query is None or
-            self._cached_queued_execs_with_deployment_query is None
-        ):
+    def _queued_executions_query(self):
+        if self._cached_queued_execs_query is None:
             executions = aliased(models.Execution)
 
             queued_non_system_filter = db.and_(
@@ -336,22 +330,12 @@ class ResourceManager(object):
                 .options(db.joinedload(executions.deployment))
                 .with_for_update(of=executions)
             )
-
-            self._cached_queued_execs_with_deployment_query = (
-                queued_query
-                .order_by(executions._deployment_fk != db.bindparam('dep_id'))
-                .order_by(executions._storage_id)
-                .limit(5)
-            )
             self._cached_queued_execs_query = (
                 queued_query
                 .order_by(executions._storage_id)
                 .limit(5)
             )
-        if with_deployment_id:
-            return self._cached_queued_execs_with_deployment_query
-        else:
-            return self._cached_queued_execs_query
+        return self._cached_queued_execs_query
 
     def _report_running(self):
         """Report currently-running executions.
@@ -392,7 +376,7 @@ class ResourceManager(object):
                 active=groups[group_id].active + 1)
         return total_running, groups
 
-    def _get_queued_executions(self, deployment_storage_id):
+    def _get_queued_executions(self):
         sort_by = {'created_at': 'asc'}
         system_executions = self.sm.list(
             models.Execution, filters={
@@ -416,10 +400,8 @@ class ResourceManager(object):
         ]
         queued_executions = (
             db.session.query(models.Execution)
-            .from_statement(self._queued_executions_query(
-                deployment_storage_id is not None))
+            .from_statement(self._queued_executions_query())
             .params(
-                dep_id=deployment_storage_id,
                 excluded_groups=excluded_groups,
             )
             .all()
