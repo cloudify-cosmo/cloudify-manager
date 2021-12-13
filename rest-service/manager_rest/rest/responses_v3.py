@@ -79,6 +79,8 @@ class TenantDetailsResponse(BaseResponse):
 class AgentResponse(BaseResponse):
     resource_fields = {
         'id': fields.String,
+        # Deprecated. Should probably be removed around 7.x
+        'host_id': fields.String,
         'node_instance_id': fields.String,
         'ip': fields.String,
         'install_method': fields.String,
