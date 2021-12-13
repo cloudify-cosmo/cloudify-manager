@@ -9,7 +9,10 @@ from sqlalchemy import and_ as sql_and
 
 
 from cloudify._compat import text_type
-from cloudify.models_states import VisibilityState, ExecutionState
+from cloudify.models_states import (VisibilityState,
+                                    ExecutionState,
+                                    BlueprintUploadState,
+                                    )
 from cloudify.deployment_dependencies import (create_deployment_dependency,
                                               DEPENDENCY_CREATOR,
                                               SOURCE_DEPLOYMENT,
@@ -194,6 +197,10 @@ class DeploymentsId(resources_v1.DeploymentsId):
         rm = get_resource_manager()
         sm = get_storage_manager()
         blueprint = sm.get(models.Blueprint, blueprint_id)
+        if blueprint.state != BlueprintUploadState.UPLOADED:
+            raise DeploymentCreationError(
+                'Unable to create a deployment based on a blueprint which is '
+                f'not `uploaded` but: `{blueprint.state}`')
         site_name = _get_site_name(request_dict)
         site = sm.get(models.Site, site_name) if site_name else None
 

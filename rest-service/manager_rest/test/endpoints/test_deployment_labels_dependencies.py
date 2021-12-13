@@ -273,8 +273,8 @@ class DeploymentLabelsDependenciesTest(BaseServerTestCase):
         assert env1.sub_environments_count == 0
 
     def test_deployment_statuses_after_creation_without_sub_deployments(self):
-        bp = models.Blueprint(
-            id='bp1', creator=self.user, tenant=self.tenant, plan={})
+        bp = models.Blueprint(id='bp1', creator=self.user, tenant=self.tenant,
+                              plan={}, state='uploaded')
         db.session.add(bp)
         self.client.deployments.create('bp1', 'dep1')
         dep1 = db.session.query(models.Deployment).filter_by(id='dep1').one()

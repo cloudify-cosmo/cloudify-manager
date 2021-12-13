@@ -25,6 +25,7 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             creator=self.user,
             tenant=self.tenant,
             plan={'inputs': {}},
+            state='uploaded',
         )
         for dep_id in ['dep1', 'dep2']:
             db.session.add(models.Deployment(
@@ -377,7 +378,7 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             'group1', delete_deployments=True)
         assert len(self.client.deployment_groups.list()) == 0
 
-        # dep hasnt been deleted _yet_, but check that delete-dep-env for it
+        # dep hasn't been deleted _yet_, but check that delete-dep-env for it
         # was run
         dep = self.sm.get(models.Deployment, 'dep1')
         assert any(exc.workflow_id == 'delete_deployment_environment'
