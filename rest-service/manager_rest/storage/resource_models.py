@@ -2237,8 +2237,13 @@ class InterDeploymentDependencies(BaseDeploymentDependencies):
         else:
             dep_type = 'deployment'
             dep_node = '<unknown node>'
+        deployment = '<unknown deployment>'
+        if self.source_deployment:
+            deployment = self.source_deployment.id
+        elif self.external_source:
+            deployment = f'EXTERNAL:{self.external_source}'
         return {
-            'deployment': self.source_deployment.id,
+            'deployment': deployment,
             'dependency_type': dep_type,
             'dependent_node': dep_node,
             'tenant': self.tenant_name
@@ -2252,8 +2257,9 @@ class InterDeploymentDependencies(BaseDeploymentDependencies):
             'deployment': 'uses capabilities of'
         }[summary['dependency_type']]
         dep_node = summary['dependent_node']
+        deployment = summary['deployment']
         return (
-            f'Deployment `{self.source_deployment.id}` {type_message} '
+            f'Deployment `{deployment}` {type_message} '
             f'the current deployment in its node `{dep_node}`'
         )
 
