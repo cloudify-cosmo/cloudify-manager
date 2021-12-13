@@ -900,8 +900,7 @@ class ExecutionQueueingTests(BaseServerTestCase):
             self.bp = bp
 
     def _get_queued(self):
-        return list(
-            self.rm._get_queued_executions(self.deployment1._storage_id))
+        return list(self.rm._get_queued_executions())
 
     def _make_execution(self, status=None, deployment=None):
         execution = models.Execution(
@@ -932,11 +931,6 @@ class ExecutionQueueingTests(BaseServerTestCase):
         self._make_execution(deployment=self.deployment2)
         self._make_execution(deployment=self.deployment2)
         assert len(self._get_queued()) == 1
-
-    def test_same_deployment_first(self):
-        execution1 = self._make_execution(deployment=self.deployment2)
-        execution2 = self._make_execution(deployment=self.deployment1)
-        assert self._get_queued() == [execution2, execution1]
 
     def test_full_group(self):
         group = models.ExecutionGroup(workflow_id='install')
