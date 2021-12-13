@@ -441,8 +441,8 @@ class BaseServerTestCase(unittest.TestCase):
             logger.error("HINT: Create a docker container running postgresql "
                          "by doing `docker run --name cloudify-db-unit-test "
                          "-e POSTGRES_PASSWORD=cloudify -e POSTGRES_USER="
-                         "cloudify -e POSTGRES_DB=cloudify_db -p 5432:5432 "
-                         "-d postgres`")
+                         "cloudify -e POSTGRES_DB=cloudify_test_db "
+                         "-p 5432:5432 -d postgres`")
             raise
         admin_user = get_admin_user()
 
@@ -540,7 +540,7 @@ class BaseServerTestCase(unittest.TestCase):
             host=test_config.postgresql_host,
             user=test_config.postgresql_username,
             password=test_config.postgresql_password,
-            dbname='cloudify_db')
+            dbname='cloudify_test_db')
         try:
             conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
             with conn.cursor() as cur:
@@ -553,13 +553,14 @@ class BaseServerTestCase(unittest.TestCase):
     def _find_db_name(cls, test_config):
         """Figure out the db name to use.
 
-        By default, use cloudify_db. But if we're running under pytest-xdist,
-        magically create more databases to run on! Each process gets its own.
-        With pytest-xdist, the workers are named gw0, gw1, gw2, etc.
-        The first one gets to use cloudify_db, all other ones create more
+        By default, use cloudify_test_db. But if we're running under
+        pytest-xdist, magically create more databases to run on! Each process
+        gets its own. With pytest-xdist, the workers are named gw0, gw1,
+        gw2, etc.
+        The first one gets to use cloudify_test_db, all other ones create more
         databases.
         """
-        dbname = 'cloudify_db'
+        dbname = 'cloudify_test_db'
         worker_id = os.environ.get('PYTEST_XDIST_WORKER')
         if worker_id and worker_id != 'gw0':
             dbname += '_' + worker_id
