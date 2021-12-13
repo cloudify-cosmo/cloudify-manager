@@ -149,7 +149,6 @@ class ResourceManager(object):
                 deployment = execution.deployment
             else:
                 deployment = None
-            deployment_storage_id = execution._deployment_fk
             workflow_id = execution.workflow_id
             if not self._validate_execution_update(execution.status, status):
                 raise manager_exceptions.InvalidExecutionUpdateStatus(
@@ -182,7 +181,7 @@ class ResourceManager(object):
 
         if status in ExecutionState.END_STATES:
             update_inter_deployment_dependencies(self.sm)
-            self.start_queued_executions(deployment_storage_id)
+            self.start_queued_executions()
 
         # If the execution is a deployment update, and the status we're
         # updating to is one which should cause the update to fail - do it here
@@ -213,7 +212,7 @@ class ResourceManager(object):
             self.delete_deployment(deployment)
         return res
 
-    def start_queued_executions(self, deployment_storage_id):
+    def start_queued_executions(self):
         """Dequeue and start executions.
 
         Attempt to fetch and run as many executions as we can, and if
@@ -223,7 +222,7 @@ class ResourceManager(object):
         with self.sm.transaction():
             storage_utils.deployments_lock()
             while True:
-                dequeued = self._get_queued_executions(deployment_storage_id)
+                dequeued = self._get_queued_executions()
                 all_started = True
                 for execution in dequeued:
                     if self._refresh_execution(execution):
@@ -272,7 +271,7 @@ class ResourceManager(object):
             self.sm.update(execution)
             db.session.flush([execution])
 
-    def _queued_executions_query(self, with_deployment_id):
+    def _queued_executions_query(self):
         executions = aliased(models.Execution)
 
         queued_non_system_filter = db.and_(
@@ -314,19 +313,12 @@ class ResourceManager(object):
             .with_for_update(of=executions)
         )
 
-        if with_deployment_id:
-            return (
-                queued_query
-                .order_by(executions._deployment_fk != db.bindparam('dep_id'))
-                .order_by(executions.created_at.asc())
-            )
-        else:
-            return (
-                queued_query
-                .order_by(executions.created_at.asc())
-            )
+        return (
+            queued_query
+            .order_by(executions.created_at.asc())
+        )
 
-    def _get_queued_executions(self, deployment_storage_id):
+    def _get_queued_executions(self):
         sort_by = {'created_at': 'asc'}
         system_executions = self.sm.list(
             models.Execution, filters={
@@ -343,9 +335,8 @@ class ResourceManager(object):
             return
 
         queued_executions = (
-            self._queued_executions_query(deployment_storage_id is not None)
+            self._queued_executions_query()
             .limit(5)
-            .params(dep_id=deployment_storage_id)
             .all()
         )
 
