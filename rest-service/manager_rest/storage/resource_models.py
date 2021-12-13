@@ -1986,6 +1986,7 @@ class Agent(CreatedAtMixin, SQLResourceBase):
                                         cls._node_instance_fk)
 
     node_instance_id = association_proxy('node_instance', 'id')
+    host_id = association_proxy('node_instance', 'id')
     node_id = association_proxy('node_instance', 'node_id')
     deployment_id = association_proxy('node_instance', 'deployment_id')
 
@@ -1993,10 +1994,6 @@ class Agent(CreatedAtMixin, SQLResourceBase):
     deployment = deployment_id
     node_ids = node_id
     node_instance_ids = node_instance_id
-
-    @property
-    def host_id(self):
-        return self.node_instance_id
 
     @hybrid_property
     def install_methods(self):
