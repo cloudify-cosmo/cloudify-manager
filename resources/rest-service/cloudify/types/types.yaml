@@ -38,6 +38,7 @@ node_types:
       cloudify.interfaces.monitoring:
         start: {}
         stop: {}
+        check_status: {}
 
   # A host (physical / virtual or LXC) in a topology
   cloudify.nodes.Compute:
