@@ -307,3 +307,19 @@ class PluginsId(resources_v2_1.PluginsId):
             raise RuntimeError('Unknown error setting plugin {0} state: {1}'
                                .format(plugin_id, e))
         return response
+
+    @authorize('plugin_upload')
+    def patch(self, plugin_id, **kwargs):
+        """Update the plugin, specifically its owner.
+
+        Only updating the ownership is supported right now.
+        """
+        request_dict = rest_utils.get_json_and_verify_params({
+            'creator': {'type': text_type}})
+        check_user_action_allowed('set_owner', None, True)
+        creator = rest_utils.valid_user(request_dict['creator'])
+        sm = get_storage_manager()
+        plugin = sm.get(models.Plugin, plugin_id)
+        plugin.creator = creator
+        sm.update(plugin)
+        return plugin.to_response()
