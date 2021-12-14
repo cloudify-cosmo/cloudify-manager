@@ -1,18 +1,3 @@
-########
-# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#        http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#    * See the License for the specific language governing permissions and
-#    * limitations under the License.
-
 import glob
 import os
 import shutil
@@ -23,7 +8,7 @@ import unicodedata
 from retrying import retry
 
 from cloudify.decorators import workflow
-from cloudify.manager import get_rest_client
+from cloudify.manager import get_rest_client, _get_workdir_path
 from cloudify.workflows import workflow_context
 
 from cloudify.utils import parse_utc_datetime_relative
@@ -224,7 +209,7 @@ def _retry_if_file_already_exists(exception):
        stop_max_delay=60000,
        wait_fixed=2000)
 def _create_deployment_workdir(deployment_id, logger, tenant):
-    deployment_workdir = _workdir(deployment_id, tenant)
+    deployment_workdir = _get_workdir_path(deployment_id, tenant)
     if os.path.exists(deployment_workdir):
         # Otherwise we experience pain on snapshot restore
         return
@@ -232,7 +217,7 @@ def _create_deployment_workdir(deployment_id, logger, tenant):
 
 
 def _delete_deployment_workdir(ctx):
-    deployment_workdir = _workdir(ctx.deployment.id, ctx.tenant_name)
+    deployment_workdir = _get_workdir_path(ctx.deployment.id, ctx.tenant_name)
     if not os.path.exists(deployment_workdir):
         return
     try:
@@ -241,11 +226,6 @@ def _delete_deployment_workdir(ctx):
         ctx.logger.warning(
             'Failed deleting directory %s. Current directory content: %s',
             deployment_workdir, os.listdir(deployment_workdir), exc_info=True)
-
-
-def _workdir(deployment_id, tenant):
-    return os.path.join('/opt', 'manager', 'resources', 'deployments',
-                        tenant, deployment_id)
 
 
 @workflow
