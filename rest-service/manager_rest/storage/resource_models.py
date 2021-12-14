@@ -350,13 +350,17 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         ),
     )
     _extra_fields = {
-        'workdir_zip': flask_fields.String
+        'workdir_zip': flask_fields.String,
     }
     skipped_fields = dict(
         SQLResourceBase.skipped_fields,
         v1=['scaling_groups'],
         v2=['scaling_groups']
     )
+
+    # This will be overriden when a workdir is being retrieved
+    workdir_zip = None
+
     description = db.Column(db.Text)
     inputs = db.Column(db.PickleType(protocol=2))
     groups = db.Column(db.PickleType(protocol=2))
