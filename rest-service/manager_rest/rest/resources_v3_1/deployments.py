@@ -1,5 +1,9 @@
-import uuid
+from base64 import b64encode
 from builtins import staticmethod
+import os
+from shutil import rmtree
+from tempfile import mkdtemp
+import uuid
 
 from flask import request
 from flask_restful.inputs import boolean
@@ -9,6 +13,7 @@ from sqlalchemy import and_ as sql_and
 
 
 from cloudify._compat import text_type
+from cloudify.manager import _get_workdir_path
 from cloudify.models_states import (VisibilityState,
                                     ExecutionState,
                                     BlueprintUploadState,
@@ -18,6 +23,7 @@ from cloudify.deployment_dependencies import (create_deployment_dependency,
                                               SOURCE_DEPLOYMENT,
                                               TARGET_DEPLOYMENT,
                                               TARGET_DEPLOYMENT_FUNC)
+from cloudify.zip_utils import make_zip64_archive
 
 from manager_rest import utils, manager_exceptions, workflow_executor
 from manager_rest.security import SecuredResource
@@ -307,14 +313,29 @@ class DeploymentsId(resources_v1.DeploymentsId):
     def get(self, deployment_id, _include=None, **kwargs):
         args = rest_utils.get_args_and_verify_arguments([
             Argument('all_sub_deployments', type=boolean, default=True),
+            Argument('include_workdir', type=boolean, default=False),
         ])
-        if not args.all_sub_deployments \
-                and _include and ('id' not in _include):
-            # we will need to use id in the _populate_direct method, so it
-            # must be included
-            _include.append('id')
+        if _include:
+            if not args.all_sub_deployments and 'id' not in _include:
+                # we will need to use id in the _populate_direct method, so it
+                # must be included
+                _include.append('id')
+            if args.include_workdir and 'tenant_name' not in _include:
+                _include.append('tenant_name')
         deployment = get_storage_manager().get(
             models.Deployment, deployment_id, include=_include)
+        if args.include_workdir:
+            tmpdir_path = mkdtemp()
+            try:
+                workdir_path = _get_workdir_path(deployment_id,
+                                                 deployment.tenant_name)
+                zip_path = os.path.join(tmpdir_path, 'dep.zip')
+                make_zip64_archive(zip_path, workdir_path)
+                with open(zip_path, 'rb') as zip_handle:
+                    deployment.workdir_zip = b64encode(
+                        zip_handle.read()).decode('utf-8')
+            finally:
+                rmtree(tmpdir_path)
         # always return the deployment if `all_sub_deployments` is True
         if args.all_sub_deployments:
             return deployment

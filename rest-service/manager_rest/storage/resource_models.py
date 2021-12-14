@@ -349,6 +349,9 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             unique=True
         ),
     )
+    _extra_fields = {
+        'workdir_zip': flask_fields.String
+    }
     skipped_fields = dict(
         SQLResourceBase.skipped_fields,
         v1=['scaling_groups'],
