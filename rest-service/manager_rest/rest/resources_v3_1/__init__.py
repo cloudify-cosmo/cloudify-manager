@@ -65,6 +65,8 @@ from .blueprints import (                        # NOQA
     BlueprintsIcon,
 )
 
+from .idp import Idp                             # NOQA
+
 from .summary import (                           # NOQA
     SummarizeDeployments,
     SummarizeNodes,
