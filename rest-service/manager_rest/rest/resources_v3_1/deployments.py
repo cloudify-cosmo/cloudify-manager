@@ -514,7 +514,7 @@ class InterDeploymentDependencies(SecuredResource):
     @authorize('inter_deployment_dependency_create')
     @rest_decorators.marshal_list_response
     def post(self):
-        """Creates an inter-deployment dependency.
+        """Creates many inter-deployment dependencies.
 
         :param source_deployment_id: ID of the source deployment
          (the one which depends on the target deployment).
@@ -530,6 +530,12 @@ class InterDeploymentDependencies(SecuredResource):
         })
 
         dependencies = params.get('inter_deployment_dependencies')
+
+        if any(item.get('created_by') for item in dependencies):
+            check_user_action_allowed('set_owner')
+        if any(item.get('created_at') for item in dependencies):
+            check_user_action_allowed('set_timestamp')
+
         if len(dependencies) > 0 and EXTERNAL_SOURCE in dependencies[0]:
             source_deployment = None
         else:
@@ -1355,14 +1361,23 @@ def _create_inter_deployment_dependency(
                 f'Cyclic dependency between {source_deployment} and '
                 f'{target_deployment}')
 
+    created_at = (
+        rest_utils.parse_datetime_string(dependency.get('created_at'))
+        if dependency.get('created_at')
+        else now
+    )
+
     deployment_dependency = models.InterDeploymentDependencies(
-        id=str(uuid.uuid4()),
+        id=dependency.get('id', str(uuid.uuid4())),
         dependency_creator=dependency[DEPENDENCY_CREATOR],
         source_deployment=source_deployment,
         target_deployment=target_deployment,
         target_deployment_func=dependency.get(TARGET_DEPLOYMENT_FUNC),
         external_source=dependency.get(EXTERNAL_SOURCE),
         external_target=dependency.get(EXTERNAL_TARGET),
-        created_at=now)
+        created_at=created_at)
+    if dependency.get('created_by'):
+        deployment_dependency.creator = rest_utils.valid_user(
+            dependency['created_by'])
     record = sm.put(deployment_dependency)
     return record
