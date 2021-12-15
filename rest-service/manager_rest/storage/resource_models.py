@@ -1234,6 +1234,7 @@ class ExecutionGroup(CreatedAtMixin, SQLResourceBase):
             if exc.status == ExecutionState.PENDING
         ]
         with sm.transaction():
+            storage_utils.deployments_lock()
             for execution in executions[self.concurrency:]:
                 execution.status = ExecutionState.QUEUED
                 sm.update(execution, modified_attrs=('status', ))
