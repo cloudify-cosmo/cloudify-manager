@@ -24,6 +24,9 @@ from manager_rest.storage.management_models import (
     Tenant, UserTenantAssoc, Role
 )
 
+# re-import here for compat
+from manager_rest.storage.models import deployments_lock  # NOQA
+
 
 def get_node(deployment_id, node_id):
     """Return the single node associated with a given ID and Dep ID
@@ -122,22 +125,6 @@ def _create_default_tenant():
     )
     db.session.add(default_tenant)
     return default_tenant
-
-
-def deployments_lock():
-    """Lock multi-deployments update.
-
-    This lock is to be used around operations that possibly access multiple
-    deployments, their dependencies, and their executions.
-
-    This is not strictly based on deployments themselves, but to be used
-    co-operatively by functions, to avoid deadlocks in case multiple locks
-    on the deployments table are going to be acquired.
-    """
-    # the number doesn't mean anything, just needs to be globally unique,
-    # ie. not used by any other kind of lock across all of Cloudify
-    lock = 5
-    db.session.execute('SELECT pg_advisory_xact_lock(:lock)', {'lock': lock})
 
 
 def try_acquire_lock_on_table(lock_number):
