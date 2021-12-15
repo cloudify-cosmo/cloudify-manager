@@ -59,7 +59,6 @@ from .relationships import (
     many_to_many_relationship
 )
 
-
 if typing.TYPE_CHECKING:
     from manager_rest.resource_manager import ResourceManager
     from manager_rest.storage.storage_manager import SQLStorageManager
@@ -1234,6 +1233,7 @@ class ExecutionGroup(CreatedAtMixin, SQLResourceBase):
             if exc.status == ExecutionState.PENDING
         ]
         with sm.transaction():
+            deployments_lock()
             for execution in executions[self.concurrency:]:
                 execution.status = ExecutionState.QUEUED
                 sm.update(execution, modified_attrs=('status', ))
@@ -1952,3 +1952,19 @@ class DeploymentLabelsDependencies(BaseDeploymentDependencies):
     _source_deployment = foreign_key(Deployment._storage_id)
     _target_deployment = foreign_key(Deployment._storage_id)
 # endregion
+
+
+def deployments_lock():
+    """Lock multi-deployments update.
+
+    This lock is to be used around operations that possibly access multiple
+    deployments, their dependencies, and their executions.
+
+    This is not strictly based on deployments themselves, but to be used
+    co-operatively by functions, to avoid deadlocks in case multiple locks
+    on the deployments table are going to be acquired.
+    """
+    # the number doesn't mean anything, just needs to be globally unique,
+    # ie. not used by any other kind of lock across all of Cloudify
+    lock = 5
+    db.session.execute('SELECT pg_advisory_xact_lock(:lock)', {'lock': lock})

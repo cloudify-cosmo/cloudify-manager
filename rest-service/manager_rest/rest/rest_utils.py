@@ -761,7 +761,6 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
             _target = self.sm.get(
                 models.Deployment,
                 dep,
-                locking=True,
                 fail_silently=True
             )
             if _target:

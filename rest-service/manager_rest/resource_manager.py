@@ -982,6 +982,7 @@ class ResourceManager(object):
                          allow_overlapping_running_wf=False,
                          send_handler: 'SendHandler' = None):
         with self.sm.transaction():
+            storage_utils.deployments_lock()
             if execution.deployment:
                 self._check_allow_global_execution(execution.deployment)
                 self._verify_dependencies_not_affected(
@@ -1020,6 +1021,7 @@ class ResourceManager(object):
 
         component_executions = []
         with self.sm.transaction():
+            storage_utils.deployments_lock()
             components_dep_ids = self._find_all_components_deployment_id(
                 execution.deployment.id)
 
