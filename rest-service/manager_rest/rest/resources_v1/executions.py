@@ -40,6 +40,7 @@ from manager_rest.security.authorization import authorize
 from manager_rest.storage import (
     get_storage_manager,
     models,
+    storage_utils,
 )
 
 
@@ -138,6 +139,7 @@ class Executions(SecuredResource):
         sm = get_storage_manager()
         rm = get_resource_manager()
         with sm.transaction():
+            storage_utils.deployments_lock()
             deployment = sm.get(models.Deployment, deployment_id)
             rm.verify_deployment_environment_created_successfully(deployment)
             execution = models.Execution(
