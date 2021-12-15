@@ -1,9 +1,10 @@
-from base64 import b64encode
+from base64 import b64decode, b64encode
 from builtins import staticmethod
 import os
 from shutil import rmtree
 from tempfile import mkdtemp
 import uuid
+import zipfile
 
 from flask import request
 from flask_restful.inputs import boolean
@@ -192,6 +193,11 @@ class DeploymentsId(resources_v1.DeploymentsId):
             Argument('private_resource', type=boolean),
             Argument('async_create', type=boolean, default=False)
         ])
+        if args.async_create and request_dict.get('workdir_zip'):
+            raise DeploymentCreationError(
+                'Unable to create deployment asynchronously with provided '
+                'workdir zip.'
+            )
         visibility = rest_utils.get_visibility_parameter(
             optional=True,
             valid_values=VisibilityState.STATES
@@ -223,6 +229,29 @@ class DeploymentsId(resources_v1.DeploymentsId):
                 runtime_only_evaluation=request_dict.get(
                     'runtime_only_evaluation', False),
             )
+            if request_dict.get('workdir_zip'):
+                tmpdir_path = mkdtemp()
+                try:
+                    workdir_path = _get_workdir_path(deployment_id,
+                                                     deployment.tenant_name)
+                    os.mkdir(workdir_path)
+                    zip_path = os.path.join(tmpdir_path, 'dep.zip')
+                    with open(zip_path, 'wb') as zip_handle:
+                        zip_handle.write(
+                            b64decode(request_dict['workdir_zip'])
+                        )
+                    with zipfile.ZipFile(zip_path, 'r') as zipf:
+                        zipf.extractall(workdir_path)
+                except FileExistsError:
+                    raise DeploymentCreationError(
+                        'Error attempting to prepare deployment workdir. '
+                        'Workdir already exists.'
+                    )
+                finally:
+                    rmtree(tmpdir_path)
+                # We don't execute the create_dep_env when a workdir is
+                # provided- this is part of a restore or similar
+                return deployment, 201
             create_execution = deployment.make_create_environment_execution(
                 inputs=inputs,
                 labels=labels,
