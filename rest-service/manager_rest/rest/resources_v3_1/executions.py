@@ -33,7 +33,13 @@ from manager_rest.rest.rest_utils import (
     verify_and_convert_bool,
     parse_datetime_multiple_formats
 )
-from manager_rest.storage import models, db, get_storage_manager, ListResult
+from manager_rest.storage import (
+    models,
+    db,
+    get_storage_manager,
+    ListResult,
+    storage_utils
+)
 from manager_rest.workflow_executor import (
     get_amqp_client,
     workflow_sendhandler
@@ -194,6 +200,7 @@ class ExecutionGroups(SecuredResource):
         rm = get_resource_manager()
         executions = []
         with sm.transaction():
+            storage_utils.deployments_lock()
             for dep in dep_group.deployments:
                 params = default_parameters.copy()
                 params.update(parameters.get(dep.id) or {})
