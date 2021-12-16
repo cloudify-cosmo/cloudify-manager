@@ -156,7 +156,7 @@ class PluginsArchive(SecuredResource):
         return rest_utils.make_streaming_response(
             plugin_id,
             plugin_path,
-            'tar.gz'
+            'wgn'
         )
 
 
