@@ -323,3 +323,25 @@ class PluginsId(resources_v2_1.PluginsId):
         plugin.creator = creator
         sm.update(plugin)
         return plugin.to_response()
+
+
+class PluginsYaml(SecuredResource):
+    """
+    GET = download previously uploaded plugin yaml.
+    """
+    @swagger.operation(
+        responseClass='YAML file',
+        nickname="downloadPluginYaml",
+        notes="download a plugin YAML according to the plugin ID. "
+    )
+    @authorize('plugin_download')
+    def get(self, plugin_id, **kwargs):
+        """
+        Download plugin yaml
+        """
+        plugin = get_storage_manager().get(models.Plugin, plugin_id)
+        return rest_utils.make_streaming_response(
+            plugin_id,
+            plugin.file_server_path,
+            'yaml'
+        )

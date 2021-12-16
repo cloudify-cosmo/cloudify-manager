@@ -43,6 +43,7 @@ from .plugins import (                           # NOQA
     PluginsId,
     PluginsSetGlobal,
     PluginsSetVisibility,
+    PluginsYaml,
 )
 
 from .deployments import (                       # NOQA
