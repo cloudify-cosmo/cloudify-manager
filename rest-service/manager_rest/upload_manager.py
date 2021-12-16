@@ -746,6 +746,17 @@ class UploadedPluginsManager(UploadedDataManager):
                                     private_resource,
                                     visibility):
         plugin = self._load_plugin_package_json(archive_path)
+
+        archive_dir = os.path.dirname(archive_path)
+        wagons = files_in_folder(archive_dir, '*.wgn')
+        # archive_name is not nullable, so we'll error now or later if it is
+        # not set
+        expected_archive_name = plugin['archive_name']
+        if wagons and wagons[0] != expected_archive_name:
+            expected_path = os.path.join(archive_dir, expected_archive_name)
+            os.rename(archive_path, expected_path)
+            archive_path = expected_path
+
         build_props = plugin.get('build_server_os_properties')
         plugin_info = {'package_name': plugin.get('package_name'),
                        'archive_name': plugin.get('archive_name')}
