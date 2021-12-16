@@ -23,9 +23,8 @@ from cloudify.rabbitmq_client import USERNAME_PATTERN
 
 from manager_rest.test import base_test
 from manager_rest import manager_exceptions
-from manager_rest.test.mocks import put_node_instance
 from manager_rest.utils import get_formatted_timestamp
-from manager_rest.storage.models import Agent, NodeInstance
+from manager_rest.storage import models
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 
@@ -37,14 +36,78 @@ class AgentsTest(base_test.BaseServerTestCase):
         'rabbitmq_exchange': 'agent_1'
     }
 
-    node_instance_data = {
-        'instance_id': 'node_instance_1',
-        'deployment_id': 'deployment_1',
-        'runtime_properties': {'key': 'value'}
-    }
+    def setUp(self):
+        super().setUp()
+        self.bp1 = models.Blueprint(
+            id='bp1',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        self.dep1 = self._deployment('d1')
+        self.node1 = self._node('node_id')
+        self.ni1 = self._instance('node_instance_1')
+
+    def _deployment(self, deployment_id, **kwargs):
+        deployment_params = {
+            'id': deployment_id,
+            'blueprint': self.bp1,
+            'scaling_groups': {},
+            'creator': self.user,
+            'tenant': self.tenant,
+        }
+        deployment_params.update(kwargs)
+        return models.Deployment(**deployment_params)
+
+    def _node(self, node_id, **kwargs):
+        node_params = {
+            'id': node_id,
+            'type': 'type1',
+            'number_of_instances': 0,
+            'deploy_number_of_instances': 0,
+            'max_number_of_instances': 0,
+            'min_number_of_instances': 0,
+            'planned_number_of_instances': 0,
+            'deployment': self.dep1,
+            'creator': self.user,
+            'tenant': self.tenant,
+        }
+        node_params.update(kwargs)
+        return models.Node(**node_params)
+
+    def _instance(self, instance_id, **kwargs):
+        instance_params = {
+            'id': instance_id,
+            'state': '',
+            'creator': self.user,
+            'tenant': self.tenant,
+        }
+        instance_params.update(kwargs)
+        if 'node' not in instance_params:
+            instance_params['node'] = self.node1
+        return models.NodeInstance(**instance_params)
+
+    def _agent(self, agent_name, **kwargs):
+        agent_params = {
+            'id': agent_name,
+            'name': agent_name,
+            'ip': '127.0.0.1',
+            'install_method': 'remote',
+            'system': 'centos core',
+            'version': '4.5.5',
+            'visibility': 'tenant',
+            'state': AgentState.STARTED,
+            'node_instance': self.ni1,
+            'rabbitmq_username': 'rabbitmq_user_{0}'.format(agent_name),
+            'rabbitmq_password': encrypt(generate_user_password()),
+            'rabbitmq_exchange': agent_name,
+            'creator': self.user,
+            'tenant': self.tenant,
+        }
+        agent_params.update(kwargs)
+        return models.Agent(**agent_params)
 
     def test_get_agent(self):
-        self.put_agent()
+        self._agent('agent_1')
         agent = self.client.agents.get('agent_1')
         self.assertEqual(agent.name, 'agent_1')
         self.assertEqual(agent.node_instance_id, 'node_instance_1')
@@ -69,11 +132,10 @@ class AgentsTest(base_test.BaseServerTestCase):
 
     @patch('manager_rest.amqp_manager.RabbitMQClient')
     def test_create_agent(self, create_rabbitmq_user_mock):
-        put_node_instance(self.sm, **self.node_instance_data)
         self.client.agents.create('agent_1',
-                                  'node_instance_1',
+                                  self.ni1.id,
                                   **self.agent_data)
-        agent = self.sm.get(Agent, 'agent_1')
+        agent = self.sm.get(models.Agent, 'agent_1')
         self.assertEqual(agent.name, 'agent_1')
         self.assertEqual(agent.node_instance_id, 'node_instance_1')
         self.assertEqual(agent.visibility, 'tenant')
@@ -87,13 +149,12 @@ class AgentsTest(base_test.BaseServerTestCase):
     @patch('manager_rest.amqp_manager.RabbitMQClient')
     def test_create_agent_without_rabbitmq_user(self,
                                                 create_rabbitmq_user_mock):
-        put_node_instance(self.sm, **self.node_instance_data)
         self.client.agents.create('agent_1',
-                                  'node_instance_1',
+                                  self.ni1.id,
                                   create_rabbitmq_user=False,
                                   **self.agent_data)
         create_rabbitmq_user_mock.assert_not_called()
-        agent = self.sm.get(Agent, 'agent_1')
+        agent = self.sm.get(models.Agent, 'agent_1')
         self.assertEqual(agent.name, 'agent_1')
         self.assertIsNone(agent.rabbitmq_username)
         self.assertIsNone(agent.rabbitmq_password)
@@ -116,13 +177,10 @@ class AgentsTest(base_test.BaseServerTestCase):
                                'test_state')
 
     def test_create_agent_already_exists(self):
-        self._get_or_create_node_instance()
-        self.client.agents.create('agent_1',
-                                  'node_instance_1',
-                                  **self.agent_data)
-        none_response = self.client.agents.create('agent_1',
-                                                  'node_instance_1',
-                                                  **self.agent_data)
+        self.client.agents.create(
+            'agent_1', self.ni1.id, **self.agent_data)
+        none_response = self.client.agents.create(
+            'agent_1', self.ni1.id, **self.agent_data)
         self.assertEqual(none_response.name, None)
         self.assertEqual(none_response.state, None)
 
@@ -136,21 +194,21 @@ class AgentsTest(base_test.BaseServerTestCase):
                                'node_instance_2')
 
     def test_update_agent(self):
-        self.put_agent()
+        self._agent('agent_1', state=AgentState.CREATING)
         self.client.agents.update('agent_1', AgentState.STARTED)
         agent = self.client.agents.get('agent_1')
         self.assertEqual(agent.name, 'agent_1')
         self.assertEqual(agent.state, AgentState.STARTED)
 
     def test_update_without_state(self):
-        self.put_agent()
+        self._agent('agent_1')
         response = self.patch('/agents/agent_1', {})
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json['message'],
                          'Missing state in json request body')
 
     def test_update_invalid_state(self):
-        self.put_agent()
+        self._agent('agent_1')
         error_message = '400: Invalid agent state: `test_state`'
         self.assertRaisesRegex(CloudifyClientError,
                                error_message,
@@ -159,11 +217,11 @@ class AgentsTest(base_test.BaseServerTestCase):
                                'test_state')
 
     def test_agent_deleted_following_instance_deletion(self):
-        self.put_agent()
+        self._agent('agent_1')
         agent = self.client.agents.get('agent_1')
         self.assertEqual('agent_1', agent.name)
         self.assertEqual('node_instance_1', agent.node_instance_id)
-        node_instance = self.sm.get(NodeInstance, 'node_instance_1')
+        node_instance = self.sm.get(models.NodeInstance, 'node_instance_1')
         self.sm.delete(node_instance)
         error_message = '404: Requested `Agent` with ID `agent_1` ' \
                         'was not found'
@@ -173,37 +231,37 @@ class AgentsTest(base_test.BaseServerTestCase):
                                'agent_1')
 
     def test_instance_exist_after_deleting_agent(self):
-        self.put_agent()
-        agent = self.sm.get(Agent, 'agent_1')
+        self._agent('agent_1')
+        agent = self.sm.get(models.Agent, 'agent_1')
         self.sm.delete(agent)
-        node_instance = self.sm.get(NodeInstance, 'node_instance_1')
+        node_instance = self.sm.get(models.NodeInstance, 'node_instance_1')
         self.assertEqual(node_instance.id, 'node_instance_1')
-        self.assertEqual(node_instance.deployment_id, 'deployment_1')
+        self.assertEqual(node_instance.deployment_id, 'd1')
 
     def test_list_agents(self):
-        self.put_agent()
-        self.put_agent(agent_name='agent_2', state=AgentState.CREATING)
+        self._agent('agent_1')
+        self._agent(agent_name='agent_2', state=AgentState.CREATING)
         self.assertEqual(len(self.client.agents.list().items), 1)
         self.client.agents.update('agent_2', AgentState.STARTED)
         self.assertEqual(len(self.client.agents.list().items), 2)
 
     def test_list_agents_sort_byname(self):
-        self.put_agent(agent_name='price')
-        self.put_agent(agent_name='smith')
-        self.put_agent(agent_name='kevin')
+        self._agent('price')
+        self._agent('smith')
+        self._agent('kevin')
         agent_list = self.client.agents.list(sort='name')
         self.assertEqual([agent['id'] for agent in agent_list],
                          ['kevin', 'price', 'smith'])
 
     def test_list_agents_include(self):
-        self.put_agent()
+        self._agent('agent_1')
         agent_list = self.client.agents.list(_include=['id', 'ip'])
         self.assertEqual(agent_list.items,
                          [{'ip': '127.0.0.1', 'id': 'agent_1'}])
 
     def test_list_agents_search(self):
-        self.put_agent(agent_name='kevin')
-        self.put_agent(agent_name='smith')
+        self._agent('smith')
+        self._agent('kevin')
         agent_list = self.client.agents.list(_search='s')
         self.assertEqual(len(agent_list.items), 1)
         self.assertEqual(agent_list.items[0]['id'], 'smith')
@@ -212,13 +270,13 @@ class AgentsTest(base_test.BaseServerTestCase):
         """
         Testing filter fields for backwards compatibility with the REST API
         """
-        self.put_agent(agent_name='agent_1', instance_id='inst_1')
-        self.put_agent(agent_name='agent_2',
-                       instance_id='inst_2',
-                       install_method='local')
-        self.put_agent(agent_name='agent_3', instance_id='inst_3')
-        agent_list = self.client.agents.list(node_instance_ids=['inst_1',
-                                                                'inst_2'])
+        inst2 = self._instance('node_instance_2')
+        inst3 = self._instance('node_instance_3')
+        self._agent('agent_1')
+        self._agent('agent_2', node_instance=inst2, install_method='local')
+        self._agent('agent_3', node_instance=inst3)
+        agent_list = self.client.agents.list(node_instance_ids=[
+            self.ni1.id, inst2.id])
         self.assertEqual(len(agent_list.items), 2)
         self.assertEqual([agent['id'] for agent in agent_list],
                          ['agent_1', 'agent_2'])
@@ -234,46 +292,9 @@ class AgentsTest(base_test.BaseServerTestCase):
 
     def test_list_agents_filters(self):
         """ Testing filter fields based on the Agent resource model """
-        self.put_agent(agent_name='agent_1')
+        self._agent('agent_1')
         self.assertEqual(len(self.client.agents.list(system='centos core')), 1)
         self.assertEqual(len(self.client.agents.list(version='4.5.5')), 1)
         self.assertEqual(len(self.client.agents.list(version='5.0')), 0)
         self.assertEqual(len(self.client.agents.list(node_id='node_id')), 1)
         self.assertEqual(len(self.client.agents.list(node_instance_id='a')), 0)
-
-    def put_agent(self,
-                  agent_name='agent_1',
-                  instance_id='node_instance_1',
-                  deployment_id='deployment_1',
-                  install_method='remote',
-                  state=AgentState.STARTED):
-        node_instance = self._get_or_create_node_instance(instance_id,
-                                                          deployment_id)
-        agent = Agent(
-            id=agent_name,
-            name=agent_name,
-            ip='127.0.0.1',
-            install_method=install_method,
-            system='centos core',
-            version='4.5.5',
-            visibility='tenant',
-            state=state,
-            rabbitmq_username='rabbitmq_user_{0}'.format(agent_name),
-            rabbitmq_password=encrypt(generate_user_password()),
-            rabbitmq_exchange=agent_name,
-            created_at=get_formatted_timestamp(),
-            updated_at=get_formatted_timestamp()
-        )
-        agent.node_instance = node_instance
-        return self.sm.put(agent)
-
-    def _get_or_create_node_instance(self,
-                                     instance_id='node_instance_1',
-                                     deployment_id='deployment_1'):
-        try:
-            return self.sm.get(NodeInstance, instance_id)
-        except manager_exceptions.NotFoundError:
-            return put_node_instance(self.sm,
-                                     instance_id=instance_id,
-                                     deployment_id=deployment_id,
-                                     runtime_properties={'key': 'value'})
