@@ -697,14 +697,15 @@ def deployment_group_id_filter():
     return {}
 
 
-<<<<<<< HEAD
 def dependency_of_filter(sm):
     """Format the deployment group_id filter"""
     if '_dependencies_of' in request.args:
         src_deployment = sm.get(
             models.Deployment, request.args['_dependencies_of'])
         return {'id': [d.id for d in src_deployment.get_dependencies()]}
-=======
+    return {}
+
+
 def licensed_environments_filter():
     """Format the deployment group_id filter"""
     if request.args.get('_environments_only'):
@@ -717,7 +718,6 @@ def licensed_environments_filter():
                         'component.%')
                 ).exists()
         }
->>>>>>> eca3b2c87 (RD-3558 Add 'licensed environments' filter to list deoployments)
     return {}
 
 

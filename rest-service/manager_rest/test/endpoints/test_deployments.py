@@ -450,7 +450,7 @@ class TestValidateExecutionDependencies(base_test.BaseServerTestCase):
 class TestLicensedEnvironments(TestValidateExecutionDependencies):
     def test_licensed_environments(self):
         dep1 = self._deployment(id='dep1')
-        dep2 = self._deployment(id='dep1')
+        dep2 = self._deployment(id='dep2')
         dep3 = self._deployment(id='dep3')
         dep4 = self._deployment(id='dep4')
         models.InterDeploymentDependencies(
@@ -467,12 +467,10 @@ class TestLicensedEnvironments(TestValidateExecutionDependencies):
             creator=self.user,
             tenant=self.tenant,
         )
-        env_list = self.client.environments.list()
-        env_count = self.client.environments.count()
+        env_list = self.client.deployments.list(_environments_only=True)
         self.assertEqual(2, len(env_list))
-        self.assertEqual(2, env_count)
         self.assertEqual({dep1.id, dep4.id},
-                         set(x['id'] for x in env_list['items']))
+                         set(x.id for x in env_list))
 
 
 class DeploymentsTestCase(base_test.BaseServerTestCase):
