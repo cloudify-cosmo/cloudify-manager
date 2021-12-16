@@ -20,15 +20,11 @@ from datetime import datetime
 from functools import wraps
 
 from cloudify._compat import urlencode
-from manager_rest import utils, manager_exceptions
+from manager_rest import utils
 from cloudify_rest_client.client import HTTPClient
 from cloudify_rest_client.executions import Execution
-from manager_rest.storage import get_storage_manager, models, get_node
-from manager_rest.storage.models import (Node,
-                                         Blueprint,
-                                         Deployment,
-                                         NodeInstance,
-                                         License)
+from manager_rest.storage import get_storage_manager, models
+from manager_rest.storage.models import License
 
 try:
     from cloudify_rest_client.client import \

@@ -22,8 +22,6 @@ from cloudify.utils import generate_user_password
 from cloudify.rabbitmq_client import USERNAME_PATTERN
 
 from manager_rest.test import base_test
-from manager_rest import manager_exceptions
-from manager_rest.utils import get_formatted_timestamp
 from manager_rest.storage import models
 
 from cloudify_rest_client.exceptions import CloudifyClientError

@@ -14,7 +14,6 @@
 #  * limitations under the License.
 
 import mock
-from unittest import skip
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 
@@ -102,8 +101,8 @@ class NodesTest(base_test.BaseServerTestCase):
             tenant=self.tenant,
         )
         db.session.add(dep2)
-        node1 = self._node('node1')
-        node2 = self._node('node2', deployment=dep2)
+        self._node('node1')
+        self._node('node2', deployment=dep2)
 
         nodes = self.client.nodes.list(sort='deployment_id')
         assert [n.id for n in nodes] == ['node1', 'node2']
