@@ -65,6 +65,7 @@ class Deployments(resources_v1.Deployments):
         filters = filters or {}
         filters.update(rest_utils.deployment_group_id_filter())
         filters.update(rest_utils.dependency_of_filter(sm))
+        filters.update(rest_utils.licensed_environments_filter())
         filter_rules = get_filter_rules_from_filter_id(
             filter_id, models.DeploymentsFilter)
         result = sm.list(

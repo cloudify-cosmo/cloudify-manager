@@ -447,6 +447,34 @@ class TestValidateExecutionDependencies(base_test.BaseServerTestCase):
         self.rm._verify_dependencies_not_affected(exc, False)  # doesnt throw
 
 
+class TestLicensedEnvironments(TestValidateExecutionDependencies):
+    def test_licensed_environments(self):
+        dep1 = self._deployment(id='dep1')
+        dep2 = self._deployment(id='dep1')
+        dep3 = self._deployment(id='dep3')
+        dep4 = self._deployment(id='dep4')
+        models.InterDeploymentDependencies(
+            source_deployment=dep1,
+            target_deployment=dep2,
+            dependency_creator='component.x',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        models.InterDeploymentDependencies(
+            source_deployment=dep2,
+            target_deployment=dep3,
+            dependency_creator='component.x',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        env_list = self.client.environments.list()
+        env_count = self.client.environments.count()
+        self.assertEqual(2, len(env_list))
+        self.assertEqual(2, env_count)
+        self.assertEqual({dep1.id, dep4.id},
+                         set(x['id'] for x in env_list['items']))
+
+
 class DeploymentsTestCase(base_test.BaseServerTestCase):
 
     DEPLOYMENT_ID = 'deployment'
