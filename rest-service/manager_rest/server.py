@@ -66,10 +66,10 @@ def internal_error(e):
 
 
 def cope_with_db_failover():
-    # These two when multiplied together should be about 30 seconds as that's
+    # These two when multiplied together should be over 30 seconds as that's
     # about how long a failover can take in reasonable (not overcommitted)
     # conditions.
-    max_attempts = 30
+    max_attempts = 45
     attempt_delay = 1
     for attempt in range(1, max_attempts + 1):
         try:
