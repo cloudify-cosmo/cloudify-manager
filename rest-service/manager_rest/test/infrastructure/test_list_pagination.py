@@ -62,12 +62,10 @@ class ResourceListTestCase(BaseListTest):
                               sort_keys=['id', 'deployment_id'])
 
     def test_deployment_modifications_list_paginated(self):
-        self._put_n_deployments(id_prefix='test', number_of_deployments=2)
-        response = self._put_deployment_modification(
-            deployment_id='test0_deployment')
-        self._mark_deployment_modification_finished(
-            modification_id=response['id'])
-        self._put_deployment_modification(deployment_id='test1_deployment')
+        deployments = self._put_n_deployments(
+            id_prefix='test', number_of_deployments=2)
+        for dep in deployments:
+            self._put_deployment_modification(dep)
         self._test_pagination(self.client.deployment_modifications.list, 2,
                               sort_keys=['id', 'deployment_id'])
 
