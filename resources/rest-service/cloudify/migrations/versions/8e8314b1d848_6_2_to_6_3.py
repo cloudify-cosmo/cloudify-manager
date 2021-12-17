@@ -74,15 +74,17 @@ def upgrade():
     _add_audit_log_indexes()
     _add_audit_log_notify()
     _add_max_concurrent_config()
+    _add_system_properties_column()
 
 
 def downgrade():
+    _drop_system_properties_column()
+    _drop_max_concurrent_config()
     _drop_audit_log_notify()
     _drop_audit_log_indexes()
     _drop_config_manager_service_log()
     _drop_audit_triggers()
     _drop_functions_write_audit_log()
-    _drop_max_concurrent_config()
 
 
 # flake8: noqa
@@ -311,3 +313,14 @@ def _drop_max_concurrent_config():
             (config_table.c.scope == op.inline_literal('rest'))
         )
     )
+
+
+def _add_system_properties_column():
+    op.add_column(
+        'node_instances',
+        sa.Column('system_properties', JSONString()),
+    )
+
+
+def _drop_system_properties_column():
+    op.drop_column('node_instances', 'system_properties')
