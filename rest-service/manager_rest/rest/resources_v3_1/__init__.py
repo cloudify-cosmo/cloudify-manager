@@ -43,6 +43,7 @@ from .plugins import (                           # NOQA
     PluginsId,
     PluginsSetGlobal,
     PluginsSetVisibility,
+    PluginsYaml,
 )
 
 from .deployments import (                       # NOQA
@@ -64,6 +65,8 @@ from .blueprints import (                        # NOQA
     BlueprintsSetVisibility,
     BlueprintsIcon,
 )
+
+from .idp import Idp                             # NOQA
 
 from .summary import (                           # NOQA
     SummarizeDeployments,

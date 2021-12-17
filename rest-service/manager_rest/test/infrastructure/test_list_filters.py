@@ -13,6 +13,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from datetime import datetime
+
 from cloudify_rest_client.exceptions import CloudifyClientError
 from manager_rest import manager_exceptions
 from manager_rest.storage import models
@@ -27,7 +29,8 @@ class ResourceListFiltersTestCase(BaseListTest):
 
     def setUp(self):
         super(ResourceListFiltersTestCase, self).setUp()
-        self._put_n_deployments(id_prefix='test', number_of_deployments=2)
+        self.deployments = self._put_n_deployments(
+          id_prefix='test', number_of_deployments=2)
         self.first_blueprint_id = 'test0_blueprint'
         self.first_deployment_id = 'test0_deployment'
         self.sec_blueprint_id = 'test1_blueprint'
@@ -215,9 +218,8 @@ class ResourceListFiltersTestCase(BaseListTest):
             self.assertEqual(node_instance['state'], 'uninitialized')
 
     def test_deployment_modifications_list_no_filters(self):
-        self._put_n_deployment_modifications(id_prefix='test',
-                                             number_of_modifications=2,
-                                             skip_creation=True)
+        for dep in self.deployments:
+            self._put_deployment_modification(dep)
         response = self.client.deployment_modifications.list()
         self.assertEqual(2, len(response), 'expecting 2 deployment mod '
                                            'results, got {0}'
@@ -228,9 +230,8 @@ class ResourceListFiltersTestCase(BaseListTest):
             self.assertIn(modification['status'], ('finished', 'started'))
 
     def test_deployment_modifications_list_with_filters(self):
-        self._put_n_deployment_modifications(id_prefix='test',
-                                             number_of_modifications=2,
-                                             skip_creation=True)
+        for dep in self.deployments:
+            self._put_deployment_modification(dep)
         filter_params = {'deployment_id': self.first_deployment_id}
         response = self.client.deployment_modifications.list(**filter_params)
         self.assertEqual(1, len(response), 'expecting 1 deployment mod '
@@ -244,9 +245,8 @@ class ResourceListFiltersTestCase(BaseListTest):
         self.assertEqual(modification['status'], 'finished')
 
     def test_deployment_modifications_list_with_filters_multiple_values(self):
-        self._put_n_deployment_modifications(id_prefix='test',
-                                             number_of_modifications=2,
-                                             skip_creation=True)
+        for dep in self.deployments:
+            self._put_deployment_modification(dep)
         filter_fields = {'deployment_id': [self.first_deployment_id,
                                            self.sec_deployment_id]}
         self._test_multiple_values_filter('deployment_modifications',
@@ -254,9 +254,8 @@ class ResourceListFiltersTestCase(BaseListTest):
                                           2)
 
     def test_deployment_modifications_list_non_existent_filters(self):
-        self._put_n_deployment_modifications(id_prefix='test',
-                                             number_of_modifications=2,
-                                             skip_creation=True)
+        for dep in self.deployments:
+            self._put_deployment_modification(dep)
         filter_fields = {'non_existing_field': 'just_some_value'}
         try:
             self.client.deployment_modifications.list(**filter_fields)
@@ -276,7 +275,6 @@ class ResourceListFiltersTestCase(BaseListTest):
                                       'values {0}, got {1}'
                                       .format(filter_params, blueprint))
         self.assertEqual(self.first_blueprint_id, blueprint['id'])
-        self.assertIsNotNone(response[0]['plan'])
 
     def test_blueprints_list_with_filters_multiple_values(self):
 
@@ -293,7 +291,6 @@ class ResourceListFiltersTestCase(BaseListTest):
         for blueprint in response:
             self.assertIn(blueprint['id'],
                           (self.first_blueprint_id, self.sec_blueprint_id))
-            self.assertIsNotNone(blueprint['plan'])
 
     def test_blueprints_list_non_existent_filters(self):
         filter_fields = {'non_existing_field': 'just_some_value'}
@@ -305,10 +302,27 @@ class ResourceListFiltersTestCase(BaseListTest):
                                             e)
 
     def test_plugins_list_with_filters(self):
-        self.upload_plugin(TEST_PACKAGE_NAME, TEST_PACKAGE_VERSION)
-        sec_plugin_id = self.upload_plugin(TEST_PACKAGE_NAME,
-                                           OLD_TEST_PACKAGE_VERSION).json['id']
-        filter_field = {'id': sec_plugin_id}
+        models.Plugin(
+            id='plug1',
+            package_name=TEST_PACKAGE_NAME,
+            package_version=TEST_PACKAGE_VERSION,
+            archive_name='',
+            uploaded_at=datetime.now(),
+            wheels=[],
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        second_plugin = models.Plugin(
+            id='plug2',
+            package_name=TEST_PACKAGE_NAME,
+            package_version=OLD_TEST_PACKAGE_VERSION,
+            archive_name='',
+            uploaded_at=datetime.now(),
+            wheels=[],
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        filter_field = {'id': second_plugin.id}
         response = self.client.plugins.list(**filter_field)
 
         self.assertEqual(len(response), 1, 'expecting 1 plugin result, '
@@ -327,22 +341,36 @@ class ResourceListFiltersTestCase(BaseListTest):
             self.assert_bad_parameter_error(models.Plugin.resource_fields, e)
 
     def test_plugins_list_no_filters(self):
-        first_plugin_response = self.upload_plugin(TEST_PACKAGE_NAME,
-                                                   TEST_PACKAGE_VERSION).json
-        sec_plugin_response = self.upload_plugin(TEST_PACKAGE_NAME,
-                                                 OLD_TEST_PACKAGE_VERSION)\
-            .json
+        first_plugin = models.Plugin(
+            id='plug1',
+            package_name=TEST_PACKAGE_NAME,
+            package_version=TEST_PACKAGE_VERSION,
+            archive_name='',
+            uploaded_at=datetime.now(),
+            wheels=[],
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        second_plugin = models.Plugin(
+            id='plug2',
+            package_name=TEST_PACKAGE_NAME,
+            package_version=OLD_TEST_PACKAGE_VERSION,
+            archive_name='',
+            uploaded_at=datetime.now(),
+            wheels=[],
+            creator=self.user,
+            tenant=self.tenant,
+        )
         response = self.client.plugins.list()
         self.assertEqual(2, len(response), 'expecting 2 plugin results, '
                                            'got {0}'.format(len(response)))
 
         for plugin in response:
-            self.assertIn(plugin['id'],
-                          (first_plugin_response['id'],
-                           sec_plugin_response['id']))
-            self.assertIn(plugin['uploaded_at'],
-                          (first_plugin_response['uploaded_at'],
-                           sec_plugin_response['uploaded_at']))
+            self.assertIn(plugin['id'], {first_plugin.id, second_plugin.id})
+            self.assertIn(
+                plugin['uploaded_at'],
+                {first_plugin.uploaded_at, second_plugin.uploaded_at}
+            )
 
     def _test_multiple_values_filter(self, resource,
                                      filter_fields, expected_count):

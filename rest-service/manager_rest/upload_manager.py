@@ -25,6 +25,7 @@ from manager_rest.constants import (FILE_SERVER_PLUGINS_FOLDER,
                                     FILE_SERVER_BLUEPRINTS_FOLDER,
                                     BLUEPRINT_ICON_FILENAME)
 from manager_rest.archiving import get_archive_type
+from manager_rest.security.authorization import check_user_action_allowed
 from manager_rest.storage.models import Blueprint, Plugin
 from manager_rest import config, chunked, manager_exceptions, workflow_executor
 from manager_rest.utils import (mkdirs,
@@ -35,7 +36,11 @@ from manager_rest.utils import (mkdirs,
                                 remove)
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.constants import (SUPPORTED_ARCHIVE_TYPES)
-from manager_rest.rest.rest_utils import get_args_and_verify_arguments
+from manager_rest.rest.rest_utils import (
+    get_args_and_verify_arguments,
+    parse_datetime_string,
+    valid_user,
+)
 
 _PRIVATE_RESOURCE = 'private_resource'
 _VISIBILITY = 'visibility'
@@ -698,17 +703,32 @@ class UploadedPluginsManager(UploadedDataManager):
         args = get_args_and_verify_arguments([
             Argument('title'),
             Argument('private_resource', type=boolean),
-            Argument('visibility')])
+            Argument('visibility'),
+            Argument('uploaded_at'),
+            Argument('created_by')])
+
+        uploaded_at = None
+        if args.uploaded_at:
+            check_user_action_allowed('set_timestamp')
+            uploaded_at = parse_datetime_string(args.uploaded_at)
+
+        creator = None
+        if args.created_by:
+            check_user_action_allowed('set_owner')
+            creator = valid_user(args.created_by)
 
         visibility = kwargs.get(_VISIBILITY, None)
         new_plugin = self._create_plugin_from_archive(data_id,
                                                       args.title,
                                                       wagon_target_path,
                                                       args.private_resource,
-                                                      visibility)
+                                                      visibility,
+                                                      uploaded_at)
         filter_by_name = {'package_name': new_plugin.package_name}
         sm = get_resource_manager().sm
         plugins = sm.list(Plugin, filters=filter_by_name)
+        if creator:
+            new_plugin.creator = creator
 
         for plugin in plugins:
             if plugin.archive_name == new_plugin.archive_name:
@@ -744,8 +764,20 @@ class UploadedPluginsManager(UploadedDataManager):
                                     plugin_title,
                                     archive_path,
                                     private_resource,
-                                    visibility):
+                                    visibility,
+                                    uploaded_at=None):
         plugin = self._load_plugin_package_json(archive_path)
+
+        archive_dir = os.path.dirname(archive_path)
+        wagons = files_in_folder(archive_dir, '*.wgn')
+        # archive_name is not nullable, so we'll error now or later if it is
+        # not set
+        expected_archive_name = plugin['archive_name']
+        if wagons and wagons[0] != expected_archive_name:
+            expected_path = os.path.join(archive_dir, expected_archive_name)
+            os.rename(archive_path, expected_path)
+            archive_path = expected_path
+
         build_props = plugin.get('build_server_os_properties')
         plugin_info = {'package_name': plugin.get('package_name'),
                        'archive_name': plugin.get('archive_name')}
@@ -772,7 +804,7 @@ class UploadedPluginsManager(UploadedDataManager):
             wheels=plugin.get('wheels'),
             excluded_wheels=plugin.get('excluded_wheels'),
             supported_py_versions=plugin.get('supported_python_versions'),
-            uploaded_at=get_formatted_timestamp(),
+            uploaded_at=uploaded_at or get_formatted_timestamp(),
             visibility=visibility
         )
 

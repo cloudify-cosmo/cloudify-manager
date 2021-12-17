@@ -35,6 +35,7 @@ def setup_resources(api):
             'deployments/<string:deployment_id>/capabilities',
         'DeploymentsSetVisibility': 'deployments/<string:deployment_id>/'
                                     'set-visibility',
+        'Idp': 'idp',
         'InterDeploymentDependencies':
             'deployments/inter-deployment-dependencies',
         'InterDeploymentDependenciesId':
@@ -67,6 +68,7 @@ def setup_resources(api):
         'PluginsArchive': 'plugins/<string:plugin_id>/archive',
         'PluginsSetGlobal': 'plugins/<string:plugin_id>/set-global',
         'PluginsSetVisibility': 'plugins/<string:plugin_id>/set-visibility',
+        'PluginsYaml': 'plugins/<string:plugin_id>/yaml',
         'MaintenanceMode': 'maintenance',
         'MaintenanceModeAction': 'maintenance/<string:maintenance_action>',
 

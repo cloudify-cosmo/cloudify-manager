@@ -1,9 +1,10 @@
-from base64 import b64encode
+from base64 import b64decode, b64encode
 from builtins import staticmethod
 import os
 from shutil import rmtree
 from tempfile import mkdtemp
 import uuid
+import zipfile
 
 from flask import request
 from flask_restful.inputs import boolean
@@ -192,6 +193,11 @@ class DeploymentsId(resources_v1.DeploymentsId):
             Argument('private_resource', type=boolean),
             Argument('async_create', type=boolean, default=False)
         ])
+        if args.async_create and request_dict.get('workdir_zip'):
+            raise DeploymentCreationError(
+                'Unable to create deployment asynchronously with provided '
+                'workdir zip.'
+            )
         visibility = rest_utils.get_visibility_parameter(
             optional=True,
             valid_values=VisibilityState.STATES
@@ -223,6 +229,29 @@ class DeploymentsId(resources_v1.DeploymentsId):
                 runtime_only_evaluation=request_dict.get(
                     'runtime_only_evaluation', False),
             )
+            if request_dict.get('workdir_zip'):
+                tmpdir_path = mkdtemp()
+                try:
+                    workdir_path = _get_workdir_path(deployment_id,
+                                                     deployment.tenant_name)
+                    os.mkdir(workdir_path)
+                    zip_path = os.path.join(tmpdir_path, 'dep.zip')
+                    with open(zip_path, 'wb') as zip_handle:
+                        zip_handle.write(
+                            b64decode(request_dict['workdir_zip'])
+                        )
+                    with zipfile.ZipFile(zip_path, 'r') as zipf:
+                        zipf.extractall(workdir_path)
+                except FileExistsError:
+                    raise DeploymentCreationError(
+                        'Error attempting to prepare deployment workdir. '
+                        'Workdir already exists.'
+                    )
+                finally:
+                    rmtree(tmpdir_path)
+                # We don't execute the create_dep_env when a workdir is
+                # provided- this is part of a restore or similar
+                return deployment, 201
             create_execution = deployment.make_create_environment_execution(
                 inputs=inputs,
                 labels=labels,
@@ -485,7 +514,7 @@ class InterDeploymentDependencies(SecuredResource):
     @authorize('inter_deployment_dependency_create')
     @rest_decorators.marshal_list_response
     def post(self):
-        """Creates an inter-deployment dependency.
+        """Creates many inter-deployment dependencies.
 
         :param source_deployment_id: ID of the source deployment
          (the one which depends on the target deployment).
@@ -501,6 +530,12 @@ class InterDeploymentDependencies(SecuredResource):
         })
 
         dependencies = params.get('inter_deployment_dependencies')
+
+        if any(item.get('created_by') for item in dependencies):
+            check_user_action_allowed('set_owner')
+        if any(item.get('created_at') for item in dependencies):
+            check_user_action_allowed('set_timestamp')
+
         if len(dependencies) > 0 and EXTERNAL_SOURCE in dependencies[0]:
             source_deployment = None
         else:
@@ -1326,14 +1361,23 @@ def _create_inter_deployment_dependency(
                 f'Cyclic dependency between {source_deployment} and '
                 f'{target_deployment}')
 
+    created_at = (
+        rest_utils.parse_datetime_string(dependency.get('created_at'))
+        if dependency.get('created_at')
+        else now
+    )
+
     deployment_dependency = models.InterDeploymentDependencies(
-        id=str(uuid.uuid4()),
+        id=dependency.get('id', str(uuid.uuid4())),
         dependency_creator=dependency[DEPENDENCY_CREATOR],
         source_deployment=source_deployment,
         target_deployment=target_deployment,
         target_deployment_func=dependency.get(TARGET_DEPLOYMENT_FUNC),
         external_source=dependency.get(EXTERNAL_SOURCE),
         external_target=dependency.get(EXTERNAL_TARGET),
-        created_at=now)
+        created_at=created_at)
+    if dependency.get('created_by'):
+        deployment_dependency.creator = rest_utils.valid_user(
+            dependency['created_by'])
     record = sm.put(deployment_dependency)
     return record

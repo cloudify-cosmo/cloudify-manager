@@ -66,7 +66,11 @@ def internal_error(e):
 
 
 def cope_with_db_failover():
-    max_attempts = 10
+    # These two when multiplied together should be over 30 seconds as that's
+    # about how long a failover can take in reasonable (not overcommitted)
+    # conditions.
+    max_attempts = 45
+    attempt_delay = 1
     for attempt in range(1, max_attempts + 1):
         try:
             standby = db.session.execute(
@@ -78,7 +82,7 @@ def cope_with_db_failover():
                     'Attempt number %s/%s', attempt, max_attempts)
                 current_app.update_db_uri()
                 close_all_sessions()
-                time.sleep(0.2)
+                time.sleep(attempt_delay)
             else:
                 break
         except OperationalError as err:

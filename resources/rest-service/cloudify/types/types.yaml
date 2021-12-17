@@ -32,13 +32,13 @@ node_types:
       cloudify.interfaces.validation:
         create: {}
         delete: {}
+        check_status: {}
         # Deprecated - should not be implemented.
         creation: {}
         deletion: {}
       cloudify.interfaces.monitoring:
         start: {}
         stop: {}
-        check_status: {}
 
   # A host (physical / virtual or LXC) in a topology
   cloudify.nodes.Compute:
