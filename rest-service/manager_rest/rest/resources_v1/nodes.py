@@ -215,7 +215,9 @@ class NodeInstancesId(SecuredResource):
             node_instance_id,
             locking=True
         )
-        if 'runtime_properties' in request_dict or 'state' in request_dict:
+        if request_dict.keys() | {
+            'runtime_properties', 'state', 'system_properties'
+        }:
             # Added for backwards compatibility with older client versions that
             # had version=0 by default
             if not force and instance.version > version:
@@ -226,6 +228,8 @@ class NodeInstancesId(SecuredResource):
             if 'runtime_properties' in request_dict:
                 instance.runtime_properties = \
                     request_dict['runtime_properties']
+            if 'system_properties' in request_dict:
+                instance.system_properties = request_dict['system_properties']
             if 'state' in request_dict:
                 instance.state = request_dict['state']
         if 'relationships' in request_dict:

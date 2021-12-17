@@ -1927,6 +1927,7 @@ class NodeInstance(SQLResourceBase):
     index = db.Column(db.Integer)
     relationships = db.Column(db.PickleType(protocol=2))
     runtime_properties = db.Column(db.PickleType(protocol=2))
+    system_properties = db.Column(JSONString)
     scaling_groups = db.Column(db.PickleType(protocol=2))
     state = db.Column(db.Text, nullable=False, index=True)
     version = db.Column(db.Integer, nullable=False)
