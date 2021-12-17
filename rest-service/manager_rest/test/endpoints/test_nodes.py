@@ -412,6 +412,16 @@ class NodesTest(base_test.BaseServerTestCase):
         # planned * group factor
         assert node['actual_planned_number_of_instances'] == 4
 
+    def test_node_instance_update_system_properties(self):
+        inst = self._instance('ni1')
+        assert inst.system_properties is None
+        self.client.node_instances.update(
+            'ni1',
+            system_properties={'property1': 'value1'},
+            version=1,
+        )
+        assert inst.system_properties == {'property1': 'value1'}
+
 
 class NodesCreateTest(base_test.BaseServerTestCase):
     def setUp(self):
