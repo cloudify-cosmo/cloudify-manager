@@ -249,6 +249,21 @@ class ModelDependenciesTest(_DependencyTestUtils, BaseServerTestCase):
         assert d2.get_all_dependents() == {d1, d3}
         assert d4.get_all_dependents() == {d3}
 
+    def test_list_deployments_dependencies_filter(self):
+        d1 = self._deployment(id='d1')
+        d2 = self._deployment(id='d2')
+        d3 = self._deployment(id='d3')
+        d4 = self._deployment(id='d4')
+        self._dependency(d1, d2)
+        self._dependency(d1, d4)
+        self._dependency(d2, d3)
+        assert {'d2', 'd3', 'd4'} ==\
+            {d.id for d in self.client.deployments.list(_dependencies_of='d1')}
+        assert {'d3'} ==\
+            {d.id for d in self.client.deployments.list(_dependencies_of='d2')}
+        assert set() ==\
+            {d.id for d in self.client.deployments.list(_dependencies_of='d3')}
+
 
 class RecalcAncestorsTest(_DependencyTestUtils, BaseServerTestCase):
     def test_no_relation(self):
