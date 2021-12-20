@@ -697,6 +697,15 @@ def deployment_group_id_filter():
     return {}
 
 
+def dependency_of_filter(sm):
+    """Format the deployment group_id filter"""
+    if '_dependencies_of' in request.args:
+        src_deployment = sm.get(
+            models.Deployment, request.args['_dependencies_of'])
+        return {'id': [d.id for d in src_deployment.get_dependencies()]}
+    return {}
+
+
 def normalize_value(value):
     return unicodedata.normalize('NFKC', value)
 
