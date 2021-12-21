@@ -706,6 +706,21 @@ def dependency_of_filter(sm):
     return {}
 
 
+def licensed_environments_filter():
+    """Format the deployment group_id filter"""
+    if request.args.get('_environments_only'):
+        return {
+            '_storage_id': lambda col:
+                ~models.InterDeploymentDependencies.query.filter(
+                    col ==
+                    models.InterDeploymentDependencies._target_deployment,
+                    models.InterDeploymentDependencies.dependency_creator.like(
+                        'component.%')
+                ).exists()
+        }
+    return {}
+
+
 def normalize_value(value):
     return unicodedata.normalize('NFKC', value)
 
