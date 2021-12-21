@@ -1,20 +1,19 @@
 import json
-
+import os
 import unittest
 
-from manager_rest.storage import models
-from manager_rest.deployment_update.step_extractor import (
+from cloudify_rest_client.deployments import Deployment
+from cloudify_system_workflows.deployment_update.step_extractor import (
+    extract_steps,
+    DeploymentUpdateStep,
     PROPERTY, PROPERTIES, OUTPUT, OUTPUTS, WORKFLOW, WORKFLOWS, NODE,
     NODES, OPERATION, OPERATIONS, RELATIONSHIP, RELATIONSHIPS,
     SOURCE_OPERATIONS, TARGET_OPERATIONS, TYPE, GROUP, GROUPS, POLICY_TYPE,
     POLICY_TYPES, POLICY_TRIGGER, POLICY_TRIGGERS, HOST_ID, PLUGIN,
     DEPLOYMENT_PLUGINS_TO_INSTALL, PLUGINS_TO_INSTALL, DESCRIPTION,
-    extract_steps,
     _update_topology_order_of_add_node_steps,
-    _find_relationship
+    _find_relationship,
 )
-from manager_rest.deployment_update.step_extractor import DeploymentUpdateStep
-from manager_rest.test.utils import get_resource
 
 
 class StepExtractorTestCase(unittest.TestCase):
@@ -45,7 +44,10 @@ class StepExtractorTestCase(unittest.TestCase):
 
     def setUp(self):
         super(StepExtractorTestCase, self).setUp()
-        self.deployment = models.Deployment(id='deployment_id')
+        self.deployment = Deployment({
+            'id': 'deployment_id',
+            'groups': {}
+        })
 
         self.deployment_plan = {
             DESCRIPTION: None,
@@ -144,13 +146,13 @@ class StepExtractorTestCase(unittest.TestCase):
         assert order_by_id['nodes:node_e'] > order_by_id['nodes:node_d']
 
     def test_description_no_change(self):
-        self.deployment.description = 'description'
+        self.deployment[DESCRIPTION] = 'description'
         self.deployment_plan[DESCRIPTION] = 'description'
         steps, _ = extract_steps({}, self.deployment, self.deployment_plan)
         assert steps == []
 
     def test_description_modify_description(self):
-        self.deployment.description = 'description_old'
+        self.deployment[DESCRIPTION] = 'description_old'
         self.deployment_plan[DESCRIPTION] = 'description_new'
         steps, _ = extract_steps({}, self.deployment, self.deployment_plan)
         assert steps == [
@@ -161,7 +163,7 @@ class StepExtractorTestCase(unittest.TestCase):
         ]
 
     def test_outputs_no_change(self):
-        self.deployment.outputs = {'output1': 'output1_value'}
+        self.deployment[OUTPUTS] = {'output1': 'output1_value'}
         self.deployment_plan[OUTPUTS] = self.deployment.outputs
         steps, _ = extract_steps({}, self.deployment, self.deployment_plan)
         assert steps == []
@@ -177,7 +179,7 @@ class StepExtractorTestCase(unittest.TestCase):
         ]
 
     def test_outputs_remove_output(self):
-        self.deployment.outputs = {'output1': 'output1_value'}
+        self.deployment[OUTPUTS] = {'output1': 'output1_value'}
         steps, _ = extract_steps({}, self.deployment, self.deployment_plan)
         assert steps == [
             DeploymentUpdateStep(
@@ -187,7 +189,7 @@ class StepExtractorTestCase(unittest.TestCase):
         ]
 
     def test_outputs_modify_output(self):
-        self.deployment.outputs = {'output1': 'output1_value'}
+        self.deployment[OUTPUTS] = {'output1': 'output1_value'}
         self.deployment_plan[OUTPUTS] = {'output1': 'output1_modified_value'}
         steps, _ = extract_steps({}, self.deployment, self.deployment_plan)
         assert steps == [
@@ -198,7 +200,7 @@ class StepExtractorTestCase(unittest.TestCase):
         ]
 
     def test_workflows_no_change(self):
-        self.deployment.workflows = {
+        self.deployment[WORKFLOWS] = {
             'intact_workflow': {
                 'operation': 'module_name.foo',
                 'plugin': 'plugin_for_workflows'
@@ -238,7 +240,7 @@ class StepExtractorTestCase(unittest.TestCase):
         ]
 
     def test_workflows_remove_workflow(self):
-        self.deployment.workflows = {
+        self.deployment[WORKFLOWS] = {
             'removed_workflow': {
                 'operation': 'module_name.foo',
                 'plugin': 'plugin_for_workflows'
@@ -253,7 +255,7 @@ class StepExtractorTestCase(unittest.TestCase):
         ]
 
     def test_workflows_modify_workflow_of_existing_plugin(self):
-        self.deployment.workflows = {
+        self.deployment[WORKFLOWS] = {
             'added_workflow': {
                 'operation': 'module_name.foo',
                 'plugin': 'plugin_for_workflows'
@@ -1153,7 +1155,7 @@ class StepExtractorTestCase(unittest.TestCase):
 
     def test_extract_steps_policy_types_no_change(self):
         policy_types = {'policy_type1': 'policy_type1_value'}
-        self.deployment.policy_types = policy_types
+        self.deployment[POLICY_TYPES] = policy_types
         self.deployment_plan[POLICY_TYPES] = policy_types
 
         steps, unsupported_steps = extract_steps(
@@ -1177,7 +1179,7 @@ class StepExtractorTestCase(unittest.TestCase):
         ]
 
     def test_policy_types_remove_policy_type(self):
-        self.deployment.policy_types = {'policy_type1': 'policy_type1_value'}
+        self.deployment[POLICY_TYPES] = {'policy_type1': 'policy_type1_value'}
         _, unsupported_steps = extract_steps(
             {}, self.deployment, self.deployment_plan)
         assert unsupported_steps == [
@@ -1189,7 +1191,7 @@ class StepExtractorTestCase(unittest.TestCase):
         ]
 
     def test_policy_types_modify_policy_type(self):
-        self.deployment.policy_types = {'policy_type1': 'policy_type1_value'}
+        self.deployment[POLICY_TYPES] = {'policy_type1': 'policy_type1_value'}
         self.deployment_plan[POLICY_TYPES] = {
             'policy_type1': 'policy_type1_modified_value'
         }
@@ -1206,7 +1208,7 @@ class StepExtractorTestCase(unittest.TestCase):
 
     def test_extract_steps_policy_triggers_no_change(self):
         policy_triggers = {'policy_trigger1': 'policy_trigger1_value'}
-        self.deployment.policy_triggers = policy_triggers
+        self.deployment[POLICY_TRIGGERS] = policy_triggers
         self.deployment_plan[POLICY_TRIGGERS] = policy_triggers
 
         steps, unsupported_steps = extract_steps(
@@ -1230,7 +1232,7 @@ class StepExtractorTestCase(unittest.TestCase):
         ]
 
     def test_policy_triggers_remove_policy_trigger(self):
-        self.deployment.policy_triggers = {
+        self.deployment[POLICY_TRIGGERS] = {
             'policy_trigger1': 'policy_trigger1_value'
         }
         _, unsupported_steps = extract_steps(
@@ -1244,7 +1246,7 @@ class StepExtractorTestCase(unittest.TestCase):
         ]
 
     def test_policy_triggers_modify_policy_trigger(self):
-        self.deployment.policy_triggers = {
+        self.deployment[POLICY_TRIGGERS] = {
             'policy_trigger1': 'policy_trigger1_value'
         }
         self.deployment_plan[POLICY_TRIGGERS] = {
@@ -1263,7 +1265,7 @@ class StepExtractorTestCase(unittest.TestCase):
 
     def test_groups_no_change(self):
         groups = {'group1': {}}
-        self.deployment.groups = groups
+        self.deployment[GROUPS] = groups
         self.deployment_plan[GROUPS] = groups
         steps, unsupported_steps = extract_steps(
             {}, self.deployment, self.deployment_plan)
@@ -1283,7 +1285,7 @@ class StepExtractorTestCase(unittest.TestCase):
         ]
 
     def test_groups_remove_group(self):
-        self.deployment.groups = {'group1': {}}
+        self.deployment[GROUPS] = {'group1': {}}
         _, unsupported_steps = extract_steps(
             {}, self.deployment, self.deployment_plan)
         assert unsupported_steps == [
@@ -1295,7 +1297,7 @@ class StepExtractorTestCase(unittest.TestCase):
         ]
 
     def test_groups_modify_group(self):
-        self.deployment.groups = {'group1': {'members': []}}
+        self.deployment[GROUPS] = {'group1': {'members': []}}
         self.deployment_plan[GROUPS] = {'group1': {'members': ['a']}}
         _, unsupported_steps = extract_steps(
             {}, self.deployment, self.deployment_plan)
@@ -1308,7 +1310,7 @@ class StepExtractorTestCase(unittest.TestCase):
         ]
 
     def test_groups_member_order(self):
-        self.deployment.groups = {'group1': {'members': ['a', 'b']}}
+        self.deployment[GROUPS] = {'group1': {'members': ['a', 'b']}}
         self.deployment_plan[GROUPS] = {'group1': {'members': ['b', 'a']}}
         steps, unsupported_steps = extract_steps(
             {}, self.deployment, self.deployment_plan)
@@ -1386,21 +1388,21 @@ class StepExtractorTestCase(unittest.TestCase):
         ]
 
     def test_all_changes_combined(self):
-        path_before = get_resource(
-            'deployment_update/combined_changes_before.json')
-        path_after = get_resource(
-            'deployment_update/combined_changes_after.json')
+        path_before = os.path.join(
+            os.path.dirname(__file__), 'combined_changes_before.json')
+        path_after = os.path.join(
+            os.path.dirname(__file__), 'combined_changes_after.json')
         with open(path_before) as fp_before, open(path_after) as fp_after:
             plan_before = json.load(fp_before)
             plan_after = json.load(fp_after)
 
         nodes = list(plan_before['nodes'].values())
         plan_after['nodes'] = list(plan_after['nodes'].values())
-        self.deployment.groups = plan_before['groups']
-        self.deployment.workflows = plan_before['workflows']
-        self.deployment.policy_types = plan_before['policy_types']
-        self.deployment.policy_triggers = plan_before['policy_triggers']
-        self.deployment.outputs = plan_before['outputs']
+        self.deployment[GROUPS] = plan_before['groups']
+        self.deployment[WORKFLOWS] = plan_before['workflows']
+        self.deployment[POLICY_TYPES] = plan_before['policy_types']
+        self.deployment[POLICY_TRIGGERS] = plan_before['policy_triggers']
+        self.deployment[OUTPUTS] = plan_before['outputs']
 
         expected_steps = {
             'modify_description': DeploymentUpdateStep(
