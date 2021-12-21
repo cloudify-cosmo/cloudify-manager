@@ -155,7 +155,7 @@ exit 0
 
 %files
 
-/opt/manager
+%attr(750,cfyuser,adm)  /opt/manager
 /etc/cloudify/delete_logs_and_events_from_db.py*
 %dir /opt/cloudify/encryption
 /opt/cloudify/encryption/update-encryption-key
@@ -168,10 +168,10 @@ exit 0
 /usr/lib/systemd/system/cloudify-amqp-postgres.service
 /usr/lib/systemd/system/cloudify-execution-scheduler.service
 
-%attr(750,cfyuser,adm) /opt/manager/scripts/load_permissions.py
-%attr(750,cfyuser,adm) /opt/manager/scripts/create_system_filters.py
+/opt/manager/scripts/load_permissions.py
+/opt/manager/scripts/create_system_filters.py
+/opt/manager/snapshot_status
 %attr(750,cfyuser,adm) /var/log/cloudify/rest
-%attr(750,cfyuser,adm) /opt/manager/snapshot_status
 %attr(750,cfyuser,adm) /var/log/cloudify/amqp-postgres
 %attr(750,cfyuser,adm) /var/log/cloudify/execution-scheduler
 %attr(550,root,cfyuser) /opt/cloudify/encryption/update-encryption-key
