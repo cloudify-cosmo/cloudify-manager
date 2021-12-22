@@ -362,8 +362,6 @@ def _diff_dicts(new, old, compare=operator.eq):
         elif key in old and key not in new:
             yield 'remove', key
         elif not compare(new[key], old[key]):
-            from cloudify.state import workflow_ctx
-            workflow_ctx.logger.info('diff %s != %s', new[key], old[key])
             yield 'modify', key
 
 

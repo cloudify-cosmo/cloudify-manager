@@ -503,30 +503,6 @@ class InterDeploymentDependenciesTest(BaseServerTestCase):
             'uninstall'
         )
 
-    def test_alerts_update_deployment(self):
-        self._prepare_dependent_deployments()
-        self.assertRaisesRegex(
-            CloudifyClientError,
-            '1] Deployment `app` uses a shared resource from the current '
-            'deployment in its node `vm`',
-            self.client.deployment_updates.update_with_existing_blueprint,
-            'infra',
-            inputs={'http_web_server_port': 8080}
-        )
-
-    def test_alerts_update_deployment_preview(self):
-        self._prepare_dependent_deployments()
-        update_result = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                'infra', inputs={'http_web_server_port': 8080}, preview=True)
-        deployment_dependencies = update_result['recursive_dependencies']
-        self.assertEqual(len(deployment_dependencies), 1)
-        self.assertEqual(deployment_dependencies[0],
-                         {'dependency_type': 'sharedresource',
-                          'dependent_node': 'vm',
-                          'tenant': 'default_tenant',
-                          'deployment': 'app'})
-
     def test_alerts_delete_deployment(self):
         self._prepare_dependent_deployments()
         self.assertRaisesRegex(

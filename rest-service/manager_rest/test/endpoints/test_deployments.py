@@ -1383,65 +1383,6 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             self.client.deployments.list,
             filter_rules=[schedules_filter])
 
-    def test_update_deployment_with_default_schedules(self):
-        _, _, _, deployment = self.put_deployment(
-            blueprint_file_name='blueprint_with_default_schedules.yaml')
-
-        new_blueprint_id = 'updated_schedules'
-        self.put_blueprint(
-            blueprint_id=new_blueprint_id,
-            blueprint_file_name='blueprint_with_default_schedules2.yaml')
-
-        # sc2's workflow_id of should change to `uninstall` after the update
-        sc2 = self.client.execution_schedules.get('sc2', deployment.id)
-        self.assertEqual('install', sc2['workflow_id'])
-
-        self.client.deployment_updates.update_with_existing_blueprint(
-            deployment.id, new_blueprint_id)
-
-        self.assertListEqual(
-            ['sc2', 'sc3'],
-            [sc['id'] for sc in self.client.execution_schedules.list()])
-        sc2 = self.client.execution_schedules.get('sc2', deployment.id)
-        self.assertEqual('uninstall', sc2['workflow_id'])
-
-    def test_update_deployment_with_default_schedule_manually_deleted(self):
-        _, _, _, deployment = self.put_deployment(
-            blueprint_file_name='blueprint_with_default_schedules.yaml')
-
-        self.client.execution_schedules.delete('sc2', deployment.id)
-        new_blueprint_id = 'updated_schedules'
-        self.put_blueprint(
-            blueprint_id=new_blueprint_id,
-            blueprint_file_name='blueprint_with_default_schedules2.yaml')
-        dep_up = self.client.deployment_updates.update_with_existing_blueprint(
-            deployment.id, new_blueprint_id, preview=True)
-
-        self.assertListEqual(['sc1'], dep_up['schedules_to_delete'])
-        self.assertListEqual(['sc2', 'sc3'],
-                             [i['id'] for i in dep_up['schedules_to_create']])
-
-    def test_update_deployment_with_default_schedule_name_conflict(self):
-        _, _, _, deployment = self.put_deployment(
-            blueprint_file_name='blueprint_with_default_schedules.yaml')
-
-        self.client.execution_schedules.create(
-            'sc3', deployment.id, 'install', since=datetime.utcnow(), count=1)
-
-        new_blueprint_id = 'updated_schedules'
-        self.put_blueprint(
-            blueprint_id=new_blueprint_id,
-            blueprint_file_name='blueprint_with_default_schedules2.yaml')
-
-        error_msg = "400:.* contains a default schedule `sc3`.* " \
-                    "already exists for the deployment"
-        self.assertRaisesRegex(
-            CloudifyClientError,
-            error_msg,
-            self.client.deployment_updates.update_with_existing_blueprint,
-            deployment.id,
-            new_blueprint_id)
-
     def test_create_deployment_with_display_name(self):
         display_name = 'New Deployment'
         _, _, _, deployment = self.put_deployment(display_name=display_name)
