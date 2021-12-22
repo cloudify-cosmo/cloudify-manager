@@ -53,7 +53,7 @@ getent passwd cfyuser >/dev/null || useradd -r -g cfyuser -d /etc/cloudify -s /s
 
 
 %files
-%dir /opt/manager
+%attr(750,cfyuser,adm)  /opt/manager
 %dir /opt/manager/resources
 %dir /opt/manager/resources/packages
 
