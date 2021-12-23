@@ -212,3 +212,30 @@ class PluginsTest(BaseServerTestCase):
         get_plugin_by_id_response = self.client.plugins.get(plugin_id)
         self.assertIsNotNone(get_plugin_by_id_response)
         self.assertEqual(get_plugin_by_id_response.title, TEST_PACKAGE_NAME)
+
+    def test_plugin_upload_blueprint_labels(self):
+        uploaded_plugin = self.upload_plugin(
+            TEST_PACKAGE_NAME,
+            TEST_PACKAGE_VERSION,
+            'mock_blueprint/plugin_labels_and_tags.yaml').json
+        plugin_id = uploaded_plugin.get('id')
+        plugin = self.client.plugins.get(plugin_id)
+        assert plugin.blueprint_labels == {
+            'arch': ['docker', 'k8s'],
+            'csys-obj-type': ['aws'],
+        }
+        assert plugin.labels == {
+            'arch': ['k8s'],
+            'csys-obj-type': ['eks'],
+        }
+        assert plugin.resource_tags == {
+            'key1': 'value1',
+            'key2': 'value2',
+        }
+
+    def test_plugin_upload_blueprint_invalid_labels(self):
+        response = self.upload_plugin(
+            TEST_PACKAGE_NAME,
+            TEST_PACKAGE_VERSION,
+            'mock_blueprint/plugin_invalid_labels.yaml')
+        assert response.status_code == 400

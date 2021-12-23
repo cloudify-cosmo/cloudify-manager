@@ -778,6 +778,8 @@ class UploadedPluginsManager(UploadedDataManager):
             os.rename(archive_path, expected_path)
             archive_path = expected_path
 
+        plugin_extras = self._load_plugin_extras(archive_dir)
+
         build_props = plugin.get('build_server_os_properties')
         plugin_info = {'package_name': plugin.get('package_name'),
                        'archive_name': plugin.get('archive_name')}
@@ -805,7 +807,10 @@ class UploadedPluginsManager(UploadedDataManager):
             excluded_wheels=plugin.get('excluded_wheels'),
             supported_py_versions=plugin.get('supported_python_versions'),
             uploaded_at=uploaded_at or get_formatted_timestamp(),
-            visibility=visibility
+            visibility=visibility,
+            blueprint_labels=plugin_extras.get('blueprint_labels'),
+            labels=plugin_extras.get('labels'),
+            resource_tags=plugin_extras.get('resource_tags'),
         )
 
     @staticmethod
@@ -823,6 +828,40 @@ class UploadedPluginsManager(UploadedDataManager):
             raise manager_exceptions.InvalidPluginError(
                 'The provided wagon archive can not be read.\n{0}'
                 .format(str(e)))
+
+    def _load_plugin_extras(self, archive_dir):
+        result = {'blueprint_labels': None,
+                  'labels': None,
+                  'resource_tags': None}
+        filename = self._plugin_yaml_filename(archive_dir)
+        if not filename:
+            return result
+
+        with open(filename, 'r') as fh:
+            try:
+                plugin_yaml = yaml.safe_load(fh)
+            except yaml.YAMLError as e:
+                raise manager_exceptions.InvalidPluginError(
+                    f"The provided plugin's description ({filename}) "
+                    f"can not be read.\n{e}")
+        result['blueprint_labels'] = _retrieve_labels(
+            plugin_yaml.get('blueprint_labels'))
+        result['labels'] = _retrieve_labels(plugin_yaml.get('labels'))
+        result['resource_tags'] = plugin_yaml.get('resource_tags')
+        return result
+
+    @staticmethod
+    def _plugin_yaml_filename(archive_dir):
+        filenames = (files_in_folder(archive_dir, '*.yaml') or
+                     files_in_folder(archive_dir, '*.yml') or
+                     files_in_folder(archive_dir, '*.YAML') or
+                     files_in_folder(archive_dir, '*.YML'))
+        if not filenames:
+            return None
+        for fn in filenames:
+            if 'plugin.' in fn.lower():
+                return fn
+        return filenames[0]
 
 
 class UploadedCaravanManager(UploadedPluginsManager):
@@ -947,3 +986,26 @@ class UploadedCaravanManager(UploadedPluginsManager):
                 pass
 
         return plugins
+
+
+def _retrieve_labels(labels):
+    if not labels:
+        return labels
+    try:
+        flattened = _flatten_labels_dict(labels)
+    except AttributeError:
+        raise manager_exceptions.InvalidPluginError(
+            f"Invalid labels: {labels}")
+    for k, v in flattened.items():
+        if not isinstance(v, list):
+            raise manager_exceptions.InvalidPluginError(
+                f"Invalid labels: {labels}")
+    return flattened
+
+
+def _flatten_labels_dict(labels):
+    """Flatten labels dictionary by dropping 'values' key."""
+    flattened = {}
+    for k, v in labels.items():
+        flattened[k] = v.get('values')
+    return flattened

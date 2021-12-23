@@ -75,9 +75,11 @@ def upgrade():
     _add_audit_log_notify()
     _add_max_concurrent_config()
     _add_system_properties_column()
+    _add_plugins_labels_and_tags_columns()
 
 
 def downgrade():
+    _drop_plugins_labels_and_tags_columns()
     _drop_system_properties_column()
     _drop_max_concurrent_config()
     _drop_audit_log_notify()
@@ -324,3 +326,24 @@ def _add_system_properties_column():
 
 def _drop_system_properties_column():
     op.drop_column('node_instances', 'system_properties')
+
+
+def _add_plugins_labels_and_tags_columns():
+    op.add_column(
+        'plugins',
+        sa.Column('blueprint_labels', JSONString()),
+    )
+    op.add_column(
+        'plugins',
+        sa.Column('labels', JSONString()),
+    )
+    op.add_column(
+        'plugins',
+        sa.Column('resource_tags', JSONString()),
+    )
+
+
+def _drop_plugins_labels_and_tags_columns():
+    op.drop_column('plugins', 'blueprint_labels')
+    op.drop_column('plugins', 'labels')
+    op.drop_column('plugins', 'resource_tags')
