@@ -14,8 +14,6 @@
 
 import os
 
-from manager_rest.deployment_update.constants import STATES
-
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 
@@ -43,7 +41,7 @@ class DeploymentUpdateBase(AgentlessTestCase):
             self.client.executions.get(dep_update.execution_id))
         self.assertEqual(
             self.client.deployment_updates.get(dep_update.id).state,
-            STATES.SUCCESSFUL
+            'successful'
         )
 
     def _assert_relationship(self,

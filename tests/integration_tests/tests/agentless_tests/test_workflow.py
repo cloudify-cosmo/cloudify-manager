@@ -35,8 +35,6 @@ from integration_tests.framework.utils import create_zip
 from integration_tests.tests.utils import (get_resource,
                                            wait_for_blueprint_upload)
 
-from manager_rest.constants import DEFAULT_TENANT_NAME
-
 pytestmark = pytest.mark.group_workflows
 
 
@@ -434,7 +432,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
     def _get_deployment_folder(deployment):
         return os.path.join(
             '/opt/manager/resources/deployments',
-            DEFAULT_TENANT_NAME,
+            'default_tenant',
             deployment.id
         )
 
@@ -442,7 +440,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
     def _get_plugin_path(deployment):
         return os.path.join(
             '/opt/mgmtworker/env/source_plugins/',
-            DEFAULT_TENANT_NAME,
+            'default_tenant',
             deployment.id,
             'mock-plugin', '0.1',
             'lib/python3.6/site-packages/',

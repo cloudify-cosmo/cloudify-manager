@@ -103,12 +103,9 @@ pipeline {
           steps {
             container('rpmbuild'){
               sh """
-                cd && mkdir rpmbuild && cd rpmbuild
+                cd ~/rpmbuild
                 git clone --single-branch --branch ${env.BRANCH} https://github.com/cloudify-cosmo/cloudify-manager.git SOURCES && cd SOURCES
               """
-
-              echo 'Download sources for RPM spec file & Build RPM'
-              sh "yum install rpmdevtools -y"
 
               echo 'Build Rest Service RPM'
               buildRpm('~/rpmbuild/SOURCES', 'cloudify-rest-service.spec', "${env.VERSION}", "${env.PRERELEASE}")
