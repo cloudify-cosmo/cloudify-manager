@@ -177,6 +177,9 @@ class Plugin(SQLResourceBase):
     uploaded_at = db.Column(UTCDateTime, nullable=False, index=True)
     wheels = db.Column(db.PickleType(protocol=2), nullable=False)
     title = db.Column(db.Text)
+    blueprint_labels = db.Column(JSONString)
+    labels = db.Column(JSONString)
+    resource_tags = db.Column(JSONString)
 
     def yaml_file_path(self):
         plugin_dir = path.join(config.instance.file_server_root,
