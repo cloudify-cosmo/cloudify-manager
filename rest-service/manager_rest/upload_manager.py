@@ -830,7 +830,13 @@ class UploadedPluginsManager(UploadedDataManager):
                 .format(str(e)))
 
     def _load_plugin_extras(self, archive_dir):
+        result = {'blueprint_labels': None,
+                  'labels': None,
+                  'resource_tags': None}
         filename = self._plugin_yaml_filename(archive_dir)
+        if not filename:
+            return result
+
         with open(filename, 'r') as fh:
             try:
                 plugin_yaml = yaml.safe_load(fh)
@@ -838,14 +844,11 @@ class UploadedPluginsManager(UploadedDataManager):
                 raise manager_exceptions.InvalidPluginError(
                     f"The provided plugin's description ({filename}) "
                     f"can not be read.\n{e}")
-        bp_labels = _retrieve_labels(plugin_yaml.get('blueprint_labels'))
-        dep_labels = _retrieve_labels(plugin_yaml.get('labels'))
-        resource_tags = plugin_yaml.get('resource_tags')
-        return {
-            'blueprint_labels': bp_labels,
-            'labels': dep_labels,
-            'resource_tags': resource_tags,
-        }
+        result['blueprint_labels'] = _retrieve_labels(
+            plugin_yaml.get('blueprint_labels'))
+        result['labels'] = _retrieve_labels(plugin_yaml.get('labels'))
+        result['resource_tags'] = plugin_yaml.get('resource_tags')
+        return result
 
     @staticmethod
     def _plugin_yaml_filename(archive_dir):
@@ -854,9 +857,7 @@ class UploadedPluginsManager(UploadedDataManager):
                      files_in_folder(archive_dir, '*.YAML') or
                      files_in_folder(archive_dir, '*.YML'))
         if not filenames:
-            raise manager_exceptions.InvalidPluginError(
-                "Cannot find plugin's description among "
-                f"{files_in_folder(archive_dir)}")
+            return None
         for fn in filenames:
             if 'plugin.' in fn.lower():
                 return fn
