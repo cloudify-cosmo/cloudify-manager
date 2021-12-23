@@ -23,7 +23,7 @@ BuildRequires: dbus-devel >= %{dbus_version}
 BuildRequires: dbus-glib-devel >= %{dbus_glib_version}
 BuildRequires: python3-devel
 
-Requires:       python3 >= 3.6, postgresql-libs, sudo, dbus >= 1.6
+Requires:       python3 >= 3.6, postgresql-libs, sudo, dbus >= 1.6, nginx
 Requires(pre):  shadow-utils
 
 %description
@@ -86,6 +86,7 @@ done
 
 groupadd -fr cfyuser
 getent passwd cfyuser >/dev/null || useradd -r -g cfyuser -d /etc/cloudify -s /sbin/nologin cfyuser
+usermod -aG cfyuser nginx
 
 %post
 if [ $1 -gt 1 ]; then
@@ -155,7 +156,7 @@ exit 0
 
 %files
 
-%attr(750,cfyuser,adm)  /opt/manager
+%attr(750,cfyuser,cfyuser)  /opt/manager
 /etc/cloudify/delete_logs_and_events_from_db.py*
 %dir /opt/cloudify/encryption
 /opt/cloudify/encryption/update-encryption-key
