@@ -1,18 +1,3 @@
-#########
-# Copyright (c) 2019 Cloudify Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 import uuid
 from datetime import datetime
 
@@ -24,7 +9,8 @@ from cloudify.models_states import ExecutionState
 from manager_rest import workflow_executor
 from manager_rest.rest.responses_v3 import ItemsCount
 from manager_rest.security import SecuredResource
-from manager_rest.security.authorization import authorize
+from manager_rest.security.authorization import (authorize,
+                                                 check_user_action_allowed)
 from manager_rest.rest import resources_v2, rest_decorators
 from manager_rest.manager_exceptions import (
     BadParametersError, NonexistentWorkflowError)
@@ -32,7 +18,9 @@ from manager_rest.resource_manager import get_resource_manager
 from manager_rest.rest.rest_utils import (
     get_json_and_verify_params,
     verify_and_convert_bool,
-    parse_datetime_multiple_formats
+    parse_datetime_multiple_formats,
+    valid_user,
+    parse_datetime_string,
 )
 from manager_rest.storage import models, db, get_storage_manager, ListResult
 
@@ -171,6 +159,9 @@ class ExecutionGroups(SecuredResource):
             'parameters': {'optional': True},
             'force': {'optional': True},
             'concurrency': {'optional': True},
+            'owner': {'optional': True},
+            'created_at': {'optional': True},
+            'associated_executions': {'optional': True},
         })
         default_parameters = request_dict.get('default_parameters') or {}
         parameters = request_dict.get('parameters') or {}
@@ -178,7 +169,24 @@ class ExecutionGroups(SecuredResource):
         force = request_dict.get('force') or False
         concurrency = request_dict.get('concurrency', 5)
 
+        created_at = None
+        if request_dict.get('created_at'):
+            check_user_action_allowed('set_timestamp')
+            created_at = parse_datetime_string(request_dict['created_at'])
+
+        owner = None
+        if request_dict.get('owner'):
+            check_user_action_allowed('set_owner')
+            owner = valid_user(request_dict['owner'])
+
         sm = get_storage_manager()
+
+        executions = []
+        if request_dict.get('associated_executions'):
+            executions = [
+                sm.get(models.Execution, execution)
+                for execution in request_dict['associated_executions']
+            ]
         dep_group = sm.get(models.DeploymentGroup,
                            request_dict['deployment_group_id'])
         group = models.ExecutionGroup(
@@ -188,9 +196,18 @@ class ExecutionGroups(SecuredResource):
             visibility=dep_group.visibility,
             concurrency=concurrency,
         )
+        if created_at:
+            group.created_at = created_at
+        if owner:
+            group.creator = owner
+        if executions:
+            group.executions = executions
         sm.put(group)
         rm = get_resource_manager()
-        executions = []
+        if executions:
+            # This is a pre-populated group, so shoudl be part of a restore,
+            # don't actually run anything!
+            return group
         with sm.transaction():
             for dep in dep_group.deployments:
                 params = default_parameters.copy()
