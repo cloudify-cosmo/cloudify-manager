@@ -15,7 +15,7 @@ from pytest import mark
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 
-from . import DeploymentUpdateBase, BLUEPRINT_ID, NewDeploymentUpdateMixin
+from . import DeploymentUpdateBase, BLUEPRINT_ID
 from integration_tests.tests.utils import wait_for_blueprint_upload
 
 pytestmark = mark.group_deployments
@@ -404,10 +404,3 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
 
         deployment = self.client.deployments.get(deployment.id)
         self.assertFalse(deployment.get('description'))
-
-
-class NewTestDeploymentUpdateRemoval(
-    NewDeploymentUpdateMixin,
-    TestDeploymentUpdateRemoval
-):
-    pass

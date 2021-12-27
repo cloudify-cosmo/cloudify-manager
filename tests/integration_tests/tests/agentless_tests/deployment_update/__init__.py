@@ -32,8 +32,7 @@ class DeploymentUpdateBase(AgentlessTestCase):
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment_id, blueprint_id, preview=preview, **kwargs)
-        if not preview:
-            self._wait_for_update(dep_update)
+        self._wait_for_update(dep_update)
         return dep_update
 
     def _wait_for_update(self, dep_update):
@@ -168,17 +167,3 @@ class DeploymentUpdateBase(AgentlessTestCase):
     @staticmethod
     def _assertDictContainsSubset(subset, containing_dict):
         assert subset.items() <= containing_dict.items()
-
-
-class NewDeploymentUpdateMixin(object):
-    _group_update_workflow = 'csys_new_deployment_update'
-    _workflow_name = 'csys_new_deployment_update'
-
-    def _do_update(self, deployment_id, blueprint_id=None, **kwargs):
-        params = {
-            'blueprint_id': blueprint_id,
-        }
-        params.update(kwargs)
-        exc = self.client.executions.start(
-            deployment_id, 'csys_new_deployment_update', parameters=params)
-        self.wait_for_execution_to_end(exc)
