@@ -467,13 +467,11 @@ class ResourceManager(object):
                 reported_timestamp=now,
                 timestamp=now,
                 execution=execution,
-                message=
-                f'Failed updating dependencies of deployment '
-                f'{deployment.id}: {e}'
+                message=f'Failed updating dependencies of deployment '
+                        f'{deployment.id}: {e}'
             )
             self.sm.put(new_log)
             return ExecutionState.FAILED
-
 
     def _validate_execution_update(self, current_status, future_status):
         if current_status in ExecutionState.END_STATES:

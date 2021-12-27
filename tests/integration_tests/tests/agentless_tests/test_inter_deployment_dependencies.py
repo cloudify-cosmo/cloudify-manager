@@ -103,16 +103,17 @@ class TestInterDeploymentDependenciesInfrastructure(AgentlessTestCase):
         self.upload_blueprint_resource(
             'dsl/idd/dependency_from_property.yaml', 'bp1'
         )
-        dep1 = self.client.deployments.create(
+        self.client.deployments.create(
             'bp1', 'dep1', inputs={'target_id': 'dep2'})
-        dep2 = self.client.deployments.create(
+        self.client.deployments.create(
             'bp1', 'dep2', inputs={'target_id': 'dep1'})
         self.wait_for_deployment_environment('dep1')
         self.wait_for_deployment_environment('dep2')
         exc = self.client.executions.start(
             'dep1', 'execute_operation', parameters={
-            'operation': 'custom.set_attribute',
-        })
+                'operation': 'custom.set_attribute',
+            }
+        )
         self.wait_for_execution_to_end(exc)
 
         outs = self.client.deployments.outputs.get('dep1')
@@ -120,11 +121,11 @@ class TestInterDeploymentDependenciesInfrastructure(AgentlessTestCase):
 
         exc = self.client.executions.start(
             'dep2', 'execute_operation', parameters={
-            'operation': 'custom.set_attribute',
-        })
+                'operation': 'custom.set_attribute',
+            }
+        )
         with self.assertRaises(RuntimeError):
             self.wait_for_execution_to_end(exc)
-
 
     def _test_dependencies_are_updated(self, skip_uninstall):
         self._assert_dependencies_count(0)
