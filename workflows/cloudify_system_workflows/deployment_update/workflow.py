@@ -370,6 +370,7 @@ def set_deployment_attributes(*, update_id):
         'workflows': dep_up.deployment_plan['workflows'],
         'outputs': dep_up.deployment_plan['outputs'],
         'description': dep_up.deployment_plan['description'],
+        'capabilities': dep_up.deployment_plan['capabilities'],
     }
     if dep_up.new_inputs:
         new_attributes['inputs'] = dep_up.new_inputs

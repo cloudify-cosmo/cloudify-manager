@@ -342,6 +342,26 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         self._assertDictContainsSubset({'custom_output': {'value': 1}},
                                        deployment.outputs)
 
+    def test_modify_capability(self):
+        deployment, modified_bp_path = \
+            self._deploy_and_get_modified_bp_path('modify_capability')
+
+        deployment = self.client.deployments.get(deployment.id)
+        self.assertEqual(deployment.capabilities, {
+            'cap1': {'value': 0},
+            'cap2': {'value': 0},
+        })
+
+        self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
+        self._do_update(deployment.id, BLUEPRINT_ID)
+
+        deployment = self.client.deployments.get(deployment.id)
+        self.assertEqual(deployment.capabilities, {
+            'cap1': {'value': 1},
+            'cap3': {'value': 1},
+        })
+
     def test_modify_description(self):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('modify_description')
