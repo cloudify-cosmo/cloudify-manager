@@ -15,15 +15,13 @@
 import re
 import pytest
 
-from . import DeploymentUpdateBase, BLUEPRINT_ID, NewDeploymentUpdateMixin
+from . import DeploymentUpdateBase, BLUEPRINT_ID
 from integration_tests.tests.utils import wait_for_blueprint_upload
 
 pytestmark = pytest.mark.group_deployments
 
 
 class TestDeploymentUpdateModification(DeploymentUpdateBase):
-    _workflow_name = 'update'
-
     def test_modify_relationships(self):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('modify_relationship')
@@ -385,15 +383,11 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
             u'test_list': u'initial_input'})
 
         new_test_list = [u'update_input1', u'update_input2']
-        self._do_update(
+        dep_update = self._do_update(
             deployment.id, inputs={u'test_list': new_test_list})
 
-        execution_ids = [en.id for en in self.client.executions.list(
-            deployment_id=deployment.id,
-            workflow_id=self._workflow_name,
-            status='terminated',
-        )]
-        self.assertEqual(len(execution_ids), 1)
+        execution = self.client.executions.get(dep_update.execution_id)
+        self.assertEqual(execution.status, 'terminated')
 
         # verify if inputs have been updated
         deployment = self.client.deployments.get(deployment.id)
@@ -401,14 +395,14 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
 
         # verify reinstall-(un)install tasks graphs were generated
         self.assertEqual(len(self.client.tasks_graphs.list(
-            execution_ids[0], 'reinstall-uninstall')), 1)
+            execution.id, 'reinstall-uninstall')), 1)
         self.assertEqual(len(self.client.tasks_graphs.list(
-            execution_ids[0], 'reinstall-install')), 1)
+            execution.id, 'reinstall-install')), 1)
 
         # verify steps that have been logged
         event_messages = [re.match(r'^(\ ?\w+)+', et['message']).
                           group() for et in self.client.events.list(
-            execution_id=execution_ids[0],
+            execution_id=execution.id,
             event_type='workflow_node_event',
             sort='reported_timestamp',
         )]
@@ -419,10 +413,3 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
                         event_messages.index(u'Deleted node instance'))
         self.assertLess(event_messages.index(u'Deleted node instance'),
                         event_messages.index(u'Node instance started'))
-
-
-class NewTestDeploymentUpdateModification(
-    NewDeploymentUpdateMixin,
-    TestDeploymentUpdateModification
-):
-    pass

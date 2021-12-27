@@ -17,21 +17,6 @@ from ..deployment_environment import format_plan_schedule
 from .step_extractor import extract_steps
 
 
-def create_update(*, update_id, blueprint_id, new_inputs):
-    client = get_rest_client()
-    dep = client.deployments.get(workflow_ctx.deployment.id)
-
-    inputs = dep.inputs.copy()
-    inputs.update(new_inputs)
-
-    client.deployment_updates.create(
-        update_id,
-        workflow_ctx.deployment.id,
-        blueprint_id=blueprint_id,
-        inputs=inputs,
-    )
-
-
 def prepare_plan(*, update_id):
     """Prepare the new deployment plan for a deployment update"""
     client = get_rest_client()
@@ -159,9 +144,6 @@ def prepare_update_nodes(*, update_id):
 def _prepare_update_graph(
         ctx,
         update_id,
-        *,
-        inputs=None,
-        blueprint_id=None,
         **kwargs):
     """Make a tasks-graph that prepares the deployment-update.
 
@@ -171,11 +153,6 @@ def _prepare_update_graph(
     graph = ctx.graph_mode()
     seq = graph.sequence()
     seq.add(
-        ctx.local_task(create_update, kwargs={
-            'update_id': update_id,
-            'blueprint_id': blueprint_id,
-            'new_inputs': inputs or {},
-        }, total_retries=0),
         ctx.local_task(prepare_plan, kwargs={
             'update_id': update_id,
         }, total_retries=0),
@@ -796,11 +773,11 @@ def _execute_custom_workflow(client, dep_up, workflow_id, install_params,
 
 
 @workflow
-def update_deployment(ctx, *, preview=False, ignore_failure=False,
+def update_deployment(ctx, *, update_id=None, preview=False,
+                      ignore_failure=False,
                       skip_reinstall=False, workflow_id=None,
                       custom_workflow_timeout=None, **kwargs):
     client = get_rest_client()
-    update_id = '{0}_{1}'.format(ctx.deployment.id, ctx.execution_id)
     graph = _prepare_update_graph(ctx, update_id, **kwargs)
     graph.execute()
 

@@ -14,8 +14,6 @@
 #  * limitations under the License.
 
 import uuid
-from os.path import join
-from shutil import copytree, rmtree
 
 from flask import request
 from flask_restful_swagger import swagger
@@ -23,21 +21,19 @@ from flask_restful_swagger import swagger
 from cloudify._compat import text_type
 
 from manager_rest.security import SecuredResource
-from manager_rest import manager_exceptions, config
+from manager_rest import manager_exceptions, workflow_executor
 from manager_rest.security.authorization import authorize
 from manager_rest.deployment_update.constants import (
     PHASES,
     STATES
 )
 from manager_rest.execution_token import current_execution
-from manager_rest.storage import models, get_storage_manager
+from manager_rest.storage import models, get_storage_manager, db
 from manager_rest.deployment_update.manager import \
     get_deployment_updates_manager
-from manager_rest.constants import (FILE_SERVER_BLUEPRINTS_FOLDER,
-                                    FILE_SERVER_DEPLOYMENTS_FOLDER)
-from manager_rest.utils import (create_filter_params_list_description,
-                                current_tenant)
+from manager_rest.utils import create_filter_params_list_description
 
+from manager_rest.resource_manager import get_resource_manager
 from .. import rest_decorators
 from ..rest_utils import verify_and_convert_bool, get_json_and_verify_params
 
@@ -46,48 +42,22 @@ class DeploymentUpdate(SecuredResource):
     @authorize('deployment_update_create')
     @rest_decorators.marshal_with(models.DeploymentUpdate)
     def post(self, id, phase):
-        """
-        Provides support for two phases of deployment update. The phase is
-        chosen according to the phase arg, and the id is used by this step.
+        """Start a deployment-update
 
-        In the first phase ("initiate") the deployment update is:
-
-        1. Staged (from a new blueprint)
-        2. The steps are extracted and saved onto the data model.
-        3. The data storage is manipulated according to the
-           addition/modification steps.
-        4. The update workflow is run, executing any lifecycles of add/removed
-           nodes or relationships.
-
-        Prerequisites:
-
-        * The blueprint for the deployment update has already been uploaded
-          to the manager.
-        * The request should contain a blueprint id.
-        * The inputs are supplied as a json dict - just like in deployment
-          creation.
-
-        Note: the blueprint id of the deployment will be updated to the given
-        blueprint id.
-
-        The second step ("finalize") finalizes the commit by manipulating the
-        data model according to any removal steps.
-
-        In order
-        :param id: for the initiate step it's the deployment_id, and for the
-        finalize step it's the update_id
-        :param phase: initiate or finalize
-        :return: update response
+        This endpoint has two modes of operation: POST /initiate, which
+        starts a dep-update; and POST /finalize, which currently does nothing,
+        and only exists for backwards compatibility.
         """
         if phase == PHASES.INITIAL:
             return self._initiate(id)
-        if phase == PHASES.FINAL:
-            return get_deployment_updates_manager().finalize_commit(id)
+        else:
+            sm = get_storage_manager()
+            return sm.get(models.DeploymentUpdate, id)
 
     @authorize('deployment_update_create')
     @rest_decorators.marshal_with(models.DeploymentUpdate)
     def put(self, id, phase):
-        """DEPRECATED.  Please use POST method instead.
+        """DEPRECATED.
 
         This method is implemented for backward-compatibility only.
         """
@@ -95,45 +65,64 @@ class DeploymentUpdate(SecuredResource):
 
     @rest_decorators.marshal_with(models.DeploymentUpdate)
     def _initiate(self, deployment_id):
-        manager, skip_install, skip_uninstall, skip_reinstall, workflow_id, \
+        sm = get_storage_manager()
+        rm = get_resource_manager()
+        skip_install, skip_uninstall, skip_reinstall, workflow_id, \
             ignore_failure, install_first, preview, update_plugins, \
             runtime_eval, auto_correct_args, reevaluate_active_statuses, \
             force = \
             self._parse_args(deployment_id, request.json)
-        blueprint, inputs, reinstall_list = \
-            self._get_and_validate_blueprint_and_inputs(deployment_id,
-                                                        request.json)
-        blueprint_dir_abs = _get_plugin_update_blueprint_abs_path(
-            config.instance.file_server_root, blueprint)
-        deployment_dir = join(FILE_SERVER_DEPLOYMENTS_FOLDER,
-                              current_tenant.name,
-                              deployment_id,
-                              'updated_blueprint')
-        dep_dir_abs = join(config.instance.file_server_root, deployment_dir)
-        rmtree(dep_dir_abs, ignore_errors=True)
-        copytree(blueprint_dir_abs, dep_dir_abs)
-        file_name = blueprint.main_file_name
-        try:
-            deployment_update = manager.stage_deployment_update(
-                deployment_id, deployment_dir, file_name, inputs,
-                blueprint.id, preview,
+        with sm.transaction():
+            blueprint, inputs, reinstall_list = \
+                self._get_and_validate_blueprint_and_inputs(deployment_id,
+                                                            request.json)
+            deployment = sm.get(models.Deployment, deployment_id)
+            new_inputs = deployment.inputs.copy()
+            new_inputs.update(inputs)
+            dep_up = models.DeploymentUpdate(
+                id=f'{deployment.id}-{uuid.uuid4()}',
+                old_blueprint=deployment.blueprint,
+                new_blueprint=blueprint or deployment.blueprint,
+                old_inputs=deployment.inputs,
+                new_inputs=new_inputs,
+                preview=preview,
                 runtime_only_evaluation=runtime_eval,
-                auto_correct_types=auto_correct_args,
-                reevaluate_active_statuses=reevaluate_active_statuses)
-        finally:
-            rmtree(dep_dir_abs, ignore_errors=True)
-
-        manager.extract_steps_from_deployment_update(deployment_update)
-        return manager.commit_deployment_update(deployment_update,
-                                                skip_install,
-                                                skip_uninstall,
-                                                skip_reinstall,
-                                                workflow_id,
-                                                ignore_failure,
-                                                install_first,
-                                                reinstall_list,
-                                                update_plugins=update_plugins,
-                                                force=force)
+                state=STATES.UPDATING,
+            )
+            execution_args = {
+                'update_id': dep_up.id,
+                'preview': preview,
+                'ignore_failure': ignore_failure,
+                'skip_install': skip_install,
+                'skip_reinstall': skip_reinstall,
+                'skip_uninstall': skip_uninstall,
+                'workflow_id': workflow_id,
+                'blueprint_id': blueprint.id,
+                'inputs': inputs,
+            }
+            update_exec = models.Execution(
+                deployment=deployment,
+                workflow_id='csys_new_deployment_update',
+                parameters=execution_args
+            )
+            sm.put(update_exec)
+            dep_up.execution = update_exec
+            sm.put(dep_up)
+            dep_up.set_deployment(deployment)
+            messages = rm.prepare_executions(
+                [update_exec],
+                allow_overlapping_running_wf=True,
+                force=force,
+            )
+            if current_execution and \
+                    current_execution.workflow_id == 'csys_update_deployment':
+                # if we're created from a update_deployment workflow, join its
+                # exec-groups, for easy tracking
+                for exec_group in current_execution.execution_groups:
+                    exec_group.executions.append(update_exec)
+                db.session.commit()
+        workflow_executor.execute_workflow(messages)
+        return dep_up
 
     @staticmethod
     def _get_and_validate_blueprint_and_inputs(deployment_id, request_json):
@@ -199,9 +188,7 @@ class DeploymentUpdate(SecuredResource):
             'force',
             request_json.get('force', False)
         )
-        manager = get_deployment_updates_manager(preview)
-        return (manager,
-                skip_install,
+        return (skip_install,
                 skip_uninstall,
                 skip_reinstall,
                 workflow_id,
@@ -327,15 +314,3 @@ class DeploymentUpdates(SecuredResource):
                 substr_filters=search
             )
         return deployment_updates
-
-
-def _get_plugin_update_blueprint_abs_path(server_root, blueprint):
-    def get_blueprint_abs_path(_blueprint):
-        return join(server_root,
-                    FILE_SERVER_BLUEPRINTS_FOLDER,
-                    _blueprint.tenant_name,
-                    _blueprint.id)
-    if not blueprint.temp_of_plugins_update:
-        return get_blueprint_abs_path(blueprint)
-    original_blueprint = blueprint.temp_of_plugins_update[0].blueprint
-    return get_blueprint_abs_path(original_blueprint)
