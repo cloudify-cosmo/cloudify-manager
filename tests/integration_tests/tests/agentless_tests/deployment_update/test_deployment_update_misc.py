@@ -20,7 +20,7 @@ from integration_tests.tests.utils import (
     wait_for_blueprint_upload,
     wait_for_deployment_deletion_to_complete
 )
-from . import DeploymentUpdateBase, BLUEPRINT_ID, NewDeploymentUpdateMixin
+from . import DeploymentUpdateBase, BLUEPRINT_ID
 
 pytestmark = pytest.mark.group_deployments
 
@@ -531,11 +531,6 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
             dep = self.client.deployments.get(deployment_id)
             self.assertIn('description', dep.description)
 
-
-class NewTestDeploymentUpdateMisc(
-    NewDeploymentUpdateMixin,
-    TestDeploymentUpdateMisc
-):
     def test_change_schedules(self):
         deployment, modified_bp_path = self._deploy_and_get_modified_bp_path(
             'modify_schedules')
