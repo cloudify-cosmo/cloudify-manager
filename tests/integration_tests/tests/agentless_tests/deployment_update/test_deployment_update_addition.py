@@ -21,7 +21,7 @@ from pytest import mark
 
 from integration_tests.tests.utils import (tar_blueprint,
                                            wait_for_blueprint_upload)
-from . import DeploymentUpdateBase, BLUEPRINT_ID, NewDeploymentUpdateMixin
+from . import DeploymentUpdateBase, BLUEPRINT_ID
 
 
 pytestmark = pytest.mark.group_deployments
@@ -559,10 +559,3 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
 
         deployment = self.client.deployments.get(deployment.id)
         self.assertRegexpMatches(deployment['description'], 'new description')
-
-
-class NewTestDeploymentUpdateAddition(
-    NewDeploymentUpdateMixin,
-    TestDeploymentUpdateAddition
-):
-    pass

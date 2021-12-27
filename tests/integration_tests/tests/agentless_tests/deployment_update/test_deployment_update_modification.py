@@ -399,10 +399,3 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
                         event_messages.index(u'Deleted node instance'))
         self.assertLess(event_messages.index(u'Deleted node instance'),
                         event_messages.index(u'Node instance started'))
-
-
-class NewTestDeploymentUpdateModification(
-    NewDeploymentUpdateMixin,
-    TestDeploymentUpdateModification
-):
-    pass
