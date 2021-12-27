@@ -32,8 +32,7 @@ class DeploymentUpdateBase(AgentlessTestCase):
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment_id, blueprint_id, preview=preview, **kwargs)
-        if not preview:
-            self._wait_for_update(dep_update)
+        self._wait_for_update(dep_update)
         return dep_update
 
     def _wait_for_update(self, dep_update):
