@@ -124,6 +124,15 @@ class ResourceManager(object):
         self.sm.update(dep)
 
     def update_execution_status(self, execution_id, status, error):
+        if status in ExecutionState.END_STATES:
+            with self.sm.transaction():
+                execution = self.sm.get(
+                    models.Execution, execution_id, locking=True)
+                override_status = self._update_finished_execution_dependencies(
+                    execution)
+                if override_status is not None:
+                    status = override_status
+
         affected_parent_deployments = set()
         with self.sm.transaction():
             execution = self.sm.get(models.Execution, execution_id,
@@ -164,9 +173,6 @@ class ResourceManager(object):
             del execution
 
         if status in ExecutionState.END_STATES:
-            if deployment and workflow_id != 'delete_deployment_environment':
-                with self.sm.transaction():
-                    update_inter_deployment_dependencies(self.sm, deployment)
             self.start_queued_executions()
 
         # If the execution is a deployment update, and the status we're
@@ -435,6 +441,39 @@ class ResourceManager(object):
             seen_deployments.add(execution._deployment_fk)
             total += 1
             yield execution
+
+    def _update_finished_execution_dependencies(self, execution):
+        """Update IDDs affected by the finished executions.
+
+        This might result in invalid IDDs, in which case we'll override
+        the execution status to failed, and log the error. Nothing much
+        else we can do, the user has already created an invalid state,
+        let's just inform them of that.
+        """
+        if execution._deployment_fk:
+            deployment = execution.deployment
+        else:
+            return
+
+        workflow_id = execution.workflow_id
+        if workflow_id == 'delete_deployment_environment':
+            return
+
+        try:
+            update_inter_deployment_dependencies(self.sm, deployment)
+        except Exception as e:
+            now = datetime.utcnow()
+            new_log = models.Log(
+                reported_timestamp=now,
+                timestamp=now,
+                execution=execution,
+                message=
+                f'Failed updating dependencies of deployment '
+                f'{deployment.id}: {e}'
+            )
+            self.sm.put(new_log)
+            return ExecutionState.FAILED
+
 
     def _validate_execution_update(self, current_status, future_status):
         if current_status in ExecutionState.END_STATES:
