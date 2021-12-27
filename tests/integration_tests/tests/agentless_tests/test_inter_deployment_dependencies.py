@@ -92,6 +92,40 @@ class TestInterDeploymentDependenciesInfrastructure(AgentlessTestCase):
     def test_dependencies_are_updated_but_keeps_old_dependencies(self):
         self._test_dependencies_are_updated(skip_uninstall=True)
 
+    def test_cyclic_dependency_after_execution(self):
+        """Creating a cyclic dependency in a workflow, fails taht execution.
+
+        We'll prepare two deployments that will eventually depend on each
+        other; having dep1 depend on dep2 is OK, but then making dep2
+        depend on dep1, is going to fail the execution that attempted
+        to set this dependency.
+        """
+        self.upload_blueprint_resource(
+            'dsl/idd/dependency_from_property.yaml', 'bp1'
+        )
+        dep1 = self.client.deployments.create(
+            'bp1', 'dep1', inputs={'target_id': 'dep2'})
+        dep2 = self.client.deployments.create(
+            'bp1', 'dep2', inputs={'target_id': 'dep1'})
+        self.wait_for_deployment_environment('dep1')
+        self.wait_for_deployment_environment('dep2')
+        exc = self.client.executions.start(
+            'dep1', 'execute_operation', parameters={
+            'operation': 'custom.set_attribute',
+        })
+        self.wait_for_execution_to_end(exc)
+
+        outs = self.client.deployments.outputs.get('dep1')
+        assert outs.outputs == {'out1': 1}
+
+        exc = self.client.executions.start(
+            'dep2', 'execute_operation', parameters={
+            'operation': 'custom.set_attribute',
+        })
+        with self.assertRaises(RuntimeError):
+            self.wait_for_execution_to_end(exc)
+
+
     def _test_dependencies_are_updated(self, skip_uninstall):
         self._assert_dependencies_count(0)
         self._prepare_dep_update_test_resources()
