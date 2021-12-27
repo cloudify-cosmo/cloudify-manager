@@ -33,15 +33,15 @@ COMPUTE_NODE = 'compute_node'
 SR_DEPLOYMENT = 'shared_resource_deployment'
 
 # Dependencies creation test constants
-CREATION_TEST_BLUEPRINT = 'dsl/dependency_creating_resources.yaml'
+CREATION_TEST_BLUEPRINT = 'dsl/idd/dependency_creating_resources.yaml'
 
 # Deployment Update tests constants
 SR_DEPLOYMENT1 = SR_DEPLOYMENT + '1'
 SR_DEPLOYMENT2 = SR_DEPLOYMENT + '2'
 COMP_DEPLOYMENT1 = 'single_component_deployment1'
 COMP_DEPLOYMENT2 = 'single_component_deployment2'
-BLUEPRINT_BASE = 'dsl/inter_deployment_dependency_dep_base.yaml'
-BLUEPRINT_MOD = 'dsl/inter_deployment_dependency_dep_modified.yaml'
+BLUEPRINT_BASE = 'dsl/idd/inter_deployment_dependency_dep_base.yaml'
+BLUEPRINT_MOD = 'dsl/idd/inter_deployment_dependency_dep_modified.yaml'
 
 
 @pytest.mark.usefixtures('cloudmock_plugin')
