@@ -362,6 +362,29 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
             'cap3': {'value': 1},
         })
 
+    def test_modify_labels(self):
+        deployment, modified_bp_path = \
+            self._deploy_and_get_modified_bp_path('modify_labels')
+
+        deployment = self.client.deployments.get(deployment.id)
+        self.assertEqual(
+            {(lab.key, lab.value) for lab in deployment.labels},
+            {('label1', 'value1'), ('label1', 'value2'), ('label2', 'value1')}
+        )
+
+        self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
+        self._do_update(deployment.id, BLUEPRINT_ID)
+
+        deployment = self.client.deployments.get(deployment.id)
+        self.assertEqual(
+            {(lab.key, lab.value) for lab in deployment.labels},
+            # we're keeping the labels that disappeared from the new blueprint
+            # as well - we don't know if maybe the user added them explicitly
+            {('label1', 'value1'), ('label1', 'value2'), ('label1', 'value3'),
+             ('label2', 'value1'), ('label3', 'value1')}
+        )
+
     def test_modify_description(self):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('modify_description')
