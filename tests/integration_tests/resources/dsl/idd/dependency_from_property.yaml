@@ -1,0 +1,26 @@
+tosca_definitions_version: 'cloudify_dsl_1_3'
+
+imports:
+  - cloudify/types/types.yaml
+
+inputs:
+  target_id: {}
+
+node_templates:
+  node1:
+    type: cloudify.nodes.Root
+    interfaces:
+      custom:
+        set_attribute:
+          implementation: scripts/set_target_attribute.py
+          executor: central_deployment_agent
+          inputs:
+              target_id: { get_input: target_id }
+
+outputs:
+  out1:
+    value: {get_capability: [ {get_attribute: [node1, prop1] }, cap1]}
+
+capabilities:
+  cap1:
+    value: 1

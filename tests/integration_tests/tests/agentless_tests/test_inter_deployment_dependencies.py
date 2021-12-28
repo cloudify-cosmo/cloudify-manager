@@ -33,15 +33,15 @@ COMPUTE_NODE = 'compute_node'
 SR_DEPLOYMENT = 'shared_resource_deployment'
 
 # Dependencies creation test constants
-CREATION_TEST_BLUEPRINT = 'dsl/dependency_creating_resources.yaml'
+CREATION_TEST_BLUEPRINT = 'dsl/idd/dependency_creating_resources.yaml'
 
 # Deployment Update tests constants
 SR_DEPLOYMENT1 = SR_DEPLOYMENT + '1'
 SR_DEPLOYMENT2 = SR_DEPLOYMENT + '2'
 COMP_DEPLOYMENT1 = 'single_component_deployment1'
 COMP_DEPLOYMENT2 = 'single_component_deployment2'
-BLUEPRINT_BASE = 'dsl/inter_deployment_dependency_dep_base.yaml'
-BLUEPRINT_MOD = 'dsl/inter_deployment_dependency_dep_modified.yaml'
+BLUEPRINT_BASE = 'dsl/idd/inter_deployment_dependency_dep_base.yaml'
+BLUEPRINT_MOD = 'dsl/idd/inter_deployment_dependency_dep_modified.yaml'
 
 
 @pytest.mark.usefixtures('cloudmock_plugin')
@@ -91,6 +91,41 @@ class TestInterDeploymentDependenciesInfrastructure(AgentlessTestCase):
 
     def test_dependencies_are_updated_but_keeps_old_dependencies(self):
         self._test_dependencies_are_updated(skip_uninstall=True)
+
+    def test_cyclic_dependency_after_execution(self):
+        """Creating a cyclic dependency in a workflow, fails taht execution.
+
+        We'll prepare two deployments that will eventually depend on each
+        other; having dep1 depend on dep2 is OK, but then making dep2
+        depend on dep1, is going to fail the execution that attempted
+        to set this dependency.
+        """
+        self.upload_blueprint_resource(
+            'dsl/idd/dependency_from_property.yaml', 'bp1'
+        )
+        self.client.deployments.create(
+            'bp1', 'dep1', inputs={'target_id': 'dep2'})
+        self.client.deployments.create(
+            'bp1', 'dep2', inputs={'target_id': 'dep1'})
+        self.wait_for_deployment_environment('dep1')
+        self.wait_for_deployment_environment('dep2')
+        exc = self.client.executions.start(
+            'dep1', 'execute_operation', parameters={
+                'operation': 'custom.set_attribute',
+            }
+        )
+        self.wait_for_execution_to_end(exc)
+
+        outs = self.client.deployments.outputs.get('dep1')
+        assert outs.outputs == {'out1': 1}
+
+        exc = self.client.executions.start(
+            'dep2', 'execute_operation', parameters={
+                'operation': 'custom.set_attribute',
+            }
+        )
+        with self.assertRaises(RuntimeError):
+            self.wait_for_execution_to_end(exc)
 
     def _test_dependencies_are_updated(self, skip_uninstall):
         self._assert_dependencies_count(0)
