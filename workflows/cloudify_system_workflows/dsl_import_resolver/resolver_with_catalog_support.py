@@ -88,7 +88,9 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
 
     def retrieve_plugin(self, import_url):
         if not self._is_plugin_url(import_url):
-            return
+            raise InvalidBlueprintImport(
+                'Error retrieving plugin, expected plugin url, got: {0}'
+                .format(import_url))
         plugin_spec = import_url.replace(PLUGIN_PREFIX, '', 1).strip()
         name, plugin_filters = self._make_plugin_filters(
             plugin_spec, self.version_constraints, self.mappings)
