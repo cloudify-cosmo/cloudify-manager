@@ -15,3 +15,4 @@
 from .operations import connect_deployment  # NOQA
 from .operations import disconnect_deployment  # NOQA
 from .operations import execute_workflow  # NOQA
+from .operations import refresh  # NOQA

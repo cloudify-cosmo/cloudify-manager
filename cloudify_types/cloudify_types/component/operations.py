@@ -472,3 +472,20 @@ def execute_start(timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL,
     ctx.logger.info('Execution succeeded for "%s" deployment', deployment_id)
     populate_runtime_with_wf_results(client, deployment_id)
     return True
+
+
+@operation(resumable=True)
+@errors_nonrecoverable
+def refresh(**kwargs):
+    client = _get_client(kwargs)
+    config = _get_desired_operation_input('resource_config', kwargs)
+
+    runtime_deployment_prop = ctx.instance.runtime_properties.get(
+            'deployment', {})
+    runtime_deployment_id = runtime_deployment_prop.get('id')
+
+    deployment = config.get('deployment', {})
+    deployment_id = (runtime_deployment_id or
+                     deployment.get('id') or
+                     ctx.instance.id)
+    populate_runtime_with_wf_results(client, deployment_id)
