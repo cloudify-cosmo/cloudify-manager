@@ -1,0 +1,27 @@
+plugins:
+  mock_labels:
+    executor: central_deployment_agent
+    package_name: mock_labels
+    package_version: 0.0.1
+
+blueprint_labels:
+  key1:
+    values:
+      - plugin_key1_val1
+  key2:
+    values:
+      - plugin_key2_val1
+      - plugin_key2_val2
+
+labels:
+  key1:
+    values:
+      - plugin_key1_val1
+  key2:
+    values:
+      - plugin_key2_val1
+      - plugin_key2_val2
+
+#resource_tags:
+#  key1: value1
+#  key2: value2
