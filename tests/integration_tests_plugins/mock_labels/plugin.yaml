@@ -22,6 +22,6 @@ labels:
       - plugin_key2_val1
       - plugin_key2_val2
 
-#resource_tags:
-#  key1: value1
-#  key2: value2
+resource_tags:
+  key1: value1
+  key2: value2
