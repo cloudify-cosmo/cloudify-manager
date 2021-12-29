@@ -86,6 +86,16 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
             return self._fetch_plugin_import(import_url)
         return super(ResolverWithCatalogSupport, self).fetch_import(import_url)
 
+    def retrieve_plugin(self, import_url):
+        if not self._is_plugin_url(import_url):
+            raise InvalidBlueprintImport(
+                'Error retrieving plugin, expected plugin url, got: {0}'
+                .format(import_url))
+        plugin_spec = import_url.replace(PLUGIN_PREFIX, '', 1).strip()
+        name, plugin_filters = self._make_plugin_filters(
+            plugin_spec, self.version_constraints, self.mappings)
+        return self._find_plugin(name, plugin_filters)
+
     def _rewrite_from_mappings(self, import_url):
         for plugin_name, mapping in self.mappings.items():
             if import_url == mapping.get('import_url'):
@@ -133,10 +143,7 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
         return name, filters
 
     def _resolve_plugin_yaml_url(self, import_url):
-        plugin_spec = import_url.replace(PLUGIN_PREFIX, '', 1).strip()
-        name, plugin_filters = self._make_plugin_filters(
-            plugin_spec, self.version_constraints, self.mappings)
-        plugin = self._find_plugin(name, plugin_filters)
+        plugin = self.retrieve_plugin(import_url)
         return self._make_plugin_yaml_url(plugin)
 
     @staticmethod

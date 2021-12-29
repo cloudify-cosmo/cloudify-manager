@@ -16,3 +16,4 @@ from .operations import upload_blueprint  # NOQA
 from .operations import delete  # NOQA
 from .operations import create  # NOQA
 from .operations import execute_start  # NOQA
+from .operations import refresh  # NOQA

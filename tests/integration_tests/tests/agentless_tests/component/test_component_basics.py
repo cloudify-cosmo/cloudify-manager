@@ -110,6 +110,55 @@ capabilities:
                           self.client.deployments.get,
                           deployment_id)
 
+    def test_component_refresh(self):
+        capability_blueprint_path = resource(
+          'dsl/capability_from_attribute.yaml')
+        self.client.blueprints.upload(capability_blueprint_path,
+                                      entity_id='bp_with_cap')
+        base_bp_path = resource('dsl/component_with_blueprint_id.yaml')
+        base_component_dep, _ = self.deploy_application(
+            base_bp_path,
+            deployment_id='d{0}'.format(uuid.uuid4()),
+            inputs={'blueprint_id': 'bp_with_cap'}
+        )
+
+        shared_bp_path = resource('dsl/shared_resource_id_from_input.yaml')
+        shared_dep, _ = self.deploy_application(
+            shared_bp_path,
+            deployment_id='d{0}'.format(uuid.uuid4()),
+            inputs={'deployment_id': 'component'}
+        )
+
+        for dep in [base_component_dep, shared_dep]:
+            instances = self.client.node_instances.list(deployment_id=dep.id)
+            assert len(instances) == 1
+            props = instances[0].runtime_properties
+            assert 'capabilities' in props
+            assert 'capability1' in props['capabilities']
+            assert props['capabilities']['capability1'] is None
+
+        component_instance = self.client.node_instances.list(
+          deployment_id='component')[0]
+        self.client.node_instances.update(
+            component_instance.id,
+            version=component_instance.version,
+            runtime_properties={
+                'attribute1': 42
+            }
+        )
+        for dep in [base_component_dep, shared_dep]:
+            instances = self.client.node_instances.list(deployment_id=dep.id)
+            assert instances[0].runtime_properties[
+                'capabilities']['capability1'] is None
+            exc = self.client.executions.start(
+                dep.id, 'execute_operation', parameters={
+                    'operation': 'cloudify.interfaces.lifecycle.refresh'
+                })
+            self.wait_for_execution_to_end(exc)
+            instances = self.client.node_instances.list(deployment_id=dep.id)
+            assert instances[0].runtime_properties[
+                'capabilities']['capability1'] == 42
+
     def test_component_labeling(self):
         component_blueprint = """
 tosca_definitions_version: cloudify_dsl_1_3

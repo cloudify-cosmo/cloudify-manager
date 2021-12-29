@@ -155,3 +155,13 @@ def execute_workflow(workflow_id,
                                             parameters,
                                             timeout,
                                             redirect_logs)
+
+
+@operation(resumable=True)
+@errors_nonrecoverable
+def refresh(**kwargs):
+    config = _get_desired_operation_input('resource_config', kwargs)
+    deployment = config.get('deployment', '')
+    deployment_id = deployment.get('id', '')
+    client, _ = _get_client(kwargs)
+    populate_runtime_with_wf_results(client, deployment_id)

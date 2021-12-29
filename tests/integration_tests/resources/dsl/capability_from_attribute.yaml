@@ -1,0 +1,13 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - cloudify/types/types.yaml
+
+
+node_templates:
+  node1:
+    type: cloudify.nodes.Root
+
+capabilities:
+  capability1:
+    value: {get_attribute: [node1, attribute1]}
