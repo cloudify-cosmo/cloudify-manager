@@ -2395,7 +2395,8 @@ class ResourceManager(object):
                         ExecutionState.QUEUED
                     ]),
                     models.Execution.workflow_id.in_([
-                        'stop', 'uninstall', 'update'
+                        'stop', 'uninstall', 'update',
+                        'csys_new_deployment_update'
                     ])
                 )
                 .exists()
@@ -2405,7 +2406,9 @@ class ResourceManager(object):
         return children.all() + component_creators.all()
 
     def _verify_dependencies_not_affected(self, execution, force):
-        if execution.workflow_id not in ['stop', 'uninstall', 'update']:
+        if execution.workflow_id not in [
+            'stop', 'uninstall', 'update', 'csys_new_deployment_update'
+        ]:
             return
         # if we're in the middle of an execution initiated by the component
         # creator, we'd like to drop the component dependency from the list
@@ -2425,7 +2428,7 @@ class ResourceManager(object):
                 formatted_dependencies)
             return
         # If part of a deployment update - mark the update as failed
-        if execution.workflow_id == 'update':
+        if execution.workflow_id in ('update', 'csys_new_deployment_update'):
             dep_update = self.sm.get(
                 models.DeploymentUpdate,
                 None,

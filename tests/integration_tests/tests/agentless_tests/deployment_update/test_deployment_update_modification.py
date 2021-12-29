@@ -17,6 +17,7 @@ import pytest
 
 from . import DeploymentUpdateBase, BLUEPRINT_ID
 from integration_tests.tests.utils import wait_for_blueprint_upload
+from integration_tests.tests.utils import get_resource as resource
 
 pytestmark = pytest.mark.group_deployments
 
@@ -341,6 +342,26 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         deployment = self.client.deployments.get(deployment.id)
         self._assertDictContainsSubset({'custom_output': {'value': 1}},
                                        deployment.outputs)
+
+    def test_modify_idd(self):
+        shared_bp_path = resource(
+            'dsl/deployment_update/modify_idd/shared.yaml')
+        self.deploy(shared_bp_path, 'shared1', 'shared1')
+        self.deploy(shared_bp_path, 'shared2', 'shared2')
+        deployment, modified_bp_path = \
+            self._deploy_and_get_modified_bp_path('modify_idd')
+
+        idds = self.client.inter_deployment_dependencies.list(
+            source_deployment_id=deployment.id)
+        assert len(idds) == 2  # sharedresource + get_capability
+
+        self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
+        self._do_update(deployment.id, BLUEPRINT_ID)
+
+        idds = self.client.inter_deployment_dependencies.list(
+            source_deployment_id=deployment.id)
+        assert len(idds) == 2
 
     def test_modify_capability(self):
         deployment, modified_bp_path = \
