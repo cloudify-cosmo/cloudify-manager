@@ -3,14 +3,17 @@ tosca_definitions_version: cloudify_dsl_1_3
 imports:
   - cloudify/types/types.yaml
 
-node_templates:
+inputs:
+  blueprint_id:
+    default: basic
 
+node_templates:
   component_node:
     type: cloudify.nodes.Component
     properties:
       resource_config:
         blueprint:
           external_resource: true
-          id: basic
+          id: {get_input: blueprint_id}
         deployment:
           id: component

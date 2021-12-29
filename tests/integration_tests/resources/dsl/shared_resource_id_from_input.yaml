@@ -1,0 +1,15 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - cloudify/types/types.yaml
+
+inputs:
+  deployment_id: {}
+
+node_templates:
+  resource_node:
+    type: cloudify.nodes.SharedResource
+    properties:
+      resource_config:
+        deployment:
+          id: {get_input: deployment_id}

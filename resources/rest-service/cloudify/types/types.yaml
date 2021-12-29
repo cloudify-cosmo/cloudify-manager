@@ -425,6 +425,8 @@ node_types:
                   allow_custom_parameters: true
         delete:
           implementation: cfy_extensions.cloudify_types.component.delete
+        refresh:
+          implementation: cfy_extensions.cloudify_types.component.refresh
 
   cloudify.nodes.ServiceComponent:
     derived_from: cloudify.nodes.Component
@@ -446,7 +448,8 @@ node_types:
           implementation: cfy_extensions.cloudify_types.shared_resource.connect_deployment
         delete:
           implementation: cfy_extensions.cloudify_types.shared_resource.disconnect_deployment
-
+        refresh:
+          implementation: cfy_extensions.cloudify_types.shared_resource.refresh
 
 ##################################################################################
 # Base relationship definitions
