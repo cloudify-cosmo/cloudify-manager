@@ -39,6 +39,26 @@ def update(ctx: CloudifyWorkflowContext,
         ctx.tenant_name,
         ctx.deployment.id,
     )
+
+    preexisting = client.inter_deployment_dependencies.list(
+        source_deployment_id=ctx.deployment.id)
+    for entry in preexisting:
+        if not entry['dependency_creator'].startswith(
+            ('component.', 'sharedresource.')
+        ):
+            continue
+        keep_entry = {
+            'dependency_creator': entry['dependency_creator'],
+            'target_deployment_func': entry['target_deployment_func'],
+        }
+        if entry.get('external_target'):
+            target = external_dependencies
+            keep_entry['external_target'] = entry['external_target']
+        else:
+            target = local_dependencies
+            keep_entry['target_deployment'] = entry['target_deployment_id']
+        target.append(keep_entry)
+
     if local_dependencies:
         client.inter_deployment_dependencies.update_all(
             ctx.deployment.id,
