@@ -363,9 +363,24 @@ def _reorder_instance_relationships(plan_rels, instance_rels):
     return new_instance_rels
 
 
+def _updated_deployment_labels(existing_labels, plan_labels):
+    changed = False
+    labels = {(lab.key, lab.value) for lab in existing_labels}
+    for plan_label, label_definition in plan_labels.items():
+        for value in label_definition.get('values', []):
+            new_label = (plan_label, value)
+            if new_label not in labels:
+                changed = True
+                labels.add(new_label)
+    if not changed:
+        return None
+    return [{k: v} for k, v in labels]
+
+
 def set_deployment_attributes(*, update_id):
     client = get_rest_client()
     dep_up = client.deployment_updates.get(update_id)
+    deployment = client.deployments.get(dep_up.deployment_id)
     new_attributes = {
         'workflows': dep_up.deployment_plan['workflows'],
         'outputs': dep_up.deployment_plan['outputs'],
@@ -380,6 +395,14 @@ def set_deployment_attributes(*, update_id):
         # well, so that later graphs downlood scripts from the new blueprint.
         # Unfortunate, but no public method for this just yet
         workflow_ctx._context['blueprint_id'] = dep_up.new_blueprint_id
+
+    new_labels = _updated_deployment_labels(
+        deployment.labels,
+        dep_up.deployment_plan.get('labels')
+    )
+    if new_labels:
+        new_attributes['labels'] = new_labels
+
     client.deployments.set_attributes(
         dep_up.deployment_id,
         **new_attributes
