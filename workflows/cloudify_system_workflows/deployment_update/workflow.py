@@ -389,10 +389,9 @@ def set_deployment_attributes(*, update_id):
         'outputs': dep_up.deployment_plan['outputs'],
         'description': dep_up.deployment_plan['description'],
         'capabilities': dep_up.deployment_plan['capabilities'],
+        'inputs': dep_up.deployment_plan['inputs'],
         'runtime_only_evaluation': dep_up.runtime_only_evaluation,
     }
-    if dep_up.new_inputs:
-        new_attributes['inputs'] = dep_up.new_inputs
     if dep_up.new_blueprint_id:
         new_attributes['blueprint_id'] = dep_up.new_blueprint_id
         # in the currently-running execution, update the current context as
