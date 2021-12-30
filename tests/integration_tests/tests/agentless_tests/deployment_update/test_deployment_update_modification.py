@@ -421,21 +421,29 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
 
     def test_modify_inputs_ops_order(self):
         """Verify that update workflow executes uninstall and install."""
-        deployment, _ = \
+        deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('modify_inputs')
         self.assertEqual(deployment['inputs'], {
-            u'test_list': u'initial_input'})
+            'test_list': 'initial_input',
+            'test_string_toremove': 'xxx'
+        })
 
-        new_test_list = [u'update_input1', u'update_input2']
+        new_test_list = ['update_input3', 'update_input4']
+        self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
         dep_update = self._do_update(
-            deployment.id, inputs={u'test_list': new_test_list})
+            deployment.id, BLUEPRINT_ID, inputs={'test_list': new_test_list})
 
         execution = self.client.executions.get(dep_update.execution_id)
         self.assertEqual(execution.status, 'terminated')
 
         # verify if inputs have been updated
         deployment = self.client.deployments.get(deployment.id)
-        self.assertEqual(deployment['inputs'], {u'test_list': new_test_list})
+        self.assertEqual(deployment['inputs'], {
+            'test_list': new_test_list,
+            'test_string_new': 'xxx',
+            # test_string_toremove was removed!
+        })
 
         # verify reinstall-(un)install tasks graphs were generated
         self.assertEqual(len(self.client.tasks_graphs.list(
