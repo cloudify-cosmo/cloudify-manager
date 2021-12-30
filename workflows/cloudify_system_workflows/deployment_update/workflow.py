@@ -27,10 +27,13 @@ def prepare_plan(*, update_id):
         dep = client.deployments.get(dep_up.deployment_id)
         bp = client.blueprints.get(dep.blueprint_id)
 
+    new_inputs = {
+        k: v for k, v in dep_up.new_inputs.items() if k in bp.plan['inputs']
+    }
     deployment_plan = tasks.prepare_deployment_plan(
         bp.plan,
         client.secrets.get,
-        dep_up.new_inputs,
+        new_inputs,
         runtime_only_evaluation=dep_up.runtime_only_evaluation
     )
     client.deployment_updates.set_attributes(update_id, plan=deployment_plan)
