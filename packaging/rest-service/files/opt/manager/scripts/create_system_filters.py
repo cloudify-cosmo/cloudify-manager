@@ -62,6 +62,19 @@ def create_system_filters():
                 ]
             }
             _add_deployments_filter(service_filter, creator, tenant, now)
+        if 'csys-terraform-filter' not in curr_dep_filters_ids:
+            service_filter = {
+                'id': 'csys-terraform-filter',
+                'value': [
+                    {
+                        'key': 'obj-type',
+                        'values': ['terraform'],
+                        'operator': 'any_of',
+                        'type': 'label',
+                    }
+                ]
+            }
+            _add_deployments_filter(service_filter, creator, tenant, now)
 
         db.session.commit()
 
