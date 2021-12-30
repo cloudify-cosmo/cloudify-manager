@@ -220,6 +220,7 @@ class TestRuntimeFunctionEvaluation(AgentlessTestCase):
         dep = self.client.deployments.get(deployment.id)
         self.assertTrue(dep.runtime_only_evaluation)
 
+    @pytest.mark.xfail  # RD-3907
     def test_change_flag_update_resume(self):
         deployment = self.deploy(
             self.bp_path,

@@ -298,7 +298,7 @@ class DeploymentsId(resources_v1.DeploymentsId):
             allowed_attribs = {
                 'description', 'workflows', 'inputs', 'policy_types',
                 'policy_triggers', 'groups', 'scaling_groups', 'outputs',
-                'capabilities', 'display_name',
+                'capabilities', 'display_name', 'runtime_only_evaluation',
             }
             allow_change = {'display_name'}
             for attrib in allowed_attribs:
