@@ -77,6 +77,8 @@ class DeploymentUpdate(SecuredResource):
                 self._get_and_validate_blueprint_and_inputs(deployment_id,
                                                             request.json)
             deployment = sm.get(models.Deployment, deployment_id)
+            if runtime_eval is None:
+                runtime_eval = deployment.runtime_only_evaluation
             new_inputs = deployment.inputs.copy()
             new_inputs.update(inputs)
             dep_up = models.DeploymentUpdate(
@@ -172,10 +174,7 @@ class DeploymentUpdate(SecuredResource):
         update_plugins = verify_and_convert_bool(
             'update_plugins',
             request_json.get('update_plugins', True))
-        runtime_only_evaluation = verify_and_convert_bool(
-            'runtime_only_evaluation',
-            request_json.get('runtime_only_evaluation', False)
-        )
+        runtime_only_evaluation = request_json.get('runtime_only_evaluation')
         auto_correct_types = verify_and_convert_bool(
             'auto_correct_types',
             request_json.get('auto_correct_types', False)

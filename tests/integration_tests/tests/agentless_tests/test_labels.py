@@ -14,8 +14,10 @@ class DeploymentsLabelsTest(AgentlessTestCase):
         new_blueprint_id = 'update_labels'
         dsl_path = utils.get_resource('dsl/updated_blueprint_with_labels.yaml')
         blueprint = self.client.blueprints.upload(dsl_path, new_blueprint_id)
-        self.client.deployment_updates.update_with_existing_blueprint(
+        dep_up = self.client.deployment_updates.update_with_existing_blueprint(
             deployment.id, new_blueprint_id)
+        self.wait_for_execution_to_end(
+            self.client.executions.get(dep_up.execution_id))
         updated_deployment = self.client.deployments.get(deployment.id)
         deployment_labels_list = [{'key1': 'key1_val1'},
                                   {'key2': 'key2_val1'},

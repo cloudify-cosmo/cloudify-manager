@@ -184,7 +184,7 @@ def update_deployment_nodes(*, update_id):
         else:
             raise RuntimeError(f'Node {node_name} not found in the plan')
         new_attributes = {
-            attr_name: plan_node[attr_name] for attr_name in changed_attrs
+            attr_name: plan_node[attr_name] for attr_name in set(changed_attrs)
         }
         if 'relationships' in new_attributes:
             # if we're to remove a relationship, make sure to keep it for now,
@@ -386,6 +386,7 @@ def set_deployment_attributes(*, update_id):
         'outputs': dep_up.deployment_plan['outputs'],
         'description': dep_up.deployment_plan['description'],
         'capabilities': dep_up.deployment_plan['capabilities'],
+        'runtime_only_evaluation': dep_up.runtime_only_evaluation,
     }
     if dep_up.new_inputs:
         new_attributes['inputs'] = dep_up.new_inputs
