@@ -76,9 +76,11 @@ def upgrade():
     _add_max_concurrent_config()
     _add_system_properties_column()
     _add_plugins_labels_and_tags_columns()
+    _add_deployment_resource_tags_column()
 
 
 def downgrade():
+    _drop_deployment_resource_tags_column()
     _drop_plugins_labels_and_tags_columns()
     _drop_system_properties_column()
     _drop_max_concurrent_config()
@@ -347,3 +349,14 @@ def _drop_plugins_labels_and_tags_columns():
     op.drop_column('plugins', 'blueprint_labels')
     op.drop_column('plugins', 'labels')
     op.drop_column('plugins', 'resource_tags')
+
+
+def _add_deployment_resource_tags_column():
+    op.add_column(
+        'deployments',
+        sa.Column('resource_tags', JSONString()),
+    )
+
+
+def _drop_deployment_resource_tags_column():
+    op.drop_column('deployments', 'resource_tags')
