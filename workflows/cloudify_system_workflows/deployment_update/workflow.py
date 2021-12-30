@@ -28,7 +28,8 @@ def prepare_plan(*, update_id):
         bp = client.blueprints.get(dep.blueprint_id)
 
     new_inputs = {
-        k: v for k, v in dep_up.new_inputs.items() if k in bp.plan['inputs']
+        k: v for k, v in dep_up.new_inputs.items()
+        if k in bp.plan.get('inputs', {})
     }
     deployment_plan = tasks.prepare_deployment_plan(
         bp.plan,
