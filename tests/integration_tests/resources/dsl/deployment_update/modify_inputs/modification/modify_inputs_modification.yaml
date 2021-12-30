@@ -4,9 +4,12 @@ imports:
   - https://cloudify.co/spec/cloudify/5.0.5/types.yaml
 
 inputs:
+  test_string_new:
+    default: "xxx"
   test_list:
-    - update_input1
-    - update_input2
+    default:
+      - update_input1
+      - update_input2
 
 node_types:
 

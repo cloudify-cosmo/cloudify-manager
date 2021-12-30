@@ -4,6 +4,8 @@ imports:
   - https://cloudify.co/spec/cloudify/5.0.5/types.yaml
 
 inputs:
+  test_string_toremove:
+    default: "xxx"
   test_list:
     default: "initial_input"
 
