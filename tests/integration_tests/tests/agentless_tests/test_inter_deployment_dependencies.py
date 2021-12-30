@@ -132,7 +132,6 @@ class TestInterDeploymentDependenciesInfrastructure(AgentlessTestCase):
         self._prepare_dep_update_test_resources()
         base_expected_dependencies = self._get_dep_update_test_dependencies(
             is_first_state=True)
-
         base_dependencies = self._assert_dependencies_count(
             len(base_expected_dependencies))
 
@@ -141,7 +140,7 @@ class TestInterDeploymentDependenciesInfrastructure(AgentlessTestCase):
 
         self._perform_update_on_main_deployment(skip_uninstall=skip_uninstall)
         mod_expected_dependencies = self._get_dep_update_test_dependencies(
-            is_first_state=False, should_keep_old_dependencies=skip_uninstall)
+            is_first_state=False)
         mod_dependencies = self._assert_dependencies_count(
             len(mod_expected_dependencies))
         self._assert_dependencies_exist(mod_expected_dependencies,
@@ -273,8 +272,7 @@ class TestInterDeploymentDependenciesInfrastructure(AgentlessTestCase):
                 creator_to_dependency)
 
     def _get_dep_update_test_dependencies(self,
-                                          is_first_state,
-                                          should_keep_old_dependencies=False):
+                                          is_first_state):
         shared_deployment_target = SR_DEPLOYMENT1
         comp_target_id = COMP_DEPLOYMENT1
         if not is_first_state:
@@ -316,7 +314,7 @@ class TestInterDeploymentDependenciesInfrastructure(AgentlessTestCase):
                 comp_target_id,
         }
 
-        if is_first_state or should_keep_old_dependencies:
+        if is_first_state:
             dependencies['{0}.{1}.{2}.might_be_deleted.get_capability'
                          ''.format(NODES, COMPUTE_NODE, PROPERTIES)] = \
                 SR_DEPLOYMENT1
