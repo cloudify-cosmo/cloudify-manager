@@ -368,6 +368,8 @@ def _reorder_instance_relationships(plan_rels, instance_rels):
 
 
 def _updated_deployment_labels(existing_labels, plan_labels):
+    if not plan_labels:
+        return []
     changed = False
     labels = {(lab.key, lab.value) for lab in existing_labels}
     for plan_label, label_definition in plan_labels.items():
