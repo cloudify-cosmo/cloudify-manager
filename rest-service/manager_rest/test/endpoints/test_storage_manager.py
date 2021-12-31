@@ -155,7 +155,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         self.sm.put(dep)
 
         serialized_dep = dep.to_response()
-        self.assertEqual(39, len(serialized_dep))
+        self.assertEqual(40, len(serialized_dep))
         self.assertEqual(dep.id, serialized_dep['id'])
         self.assertEqual(dep.created_at, serialized_dep['created_at'])
         self.assertEqual(dep.updated_at, serialized_dep['updated_at'])
@@ -163,6 +163,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         self.assertEqual(dep.permalink, serialized_dep['permalink'])
         self.assertEqual(dep.tenant.name, serialized_dep['tenant_name'])
         self.assertEqual(dep.description, None)
+        self.assertEqual(dep.resource_tags, None)
 
         # `blueprint_id` isn't a regular column, but a relationship
         serialized_dep.pop('blueprint_id')

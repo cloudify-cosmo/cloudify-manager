@@ -1,5 +1,7 @@
 import pytest
 
+from time import sleep
+
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 
@@ -98,3 +100,40 @@ class PluginWithoutBlueprintLabelsTest(AgentlessTestCase):
                        'values': ['key2_val1', {'get_input': 'label_value'}]
                    }
                }
+
+
+@pytest.mark.usefixtures('mock_labels_plugin')
+class PluginWithResourceTagsTest(AgentlessTestCase):
+    def test_resource_tags_propagation(self):
+        self.client.blueprints.upload(
+            resource('dsl/blueprint_with_plugin_and_labels.yaml'),
+            entity_id='bp')
+        blueprint = self.client.blueprints.get('bp')
+        assert 'resource_tags' in blueprint.plan
+        assert blueprint.plan['resource_tags'] == \
+               {
+                   'key1': 'value1',
+                   'key2': 'value2',
+               }
+
+        self.client.deployments.create('bp', 'dep')
+        deployment = self.client.deployments.get('dep')
+        assert 'resource_tags' in deployment
+        assert deployment['resource_tags'] == \
+               {
+                   'key1': 'value1',
+                   'key2': 'value2',
+               }
+
+        self.client.deployments.delete('dep')
+        self._wait_until_deployment_deleted('dep')
+        self.client.blueprints.delete('bp')
+
+    def _wait_until_deployment_deleted(self, deployment_id, timeout_sec=5):
+        ticks = timeout_sec * 5
+        while ticks > 0:
+            try:
+                self.client.deployments.get(deployment_id)
+            except Exception:
+                return
+            sleep(0.2)
