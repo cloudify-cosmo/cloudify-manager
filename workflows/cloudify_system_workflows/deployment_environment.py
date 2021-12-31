@@ -125,6 +125,7 @@ def create(ctx, labels=None, inputs=None, skip_plugins_validation=False,
         outputs=deployment_plan['outputs'],
         capabilities=deployment_plan.get('capabilities', {}),
         labels=labels_to_create,
+        resource_tags=deployment_plan.get('resource_tags'),
     )
 
     ctx.logger.info('Creating %d nodes', len(nodes))

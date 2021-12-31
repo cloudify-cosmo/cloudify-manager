@@ -361,7 +361,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         v2=['scaling_groups']
     )
 
-    # This will be overriden when a workdir is being retrieved
+    # This will be overridden when a workdir is being retrieved
     workdir_zip = None
 
     description = db.Column(db.Text)
@@ -410,6 +410,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         db.Text, nullable=False, index=True,
         default=lambda ctx: ctx.get_current_parameters().get('id')
     )
+    resource_tags = db.Column(JSONString)
     _blueprint_fk = foreign_key(Blueprint._storage_id)
     _site_fk = foreign_key(Site._storage_id,
                            nullable=True,
