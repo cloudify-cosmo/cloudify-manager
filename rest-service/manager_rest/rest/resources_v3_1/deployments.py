@@ -680,6 +680,15 @@ class InterDeploymentDependencies(SecuredResource):
             locking=True)
 
         sm.delete(dependency)
+
+        # Delete source from target's consumers
+        if params.get(SOURCE_DEPLOYMENT) and params.get(TARGET_DEPLOYMENT):
+            for label in params[TARGET_DEPLOYMENT].labels:
+                if (label.key, label.value) == \
+                        ('csys-consumer-id', params[SOURCE_DEPLOYMENT].id):
+                    sm.delete(label)
+                    break
+
         return None, 204
 
     @staticmethod
