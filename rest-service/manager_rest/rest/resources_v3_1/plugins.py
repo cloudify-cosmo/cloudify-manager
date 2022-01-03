@@ -315,12 +315,20 @@ class PluginsId(resources_v2_1.PluginsId):
         Only updating the ownership is supported right now.
         """
         request_dict = rest_utils.get_json_and_verify_params({
-            'creator': {'type': text_type}})
-        check_user_action_allowed('set_owner', None, True)
-        creator = rest_utils.valid_user(request_dict['creator'])
+            'creator': {'type': text_type, 'optional': True},
+            'blueprint_labels': {'type': dict, 'optional': True},
+            'labels': {'type': dict, 'optional': True},
+        })
         sm = get_storage_manager()
         plugin = sm.get(models.Plugin, plugin_id)
-        plugin.creator = creator
+        if 'creator' in request_dict:
+            check_user_action_allowed('set_owner', None, True)
+            creator = rest_utils.valid_user(request_dict['creator'])
+            plugin.creator = creator
+        for key in ['blueprint_labels', 'labels']:
+            if key not in request_dict:
+                continue
+            setattr(plugin, key, request_dict[key])
         sm.update(plugin)
         return plugin.to_response()
 
