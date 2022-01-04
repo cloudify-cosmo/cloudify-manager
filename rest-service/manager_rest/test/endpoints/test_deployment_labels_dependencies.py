@@ -120,8 +120,25 @@ class DeploymentLabelsDependenciesTest(BaseServerTestCase):
 
         # Defining dep1 as a parent will add a consumer label to it
         sanitized_dep1_labels = \
-            [l for l in dep1.labels if l.key!='csys-consumer-id']
+            [lb for lb in dep1.labels if lb.key != 'csys-consumer-id']
         assert len(sanitized_dep1_labels) == 0
+
+    def test_consumer_label_for_dld(self):
+        dep1 = self._deployment(id='dep1')
+        dep2 = self._deployment(id='dep2')
+        self.client.deployments.set_attributes(
+            'dep2',
+            labels=[{'csys-obj-parent': 'dep1'}]
+        )
+        assert len(dep1.labels) == 1
+        assert dep1.labels[0].key == 'csys-consumer-id'
+        assert dep1.labels[0].value == dep2.id
+
+        self.client.deployments.set_attributes(
+            'dep2',
+            labels=[]
+        )
+        assert len(dep1.labels) == 0
 
     def test_number_of_direct_services_deployed_inside_environment(self):
         self._deployment(id='env')

@@ -723,7 +723,7 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
 
         # Defining dep1 as a parent will add a consumer label to it
         sanitized_dep1_labels = \
-            [l for l in dep1.labels if l.key!='csys-consumer-id']
+            [lb for lb in dep1.labels if lb.key != 'csys-consumer-id']
 
         assert len(group.labels) == 0
         assert len(sanitized_dep1_labels) == 0

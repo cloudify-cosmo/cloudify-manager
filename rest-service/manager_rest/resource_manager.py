@@ -1681,7 +1681,7 @@ class ResourceManager(object):
                 self.sm.put(dependency)
 
                 # Add deployment to parent's consumers
-                existing_consumer_label = sm.list(
+                existing_consumer_label = self.sm.list(
                     models.DeploymentLabel,
                     filters={'key': 'csys-consumer-id', 'value': dep.id}
                 )
