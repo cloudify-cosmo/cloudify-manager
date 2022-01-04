@@ -1681,12 +1681,17 @@ class ResourceManager(object):
                 self.sm.put(dependency)
 
                 # Add deployment to parent's consumers
-                new_label = {'key': 'csys-consumer-id',
-                             'value': dep.id,
-                             'created_at': datetime.utcnow(),
-                             'creator': current_user,
-                             'deployment': parent}
-                self.sm.put(models.DeploymentLabel(**new_label))
+                existing_consumer_label = sm.list(
+                    models.DeploymentLabel,
+                    filters={'key': 'csys-consumer-id', 'value': dep.id}
+                )
+                if not existing_consumer_label:
+                    new_label = {'key': 'csys-consumer-id',
+                                 'value': dep.id,
+                                 'created_at': datetime.utcnow(),
+                                 'creator': current_user,
+                                 'deployment': parent}
+                    self.sm.put(models.DeploymentLabel(**new_label))
 
     def delete_deployment_from_labels_graph(self, deployments, parents):
         if not parents or not deployments:
