@@ -720,8 +720,13 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         group = self.client.deployment_groups.get('group1')
         dep1 = self.client.deployments.get('dep1')
         dep2 = self.client.deployments.get('dep2')
+
+        # Defining dep1 as a parent will add a consumer label to it
+        sanitized_dep1_labels = \
+            [lb for lb in dep1.labels if lb.key != 'csys-consumer-id']
+
         assert len(group.labels) == 0
-        assert len(dep1.labels) == 0
+        assert len(sanitized_dep1_labels) == 0
         assert len(dep2.labels) == 1
 
     def test_add_self_deployment_as_parent(self):

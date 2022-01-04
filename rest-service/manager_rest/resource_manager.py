@@ -1680,6 +1680,19 @@ class ResourceManager(object):
                 )
                 self.sm.put(dependency)
 
+                # Add deployment to parent's consumers
+                existing_consumer_label = self.sm.list(
+                    models.DeploymentLabel,
+                    filters={'key': 'csys-consumer-id', 'value': dep.id}
+                )
+                if not existing_consumer_label:
+                    new_label = {'key': 'csys-consumer-id',
+                                 'value': dep.id,
+                                 'created_at': datetime.utcnow(),
+                                 'creator': current_user,
+                                 'deployment': parent}
+                    self.sm.put(models.DeploymentLabel(**new_label))
+
     def delete_deployment_from_labels_graph(self, deployments, parents):
         if not parents or not deployments:
             return
@@ -1695,6 +1708,14 @@ class ResourceManager(object):
                 )
             )
         )
+        # Delete deployment from parent's consumers
+        for parent in parents:
+            for dep in deployments:
+                for label in parent.labels:
+                    if (label.key, label.value) == \
+                            ('csys-consumer-id', dep.id):
+                        self.sm.delete(label)
+                        break
 
     def install_plugin(self, plugin, manager_names=None, agent_names=None):
         """Send the plugin install task to the given managers or agents."""

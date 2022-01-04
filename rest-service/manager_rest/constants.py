@@ -85,6 +85,7 @@ RESERVED_LABELS = {'csys-obj-name',
                    'csys-location-long',
                    'csys-obj-parent',
                    'csys-environment',
+                   'csys-consumer-id',
                    'csys-wrcp-group-id'}
 
 RESERVED_PREFIX = 'csys-'
