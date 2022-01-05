@@ -143,15 +143,7 @@ class TestBlueprint(ComponentTestBase):
 
             mock_client.return_value = self.cfy_mock_client
 
-            error = r"The provided blueprint labels are not valid. " \
-                    r"Labels must be a list of single-entry dicts, " \
-                    r"e.g. [{'foo': 'bar'}]. " \
-                    r"This value was provided: %s." % blueprint_labels
-
-            with self.assertRaisesRegex(
-                NonRecoverableError,
-                'Error in upload_blueprint: ' + error
-            ):
+            with self.assertRaises(NonRecoverableError):
                 upload_blueprint(**self.resource_config)
 
             # Another invalid prop
@@ -159,17 +151,8 @@ class TestBlueprint(ComponentTestBase):
             blueprint_params['blueprint']['labels'] = blueprint_labels
             self.resource_config['resource_config'] = blueprint_params
             mock_client.return_value = self.cfy_mock_client
-            mock_client.return_value = self.cfy_mock_client
 
-            error = r"The provided blueprint labels are not valid. " \
-                    r"Labels must be a list of single-entry dicts, " \
-                    r"e.g. [{'foo': 'bar'}]. " \
-                    r"This value was provided: %s." % blueprint_labels
-
-            with self.assertRaisesRegex(
-                NonRecoverableError,
-                'Error in upload_blueprint: ' + error
-            ):
+            with self.assertRaises(NonRecoverableError):
                 upload_blueprint(**self.resource_config)
 
     def test_upload_blueprint(self):
