@@ -26,7 +26,8 @@ from cloudify_types.utils import get_deployment_by_id
 from cloudify_types.component.utils import (
     populate_runtime_with_wf_results)
 from .constants import WORKFLOW_EXECUTION_TIMEOUT
-from .execute_shared_resource_workflow import execute_shared_resource_workflow
+from .execute_shared_resource_workflow import (
+    execute_shared_resource_workflow, execute_workflow_base)
 
 
 def _get_desired_operation_input(key, args):
@@ -89,6 +90,38 @@ def _mark_verified_shared_resource_node(deployment_id):
     ctx.instance.runtime_properties['deployment'] = {'id': deployment_id}
 
 
+def _checkin_resource_consumer(client, deployment_id):
+    deployment = client.deployments.get(deployment_id)
+    type_labels = _get_label_values(deployment.labels, 'csys-obj-type')
+    consumers_list = _get_label_values(deployment.labels, 'csys-consumer-id')
+    ctx.logger.info('Types: %s; Consumers: %s', type_labels, consumers_list)
+
+    if ('on-demand-resource' in type_labels and not consumers_list and
+            deployment.installation_status == 'inactive'):
+        execute_workflow_base(client, 'install', deployment_id)
+
+
+def _checkout_resource_consumer(client, deployment_id):
+    deployment = client.deployments.get(deployment_id)
+    type_labels = _get_label_values(deployment.labels, 'csys-obj-type')
+    consumers_list = _get_label_values(deployment.labels, 'csys-consumer-id')
+    ctx.logger.info('Types: %s; Consumers: %s', type_labels, consumers_list)
+
+    on_demand_uninstall = ('on-demand-resource' in type_labels or
+                           'on-demand-uninstall' in type_labels)
+    if (on_demand_uninstall and not consumers_list and
+            deployment.installation_status == 'active'):
+        execute_workflow_base(client, 'uninstall', deployment_id)
+
+
+def _get_label_values(labels_list, key):
+    values = []
+    for label in labels_list:
+        if label['key'] == key:
+            values.append(label['value'])
+    return values
+
+
 @operation(resumable=True)
 @errors_nonrecoverable
 def connect_deployment(**kwargs):
@@ -111,6 +144,7 @@ def connect_deployment(**kwargs):
             f'SharedResource\'s deployment ID "{deployment_id}" does '
             f'not exist, please verify the given ID.')
     _mark_verified_shared_resource_node(deployment_id)
+    _checkin_resource_consumer(client, deployment_id)
     populate_runtime_with_wf_results(client, deployment_id)
 
     client.inter_deployment_dependencies.create(**_inter_deployment_dependency)
@@ -141,6 +175,7 @@ def disconnect_deployment(**kwargs):
             **_local_dependency_params)
 
     client.inter_deployment_dependencies.delete(**_inter_deployment_dependency)
+    _checkout_resource_consumer(client, deployment_id)
     return True
 
 
