@@ -77,7 +77,7 @@ class BlueprintUploadTest(AgentlessTestCase):
         self.assertRegexpMatches(
             response.json()['message'],
             "failed uploading.* "
-            "Invalid URL '{}': No schema supplied".format(archive_url))
+            "Invalid URL '{}'".format(archive_url))
 
     def test_blueprint_upload_from_url_bad_archive_format(self):
         blueprint_id = 'bp-url-bad-format'
