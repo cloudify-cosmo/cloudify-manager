@@ -18,14 +18,14 @@ from setuptools import setup, find_packages
 
 setup(
     name='cloudify-workflows',
-    version='6.0.1.dev1',
+    version='6.0.1',
     author='Cloudify',
     author_email='cosmo-admin@cloudify.co',
     packages=find_packages(),
     license='LICENSE',
     description='Various Cloudify Workflows',
     install_requires=[
-        'cloudify-common==6.0.1.dev1',
+        'cloudify-common==6.0.1',
         'retrying==1.3.3',
         'cffi>=1.14,<1.15',
         'psycopg2==2.7.4',
