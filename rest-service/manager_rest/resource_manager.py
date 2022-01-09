@@ -1683,7 +1683,9 @@ class ResourceManager(object):
                 # Add deployment to parent's consumers
                 existing_consumer_label = self.sm.list(
                     models.DeploymentLabel,
-                    filters={'key': 'csys-consumer-id', 'value': dep.id}
+                    filters={'key': 'csys-consumer-id',
+                             'value': dep.id,
+                             'deployment': parent}
                 )
                 if not existing_consumer_label:
                     new_label = {'key': 'csys-consumer-id',
