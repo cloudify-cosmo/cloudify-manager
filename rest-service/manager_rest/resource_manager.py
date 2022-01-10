@@ -31,6 +31,7 @@ from cloudify_rest_client.client import CloudifyClient
 from dsl_parser import constants, tasks
 
 from manager_rest import premium_enabled
+from manager_rest.maintenance import get_maintenance_state
 from manager_rest.constants import (DEFAULT_TENANT_NAME,
                                     FILE_SERVER_BLUEPRINTS_FOLDER,
                                     FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
@@ -172,7 +173,8 @@ class ResourceManager(object):
             # then, the execution could've been deleted already
             del execution
 
-        if status in ExecutionState.END_STATES:
+        if status in ExecutionState.END_STATES \
+                and get_maintenance_state() is None:
             self.start_queued_executions()
 
         # If the execution is a deployment update, and the status we're
