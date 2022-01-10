@@ -90,19 +90,17 @@ def _mark_verified_shared_resource_node(deployment_id):
     ctx.instance.runtime_properties['deployment'] = {'id': deployment_id}
 
 
-def _checkin_resource_consumer(client, deployment_id):
-    deployment = client.deployments.get(deployment_id)
+def _checkin_resource_consumer(client, deployment):
     type_labels = _get_label_values(deployment.labels, 'csys-obj-type')
     consumers_list = _get_label_values(deployment.labels, 'csys-consumer-id')
     ctx.logger.info('Types: %s; Consumers: %s', type_labels, consumers_list)
 
     if ('on-demand-resource' in type_labels and not consumers_list and
             deployment.installation_status == 'inactive'):
-        execute_workflow_base(client, 'install', deployment_id)
+        execute_workflow_base(client, 'install', deployment.id)
 
 
-def _checkout_resource_consumer(client, deployment_id):
-    deployment = client.deployments.get(deployment_id)
+def _checkout_resource_consumer(client, deployment):
     type_labels = _get_label_values(deployment.labels, 'csys-obj-type')
     consumers_list = _get_label_values(deployment.labels, 'csys-consumer-id')
     ctx.logger.info('Types: %s; Consumers: %s', type_labels, consumers_list)
@@ -111,7 +109,7 @@ def _checkout_resource_consumer(client, deployment_id):
                            'on-demand-uninstall' in type_labels)
     if (on_demand_uninstall and not consumers_list and
             deployment.installation_status == 'active'):
-        execute_workflow_base(client, 'uninstall', deployment_id)
+        execute_workflow_base(client, 'uninstall', deployment.id)
 
 
 def _get_label_values(labels_list, key):
@@ -144,7 +142,7 @@ def connect_deployment(**kwargs):
             f'SharedResource\'s deployment ID "{deployment_id}" does '
             f'not exist, please verify the given ID.')
     _mark_verified_shared_resource_node(deployment_id)
-    _checkin_resource_consumer(client, deployment_id)
+    _checkin_resource_consumer(client, deployment)
     populate_runtime_with_wf_results(client, deployment_id)
 
     client.inter_deployment_dependencies.create(**_inter_deployment_dependency)
