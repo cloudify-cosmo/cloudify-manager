@@ -2438,6 +2438,12 @@ class ResourceManager(object):
         deployment = execution.deployment
         idds = self._get_blocking_dependencies(
             deployment, skip_component_children=True)
+        # allow uninstall of get-capability dependencies
+        # if the dependent deployment is inactive
+        if execution.workflow_id == 'uninstall':
+            idds = [idd for idd in idds if not (
+                    idd.dependency_creator.endswith('.get_capability') and
+                    idd.source_deployment.installation_status == 'inactive')]
         if not idds:
             return
         formatted_dependencies = '\n'.join(

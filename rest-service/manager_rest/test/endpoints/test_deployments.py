@@ -18,7 +18,9 @@ import os
 import uuid
 from datetime import datetime
 
-from cloudify.models_states import VisibilityState, ExecutionState
+from cloudify.models_states import (VisibilityState,
+                                    ExecutionState,
+                                    DeploymentState)
 from dsl_parser import exceptions as dsl_exceptions
 
 from manager_rest.test import base_test
@@ -409,6 +411,40 @@ class TestValidateExecutionDependencies(base_test.BaseServerTestCase):
         )
         self.rm._verify_dependencies_not_affected(exc, False)  # doesnt throw
 
+    def test_uninstall_capability_dependency(self):
+        # dep2 is using a capability of dep1
+        dep1 = self._deployment(id='dep1')
+        dep2 = self._deployment(id='dep2')
+        models.InterDeploymentDependencies(
+            source_deployment=dep2,
+            target_deployment=dep1,
+            dependency_creator='x.get_capability',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        # uninstall should fail when the dependent is active
+        dep2.installation_status = DeploymentState.ACTIVE
+        exc1 = models.Execution(
+            id='exc1',
+            workflow_id='uninstall',
+            deployment=dep1,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        with self.assertRaises(manager_exceptions.DependentExistsError):
+            self.rm._verify_dependencies_not_affected(exc1, False)
+
+        # uninstall should succeed when the dependent is inactive
+        dep2.installation_status = DeploymentState.INACTIVE
+        exc2 = models.Execution(
+            id='exc2',
+            workflow_id='uninstall',
+            deployment=dep1,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        self.rm._verify_dependencies_not_affected(exc2, False)  # doesnt throw
+
     def test_external_dependency_source(self):
         dep1 = self._deployment(id='dep1')
         models.InterDeploymentDependencies(
@@ -447,7 +483,25 @@ class TestValidateExecutionDependencies(base_test.BaseServerTestCase):
         self.rm._verify_dependencies_not_affected(exc, False)  # doesnt throw
 
 
-class TestLicensedEnvironments(TestValidateExecutionDependencies):
+class TestLicensedEnvironments(base_test.BaseServerTestCase):
+    def setUp(self):
+        super().setUp()
+        self._bp = models.Blueprint(
+            id='bp1',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+
+    def _deployment(self, **kwargs):
+        params = {
+            'blueprint': self._bp,
+            'creator': self.user,
+            'tenant': self.tenant
+        }
+        params.update(kwargs)
+        dep = models.Deployment(**params)
+        return dep
+
     def test_licensed_environments(self):
         dep1 = self._deployment(id='dep1')
         dep2 = self._deployment(id='dep2')
