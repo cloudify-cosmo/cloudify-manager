@@ -320,8 +320,7 @@ class SnapshotRestore(object):
 
     def _create_system_filters(self):
         ctx.logger.info('Creating system filters')
-        if self._snapshot_version < V_6_0_0:
-            utils.run(['/opt/manager/scripts/create_system_filters.py'])
+        utils.run(['/opt/manager/scripts/create_system_filters.py'])
 
     def _update_deployment_statuses(self):
         ctx.logger.info('Updating deployment statuses.')
