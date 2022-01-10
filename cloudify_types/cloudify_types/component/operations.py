@@ -81,7 +81,7 @@ def upload_blueprint(**kwargs):
     blueprint_id = blueprint.get('id') or ctx.instance.id
     blueprint_archive = blueprint.get('blueprint_archive')
     blueprint_file_name = blueprint.get('main_file_name')
-    blueprint_labels = blueprint.get('labels', [])
+    labels = blueprint.get('labels', [])
 
     if 'blueprint' not in ctx.instance.runtime_properties:
         ctx.instance.runtime_properties['blueprint'] = dict()
@@ -92,7 +92,7 @@ def upload_blueprint(**kwargs):
     ctx.instance.runtime_properties['blueprint']['application_file_name'] = \
         blueprint_file_name
     ctx.instance.runtime_properties['blueprint']['labels'] = \
-        blueprint_labels
+        labels
     blueprint_exists = blueprint_id_exists(client, blueprint_id)
 
     if blueprint.get(EXTERNAL_RESOURCE) and not blueprint_exists:
@@ -113,12 +113,12 @@ def upload_blueprint(**kwargs):
     if not blueprint_archive:
         raise NonRecoverableError(
             f'No blueprint_archive supplied, but {EXTERNAL_RESOURCE} is False')
-    if not validate_labels(blueprint_labels):
+    if not validate_labels(labels):
         raise NonRecoverableError(
-            "The provided blueprint labels are not valid. "
+            "The provided labels are not valid. "
             "Labels must be a list of single-entry dicts, "
             "e.g. [{\'foo\': \'bar\'}]. "
-            "This value was provided: %s." % blueprint_labels
+            "This value was provided: %s." % labels
         )
 
     # Check if the ``blueprint_archive`` is not a URL then we need to
@@ -131,7 +131,7 @@ def upload_blueprint(**kwargs):
             blueprint_id=blueprint_id,
             archive_location=blueprint_archive,
             application_file_name=blueprint_file_name,
-            labels=blueprint_labels
+            labels=labels
         )
         wait_for_blueprint_to_upload(blueprint_id, client)
     except CloudifyClientError as ex:
@@ -309,9 +309,6 @@ def create(timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL, **kwargs):
             "e.g. [{\'foo\': \'bar\'}]. "
             "This value was provided: %s." % deployment_labels
         )
-
-    if not any('csys-obj-parent' in item for item in deployment_labels):
-        deployment_labels.append({'csys-obj-parent': ctx.deployment.id})
 
     blueprint = config.get('blueprint', {})
     blueprint_id = blueprint.get('id') or ctx.instance.id

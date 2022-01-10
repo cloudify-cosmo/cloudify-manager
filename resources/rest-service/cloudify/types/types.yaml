@@ -1067,7 +1067,7 @@ data_types:
         required: true
       labels:
         description: >
-          A list of single-entry dicts describing labels to apply to the blueprint.
+          A list of single-entry dicts describing labels to apply to the deployment.
         type: list
         required: false
 
