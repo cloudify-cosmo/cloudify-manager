@@ -81,6 +81,7 @@ def upload_blueprint(**kwargs):
     blueprint_id = blueprint.get('id') or ctx.instance.id
     blueprint_archive = blueprint.get('blueprint_archive')
     blueprint_file_name = blueprint.get('main_file_name')
+    labels = blueprint.get('labels', [])
 
     if 'blueprint' not in ctx.instance.runtime_properties:
         ctx.instance.runtime_properties['blueprint'] = dict()
@@ -90,6 +91,8 @@ def upload_blueprint(**kwargs):
         blueprint_archive
     ctx.instance.runtime_properties['blueprint']['application_file_name'] = \
         blueprint_file_name
+    ctx.instance.runtime_properties['blueprint']['labels'] = \
+        labels
     blueprint_exists = blueprint_id_exists(client, blueprint_id)
 
     if blueprint.get(EXTERNAL_RESOURCE) and not blueprint_exists:
@@ -110,6 +113,13 @@ def upload_blueprint(**kwargs):
     if not blueprint_archive:
         raise NonRecoverableError(
             f'No blueprint_archive supplied, but {EXTERNAL_RESOURCE} is False')
+    if not validate_labels(labels):
+        raise NonRecoverableError(
+            "The provided labels are not valid. "
+            "Labels must be a list of single-entry dicts, "
+            "e.g. [{\'foo\': \'bar\'}]. "
+            "This value was provided: %s." % labels
+        )
 
     # Check if the ``blueprint_archive`` is not a URL then we need to
     # download it and pass the binaries to the client_args
@@ -120,12 +130,21 @@ def upload_blueprint(**kwargs):
         client.blueprints._upload(
             blueprint_id=blueprint_id,
             archive_location=blueprint_archive,
-            application_file_name=blueprint_file_name)
+            application_file_name=blueprint_file_name,
+            labels=labels
+        )
         wait_for_blueprint_to_upload(blueprint_id, client)
     except CloudifyClientError as ex:
         if 'already exists' not in str(ex):
             raise NonRecoverableError(
                 f'Client action "_upload" failed: {ex}.')
+    return True
+
+
+def validate_labels(labels):
+    if not isinstance(labels, list) or not all(
+            isinstance(label, dict) and len(label) == 1 for label in labels):
+        return False
     return True
 
 
@@ -282,6 +301,14 @@ def create(timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL, **kwargs):
     # TODO capabilities are unused?
     # deployment_capabilities = deployment.get('capabilities')
     deployment_auto_suffix = deployment.get('auto_inc_suffix', False)
+    deployment_labels = deployment.get('labels', [])
+    if not validate_labels(deployment_labels):
+        raise NonRecoverableError(
+            "The provided deployment labels are not valid. "
+            "Labels must be a list of single-entry dicts, "
+            "e.g. [{\'foo\': \'bar\'}]. "
+            "This value was provided: %s." % deployment_labels
+        )
 
     blueprint = config.get('blueprint', {})
     blueprint_id = blueprint.get('id') or ctx.instance.id
@@ -291,7 +318,7 @@ def create(timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL, **kwargs):
         _create_deployment_id(deployment_id, deployment_auto_suffix),
         {'blueprint_id': blueprint_id,
          'inputs': deployment_inputs,
-         'labels': [{'csys-obj-parent': ctx.deployment.id}]},
+         'labels': deployment_labels},
     )
     ctx.logger.info('Creating "%s" component deployment', deployment_id)
     _create_inter_deployment_dependency(client, deployment_id)
