@@ -1,4 +1,3 @@
-import json
 import os
 import unittest
 
@@ -14,6 +13,7 @@ from cloudify_system_workflows.deployment_update.step_extractor import (
     _update_topology_order_of_add_node_steps,
     _find_relationship,
 )
+from dsl_parser import tasks
 
 
 class StepExtractorTestCase(unittest.TestCase):
@@ -1388,16 +1388,22 @@ class StepExtractorTestCase(unittest.TestCase):
         ]
 
     def test_all_changes_combined(self):
-        path_before = os.path.join(
-            os.path.dirname(__file__), 'combined_changes_before.json')
-        path_after = os.path.join(
-            os.path.dirname(__file__), 'combined_changes_after.json')
-        with open(path_before) as fp_before, open(path_after) as fp_after:
-            plan_before = json.load(fp_before)
-            plan_after = json.load(fp_after)
-
-        nodes = list(plan_before['nodes'].values())
-        plan_after['nodes'] = list(plan_after['nodes'].values())
+        bp_before = os.path.join(
+            os.path.dirname(__file__), 'combined_changes_before.yaml')
+        bp_after = os.path.join(
+            os.path.dirname(__file__), 'combined_changes_after.yaml')
+        plan_before = tasks.prepare_deployment_plan(
+            tasks.parse_dsl(bp_before, os.path.dirname(bp_before)),
+            None,
+            {},
+        )
+        plan_after = tasks.prepare_deployment_plan(
+            tasks.parse_dsl(bp_after, os.path.dirname(bp_after)),
+            None,
+            {},
+        )
+        nodes = plan_before['nodes']
+        plan_after['nodes'] = plan_after['nodes']
         self.deployment[GROUPS] = plan_before['groups']
         self.deployment[WORKFLOWS] = plan_before['workflows']
         self.deployment[POLICY_TYPES] = plan_before['policy_types']
@@ -1674,16 +1680,6 @@ class StepExtractorTestCase(unittest.TestCase):
                 PLUGIN,
                 'plugins:node16:cda_plugin_for_operations2'),
 
-            # the steps below are intended just to make the test pass.
-            # ideally, they should be removed since they are incorrect
-
-            'modify_node_add_contained_in_relationship':
-                DeploymentUpdateStep(
-                    'modify',
-                    NODE,
-                    'nodes:node8',
-                    supported=False),
-
             'add_cda_operation': DeploymentUpdateStep(
                 'add',
                 OPERATION,
@@ -1696,34 +1692,6 @@ class StepExtractorTestCase(unittest.TestCase):
                 'add',
                 OPERATION,
                 'nodes:node16:operations:added_operation_new_cda_plugin',
-                supported=True),
-
-            'add_ha_operation': DeploymentUpdateStep(
-                'add',
-                OPERATION,
-                'nodes:node17:operations:'
-                'interface_for_plugin_based_operations.'
-                'ha_operation_after',
-                supported=True),
-
-            'add_ha_operation_shortened': DeploymentUpdateStep(
-                'add',
-                OPERATION,
-                'nodes:node17:operations:ha_operation_after',
-                supported=True),
-
-            'remove_ha_operation': DeploymentUpdateStep(
-                'remove',
-                OPERATION,
-                'nodes:node17:operations:'
-                'interface_for_plugin_based_operations.'
-                'ha_operation_before',
-                supported=True),
-
-            'remove_ha_operation_shortened': DeploymentUpdateStep(
-                'remove',
-                OPERATION,
-                'nodes:node17:operations:ha_operation_before',
                 supported=True),
 
             'modify_ha_operation': DeploymentUpdateStep(

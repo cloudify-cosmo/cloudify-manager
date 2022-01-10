@@ -1,0 +1,153 @@
+tosca_definitions_version: 'cloudify_dsl_1_3'
+
+description: description-changed
+
+plugins:
+  plug1:
+    install: false
+    executor: central_deployment_agent
+  new_plugin:
+    install: false
+    executor: central_deployment_agent
+  plugin3_name:
+    executor: host_agent
+    install: true
+    package_name: plugin3_name
+  cda_plugin_for_operations2:
+    executor: central_deployment_agent
+    install: true
+    package_name: cda_plugin_for_operations
+
+node_types:
+  cloudify.nodes.Compute: {}
+  type1: {}
+  type2: {}
+  type3:
+    properties:
+      added_prop:
+        default: 1
+      modified_prop: {}
+
+relationships:
+  cloudify.relationships.depends_on:
+    properties:
+      connection_type:
+        default: all_to_all
+
+  rel_type2:
+    derived_from: cloudify.relationships.depends_on
+
+  rel_type3:
+    derived_from: cloudify.relationships.depends_on
+    properties:
+      added_relationship_prop:
+        default: 1
+      modified_relationship_prop:
+        default: 2
+
+node_templates:
+  node2:
+    type: type1
+
+  node3:
+    type: type2
+
+  node4:
+    type: type3
+    properties:
+      modified_prop: 2
+
+  node5:
+    type: type1
+
+  node6:
+    type: type1
+
+  node7:
+    type: type1
+    relationships:
+      - target: node6
+        type: cloudify.relationships.depends_on
+
+  node8:
+    type: type1
+
+  node9:
+    type: type1
+    relationships:
+      - target: node8
+        type: cloudify.relationships.depends_on
+
+  node10:
+    type: type1
+    relationships:
+      - target: node8
+        type: rel_type2
+
+  node11:
+    type: type1
+    interfaces:
+      interface1:
+        added_operation: {}
+        modified_operation:
+          implementation: plug1.module1.func2
+  node12:
+    type: type1
+    relationships:
+      - target: node11
+        type: cloudify.relationships.depends_on
+        target_interfaces:
+          interface_for_modified_and_added:
+            added_operation: {}
+            modified_operation: plug1.module1.func2
+  node13:
+    type: type1
+    relationships:
+      - target: node12
+        type: rel_type3
+
+  node16:
+    type: cloudify.nodes.Compute
+    interfaces:
+      interface_for_plugin_based_operations:
+        added_operation_new_cda_plugin: cda_plugin_for_operations2.op1
+
+  node18:
+    type: cloudify.nodes.Compute
+    interfaces:
+      interface_for_plugin_based_operations:
+        ha_operation_before: plugin3_name.op1
+
+outputs:
+  added_output:
+    value: 0
+  modified_output:
+    value: 2
+
+workflows:
+  added_workflow_same_plugin:
+    mapping: plug1.module1.wf1
+  added_workflow_new_plugin:
+    mapping: new_plugin.module1.wf1
+  modified_workflow_same_plugin:
+    mapping: plug1.module1.wf2
+  modified_workflow_new_plugin:
+    mapping: new_plugin.module1.wf1
+
+policy_types:
+  added_policy_type:
+    source: source
+  modified_policy_type:
+    source: source2
+
+policy_triggers:
+  added_policy_trigger:
+    source: source
+  modified_policy_trigger:
+    source: source2
+
+groups:
+  added_group:
+    members: [node2]
+  modified_group:
+    members: [node3]

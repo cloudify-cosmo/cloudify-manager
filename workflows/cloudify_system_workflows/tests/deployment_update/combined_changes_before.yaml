@@ -1,0 +1,141 @@
+tosca_definitions_version: 'cloudify_dsl_1_3'
+
+description: description
+
+plugins:
+  plug1:
+    install: false
+    executor: central_deployment_agent
+
+node_types:
+  cloudify.nodes.Compute: {}
+  type1: {}
+  type2: {}
+  type3:
+    properties:
+      removed_prop:
+        default: 1
+      modified_prop: {}
+
+relationships:
+  cloudify.relationships.depends_on:
+    properties:
+      connection_type:
+        default: all_to_all
+
+  rel_type2:
+    derived_from: cloudify.relationships.depends_on
+
+  rel_type3:
+    derived_from: cloudify.relationships.depends_on
+    properties:
+      removed_relationship_prop:
+        default: 1
+      modified_relationship_prop:
+        default: 1
+
+node_templates:
+  node1:
+    type: type1
+
+  node3:
+    type: type1
+
+  node4:
+    type: type3
+    properties:
+      modified_prop: 1
+
+  node5:
+    type: type1
+
+  node6:
+    type: type1
+    relationships:
+      - target: node5
+        type: cloudify.relationships.depends_on
+
+  node7:
+    type: type1
+
+  node8:
+    type: type1
+
+  node9:
+    type: type1
+    relationships:
+      - target: node7
+        type: cloudify.relationships.depends_on
+
+  node10:
+    type: type1
+    relationships:
+      - target: node7
+        type: cloudify.relationships.depends_on
+
+  node11:
+    type: type1
+    interfaces:
+      interface1:
+        removed_operation: {}
+        modified_operation:
+          implementation: plug1.module1.func1
+
+  node12:
+    type: type1
+    relationships:
+      - target: node11
+        type: cloudify.relationships.depends_on
+        target_interfaces:
+          interface_for_modified_and_added:
+            modified_operation: plug1.module1.func1
+        source_interfaces:
+          interface_for_intact_and_removed:
+            removed_operation: {}
+
+  node13:
+    type: type1
+    relationships:
+      - target: node12
+        type: rel_type3
+
+  node16:
+    type: cloudify.nodes.Compute
+
+  node18:
+    type: cloudify.nodes.Compute
+    interfaces:
+      interface_for_plugin_based_operations:
+        ha_operation_before: plug1.op1
+
+outputs:
+  removed_output:
+    value: 0
+  modified_output:
+    value: 1
+
+workflows:
+  removed_workflow:
+    mapping: plug1.module1.wf1
+  modified_workflow_same_plugin:
+    mapping: plug1.module1.wf1
+  modified_workflow_new_plugin:
+    mapping: plug1.module1.wf1
+
+policy_types:
+  removed_policy_type:
+    source: source
+  modified_policy_type:
+    source: source
+
+policy_triggers:
+  removed_policy_trigger:
+    source: source
+  modified_policy_trigger:
+    source: source
+
+groups:
+  removed_group:
+    members: [node1]
+  modified_group:
+    members: [node1]
