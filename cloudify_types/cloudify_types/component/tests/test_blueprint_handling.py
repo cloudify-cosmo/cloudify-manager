@@ -128,3 +128,46 @@ class TestBlueprint(ComponentTestBase):
                 'Blueprint ID "test" does not exist'
             ):
                 upload_blueprint(**self.resource_config)
+
+    def test_upload_blueprint_bad_labels(self):
+        with mock.patch('cloudify.manager.get_rest_client') as mock_client:
+            labels = {'foo': 'bar'}
+            blueprint_params = dict()
+            blueprint_params['blueprint'] = {}
+            blueprint_params['blueprint']['id'] = 'test'
+            blueprint_params['blueprint'][EXTERNAL_RESOURCE] = False
+            blueprint_params['blueprint']['labels'] = labels
+            blueprint_params['blueprint']['blueprint_archive'] = self.archive
+
+            self.resource_config['resource_config'] = blueprint_params
+
+            mock_client.return_value = self.cfy_mock_client
+
+            with self.assertRaises(NonRecoverableError):
+                upload_blueprint(**self.resource_config)
+
+            # Another invalid prop
+            labels = [{'foo': 'bar', 'baz': 'taco'}]
+            blueprint_params['blueprint']['labels'] = labels
+            self.resource_config['resource_config'] = blueprint_params
+            mock_client.return_value = self.cfy_mock_client
+
+            with self.assertRaises(NonRecoverableError):
+                upload_blueprint(**self.resource_config)
+
+    def test_upload_blueprint(self):
+        with mock.patch('cloudify.manager.get_rest_client') as mock_client:
+            labels = [{'foo': 'bar'}]
+            blueprint_params = dict()
+            blueprint_params['blueprint'] = {}
+            blueprint_params['blueprint']['id'] = 'test'
+            blueprint_params['blueprint'][EXTERNAL_RESOURCE] = False
+            blueprint_params['blueprint']['labels'] = labels
+            blueprint_params['blueprint']['blueprint_archive'] = self.archive
+
+            self.resource_config['resource_config'] = blueprint_params
+
+            mock_client.return_value = self.cfy_mock_client
+
+            output = upload_blueprint(**self.resource_config)
+            self.assertTrue(output)

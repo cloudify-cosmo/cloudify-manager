@@ -171,7 +171,8 @@ class TestDeployment(TestDeploymentBase):
                 poll.return_value = True
 
                 output = create(operation='create_deployment',
-                                timeout=MOCK_TIMEOUT)
+                                timeout=MOCK_TIMEOUT,
+                                resource_config={'labels': [{'foo': 'bar'}]})
                 self.assertTrue(output)
 
     def test_create_deployment_failed(self):

@@ -1065,6 +1065,11 @@ data_types:
         type: string
         default: ""
         required: true
+      labels:
+        description: >
+          A list of single-entry dicts describing labels to apply to the deployment.
+        type: list
+        required: false
 
   cloudify.datatypes.ComponentDeployment:
     properties:
@@ -1092,6 +1097,11 @@ data_types:
         description: >
           Optional, will add a suffix to the given deployment ID in the form of an auto incremented index.
         type: boolean
+        required: false
+      labels:
+        description: >
+          A list of single-entry dicts describing labels to apply to the deployment.
+        type: list
         required: false
 
   cloudify.datatypes.Component:
