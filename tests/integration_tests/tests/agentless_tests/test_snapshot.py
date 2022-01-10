@@ -25,6 +25,7 @@ from collections import Counter
 
 from integration_tests.framework import utils
 from integration_tests import AgentlessTestCase
+from integration_tests.tests.utils import get_resource as resource
 
 from cloudify.snapshots import STATES
 from cloudify.models_states import AgentState
@@ -273,6 +274,32 @@ class TestSnapshot(AgentlessTestCase):
 
         assert not self._restore_marker_file_exists()
         self._assert_snapshot_restore_status(is_running=False)
+
+    def test_queued_executions_in_snapshot(self):
+        snapshot_id = "test_snapshot_id"
+
+        basic_blueprint_path = resource('dsl/empty_blueprint.yaml')
+        deployment, _ = self.deploy_application(basic_blueprint_path)
+        exc = self.client.executions.create(
+            deployment.id, 'install', force_status=Execution.QUEUED)
+
+        snapshot_create_execution = self.client.snapshots.create(
+            snapshot_id, False)
+        self.wait_for_execution_to_end(snapshot_create_execution)
+        self.wait_for_execution_to_end(exc)
+
+        self.client.maintenance_mode.activate()
+        self.client.snapshots.restore(
+            snapshot_id, force=True)
+        self.wait_for_snapshot_restore_to_end()
+        self.client.maintenance_mode.deactivate()
+
+        # execution should be started immediately, but let's give a second for
+        # it to percolate through rabbitmq
+        time.sleep(1)
+        exc = self.client.executions.get(exc.id)
+        assert exc.status not in (Execution.PENDING, Execution.QUEUED)
+        self.wait_for_execution_to_end(exc)
 
     def _assert_snapshot_restore_status(self, is_running):
         status_msg = STATES.RUNNING if is_running else STATES.NOT_RUNNING
