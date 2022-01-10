@@ -55,7 +55,6 @@ from .constants import (
     V_4_6_0,
     V_5_0_5,
     V_5_3_0,
-    V_6_0_0,
     SECURITY_FILE_LOCATION,
     SECURITY_FILENAME,
     REST_AUTHORIZATION_CONFIG_PATH,
