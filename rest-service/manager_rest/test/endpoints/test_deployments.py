@@ -495,7 +495,25 @@ class TestValidateExecutionDependencies(base_test.BaseServerTestCase):
         db.session.refresh(deployment)
 
 
-class TestLicensedEnvironments(TestValidateExecutionDependencies):
+class TestLicensedEnvironments(base_test.BaseServerTestCase):
+    def setUp(self):
+        super().setUp()
+        self._bp = models.Blueprint(
+            id='bp1',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+
+    def _deployment(self, **kwargs):
+        params = {
+            'blueprint': self._bp,
+            'creator': self.user,
+            'tenant': self.tenant
+        }
+        params.update(kwargs)
+        dep = models.Deployment(**params)
+        return dep
+
     def test_licensed_environments(self):
         dep1 = self._deployment(id='dep1')
         dep2 = self._deployment(id='dep2')
