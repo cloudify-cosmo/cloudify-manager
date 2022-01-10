@@ -28,20 +28,17 @@ def create(ctx: CloudifyWorkflowContext,
             external_dependencies)
 
 
-def update(ctx: CloudifyWorkflowContext,
-           client: CloudifyClient,
-           deployment_plan: dsl_models.Plan):
+def update(ctx: CloudifyWorkflowContext, deployment_plan: dsl_models.Plan):
     """Update inter-deployment dependencies based on the deployment_plan."""
     local_dependencies, external_dependencies, ext_client = _prepare(
         deployment_plan,
-        client.manager.get_managers(),
+        ctx.get_managers(),
         deployment_plan['nodes'],
         ctx.tenant_name,
         ctx.deployment.id,
     )
 
-    preexisting = client.inter_deployment_dependencies.list(
-        source_deployment_id=ctx.deployment.id)
+    preexisting = ctx.list_idds(source_deployment_id=ctx.deployment.id)
     for entry in preexisting:
         if not entry['dependency_creator'].startswith(
             ('component.', 'sharedresource.')
@@ -60,9 +57,7 @@ def update(ctx: CloudifyWorkflowContext,
         target.append(keep_entry)
 
     if local_dependencies:
-        client.inter_deployment_dependencies.update_all(
-            ctx.deployment.id,
-            local_dependencies)
+        ctx.update_idds(ctx.deployment.id, local_dependencies)
     if external_dependencies:
         ext_client.inter_deployment_dependencies.update_all(
             ctx.deployment.id,
