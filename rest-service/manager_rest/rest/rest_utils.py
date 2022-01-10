@@ -481,6 +481,7 @@ def update_inter_deployment_dependencies(sm, deployment):
                                dependency.source_deployment_id,
                                eval_target_deployment)
 
+    db.session.flush()
     # Add consumer labels for shared resources if needed
     for shared_resource in shared_resources_list:
         _add_consumer_id_label(sm, deployment.id, shared_resource)
