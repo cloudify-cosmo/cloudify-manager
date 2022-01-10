@@ -35,7 +35,11 @@ from manager_rest.utils import create_filter_params_list_description
 
 from manager_rest.resource_manager import get_resource_manager
 from .. import rest_decorators
-from ..rest_utils import verify_and_convert_bool, get_json_and_verify_params
+from ..rest_utils import (
+    verify_and_convert_bool,
+    get_json_and_verify_params,
+    wait_for_execution
+)
 
 
 class DeploymentUpdate(SecuredResource):
@@ -124,6 +128,9 @@ class DeploymentUpdate(SecuredResource):
                     exec_group.executions.append(update_exec)
                 db.session.commit()
         workflow_executor.execute_workflow(messages)
+        if preview:
+            wait_for_execution(sm, dep_up.execution.id)
+            sm.refresh(dep_up)
         return dep_up
 
     @staticmethod
