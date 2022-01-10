@@ -448,6 +448,7 @@ def update_inter_deployment_dependencies(sm, deployment):
         dep for dep in dependencies_list
         if dep.target_deployment_func and not dep.external_target
     ]
+    consumer_labels_to_add = set()
     if not dependencies_list:
         return
     dependents = {
@@ -477,28 +478,31 @@ def update_inter_deployment_dependencies(sm, deployment):
         # Add source to target's consumers (except where target is a component)
         if dependency.target_deployment in components_list:
             continue
-        _add_consumer_id_label(sm,
-                               dependency.source_deployment_id,
-                               eval_target_deployment)
+        consumer_labels_to_add.add((dependency.source_deployment_id,
+                                    eval_target_deployment))
 
-    # Add consumer labels for shared resources if needed
+    # Add consumer labels for shared resources
     for shared_resource in shared_resources_list:
-        _add_consumer_id_label(sm, deployment.id, shared_resource)
+        consumer_labels_to_add.add((deployment.id, shared_resource))
+
+    _add_new_consumer_labels(sm, consumer_labels_to_add)
 
 
-def _add_consumer_id_label(sm, source_deployment_id, target_deployment):
-    existing_consumer_label = sm.list(
-        models.DeploymentLabel,
-        filters={'key': 'csys-consumer-id',
-                 'value': source_deployment_id,
-                 'deployment': target_deployment})
-    if not existing_consumer_label:
-        new_label = {'key': 'csys-consumer-id',
-                     'value': source_deployment_id,
-                     'created_at': datetime.utcnow(),
-                     'creator': current_user,
-                     'deployment': target_deployment}
-        sm.put(models.DeploymentLabel(**new_label))
+def _add_new_consumer_labels(sm, consumer_labels_to_add):
+    existing_consumer_labels = {
+        (lb['value'], lb['deployment']) for lb in
+        sm.list(models.DeploymentLabel, filters={'key': 'csys-consumer-id'})
+    }
+    consumer_labels_to_add -= existing_consumer_labels
+    for label in consumer_labels_to_add:
+        source_id, target = label
+        sm.put(models.DeploymentLabel(
+            key='csys-consumer-id',
+            value=source_id,
+            created_at=datetime.utcnow(),
+            creator=current_user,
+            deployment=target,
+        ))
 
 
 def _evaluate_target_func(target_dep_func, source_dep_id):

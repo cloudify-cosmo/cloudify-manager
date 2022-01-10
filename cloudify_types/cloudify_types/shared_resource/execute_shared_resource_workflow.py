@@ -67,32 +67,37 @@ def execute_shared_resource_workflow(workflow_id,
             f'The "{target_deployment_id}" deployment is not ready for '
             f'workflow execution.')
 
+    execute_workflow_base(
+        http_client, workflow_id, target_deployment_id, parameters,
+        redirect_logs, instance_ctx=ctx.target.instance)
+    return True
+
+
+def execute_workflow_base(client, workflow_id, deployment_id,
+                          parameters=None, redirect_logs=True,
+                          instance_ctx=None):
     ctx.logger.info('Starting execution of "%s" workflow for "%s" '
                     'SharedResource deployment',
-                    workflow_id, target_deployment_id)
-    execution = http_client.executions.start(
-        deployment_id=target_deployment_id,
+                    workflow_id, deployment_id)
+    execution = client.executions.start(
+        deployment_id=deployment_id,
         workflow_id=workflow_id,
         parameters=parameters,
         allow_custom_parameters=True)
     ctx.logger.debug('Execution for "%s" on "%s" deployment response is: %s',
-                     workflow_id, target_deployment_id, execution)
+                     workflow_id, deployment_id, execution)
 
     execution_id = execution['id']
-    if not verify_execution_state(http_client,
+    if not verify_execution_state(client,
                                   execution_id,
-                                  target_deployment_id,
+                                  deployment_id,
                                   redirect_logs,
                                   workflow_state='terminated',
-                                  instance_ctx=ctx.target.instance):
+                                  instance_ctx=instance_ctx):
         raise NonRecoverableError(
-            f'Execution "{execution_id}" failed for '
-            f'"{target_deployment_id}" deployment.')
-
+                f'Execution "{execution_id}" failed for '
+                f'"{deployment_id}" deployment.')
     ctx.logger.info('Execution succeeded for "%s" SharedResource '
                     'deployment of "%s" workflow',
-                    target_deployment_id, workflow_id)
-    populate_runtime_with_wf_results(http_client,
-                                     target_deployment_id,
-                                     ctx.target.instance)
-    return True
+                    deployment_id, workflow_id)
+    populate_runtime_with_wf_results(client, deployment_id, instance_ctx)

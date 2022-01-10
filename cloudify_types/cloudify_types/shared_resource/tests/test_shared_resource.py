@@ -26,7 +26,12 @@ from .base_test_suite import TestSharedResourceBase
 
 class TestSharedResource(TestSharedResourceBase):
 
-    def test_runtime_props_propagation_after_successful_connection(self):
+    @mock.patch('cloudify_types.shared_resource.operations.'
+                '_checkin_resource_consumer')
+    @mock.patch('cloudify_types.shared_resource.operations.'
+                '_checkout_resource_consumer')
+    def test_runtime_props_propagation_after_successful_connection(
+            self, checkout, checkin):
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             self.cfy_mock_client.deployments.capabilities.get = \
                 mock.MagicMock(return_value={
@@ -67,10 +72,15 @@ class TestSharedResource(TestSharedResourceBase):
         self.cfy_mock_client.inter_deployment_dependencies.create \
             .assert_not_called()
 
+    @mock.patch('cloudify_types.shared_resource.operations.'
+                '_checkin_resource_consumer')
+    @mock.patch('cloudify_types.shared_resource.operations.'
+                '_checkout_resource_consumer')
     @mock.patch('cloudify_types.shared_resource.operations'
                 '.get_deployment_by_id',
                 return_value=True)
-    def test_disconnecting_deployment_removes_deployment_dependency(self, _):
+    def test_disconnecting_deployment_removes_deployment_dependency(
+            self, _, checkout, checkin):
         disconnect_deployment()
 
         self.cfy_mock_client.inter_deployment_dependencies.delete \
