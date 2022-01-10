@@ -1681,16 +1681,6 @@ class StepExtractorTestCase(unittest.TestCase):
                 PLUGIN,
                 'plugins:node16:cda_plugin_for_operations2'),
 
-            # the steps below are intended just to make the test pass.
-            # ideally, they should be removed since they are incorrect
-
-            'modify_node_add_contained_in_relationship':
-                DeploymentUpdateStep(
-                    'modify',
-                    NODE,
-                    'nodes:node8',
-                    supported=False),
-
             'add_cda_operation': DeploymentUpdateStep(
                 'add',
                 OPERATION,
@@ -1703,34 +1693,6 @@ class StepExtractorTestCase(unittest.TestCase):
                 'add',
                 OPERATION,
                 'nodes:node16:operations:added_operation_new_cda_plugin',
-                supported=True),
-
-            'add_ha_operation': DeploymentUpdateStep(
-                'add',
-                OPERATION,
-                'nodes:node17:operations:'
-                'interface_for_plugin_based_operations.'
-                'ha_operation_after',
-                supported=True),
-
-            'add_ha_operation_shortened': DeploymentUpdateStep(
-                'add',
-                OPERATION,
-                'nodes:node17:operations:ha_operation_after',
-                supported=True),
-
-            'remove_ha_operation': DeploymentUpdateStep(
-                'remove',
-                OPERATION,
-                'nodes:node17:operations:'
-                'interface_for_plugin_based_operations.'
-                'ha_operation_before',
-                supported=True),
-
-            'remove_ha_operation_shortened': DeploymentUpdateStep(
-                'remove',
-                OPERATION,
-                'nodes:node17:operations:ha_operation_before',
                 supported=True),
 
             'modify_ha_operation': DeploymentUpdateStep(
