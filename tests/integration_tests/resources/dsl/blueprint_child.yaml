@@ -1,0 +1,18 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - cloudify/types/types.yaml
+
+
+inputs:
+  parent_project_deployment_id:
+    default: parent
+
+node_templates:
+
+  parent_project:
+    type: cloudify.nodes.SharedResource
+    properties:
+      resource_config:
+        deployment:
+          id: { get_input: parent_project_deployment_id }
