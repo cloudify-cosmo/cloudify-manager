@@ -14,6 +14,7 @@
 #  * limitations under the License.
 
 import uuid
+from datetime import datetime
 
 from flask import request
 from flask_restful_swagger import swagger
@@ -284,6 +285,8 @@ class DeploymentUpdateId(SecuredResource):
             if params.get('node_instances'):
                 dep_upd.deployment_update_node_instances = \
                     params['node_instances']
+            if dep_upd.state == STATES.SUCCESSFUL and not dep_upd.preview:
+                dep_upd.deployment.updated_at = datetime.utcnow()
             return dep_upd
 
 
