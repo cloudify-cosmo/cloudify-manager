@@ -64,7 +64,7 @@ class TestOnDemandSharedResource(AgentlessTestCase):
     def _validate_consumers_list(self, deployment_id, consumers_list):
         dep_labels = self.client.deployments.get(deployment_id).labels
         consumer_labels = {lb.value for lb in dep_labels
-                           if lb.key == 'csys_consumer_id'}
+                           if lb.key == 'csys-consumer-id'}
         self.assertEqual(consumer_labels, set(consumers_list))
 
     def test_on_demand_shared_resource(self):
