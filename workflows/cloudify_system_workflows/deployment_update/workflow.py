@@ -5,7 +5,6 @@ import typing
 from cloudify.decorators import workflow
 from cloudify.exceptions import NonRecoverableError
 from cloudify.state import workflow_ctx, workflow_parameters
-from cloudify.manager import get_rest_client
 from cloudify.models_states import ExecutionState
 from cloudify.plugins import lifecycle
 
@@ -19,13 +18,12 @@ from .step_extractor import extract_steps
 
 def prepare_plan(*, update_id):
     """Prepare the new deployment plan for a deployment update"""
-    client = get_rest_client()
-    dep_up = client.deployment_updates.get(update_id)
+    dep_up = workflow_ctx.get_deployment_update(update_id)
     if dep_up.new_blueprint_id:
-        bp = client.blueprints.get(dep_up.new_blueprint_id)
+        bp = workflow_ctx.get_blueprint(dep_up.new_blueprint_id)
     else:
-        dep = client.deployments.get(dep_up.deployment_id)
-        bp = client.blueprints.get(dep.blueprint_id)
+        dep = workflow_ctx.get_deployment(dep_up.deployment_id)
+        bp = workflow_ctx.get_blueprint(dep.blueprint_id)
 
     new_inputs = {
         k: v for k, v in dep_up.new_inputs.items()
@@ -33,19 +31,19 @@ def prepare_plan(*, update_id):
     }
     deployment_plan = tasks.prepare_deployment_plan(
         bp.plan,
-        client.secrets.get,
+        workflow_ctx.get_secret,
         new_inputs,
         runtime_only_evaluation=dep_up.runtime_only_evaluation
     )
-    client.deployment_updates.set_attributes(update_id, plan=deployment_plan)
+    workflow_ctx.set_deployment_update_attributes(
+        update_id, plan=deployment_plan)
 
 
 def create_steps(*, update_id):
     """Given a deployment update, extracts the steps for it"""
-    client = get_rest_client()
-    dep_up = client.deployment_updates.get(update_id)
-    deployment = client.deployments.get(dep_up.deployment_id)
-    nodes = client.nodes.list(deployment_id=dep_up.deployment_id)
+    dep_up = workflow_ctx.get_deployment_update(update_id)
+    deployment = workflow_ctx.get_deployment(dep_up.deployment_id)
+    nodes = workflow_ctx.list_nodes(deployment_id=dep_up.deployment_id)
 
     # step-extractor expects workflows in this format - this is the same format
     # as returned by prepare_deployment_plan
@@ -65,7 +63,7 @@ def create_steps(*, update_id):
             workflow_ctx.logger.error('Unsupported step: %s', step)
         raise RuntimeError('Cannot update: unsupported steps found')
 
-    client.deployment_updates.set_attributes(
+    workflow_ctx.set_deployment_update_attributes(
         update_id,
         steps=[step.as_dict() for step in supported_steps]
     )
@@ -117,12 +115,11 @@ def _removed_nodes(steps):
 
 
 def prepare_update_nodes(*, update_id):
-    client = get_rest_client()
-    dep_up = client.deployment_updates.get(update_id)
-    deployment = client.deployments.get(dep_up.deployment_id)
-    old_nodes = client.nodes.list(deployment_id=dep_up.deployment_id)
+    dep_up = workflow_ctx.get_deployment_update(update_id)
+    deployment = workflow_ctx.get_deployment(dep_up.deployment_id)
+    old_nodes = workflow_ctx.list_nodes(deployment_id=dep_up.deployment_id)
     new_nodes = dep_up.deployment_plan['nodes'].copy()
-    old_instances = client.node_instances.list(
+    old_instances = workflow_ctx.list_node_instances(
         deployment_id=dep_up.deployment_id)
     instance_changes = tasks.modify_deployment(
         nodes=new_nodes,
@@ -138,7 +135,7 @@ def prepare_update_nodes(*, update_id):
     }
     instance_changes['relationships_changed'] = \
         _relationship_changed_nodes(dep_up.steps)
-    client.deployment_updates.set_attributes(
+    workflow_ctx.set_deployment_update_attributes(
         update_id,
         nodes=node_changes,
         node_instances=instance_changes
@@ -175,8 +172,7 @@ def update_deployment_nodes(*, update_id):
 
     Create new nodes, update existing modified nodes.
     """
-    client = get_rest_client()
-    dep_up = client.deployment_updates.get(update_id)
+    dep_up = workflow_ctx.get_deployment_update(update_id)
     update_nodes = dep_up['deployment_update_nodes'] or {}
     plan_nodes = dep_up.deployment_plan['nodes']
     create_nodes = []
@@ -207,8 +203,9 @@ def update_deployment_nodes(*, update_id):
             for rel in new_attributes['relationships']:
                 rel.pop('source_interfaces', None)
                 rel.pop('target_interfaces', None)
-        client.nodes.update(
-            dep_up.deployment_id, node_name,
+        workflow_ctx.update_node(
+            dep_up.deployment_id,
+            node_name,
             **new_attributes
         )
     for node_path in update_nodes.get('add', []):
@@ -219,7 +216,7 @@ def update_deployment_nodes(*, update_id):
                 break
         else:
             raise RuntimeError(f'New node {node_name} not found in the plan')
-    client.nodes.create_many(
+    workflow_ctx.create_nodes(
         dep_up.deployment_id,
         create_nodes
     )
@@ -253,8 +250,7 @@ def _relationship_changed_nodes(steps):
 
 
 def update_deployment_node_instances(*, update_id):
-    client = get_rest_client()
-    dep_up = client.deployment_updates.get(update_id)
+    dep_up = workflow_ctx.get_deployment_update(update_id)
 
     update_instances = dep_up['deployment_update_node_instances']
     if update_instances.get('added_and_related'):
@@ -262,7 +258,7 @@ def update_deployment_node_instances(*, update_id):
             ni for ni in update_instances['added_and_related']
             if ni.get('modification') == 'added'
         ]
-        client.node_instances.create_many(
+        workflow_ctx.create_node_instances(
             dep_up.deployment_id,
             added_instances
         )
@@ -272,7 +268,7 @@ def update_deployment_node_instances(*, update_id):
                 continue
             old_rels = _format_instance_relationships(
                 workflow_ctx.get_node_instance(ni['id']))
-            client.node_instances.update(
+            workflow_ctx.update_node_instance(
                 ni['id'],
                 relationships=old_rels + ni['relationships'],
                 force=True
@@ -281,8 +277,7 @@ def update_deployment_node_instances(*, update_id):
 
 def delete_removed_relationships(*, update_id):
     workflow_ctx.refresh_node_instances()
-    client = get_rest_client()
-    dep_up = client.deployment_updates.get(update_id)
+    dep_up = workflow_ctx.get_deployment_update(update_id)
     update_nodes = dep_up['deployment_update_nodes'] or {}
     plan_nodes = {
         node['id']: node for node in dep_up.deployment_plan['nodes']
@@ -297,7 +292,7 @@ def delete_removed_relationships(*, update_id):
             for rel in new_relationships:
                 rel.pop('source_interfaces', None)
                 rel.pop('target_interfaces', None)
-            client.nodes.update(
+            workflow_ctx.update_node(
                 dep_up.deployment_id, node_name,
                 relationships=new_relationships
             )
@@ -311,7 +306,7 @@ def delete_removed_relationships(*, update_id):
                 node['relationships'],
                 _format_instance_relationships(instance)
             )
-            client.node_instances.update(
+            workflow_ctx.update_node_instance(
                 instance.id,
                 relationships=new_rels,
                 force=True
@@ -384,9 +379,8 @@ def _updated_deployment_labels(existing_labels, plan_labels):
 
 
 def set_deployment_attributes(*, update_id):
-    client = get_rest_client()
-    dep_up = client.deployment_updates.get(update_id)
-    deployment = client.deployments.get(dep_up.deployment_id)
+    dep_up = workflow_ctx.get_deployment_update(update_id)
+    deployment = workflow_ctx.get_deployment(dep_up.deployment_id)
     new_attributes = {
         'workflows': dep_up.deployment_plan['workflows'],
         'outputs': dep_up.deployment_plan['outputs'],
@@ -409,16 +403,15 @@ def set_deployment_attributes(*, update_id):
     if new_labels:
         new_attributes['labels'] = new_labels
 
-    client.deployments.set_attributes(
+    workflow_ctx.set_deployment_attributes(
         dep_up.deployment_id,
         **new_attributes
     )
 
 
 def update_inter_deployment_dependencies(*, ctx, update_id):
-    client = get_rest_client()
-    dep_up = client.deployment_updates.get(update_id)
-    idd.update(ctx, client, dep_up.deployment_plan)
+    dep_up = ctx.get_deployment_update(update_id)
+    idd.update(ctx, dep_up.deployment_plan)
 
 
 def _perform_update_graph(ctx, update_id, **kwargs):
@@ -447,18 +440,16 @@ def _perform_update_graph(ctx, update_id, **kwargs):
 
 
 def delete_removed_nodes(*, update_id):
-    client = get_rest_client()
-    dep_up = client.deployment_updates.get(update_id)
+    dep_up = workflow_ctx.get_deployment_update(update_id)
 
     update_nodes = dep_up['deployment_update_nodes'] or {}
     for node_path in update_nodes.get('remove', []):
         node_name = node_path.split(':')[-1]
-        client.nodes.delete(dep_up.deployment_id, node_name)
+        workflow_ctx.delete_node(dep_up.deployment_id, node_name)
 
 
 def update_schedules(*, update_id):
-    client = get_rest_client()
-    dep_up = client.deployment_updates.get(update_id)
+    dep_up = workflow_ctx.get_deployment_update(update_id)
     new_schedules = (
         dep_up.deployment_plan
         .get('deployment_settings', {})
@@ -469,17 +460,17 @@ def update_schedules(*, update_id):
         # because we can't tell if they were added by the user explicitly
         return
     new_schedule_ids = set(new_schedules)
-    old_schedule_ids = {s['id'] for s in client.execution_schedules.list(
+    old_schedule_ids = {s['id'] for s in workflow_ctx.list_execution_schedules(
         deployment_id=dep_up.deployment_id, _include=['id'])}
 
     for changed_id in old_schedule_ids & new_schedule_ids:
         schedule = format_plan_schedule(new_schedules[changed_id].copy())
-        client.execution_schedules.update(
+        workflow_ctx.update_execution_schedule(
             changed_id, dep_up.deployment_id, **schedule)
 
     for added_id in new_schedule_ids - old_schedule_ids:
         schedule = format_plan_schedule(new_schedules[added_id].copy())
-        client.execution_schedules.create(
+        workflow_ctx.create_execution_schedule(
             added_id, dep_up.deployment_id, **schedule)
 
 
@@ -733,7 +724,7 @@ class InstallParameters:
         }
 
 
-def _execute_deployment_update(ctx, client, update_id, install_params):
+def _execute_deployment_update(ctx, update_id, install_params):
     """Do the "install" part of the dep-update.
 
     This installs, uninstalls, and reinstalls the node-instances as
@@ -741,7 +732,7 @@ def _execute_deployment_update(ctx, client, update_id, install_params):
     """
     graph = ctx.graph_mode()
 
-    dep_up = client.deployment_updates.get(update_id)
+    dep_up = workflow_ctx.get_deployment_update(update_id)
 
     if install_params.reduced and not install_params.skip_uninstall:
         _clear_graph(graph)
@@ -776,9 +767,9 @@ def _execute_deployment_update(ctx, client, update_id, install_params):
     )
 
 
-def _execute_custom_workflow(client, dep_up, workflow_id, install_params,
+def _execute_custom_workflow(dep_up, workflow_id, install_params,
                              custom_workflow_timeout=None):
-    execution = client.executions.start(
+    execution = workflow_ctx.start_execution(
         dep_up.deployment_id,
         workflow_id,
         parameters=install_params.as_workflow_parameters(),
@@ -790,7 +781,7 @@ def _execute_custom_workflow(client, dep_up, workflow_id, install_params,
     else:
         deadline = None
     while True:
-        execution = client.executions.get(execution.id)
+        execution = workflow_ctx.get_execution(execution.id)
         if execution.status in ExecutionState.END_STATES:
             if execution.status != ExecutionState.TERMINATED:
                 NonRecoverableError(
@@ -806,7 +797,6 @@ def update_deployment(ctx, *, update_id=None, preview=False,
                       ignore_failure=False,
                       skip_reinstall=False, workflow_id=None,
                       custom_workflow_timeout=None, **kwargs):
-    client = get_rest_client()
     graph = _prepare_update_graph(ctx, update_id, **kwargs)
     graph.execute()
 
@@ -815,19 +805,19 @@ def update_deployment(ctx, *, update_id=None, preview=False,
         graph = _perform_update_graph(ctx, update_id)
         graph.execute()
         ctx.refresh_node_instances()
-        dep_up = client.deployment_updates.get(update_id)
+        dep_up = workflow_ctx.get_deployment_update(update_id)
         install_params = InstallParameters(ctx, workflow_parameters, dep_up)
         if workflow_id:
-            _execute_custom_workflow(client, dep_up, workflow_id,
+            _execute_custom_workflow(dep_up, workflow_id,
                                      install_params, custom_workflow_timeout)
         else:
-            _execute_deployment_update(ctx, client, update_id, install_params)
+            _execute_deployment_update(ctx, update_id, install_params)
 
         _clear_graph(graph)
         graph = _post_update_graph(ctx, update_id)
         graph.execute()
 
-    client.deployment_updates.set_attributes(
+    workflow_ctx.set_deployment_update_attributes(
         update_id,
         state='successful'
     )
