@@ -17,6 +17,7 @@
 from datetime import datetime
 from flask_security import current_user
 
+from manager_rest.resource_manager import get_resource_manager
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.constants import (MAINTENANCE_MODE_ACTIVATED,
@@ -87,7 +88,9 @@ class MaintenanceModeAction(SecuredResource):
         elif maintenance_action == 'deactivate':
             if not state:
                 return {'status': MAINTENANCE_MODE_DEACTIVATED}, 304
-            return remove_maintenance_state()
+            rv = remove_maintenance_state()
+            get_resource_manager().start_queued_executions()
+            return rv
 
         else:
             valid_actions = ['activate', 'deactivate']
