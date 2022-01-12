@@ -1,0 +1,4 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - minimal_types.yaml
