@@ -1,0 +1,10 @@
+plugins:
+  builtin:
+    install: false
+    executor: central_deployment_agent
+workflows:
+  update:
+    mapping: builtin.cloudify_system_workflows.deployment_update.workflow.update_deployment
+    parameters:
+      update_id:
+        default: ''
