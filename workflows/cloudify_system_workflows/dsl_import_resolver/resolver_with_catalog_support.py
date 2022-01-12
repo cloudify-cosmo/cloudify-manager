@@ -193,7 +193,11 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
             (v, parse_version(v)) for v in plugin['versions'].keys()
             if (parse_version(v) in specifier_set
                 and plugin['versions'][v]['yaml']
-                and plugin['versions'][v]['wagons'])
+                and plugin['versions'][v]['wagons']
+                and self.matching_distro_wagon(
+                        plugin['versions'][v]['wagons'],
+                        distribution)
+                )
         ]
         if not matching_versions:
             raise FileNotFoundError()
@@ -202,14 +206,8 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
         matching_plugin_data = plugin['versions'][max_item[0]]
 
         p_yaml = matching_plugin_data['yaml']
-        p_wagons = [x['url'] for x in matching_plugin_data['wagons'] if
-                    x['name'].lower() == distribution or
-                    x['name'].lower().startswith('manylinux')]
-
-        if not p_wagons:
-            raise FileNotFoundError()
-        p_wagon = p_wagons[0]
-
+        p_wagon = self.matching_distro_wagon(matching_plugin_data['wagons'],
+                                             distribution)
         try:
             self._download_file(p_yaml, plugin_target_path)
             self._download_file(p_wagon, plugin_target_path)
@@ -225,6 +223,14 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
         shutil.rmtree(plugin_target_path)
         self.client.plugins.upload(plugin_zip)
         os.remove(plugin_zip)
+
+    @staticmethod
+    def matching_distro_wagon(wagons, distro):
+        matching_wagons = [x['url'] for x in wagons
+                           if x['name'].lower() == distro
+                           or x['name'].lower().startswith('manylinux')]
+        if matching_wagons:
+            return matching_wagons[0]
 
     @staticmethod
     def _find_matching_plugin_versions(plugins, specifier_set,
