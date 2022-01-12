@@ -181,7 +181,7 @@ node_templates:
 
         component_obj_parent_labels = \
             [lb for lb in component_deployment.labels
-             if lb.get('key') == 'sys-obj-parent']
+             if lb.get('key') == 'csys-obj-parent']
         assert len(component_obj_parent_labels) == 1
         assert component_obj_parent_labels[0].get('value') == deployment_id
 
