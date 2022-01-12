@@ -301,7 +301,10 @@ def create(timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL, **kwargs):
     # TODO capabilities are unused?
     # deployment_capabilities = deployment.get('capabilities')
     deployment_auto_suffix = deployment.get('auto_inc_suffix', False)
-    deployment_labels = deployment.get('labels', [])
+    deployment_labels = deployment.get(
+        'labels',
+        [{'csys-obj-parent': ctx.deployment.id}]
+    )
     if not validate_labels(deployment_labels):
         raise NonRecoverableError(
             "The provided deployment labels are not valid. "
