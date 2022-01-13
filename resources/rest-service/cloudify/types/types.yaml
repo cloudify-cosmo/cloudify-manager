@@ -29,6 +29,7 @@ node_types:
         delete: {}
         postdelete: {}
         pull: {}
+        check_drift: {}
       cloudify.interfaces.validation:
         create: {}
         delete: {}
