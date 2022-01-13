@@ -301,10 +301,8 @@ def create(timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL, **kwargs):
     # TODO capabilities are unused?
     # deployment_capabilities = deployment.get('capabilities')
     deployment_auto_suffix = deployment.get('auto_inc_suffix', False)
-    deployment_labels = deployment.get(
-        'labels',
-        [{'csys-obj-parent': ctx.deployment.id}]
-    )
+    deployment_labels = deployment.get('labels', [])
+    _update_labels(deployment_labels, [{'csys-obj-parent': ctx.deployment.id}])
     if not validate_labels(deployment_labels):
         raise NonRecoverableError(
             "The provided deployment labels are not valid. "
@@ -372,6 +370,20 @@ def _delete_runtime_properties():
     ]:
         if property_name in ctx.instance.runtime_properties:
             del ctx.instance.runtime_properties[property_name]
+
+
+def _update_labels(labels: list, new_labels: list):
+    for new_label in new_labels:
+        for key, value in new_label.items():
+            found = False
+            for n, label in enumerate(labels):
+                if key not in label:
+                    continue
+                label[key] = value
+                found = True
+            if not found:
+                labels.append({key: value})
+    return labels
 
 
 @operation(resumable=True)
