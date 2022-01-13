@@ -24,7 +24,8 @@ from ... import utils
 from .. import rest_decorators, rest_utils
 from ..responses_v3 import SecretsListResponse
 from manager_rest.security import SecuredResource
-from manager_rest.security.authorization import authorize
+from manager_rest.security.authorization import (authorize,
+                                                 check_user_action_allowed)
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.manager_exceptions import (ConflictError,
@@ -174,6 +175,7 @@ class SecretsKey(SecuredResource):
         creator_username = request_dict.get('creator')
         if not creator_username:
             return
+        check_user_action_allowed('set_owner', None, True)
         creator = rest_utils.valid_user(request_dict.get('creator'))
         if creator:
             secret.creator = creator
