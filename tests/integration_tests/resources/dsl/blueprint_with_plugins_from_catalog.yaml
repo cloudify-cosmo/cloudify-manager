@@ -2,7 +2,7 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
   - cloudify/types/types.yaml
-  - plugin:cloudify-openstack-plugin?version= <=3.2.16
+  - plugin:cloudify-openstack-plugin?version= <=2.14.24
   - plugin:cloudify-utilities-plugin
   - plugin:cloudify-fabric-plugin?version= >2
 
