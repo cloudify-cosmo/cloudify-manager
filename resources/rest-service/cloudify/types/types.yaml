@@ -464,12 +464,14 @@ relationships:
         postconfigure: {}
         establish: {}
         unlink: {}
+        check_drift: {}
     target_interfaces:
       cloudify.interfaces.relationship_lifecycle:
         preconfigure: {}
         postconfigure: {}
         establish: {}
         unlink: {}
+        check_drift: {}
     properties:
       connection_type:
         default: all_to_all
