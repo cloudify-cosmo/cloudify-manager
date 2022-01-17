@@ -436,6 +436,8 @@ def update_inter_deployment_dependencies(sm, deployment):
         )
         .all()
     )
+    if not dependencies_list:
+        return
     components_list = [
         dep.target_deployment for dep in dependencies_list
         if dep.dependency_creator.startswith('component.')
@@ -449,8 +451,6 @@ def update_inter_deployment_dependencies(sm, deployment):
         if dep.target_deployment_func and not dep.external_target
     ]
     consumer_labels_to_add = set()
-    if not dependencies_list:
-        return
     dependents = {
         d._source_deployment
         for d in deployment.get_dependents(fetch_deployments=False)
