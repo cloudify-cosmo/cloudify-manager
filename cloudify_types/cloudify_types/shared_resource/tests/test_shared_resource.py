@@ -73,6 +73,8 @@ class TestSharedResource(TestSharedResourceBase):
             .assert_not_called()
 
     @mock.patch('cloudify_types.shared_resource.operations.'
+                '_verify_source_deployment_in_consumers')
+    @mock.patch('cloudify_types.shared_resource.operations.'
                 '_checkin_resource_consumer')
     @mock.patch('cloudify_types.shared_resource.operations.'
                 '_checkout_resource_consumer')
@@ -80,7 +82,7 @@ class TestSharedResource(TestSharedResourceBase):
                 '.get_deployment_by_id',
                 return_value=True)
     def test_disconnecting_deployment_removes_deployment_dependency(
-            self, _, checkout, checkin):
+            self, _, checkout, checkin, verify_consumers):
         disconnect_deployment()
 
         self.cfy_mock_client.inter_deployment_dependencies.delete \
