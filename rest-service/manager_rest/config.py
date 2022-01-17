@@ -1,4 +1,3 @@
-import atexit
 import itertools
 import jsonschema
 import os
