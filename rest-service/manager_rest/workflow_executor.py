@@ -46,7 +46,7 @@ def get_amqp_client(tenant=None):
         amqp_port=BROKER_PORT_SSL,
         amqp_vhost=vhost,
         ssl_enabled=True,
-        ssl_cert_path=config.instance.amqp_ca_path
+        ssl_cert_data=config.instance.amqp_ca,
     )
     return client
 

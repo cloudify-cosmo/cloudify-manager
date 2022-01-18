@@ -243,5 +243,5 @@ class AgentsName(SecuredResource):
             host=instance.amqp_management_host,
             username=instance.amqp_username,
             password=instance.amqp_password,
-            verify=instance.amqp_ca_path
+            cadata=instance.amqp_ca
         )

@@ -1,9 +1,7 @@
-import atexit
 import itertools
 import jsonschema
 import os
 import requests
-import tempfile
 import time
 import yaml
 
@@ -93,7 +91,7 @@ class Config(object):
     amqp_management_host = Setting('amqp_management_host', from_db=False)
     amqp_username = Setting('amqp_username', from_db=False)
     amqp_password = Setting('amqp_password', from_db=False)
-    amqp_ca_path = Setting('amqp_ca_path', from_db=False)
+    amqp_ca = Setting('amqp_ca', from_db=False)
 
     # LDAP settings
     ldap_server = Setting('ldap_server')
@@ -229,10 +227,7 @@ class Config(object):
             self.amqp_username = broker.username
             self.amqp_password = broker.password
         if stored_brokers:
-            with tempfile.NamedTemporaryFile(delete=False, mode='w') as f:
-                f.write(stored_brokers[0].ca_cert_value)
-            self.amqp_ca_path = f.name
-            atexit.register(os.unlink, self.amqp_ca_path)
+            self.amqp_ca = stored_brokers[0].ca_cert_value
 
         stored_roles = session.query(
             models.Role.id,
