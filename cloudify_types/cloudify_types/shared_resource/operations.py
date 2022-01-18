@@ -19,6 +19,7 @@ from cloudify_types.utils import errors_nonrecoverable
 from cloudify.constants import SHARED_RESOURCE
 from cloudify.exceptions import NonRecoverableError
 from cloudify_rest_client.client import CloudifyClient
+from cloudify_rest_client.exceptions import CloudifyClientError
 from cloudify.deployment_dependencies import (dependency_creator_generator,
                                               create_deployment_dependency)
 
@@ -107,7 +108,24 @@ def _checkout_resource_consumer(client, deployment_id):
                            'on-demand-uninstall' in type_labels)
     if (on_demand_uninstall and not consumers_list and
             deployment.installation_status == 'active'):
-        execute_workflow_base(client, 'uninstall', deployment_id)
+        try:
+            execute_workflow_base(client, 'uninstall', deployment_id)
+        except CloudifyClientError as e:
+            if e.status_code == 400:
+                ctx.logger.warning(
+                    'Uninstall of shared resource deployment "%s" is blocked. '
+                    'Error: %s.', deployment.id, str(e), ctx.deployment.id)
+            else:
+                raise
+
+
+def _verify_source_deployment_in_consumers(client, deployment_id):
+    deployment = client.deployments.get(deployment_id)
+    consumers_list = _get_label_values(deployment.labels, 'csys-consumer-id')
+    if ctx.deployment.id not in consumers_list:
+        ctx.logger.warning(
+            'Source deployment "%s" is not a consumer of shared resource '
+            'deployment "%s"!', ctx.deployment.id, deployment.id)
 
 
 def _get_label_values(labels_list, key):
@@ -169,6 +187,7 @@ def disconnect_deployment(**kwargs):
         manager.get_rest_client().inter_deployment_dependencies.delete(
             **_local_dependency_params)
 
+    _verify_source_deployment_in_consumers(client, deployment_id)
     client.inter_deployment_dependencies.delete(**_inter_deployment_dependency)
     _checkout_resource_consumer(client, deployment_id)
     return True
