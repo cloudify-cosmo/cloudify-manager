@@ -1026,3 +1026,26 @@ class ExecutionsTest(AgentlessTestCase):
                                                  _all_tenants=True)
         self.assertEqual(1, len(executions))
         return executions[0]
+
+    def test_wait_after_fail(self):
+        dep = self.deploy(resource('dsl/wait_after_fail.yaml'))
+        exc_spec = {
+            'deployment_id': dep.id,
+            'workflow_id': 'execute_operation',
+            'parameters': {'operation': 'foo.bar'},
+        }
+        # without wait_after_fail, the execution fails immediately, and we
+        # never see the slower task actually finish
+        exc = self.client.executions.start(wait_after_fail=0, **exc_spec)
+        with self.assertRaises(RuntimeError):
+            self.wait_for_execution_to_end(exc)
+        evts = self.client.events.list(execution_id=exc.id)
+        assert not any(e['event_type'] == 'task_succeeded' for e in evts)
+
+        # with wait_after_fail, the execution waits for in-flight tasks,
+        # so we do see the slower task finish
+        exc = self.client.executions.start(wait_after_fail=10, **exc_spec)
+        with self.assertRaises(RuntimeError):
+            self.wait_for_execution_to_end(exc)
+        evts = self.client.events.list(execution_id=exc.id)
+        assert any(e['event_type'] == 'task_succeeded' for e in evts)
