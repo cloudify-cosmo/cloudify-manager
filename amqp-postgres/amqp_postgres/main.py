@@ -28,7 +28,7 @@ def _create_connections():
         amqp_vhost='/',
         amqp_port=port,
         ssl_enabled=bool(cfy_config.amqp_ca),
-        ssl_cert_path=cfy_config.amqp_ca,
+        ssl_cert_data=cfy_config.amqp_ca,
         cls=AckingAMQPConnection
     )
     amqp_client.acks_queue = acks_queue
