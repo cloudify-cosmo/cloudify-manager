@@ -104,8 +104,8 @@ def _checkout_resource_consumer(client, deployment_id):
     deployment = client.deployments.get(deployment_id)
     type_labels = _get_label_values(deployment.labels, 'csys-obj-type')
     consumers_list = _get_label_values(deployment.labels, 'csys-consumer-id')
-    on_demand_uninstall = ('on-demand-resource' in type_labels or
-                           'on-demand-uninstall' in type_labels)
+    on_demand_uninstall = ('on-demand-resource' in type_labels and
+                           'on-demand-uninstall-off' not in type_labels)
     if (on_demand_uninstall and not consumers_list and
             deployment.installation_status == 'active'):
         try:
