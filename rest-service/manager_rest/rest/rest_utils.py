@@ -445,6 +445,7 @@ def update_inter_deployment_dependencies(sm, deployment):
     shared_resources_list = [
         dep.target_deployment for dep in dependencies_list
         if dep.dependency_creator.startswith('sharedresource.')
+        and not dep.external_target
     ]
     dependencies_list = [
         dep for dep in dependencies_list
