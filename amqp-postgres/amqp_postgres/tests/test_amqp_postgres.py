@@ -106,7 +106,7 @@ class TestAMQPPostgres(BaseServerTestCase):
             host=instance.amqp_management_host,
             username=instance.amqp_username,
             password=instance.amqp_password,
-            verify=instance.amqp_ca_path
+            cadata=instance.amqp_ca,
         )
 
     def _create_execution(self, execution_id):
