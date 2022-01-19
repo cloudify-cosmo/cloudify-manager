@@ -22,6 +22,7 @@ from flask_security.utils import verify_password, verify_hash
 from cloudify.workflows import tasks
 from cloudify.models_states import ExecutionState
 
+from manager_rest.utils import is_sanity_mode
 from manager_rest.security import user_handler
 from manager_rest.storage import user_datastore
 from manager_rest.security.hash_request_cache import HashVerifyRequestCache
@@ -84,10 +85,11 @@ class Authentication(object):
             # (User + Password), otherwise the counter will be reset on
             # every UI refresh (every 4 sec) and accounts won't be locked.
             user.failed_logins_counter = 0
-            now = datetime.utcnow()
-            if not user.last_login_at:
-                user.first_login_at = now
-            user.last_login_at = now
+            if not is_sanity_mode():
+                now = datetime.utcnow()
+                if not user.last_login_at:
+                    user.first_login_at = now
+                user.last_login_at = now
             user_datastore.commit()
         return user
 
