@@ -77,9 +77,11 @@ def upgrade():
     _add_system_properties_column()
     _add_plugins_labels_and_tags_columns()
     _add_deployment_resource_tags_column()
+    _add_usage_collector_columns()
 
 
 def downgrade():
+    _drop_usage_collector_columns()
     _drop_deployment_resource_tags_column()
     _drop_plugins_labels_and_tags_columns()
     _drop_system_properties_column()
@@ -360,3 +362,53 @@ def _add_deployment_resource_tags_column():
 
 def _drop_deployment_resource_tags_column():
     op.drop_column('deployments', 'resource_tags')
+
+
+def _add_usage_collector_columns():
+    op.add_column('usage_collector', sa.Column('max_deployments',
+                                               sa.Integer(),
+                                               nullable=False))
+    op.add_column('usage_collector', sa.Column('max_blueprints',
+                                               sa.Integer(),
+                                               nullable=False,
+                                               server_default="0"))
+    op.add_column('usage_collector', sa.Column('max_users',
+                                               sa.Integer(),
+                                               nullable=False,
+                                               server_default="0"))
+    op.add_column('usage_collector', sa.Column('max_tenants',
+                                               sa.Integer(),
+                                               nullable=False,
+                                               server_default="0"))
+    op.add_column('usage_collector', sa.Column('total_deployments',
+                                               sa.Integer(),
+                                               nullable=False,
+                                               server_default="0"))
+    op.add_column('usage_collector', sa.Column('total_blueprints',
+                                               sa.Integer(),
+                                               nullable=False,
+                                               server_default="0"))
+    op.add_column('usage_collector', sa.Column('total_executions',
+                                               sa.Integer(),
+                                               nullable=False,
+                                               server_default="0"))
+    op.add_column('usage_collector', sa.Column('total_logins', sa.Integer(),
+                                               sa.Integer(),
+                                               nullable=False,
+                                               server_default="0"))
+    op.add_column('usage_collector', sa.Column('total_logged_in_users',
+                                               sa.Integer(),
+                                               nullable=False,
+                                               server_default="0"))
+
+
+def _drop_usage_collector_columns():
+    op.drop_column('usage_collector', 'total_logged_in_users')
+    op.drop_column('usage_collector', 'total_logins')
+    op.drop_column('usage_collector', 'total_executions')
+    op.drop_column('usage_collector', 'total_blueprints')
+    op.drop_column('usage_collector', 'total_deployments')
+    op.drop_column('usage_collector', 'max_tenants')
+    op.drop_column('usage_collector', 'max_users')
+    op.drop_column('usage_collector', 'max_blueprints')
+    op.drop_column('usage_collector', 'max_deployments')
