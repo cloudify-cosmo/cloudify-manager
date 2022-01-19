@@ -78,9 +78,11 @@ def upgrade():
     _add_plugins_labels_and_tags_columns()
     _add_deployment_resource_tags_column()
     _add_usage_collector_columns()
+    _create_usage_collector_triggers()
 
 
 def downgrade():
+    _drop_usage_collector_triggers()
     _drop_usage_collector_columns()
     _drop_deployment_resource_tags_column()
     _drop_plugins_labels_and_tags_columns()
@@ -367,7 +369,8 @@ def _drop_deployment_resource_tags_column():
 def _add_usage_collector_columns():
     op.add_column('usage_collector', sa.Column('max_deployments',
                                                sa.Integer(),
-                                               nullable=False))
+                                               nullable=False,
+                                               server_default="0"))
     op.add_column('usage_collector', sa.Column('max_blueprints',
                                                sa.Integer(),
                                                nullable=False,
@@ -392,7 +395,7 @@ def _add_usage_collector_columns():
                                                sa.Integer(),
                                                nullable=False,
                                                server_default="0"))
-    op.add_column('usage_collector', sa.Column('total_logins', sa.Integer(),
+    op.add_column('usage_collector', sa.Column('total_logins',
                                                sa.Integer(),
                                                nullable=False,
                                                server_default="0"))
@@ -412,3 +415,115 @@ def _drop_usage_collector_columns():
     op.drop_column('usage_collector', 'max_users')
     op.drop_column('usage_collector', 'max_blueprints')
     op.drop_column('usage_collector', 'max_deployments')
+
+
+def _create_usage_collector_triggers():
+    op.execute("""
+    CREATE FUNCTION increase_deployments_count() RETURNS TRIGGER AS $$
+        DECLARE
+            _count_deployments INTEGER;
+        BEGIN
+            UPDATE usage_collector 
+            SET total_deployments = total_deployments + 1;
+                   
+            SELECT COUNT(*) INTO _count_deployments FROM deployments; 
+            UPDATE usage_collector SET max_deployments = _count_deployments 
+            WHERE _count_deployments > max_deployments;
+            RETURN NULL; 
+        END;
+    $$ LANGUAGE plpgsql;
+    
+    CREATE FUNCTION increase_blueprints_count() RETURNS TRIGGER AS $$
+        DECLARE
+            _count_blueprints INTEGER;
+        BEGIN
+            UPDATE usage_collector SET total_blueprints = total_blueprints + 1;
+                   
+            SELECT COUNT(*) INTO _count_blueprints FROM blueprints; 
+            UPDATE usage_collector SET max_blueprints = _count_blueprints 
+            WHERE _count_blueprints > max_blueprints;
+            RETURN NULL;
+        END;
+    $$ LANGUAGE plpgsql; 
+    
+    CREATE FUNCTION increase_users_max() RETURNS TRIGGER AS $$
+        DECLARE
+            _count_users INTEGER;
+        BEGIN
+            SELECT COUNT(*) INTO _count_users FROM users; 
+            UPDATE usage_collector SET max_users = _count_users 
+            WHERE _count_users > max_users;
+            RETURN NULL;
+        END;
+    $$ LANGUAGE plpgsql; 
+    
+    CREATE FUNCTION increase_tenants_max() RETURNS TRIGGER AS $$
+        DECLARE
+            _count_tenants INTEGER;
+        BEGIN
+            SELECT COUNT(*) INTO _count_tenants FROM tenants; 
+            UPDATE usage_collector SET max_tenants = _count_tenants 
+            WHERE _count_tenants > max_tenants;
+            RETURN NULL;
+        END;
+    $$ LANGUAGE plpgsql; 
+    
+    CREATE FUNCTION increase_executions_total() RETURNS TRIGGER AS $$
+        BEGIN
+            UPDATE usage_collector SET total_executions = total_executions + 1;
+            RETURN NULL;
+        END;
+    $$ LANGUAGE plpgsql; 
+    
+    CREATE FUNCTION increase_logins_total() RETURNS TRIGGER AS $$
+        BEGIN
+            UPDATE usage_collector SET total_logins = total_logins + 1;
+            IF (OLD.last_login_at IS NULL)
+            AND NOT (NEW.last_login_at IS NULL) THEN
+                UPDATE usage_collector 
+                SET total_logged_in_users = total_logged_in_users + 1;
+            END IF;
+            RETURN NULL;
+        END;
+    $$ LANGUAGE plpgsql; 
+
+    CREATE TRIGGER increase_deployments_count 
+    AFTER INSERT ON deployments FOR EACH ROW
+    EXECUTE PROCEDURE increase_deployments_count();
+
+    CREATE TRIGGER increase_blueprints_count 
+    AFTER INSERT ON blueprints FOR EACH ROW
+    EXECUTE PROCEDURE increase_blueprints_count();
+    
+    CREATE TRIGGER increase_users_max 
+    AFTER INSERT ON users FOR EACH ROW
+    EXECUTE PROCEDURE increase_users_max();
+    
+    CREATE TRIGGER increase_tenants_max 
+    AFTER INSERT ON tenants FOR EACH ROW
+    EXECUTE PROCEDURE increase_tenants_max();
+    
+    CREATE TRIGGER increase_executions_total 
+    AFTER INSERT ON executions FOR EACH ROW
+    EXECUTE PROCEDURE increase_executions_total();
+    
+    CREATE TRIGGER increase_logins_total 
+    AFTER UPDATE OF last_login_at ON users FOR EACH ROW
+    EXECUTE PROCEDURE increase_logins_total();
+    """)
+
+
+def _drop_usage_collector_triggers():
+    op.execute("""DROP TRIGGER increase_deployments_count ON deployments;""")
+    op.execute("""DROP TRIGGER increase_blueprints_count ON blueprints;""")
+    op.execute("""DROP TRIGGER increase_users_max ON users;""")
+    op.execute("""DROP TRIGGER increase_tenants_max ON tenants;""")
+    op.execute("""DROP TRIGGER increase_executions_total ON executions;""")
+    op.execute("""DROP TRIGGER increase_logins_total ON users;""")
+
+    op.execute("""DROP FUNCTION increase_deployments_count();""")
+    op.execute("""DROP FUNCTION increase_blueprints_count();""")
+    op.execute("""DROP FUNCTION increase_users_max();""")
+    op.execute("""DROP FUNCTION increase_tenants_max();""")
+    op.execute("""DROP FUNCTION increase_executions_total();""")
+    op.execute("""DROP FUNCTION increase_logins_total();""")
