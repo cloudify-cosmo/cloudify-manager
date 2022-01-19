@@ -625,6 +625,18 @@ workflows:
       node_instance_ids:
         default: []
 
+  check_drift:
+    mapping: default_workflows.cloudify.plugins.workflows.check_drift
+    is_cascading: true
+    parameters:
+      run_by_dependency_order:
+        default: false
+      type_names:
+        default: []
+      node_ids:
+        default: []
+      node_instance_ids:
+        default: []
 
   update:
     mapping: default_workflows.cloudify.plugins.workflows.update
