@@ -212,7 +212,7 @@ node_templates:
           external_resource: true
           id: basic
         deployment:
-          id: component
+          id: component{3}
       plugins:
         cloudify-script-plugin:
           wagon_path: {0}/{1}
@@ -236,7 +236,8 @@ node_templates:
             'https://cloudify-tests-files.s3-eu-west-1.amazonaws.com/plugins',
             'cloudify_script_plugin/1_2/'
             'cloudify_script_plugin-1.2-py27-none-any.wgn',
-            'cloudify_script_plugin/1_2/plugin.yaml'
+            'cloudify_script_plugin/1_2/plugin.yaml',
+            ''
         )
 
         blueprint_path = self.make_yaml_file(main_blueprint)
@@ -264,7 +265,8 @@ node_templates:
             'https://cloudify-tests-files.s3-eu-west-1.amazonaws.com/plugins',
             'cloudify_script_plugin/2_0/'
             'cloudify_script_plugin-2.0-py27-none-any.wgn',
-            'cloudify_script_plugin/2_0/plugin.yaml'
+            'cloudify_script_plugin/2_0/plugin.yaml',
+            ''
         )
         blueprint_path = self.make_yaml_file(main_blueprint)
         self.deploy_application(blueprint_path, deployment_id=deployment_id)
@@ -277,6 +279,41 @@ node_templates:
         self.undeploy_application(deployment_id)
         self.assertEqual(len(self.client.plugins.list()), 1)
         self.client.plugins.delete(mock_id)
+
+    def test_distro_behaviour(self):
+        self.copy_file_to_manager(resource('dsl/plugins'), '/tmp')
+        basic_blueprint_path = resource('dsl/empty_blueprint.yaml')
+        self.client.blueprints.upload(basic_blueprint_path,
+                                      entity_id=self.basic_blueprint_id)
+        wait_for_blueprint_upload(self.basic_blueprint_id, self.client, True)
+
+        centos_dep_ip = 'd{0}'.format(uuid.uuid4())
+        centos_bp = self.test_blueprint.format(
+            '/tmp/plugins/centos_distro',
+            'cloudify_script_plugin-1.3-centos-py27-none-any.wgn',
+            'plugin.yaml',
+            '1'
+        )
+        self.deploy_application(self.make_yaml_file(centos_bp),
+                                deployment_id=centos_dep_ip)
+        plugins_list = self.client.plugins.list()
+        self.assertEqual(len(plugins_list), 1)
+
+        foobar_dep_ip = 'd{0}'.format(uuid.uuid4())
+        foobar_bp = self.test_blueprint.format(
+            '/tmp/plugins/foobar_distro',
+            'cloudify_script_plugin-1.3-foobar-py27-none-any.wgn',
+            'plugin.yaml',
+            '2'
+        )
+        self.deploy_application(self.make_yaml_file(foobar_bp),
+                                deployment_id=foobar_dep_ip)
+        plugins_list = self.client.plugins.list()
+        self.assertEqual(len(plugins_list), 1)
+
+        self.undeploy_application(centos_dep_ip, is_delete_deployment=True)
+        self.undeploy_application(foobar_dep_ip, is_delete_deployment=True)
+        self.assertEqual(len(self.client.plugins.list()), 0)
 
 
 @pytest.mark.usefixtures('cloudmock_plugin')
