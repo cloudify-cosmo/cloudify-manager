@@ -716,6 +716,15 @@ class UsageCollector(SQLModelBase):
     daily_timestamp = db.Column(db.Integer)
     hours_interval = db.Column(db.Integer, nullable=False)
     days_interval = db.Column(db.Integer, nullable=False)
+    max_deployments = db.Column(db.Integer, nullable=False)
+    max_blueprints = db.Column(db.Integer, nullable=False)
+    max_users = db.Column(db.Integer, nullable=False)
+    max_tenants = db.Column(db.Integer, nullable=False)
+    total_deployments = db.Column(db.Integer, nullable=False)
+    total_blueprints = db.Column(db.Integer, nullable=False)
+    total_executions = db.Column(db.Integer, nullable=False)
+    total_logins = db.Column(db.Integer, nullable=False)
+    total_logged_in_users = db.Column(db.Integer, nullable=False)
 
 
 class MaintenanceMode(SQLModelBase):
