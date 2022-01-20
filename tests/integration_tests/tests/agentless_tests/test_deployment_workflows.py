@@ -40,7 +40,7 @@ class TestDeploymentWorkflows(AgentlessTestCase):
         deployment, _ = self.deploy_application(dsl_path)
         deployment_id = deployment.id
         workflows = self.client.deployments.get(deployment_id).workflows
-        self.assertEqual(15, len(workflows))
+        self.assertEqual(16, len(workflows))
         wf_ids = [x.name for x in workflows]
         self.assertIn('uninstall', wf_ids)
         self.assertIn('install', wf_ids)
@@ -54,6 +54,7 @@ class TestDeploymentWorkflows(AgentlessTestCase):
         self.assertIn('stop', wf_ids)
         self.assertIn('restart', wf_ids)
         self.assertIn('check_status', wf_ids)
+        self.assertIn('check_drift', wf_ids)
 
     def test_workflow_parameters_pass_from_blueprint(self):
         dsl_path = resource('dsl/workflow_parameters.yaml')
