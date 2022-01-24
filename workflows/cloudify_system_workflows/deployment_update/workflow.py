@@ -8,7 +8,7 @@ from cloudify.state import workflow_ctx, workflow_parameters
 from cloudify.models_states import ExecutionState
 from cloudify.plugins import lifecycle
 
-from dsl_parser import tasks
+from dsl_parser import constants, tasks
 
 from .. import idd
 from ..deployment_environment import format_plan_schedule
@@ -142,6 +142,54 @@ def prepare_update_nodes(*, update_id):
     )
 
 
+def prepare_plugin_changes(*, update_id):
+    dep_up = workflow_ctx.get_deployment_update(update_id)
+    old_nodes = workflow_ctx.list_nodes(deployment_id=dep_up.deployment_id)
+    old_nodes_by_id = {node.id: node for node in old_nodes}
+    new_nodes = dep_up.deployment_plan['nodes']
+
+    deleted_central_plugins = []
+    deleted_host_plugins = {}
+
+    if dep_up.new_blueprint_id:
+        old_bp = workflow_ctx.get_blueprint(dep_up.old_blueprint_id)
+        old_dep_plugins = old_bp.plan[constants.DEPLOYMENT_PLUGINS_TO_INSTALL]
+        new_dep_plugins = dep_up.deployment_plan[
+            constants.DEPLOYMENT_PLUGINS_TO_INSTALL]
+        old_wf_plugins = old_bp.plan[constants.WORKFLOW_PLUGINS_TO_INSTALL]
+        new_wf_plugins = dep_up.deployment_plan[
+            constants.WORKFLOW_PLUGINS_TO_INSTALL]
+        new_plugins = new_dep_plugins + new_wf_plugins
+        old_plugins = old_dep_plugins + old_wf_plugins
+        for plugin in old_plugins:
+            if plugin[constants.PLUGIN_EXECUTOR_KEY] != \
+                    constants.CENTRAL_DEPLOYMENT_AGENT:
+                continue
+            if plugin not in new_plugins and \
+                    plugin not in deleted_central_plugins:
+                deleted_central_plugins.append(plugin)
+
+    for node in new_nodes:
+        old_node = old_nodes_by_id.get(node['id'])
+        if old_node is None:
+            continue
+        for plugin in old_node.plugins:
+            if plugin not in node['plugins']:
+                deleted_host_plugins.setdefault(node['id'], []).append(plugin)
+
+    node_changes = dep_up['deployment_update_nodes']
+    node_changes['host_plugins_to_uninstall'] = deleted_host_plugins
+    # we store central plugins to uninstall, although we don't currently
+    # actually uninstall them. They can be uninstalled by the user if
+    # explicitly requested, by removing the plugin.
+    node_changes['cda_plugins_to_uninstall'] = deleted_central_plugins
+
+    workflow_ctx.set_deployment_update_attributes(
+        update_id,
+        nodes=node_changes,
+    )
+
+
 def _prepare_update_graph(
         ctx,
         update_id,
@@ -161,6 +209,9 @@ def _prepare_update_graph(
             'update_id': update_id,
         }, total_retries=0),
         ctx.local_task(prepare_update_nodes, kwargs={
+            'update_id': update_id,
+        }, total_retries=0),
+        ctx.local_task(prepare_plugin_changes, kwargs={
             'update_id': update_id,
         }, total_retries=0),
     )
@@ -474,6 +525,24 @@ def update_schedules(*, update_id):
             added_id, dep_up.deployment_id, **schedule)
 
 
+def _get_uninstall_plugins_tasks(ctx, update_id):
+    """Prepare all the plugin uninstall tasks
+
+    Based on the update, find which plugins need to be uninstalled,
+    and prepare tasks to uninstall them, targeted at the host nodes
+    that hold these plugins.
+    """
+    dep_up = workflow_ctx.get_deployment_update(update_id)
+    deleted_host_plugins = dep_up['deployment_update_nodes'].get(
+        'host_plugins_to_uninstall', {})
+    for node_id, deleted_plugins in deleted_host_plugins.items():
+        node = workflow_ctx.get_node(node_id)
+        for instance in node.instances:
+            task = lifecycle.plugins_uninstall_task(instance, deleted_plugins)
+            if task:
+                yield task
+
+
 def _post_update_graph(ctx, update_id, **kwargs):
     """The update part that runs after the interface operations.
 
@@ -493,6 +562,8 @@ def _post_update_graph(ctx, update_id, **kwargs):
             'update_id': update_id,
         }, total_retries=0),
     )
+    for task in _get_uninstall_plugins_tasks(ctx, update_id):
+        seq.add(task)
     return graph
 
 
