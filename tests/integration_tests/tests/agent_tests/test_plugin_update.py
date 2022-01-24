@@ -81,7 +81,6 @@ class TestPluginUpdate(AgentTestWithPlugins):
     blueprint_name_prefix = 'plugin_update_'
     setup_deployment_ids = None
 
-    @pytest.mark.xfail  # RD-3911
     @uploads_mock_plugins
     def test_plugin_update(self):
         self.setup_deployment_id = 'd{0}'.format(uuid.uuid4())
