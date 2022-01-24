@@ -363,7 +363,12 @@ class TestPluginUpdate(AgentTestWithPlugins):
                    for pstate in target_plugin.installation_state)
         for other_plugin in other_plugins:
             assert all(pstate['state'] != 'installed'
-                       for pstate in other_plugin.installation_state)
+                       for pstate in other_plugin.installation_state
+                       # we only uninstall the plugin on agents, so don't
+                       # check manager plugins. Manager plugins are only
+                       # uninstalled when explicitly requested by the user.
+                       # (because they could be used in other deployments)
+                       if pstate.get('manager') is None)
 
     def _upload_blueprints_and_deploy_base(self):
         self.deploy_application(
