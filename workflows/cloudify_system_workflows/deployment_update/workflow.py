@@ -525,6 +525,24 @@ def update_schedules(*, update_id):
             added_id, dep_up.deployment_id, **schedule)
 
 
+def _get_uninstall_plugins_tasks(ctx, update_id):
+    """Prepare all the plugin uninstall tasks
+
+    Based on the update, find which plugins need to be uninstalled,
+    and prepare tasks to uninstall them, targeted at the host nodes
+    that hold these plugins.
+    """
+    dep_up = workflow_ctx.get_deployment_update(update_id)
+    deleted_host_plugins = dep_up['deployment_update_nodes'].get(
+        'host_plugins_to_uninstall', {})
+    for node_id, deleted_plugins in deleted_host_plugins.items():
+        node = workflow_ctx.get_node(node_id)
+        for instance in node.instances:
+            task = lifecycle.plugins_uninstall_task(instance, deleted_plugins)
+            if task:
+                yield task
+
+
 def _post_update_graph(ctx, update_id, **kwargs):
     """The update part that runs after the interface operations.
 
@@ -544,6 +562,8 @@ def _post_update_graph(ctx, update_id, **kwargs):
             'update_id': update_id,
         }, total_retries=0),
     )
+    for task in _get_uninstall_plugins_tasks(ctx, update_id):
+        seq.add(task)
     return graph
 
 
