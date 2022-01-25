@@ -23,7 +23,7 @@ install_requires = [
     'flask-security',
     'flask-login>=0.4.1,<0.5',
     'flask-migrate>2.2,<2.6',
-    'cloudify-common==6.3.0.dev1',
+    'cloudify-common==6.3.0',
     'requests>=2.7.0,<3',
     'gunicorn',
     'pyyaml',
@@ -49,7 +49,7 @@ install_requires = [
 
 setup(
     name='cloudify-rest-service',
-    version='6.3.0.dev1',
+    version='6.3.0',
     author='Cloudify',
     author_email='cosmo-admin@cloudify.co',
     packages=find_packages(
