@@ -134,7 +134,7 @@ class TestSnapshot(AgentlessTestCase):
     def test_v_4_6_0_restore_snapshot_and_restart_services(self):
         snapshot_path = self._get_snapshot('snap_4_6_0_hello_world.zip')
         self._upload_and_restore_snapshot(snapshot_path)
-        self.execute_on_manager('cfy_manager restart --force')
+        self.execute_on_manager('cfy_manager restart')
         self.assertTrue(self._all_services_restarted_properly())
 
     def test_v_5_0_5_restore_snapshot(self):
