@@ -1,7 +1,7 @@
-https://github.com/cloudify-cosmo/cloudify-common/archive/6.3.0-build.zip
-https://github.com/cloudify-cosmo/cloudify-cli/archive/6.3.0-build.zip
+https://github.com/cloudify-cosmo/cloudify-common/archive/master.zip
+https://github.com/cloudify-cosmo/cloudify-cli/archive/master.zip
 https://github.com/cloudify-cosmo/cloudify-diamond-plugin/archive/master.zip
-https://github.com/cloudify-cosmo/cloudify-agent/archive/6.3.0-build.zip
+https://github.com/cloudify-cosmo/cloudify-agent/archive/master.zip
 
 # Manually install:
 # cloudify-manager/workflows
