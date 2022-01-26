@@ -5,7 +5,8 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 from cloudify.deployment_dependencies import create_deployment_dependency
 
 from manager_rest.storage import db, models
-from manager_rest.manager_exceptions import NotFoundError
+from manager_rest.manager_exceptions import NotFoundError, ConflictError
+from manager_rest.rest.rest_utils import update_inter_deployment_dependencies
 
 from manager_rest.test.base_test import BaseServerTestCase
 
@@ -27,14 +28,18 @@ class _DependencyTestUtils(object):
         db.session.add(dep)
         return dep
 
-    def _dependency(self, source, target):
-        db.session.add(models.InterDeploymentDependencies(
-            source_deployment=source,
-            target_deployment=target,
-            tenant=self.tenant,
-            dependency_creator='',
-            creator=self.user
-        ))
+    def _dependency(self, source, target, **kwargs):
+        idd_params = {
+            'source_deployment': source,
+            'target_deployment': target,
+            'tenant': self.tenant,
+            'dependency_creator': '',
+            'creator': self.user,
+        }
+        idd_params.update(kwargs)
+        idd = models.InterDeploymentDependencies(**idd_params)
+        db.session.add(idd)
+        return idd
 
     def _label_dependency(self, source, target):
         db.session.add(models.DeploymentLabelsDependencies(
@@ -388,6 +393,205 @@ class RecalcAncestorsTest(_DependencyTestUtils, BaseServerTestCase):
         db.session.refresh(d3)
         assert d2.sub_services_count == 2
         assert d3.sub_services_count == 3
+
+
+class TestUpdateIDDs(_DependencyTestUtils, BaseServerTestCase):
+    """Tests for update_inter_deployment_dependencies
+
+    Those tests prepare deployments, create dependencies, run the
+    function-under-test, and assert that labels were created, and the IDD
+    was filled in where applicable.
+
+    Normally the IDD for testing needs to have a None target, so that
+    the function can be found based on the target_deployment_func.
+
+    Note: update_inter_deployment_dependencies is going to do actual
+    select calls, bypassing the ORM, so .commit() must be called after
+    the setup phase.
+    """
+
+    def test_no_idds(self):
+        dep = self._deployment()
+        db.session.commit()
+
+        update_inter_deployment_dependencies(self.sm, dep)
+        assert len(dep.labels) == 0
+        assert len(dep.source_of_dependency_in) == 0
+        assert len(dep.target_of_dependency_in) == 0
+
+    def test_preexisting_dependency(self):
+        source = self._deployment(id='source')
+        target = self._deployment(id='target')
+        # the dependency already existed and was set to target, we do nothing
+        self._dependency(source, target)
+
+        db.session.commit()
+
+        update_inter_deployment_dependencies(self.sm, source)
+
+        assert len(source.labels) == 0
+        assert len(source.source_of_dependency_in) == 1
+        assert len(source.target_of_dependency_in) == 0
+
+        assert len(target.labels) == 0
+        assert len(target.source_of_dependency_in) == 0
+        assert len(target.target_of_dependency_in) == 1
+
+    def test_component_dependency(self):
+        source = self._deployment(id='source')
+        target = self._deployment(id='target')
+        self._dependency(
+            source, None, dependency_creator='component.node1',
+            # "target" is a function that evaluates to the string "target".
+            # A very no-op one, but still evaluates, technically!
+            target_deployment_func='target')
+
+        db.session.commit()
+
+        update_inter_deployment_dependencies(self.sm, source)
+
+        assert len(source.labels) == 0
+        assert len(source.source_of_dependency_in) == 1
+        assert len(source.target_of_dependency_in) == 0
+
+        assert len(target.labels) == 0
+        assert len(target.source_of_dependency_in) == 0
+        assert len(target.target_of_dependency_in) == 1
+
+    def test_sharedresource_dependency(self):
+        source = self._deployment(id='source')
+        target = self._deployment(id='target')
+        self._dependency(source, None,
+                         dependency_creator='sharedresource.node1',
+                         target_deployment_func='target')
+        db.session.commit()
+
+        update_inter_deployment_dependencies(self.sm, source)
+
+        assert len(source.labels) == 0
+        assert len(source.source_of_dependency_in) == 1
+        assert len(source.target_of_dependency_in) == 0
+
+        assert len(target.labels) == 1
+        assert len(target.source_of_dependency_in) == 0
+        assert len(target.target_of_dependency_in) == 1
+        label = target.labels[0]
+        assert label.key == 'csys-consumer-id'
+        assert label.value == source.id
+
+    def test_other_dependency(self):
+        source = self._deployment(id='source')
+        target = self._deployment(id='target')
+        self._dependency(source, None, target_deployment_func='target')
+        db.session.commit()
+
+        update_inter_deployment_dependencies(self.sm, source)
+
+        assert len(source.labels) == 0
+        assert len(source.source_of_dependency_in) == 1
+        assert len(source.target_of_dependency_in) == 0
+
+        assert len(target.labels) == 1
+        assert len(target.source_of_dependency_in) == 0
+        assert len(target.target_of_dependency_in) == 1
+
+    def test_func_dependency(self):
+        source = self._deployment(id='source')
+        target = self._deployment(id='target')
+
+        idd = self._dependency(source, None, target_deployment_func='target')
+        db.session.commit()
+
+        update_inter_deployment_dependencies(self.sm, source)
+
+        assert idd.target_deployment == target
+
+        assert len(source.labels) == 0
+        assert len(source.source_of_dependency_in) == 1
+        assert len(source.target_of_dependency_in) == 0
+
+        assert len(target.labels) == 1
+        assert len(target.source_of_dependency_in) == 0
+        assert len(target.target_of_dependency_in) == 1
+        label = target.labels[0]
+        assert label.key == 'csys-consumer-id'
+        assert label.value == source.id
+
+    def test_multiple_levels(self):
+        source = self._deployment(id='source')
+        target = self._deployment(id='target')
+        targets_target = self._deployment(id='targets_target')
+
+        # "target" is a function that evaluates to the string "target". A very
+        # no-op one, but still evaluates, technically!
+        self._dependency(source, None, target_deployment_func='target')
+        self._dependency(target, None, target_deployment_func='targets_target')
+        db.session.commit()
+
+        update_inter_deployment_dependencies(self.sm, source)
+
+        assert len(source.labels) == 0
+        assert len(source.source_of_dependency_in) == 1
+        assert len(source.target_of_dependency_in) == 0
+
+        assert len(target.labels) == 1
+        assert len(target.source_of_dependency_in) == 1
+        assert len(target.target_of_dependency_in) == 1
+        label = target.labels[0]
+        assert label.key == 'csys-consumer-id'
+        assert label.value == source.id
+
+        assert len(targets_target.labels) == 0
+        # still 0 - we need to recalc the next level as well
+        update_inter_deployment_dependencies(self.sm, target)
+
+        assert len(targets_target.labels) == 1
+        assert len(targets_target.source_of_dependency_in) == 0
+        assert len(targets_target.target_of_dependency_in) == 1
+        label = targets_target.labels[0]
+        assert label.key == 'csys-consumer-id'
+        assert label.value == target.id
+
+    def test_self_dependency(self):
+        source = self._deployment(id='source')
+        self._dependency(source, None, target_deployment_func='source')
+        db.session.commit()
+        with self.assertRaises(ConflictError):
+            update_inter_deployment_dependencies(self.sm, source)
+
+    def test_cyclic_dependency(self):
+        dep1 = self._deployment(id='dep1')
+        dep2 = self._deployment(id='dep2')
+        self._dependency(dep1, None, target_deployment_func='dep2')
+        self._dependency(dep2, None, target_deployment_func='dep1')
+        db.session.commit()
+        update_inter_deployment_dependencies(self.sm, dep1)
+        with self.assertRaises(ConflictError):
+            update_inter_deployment_dependencies(self.sm, dep2)
+
+    def test_multilevel_dependency(self):
+        dep1 = self._deployment(id='dep1')
+        dep2 = self._deployment(id='dep2')
+        dep3 = self._deployment(id='dep3')
+        self._dependency(dep1, None, target_deployment_func='dep2')
+        self._dependency(dep2, None, target_deployment_func='dep3')
+        self._dependency(dep3, None, target_deployment_func='dep1')
+        db.session.commit()
+        update_inter_deployment_dependencies(self.sm, dep1)
+        update_inter_deployment_dependencies(self.sm, dep2)
+        with self.assertRaises(ConflictError):
+            update_inter_deployment_dependencies(self.sm, dep3)
+
+    def test_external_target(self):
+        source = self._deployment(id='source')
+        self._dependency(source, None, external_target='external-target')
+        db.session.commit()
+
+        update_inter_deployment_dependencies(self.sm, source)
+
+        assert len(source.labels) == 0
+        assert len(source.source_of_dependency_in) == 1
+        assert len(source.target_of_dependency_in) == 0
 
 
 class InterDeploymentDependenciesTest(BaseServerTestCase):
