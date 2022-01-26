@@ -1,5 +1,4 @@
 import uuid
-import pytest
 
 from cloudify.models_states import DeploymentState
 from cloudify_rest_client.exceptions import CloudifyClientError
