@@ -1,6 +1,4 @@
-from datetime import datetime
-
-from manager_rest.storage import models, user_datastore
+from manager_rest.storage import models
 from manager_rest.test import base_test
 
 
@@ -36,18 +34,6 @@ class TestUsageCollectorTriggers(base_test.BaseServerTestCase):
         usage_metrics = models.UsageCollector.query.first()
         assert usage_metrics.total_executions == 2
 
-    def test_max_users(self):
-        base_max_users = len(self.client.users.list())
-        self.client.users.create('fred', '123456', 'default')
-
-        usage_metrics = models.UsageCollector.query.first()
-        assert usage_metrics.max_users == base_max_users + 1
-
-        self.client.users.create('derf', '123456', 'default')
-        self.client.users.delete('fred')
-        self.client.users.create('claude', '123456', 'default')
-        assert usage_metrics.max_users == base_max_users + 2
-
     def test_max_tenants(self):
         base_max_tenants = len(self.client.tenants.list())
         t1 = self.sm.put(models.Tenant(name='t1'))
@@ -60,26 +46,3 @@ class TestUsageCollectorTriggers(base_test.BaseServerTestCase):
         self.sm.put(models.Tenant(name='t3'))
         usage_metrics = models.UsageCollector.query.first()
         assert usage_metrics.max_tenants == base_max_tenants + 2
-
-    def test_total_logins_and_logged_in_users(self):
-        self.client.users.create('fred', '123456', 'default')
-        self.client.users.create('derf', '123456', 'default')
-
-        usage_metrics = models.UsageCollector.query.first()
-        # we don't want to count logins of the admin to create the above users
-        base_logins = usage_metrics.total_logins
-        base_logged_in_users = usage_metrics.total_logged_in_users
-
-        # simulate user logins
-        self._mock_login_user('fred')
-        self._mock_login_user('fred')
-        self._mock_login_user('derf')
-
-        usage_metrics = models.UsageCollector.query.first()
-        assert usage_metrics.total_logins == base_logins + 3
-        assert usage_metrics.total_logged_in_users == base_logged_in_users + 2
-
-    def _mock_login_user(self, username):
-        user = self.sm.list(models.User, filters={'username': username})[0]
-        user.last_login_at = datetime.now()
-        user_datastore.commit()
