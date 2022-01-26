@@ -82,8 +82,8 @@ def upgrade():
 
 
 def downgrade():
-    # _drop_usage_collector_triggers()
-    # _drop_usage_collector_columns()
+    _drop_usage_collector_triggers()
+    _drop_usage_collector_columns()
     _drop_deployment_resource_tags_column()
     _drop_plugins_labels_and_tags_columns()
     _drop_system_properties_column()
@@ -385,16 +385,13 @@ def _add_usage_collector_columns():
                                                server_default="0"))
     op.add_column('usage_collector', sa.Column('total_deployments',
                                                sa.Integer(),
-                                               nullable=False,
-                                               server_default="0"))
+                                               nullable=False))
     op.add_column('usage_collector', sa.Column('total_blueprints',
                                                sa.Integer(),
-                                               nullable=False,
-                                               server_default="0"))
+                                               nullable=False))
     op.add_column('usage_collector', sa.Column('total_executions',
                                                sa.Integer(),
-                                               nullable=False,
-                                               server_default="0"))
+                                               nullable=False))
     op.add_column('usage_collector', sa.Column('total_logins',
                                                sa.Integer(),
                                                nullable=False,
@@ -403,6 +400,28 @@ def _add_usage_collector_columns():
                                                sa.Integer(),
                                                nullable=False,
                                                server_default="0"))
+
+    uc_table = sa.table(
+        'usage_collector',
+        sa.Column('total_deployments'),
+        sa.Column('total_blueprints'),
+        sa.Column('total_executions'),
+        sa.Column('total_logins'),
+        sa.Column('total_logged_in_users')
+    )
+    op.execute(
+       uc_table.update().values(
+          total_deployments=
+          sa.select([sa.func.count(1)]).select_from(sa.table('deployments'))
+          .scalar_subquery(),
+          total_blueprints=
+          sa.select([sa.func.count(1)]).select_from(sa.table('blueprints'))
+          .scalar_subquery(),
+          total_executions=
+          sa.select([sa.func.count(1)]).select_from(sa.table('executions'))
+          .scalar_subquery(),
+       )
+    )
 
 
 def _drop_usage_collector_columns():
