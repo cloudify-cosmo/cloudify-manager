@@ -485,24 +485,22 @@ def update_inter_deployment_dependencies(sm, deployment):
         # Add source to target's consumers (except where target is a component)
         if dependency.target_deployment in components_list:
             continue
-        consumer_labels_to_add.add((dependency.source_deployment_id,
-                                    dependency.target_deployment))
+        consumer_labels_to_add.add(dependency.target_deployment)
 
     # Add consumer labels for shared resources
     for shared_resource in shared_resources_list:
-        consumer_labels_to_add.add((deployment.id, shared_resource))
+        consumer_labels_to_add.add(shared_resource)
 
-    _add_new_consumer_labels(sm, consumer_labels_to_add)
+    _add_new_consumer_labels(sm, deployment.id, consumer_labels_to_add)
 
 
-def _add_new_consumer_labels(sm, consumer_labels_to_add):
+def _add_new_consumer_labels(sm, source_id, consumer_labels_to_add):
     existing_consumer_labels = {
-        (lb.value, lb.deployment) for lb in
+        lb.deployment for lb in
         sm.list(models.DeploymentLabel, filters={'key': 'csys-consumer-id'})
     }
     consumer_labels_to_add -= existing_consumer_labels
-    for label in consumer_labels_to_add:
-        source_id, target = label
+    for target in consumer_labels_to_add:
         sm.put(models.DeploymentLabel(
             key='csys-consumer-id',
             value=source_id,
