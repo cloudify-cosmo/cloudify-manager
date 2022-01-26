@@ -428,7 +428,7 @@ def update_deployment_dependencies_from_plan(deployment_id,
 
 
 def update_inter_deployment_dependencies(sm, deployment):
-    dependencies_list = (
+    dependencies = (
         db.session.query(models.InterDeploymentDependencies)
         .filter(
             models.InterDeploymentDependencies._source_deployment
@@ -436,20 +436,20 @@ def update_inter_deployment_dependencies(sm, deployment):
         )
         .all()
     )
-    if not dependencies_list:
+    if not dependencies:
         return
     dependents = {
         d._source_deployment
         for d in deployment.get_dependents(fetch_deployments=False)
     } | {deployment._storage_id}
 
-    dependencies_list = [
-        dep for dep in dependencies_list
+    dependencies = {
+        dep for dep in dependencies
         if dep.target_deployment_func or dep.target_deployment
         and not dep.external_target
-    ]
-    new_dependencies = []
-    for dependency in dependencies_list:
+    }
+    new_dependency_deployments = set()
+    for dependency in dependencies:
         eval_target_deployment = _get_deployment_from_target_func(
             sm,
             dependency.target_deployment_func,
@@ -467,30 +467,20 @@ def update_inter_deployment_dependencies(sm, deployment):
             )
         dependency.target_deployment = eval_target_deployment
         sm.update(dependency)
-        new_dependencies.append(dependency)
+        new_dependency_deployments.add(dependency.target_deployment)
 
-    components_list = [
-        dep.target_deployment for dep in dependencies_list
+    components = {
+        dep.target_deployment for dep in dependencies
         if dep.dependency_creator.startswith('component.')
         and dep.target_deployment
-    ]
-    shared_resources_list = [
-        dep.target_deployment for dep in dependencies_list
+    }
+    shared_resources = {
+        dep.target_deployment for dep in dependencies
         if dep.dependency_creator.startswith('sharedresource.')
         and dep.target_deployment
-    ]
-    consumer_labels_to_add = set()
-
-    for dependency in new_dependencies:
-        # Add source to target's consumers (except where target is a component)
-        if dependency.target_deployment in components_list:
-            continue
-        consumer_labels_to_add.add(dependency.target_deployment)
-
-    # Add consumer labels for shared resources
-    for shared_resource in shared_resources_list:
-        consumer_labels_to_add.add(shared_resource)
-
+    }
+    consumer_labels_to_add = (
+        new_dependency_deployments | shared_resources) - components
     _add_new_consumer_labels(sm, deployment.id, consumer_labels_to_add)
 
 
