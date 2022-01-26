@@ -406,8 +406,6 @@ def _add_usage_collector_columns():
         sa.Column('total_deployments'),
         sa.Column('total_blueprints'),
         sa.Column('total_executions'),
-        sa.Column('total_logins'),
-        sa.Column('total_logged_in_users')
     )
     op.execute(
        uc_table.update().values(

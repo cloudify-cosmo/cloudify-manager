@@ -1,4 +1,3 @@
-import os
 from datetime import datetime
 
 from manager_rest.storage import models, user_datastore
@@ -49,7 +48,6 @@ class TestUsageCollectorTriggers(base_test.BaseServerTestCase):
         self.client.users.create('claude', '123456', 'default')
         assert usage_metrics.max_users == base_max_users + 2
 
-
     def test_max_tenants(self):
         base_max_tenants = len(self.client.tenants.list())
         t1 = self.sm.put(models.Tenant(name='t1'))
@@ -59,10 +57,9 @@ class TestUsageCollectorTriggers(base_test.BaseServerTestCase):
 
         self.sm.delete(t1)
         self.sm.delete(t2)
-        t3 = self.sm.put(models.Tenant(name='t3'))
+        self.sm.put(models.Tenant(name='t3'))
         usage_metrics = models.UsageCollector.query.first()
         assert usage_metrics.max_tenants == base_max_tenants + 2
-
 
     def test_total_logins_and_logged_in_users(self):
         self.client.users.create('fred', '123456', 'default')
