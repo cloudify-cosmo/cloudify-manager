@@ -428,26 +428,25 @@ def update_deployment_dependencies_from_plan(deployment_id,
 
 
 def update_inter_deployment_dependencies(sm, deployment):
-    dependencies = (
+    dependencies = {
+        dep for dep in
         db.session.query(models.InterDeploymentDependencies)
         .filter(
             models.InterDeploymentDependencies._source_deployment
             == deployment._storage_id
         )
         .all()
-    )
+        if dep.target_deployment_func or dep.target_deployment
+        and not dep.external_target
+    }
     if not dependencies:
         return
+
     dependents = {
         d._source_deployment
         for d in deployment.get_dependents(fetch_deployments=False)
     } | {deployment._storage_id}
 
-    dependencies = {
-        dep for dep in dependencies
-        if dep.target_deployment_func or dep.target_deployment
-        and not dep.external_target
-    }
     new_dependency_deployments = set()
     for dependency in dependencies:
         eval_target_deployment = _get_deployment_from_target_func(
