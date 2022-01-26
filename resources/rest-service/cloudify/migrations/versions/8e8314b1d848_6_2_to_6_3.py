@@ -82,8 +82,8 @@ def upgrade():
 
 
 def downgrade():
-    _drop_usage_collector_triggers()
-    _drop_usage_collector_columns()
+    # _drop_usage_collector_triggers()
+    # _drop_usage_collector_columns()
     _drop_deployment_resource_tags_column()
     _drop_plugins_labels_and_tags_columns()
     _drop_system_properties_column()
@@ -419,13 +419,10 @@ def _drop_usage_collector_columns():
 
 def _create_usage_collector_triggers():
     op.execute("""
-    CREATE FUNCTION increase_deployments_count() RETURNS TRIGGER AS $$
+    CREATE FUNCTION increase_deployments_max() RETURNS TRIGGER AS $$
         DECLARE
             _count_deployments INTEGER;
         BEGIN
-            UPDATE usage_collector 
-            SET total_deployments = total_deployments + 1;
-                   
             SELECT COUNT(*) INTO _count_deployments FROM deployments; 
             UPDATE usage_collector SET max_deployments = _count_deployments 
             WHERE _count_deployments > max_deployments;
@@ -433,12 +430,10 @@ def _create_usage_collector_triggers():
         END;
     $$ LANGUAGE plpgsql;
     
-    CREATE FUNCTION increase_blueprints_count() RETURNS TRIGGER AS $$
+    CREATE FUNCTION increase_blueprints_max() RETURNS TRIGGER AS $$
         DECLARE
             _count_blueprints INTEGER;
         BEGIN
-            UPDATE usage_collector SET total_blueprints = total_blueprints + 1;
-                   
             SELECT COUNT(*) INTO _count_blueprints FROM blueprints; 
             UPDATE usage_collector SET max_blueprints = _count_blueprints 
             WHERE _count_blueprints > max_blueprints;
@@ -467,6 +462,21 @@ def _create_usage_collector_triggers():
             RETURN NULL;
         END;
     $$ LANGUAGE plpgsql; 
+
+    CREATE FUNCTION increase_deployments_total() RETURNS TRIGGER AS $$
+        BEGIN
+            UPDATE usage_collector
+            SET total_deployments = total_deployments + 1;
+            RETURN NULL;
+        END;
+    $$ LANGUAGE plpgsql;
+
+    CREATE FUNCTION increase_blueprints_total() RETURNS TRIGGER AS $$
+        BEGIN
+            UPDATE usage_collector SET total_blueprints = total_blueprints + 1;
+            RETURN NULL;
+        END;
+    $$ LANGUAGE plpgsql;
     
     CREATE FUNCTION increase_executions_total() RETURNS TRIGGER AS $$
         BEGIN
@@ -487,22 +497,30 @@ def _create_usage_collector_triggers():
         END;
     $$ LANGUAGE plpgsql; 
 
-    CREATE TRIGGER increase_deployments_count 
-    AFTER INSERT ON deployments FOR EACH ROW
-    EXECUTE PROCEDURE increase_deployments_count();
+    CREATE TRIGGER increase_deployments_max
+    AFTER INSERT ON deployments FOR EACH STATEMENT
+    EXECUTE PROCEDURE increase_deployments_max();
 
-    CREATE TRIGGER increase_blueprints_count 
-    AFTER INSERT ON blueprints FOR EACH ROW
-    EXECUTE PROCEDURE increase_blueprints_count();
-    
+    CREATE TRIGGER increase_blueprints_max
+    AFTER INSERT ON blueprints FOR EACH STATEMENT
+    EXECUTE PROCEDURE increase_blueprints_max();
+
     CREATE TRIGGER increase_users_max 
-    AFTER INSERT ON users FOR EACH ROW
+    AFTER INSERT ON users FOR EACH STATEMENT
     EXECUTE PROCEDURE increase_users_max();
-    
+
     CREATE TRIGGER increase_tenants_max 
-    AFTER INSERT ON tenants FOR EACH ROW
+    AFTER INSERT ON tenants FOR EACH STATEMENT
     EXECUTE PROCEDURE increase_tenants_max();
-    
+
+    CREATE TRIGGER increase_deployments_total
+    AFTER INSERT ON deployments FOR EACH ROW
+    EXECUTE PROCEDURE increase_deployments_total();
+
+    CREATE TRIGGER increase_blueprints_total
+    AFTER INSERT ON blueprints FOR EACH ROW
+    EXECUTE PROCEDURE increase_blueprints_total();
+
     CREATE TRIGGER increase_executions_total 
     AFTER INSERT ON executions FOR EACH ROW
     EXECUTE PROCEDURE increase_executions_total();
@@ -514,16 +532,22 @@ def _create_usage_collector_triggers():
 
 
 def _drop_usage_collector_triggers():
-    op.execute("""DROP TRIGGER increase_deployments_count ON deployments;""")
-    op.execute("""DROP TRIGGER increase_blueprints_count ON blueprints;""")
-    op.execute("""DROP TRIGGER increase_users_max ON users;""")
-    op.execute("""DROP TRIGGER increase_tenants_max ON tenants;""")
-    op.execute("""DROP TRIGGER increase_executions_total ON executions;""")
-    op.execute("""DROP TRIGGER increase_logins_total ON users;""")
+    op.execute("""
+    DROP TRIGGER increase_deployments_max ON deployments;
+    DROP TRIGGER increase_blueprints_max ON blueprints;
+    DROP TRIGGER increase_users_max ON users;
+    DROP TRIGGER increase_tenants_max ON tenants;
+    DROP TRIGGER increase_deployments_total ON deployments;
+    DROP TRIGGER increase_blueprints_total ON blueprints;
+    DROP TRIGGER increase_executions_total ON executions;
+    DROP TRIGGER increase_logins_total ON users;
 
-    op.execute("""DROP FUNCTION increase_deployments_count();""")
-    op.execute("""DROP FUNCTION increase_blueprints_count();""")
-    op.execute("""DROP FUNCTION increase_users_max();""")
-    op.execute("""DROP FUNCTION increase_tenants_max();""")
-    op.execute("""DROP FUNCTION increase_executions_total();""")
-    op.execute("""DROP FUNCTION increase_logins_total();""")
+    DROP FUNCTION increase_deployments_max();
+    DROP FUNCTION increase_blueprints_max();
+    DROP FUNCTION increase_users_max();
+    DROP FUNCTION increase_tenants_max();
+    DROP FUNCTION increase_deployments_total();
+    DROP FUNCTION increase_blueprints_total();
+    DROP FUNCTION increase_executions_total();
+    DROP FUNCTION increase_logins_total();
+    """)
