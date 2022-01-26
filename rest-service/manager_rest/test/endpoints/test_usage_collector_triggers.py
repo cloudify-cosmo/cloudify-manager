@@ -3,9 +3,6 @@ from datetime import datetime
 
 from manager_rest.storage import models, user_datastore
 from manager_rest.test import base_test
-from integration_tests.tests.utils import (
-    wait_for_deployment_deletion_to_complete
-)
 
 
 class TestUsageCollectorTriggers(base_test.BaseServerTestCase):
