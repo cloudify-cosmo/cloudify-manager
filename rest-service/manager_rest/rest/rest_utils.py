@@ -438,25 +438,17 @@ def update_inter_deployment_dependencies(sm, deployment):
     )
     if not dependencies_list:
         return
-    components_list = [
-        dep.target_deployment for dep in dependencies_list
-        if dep.dependency_creator.startswith('component.')
-    ]
-    shared_resources_list = [
-        dep.target_deployment for dep in dependencies_list
-        if dep.dependency_creator.startswith('sharedresource.')
-        and not dep.external_target
-    ]
-    dependencies_list = [
-        dep for dep in dependencies_list
-        if dep.target_deployment_func and not dep.external_target
-    ]
-    consumer_labels_to_add = set()
     dependents = {
         d._source_deployment
         for d in deployment.get_dependents(fetch_deployments=False)
     } | {deployment._storage_id}
 
+    dependencies_list = [
+        dep for dep in dependencies_list
+        if dep.target_deployment_func or dep.target_deployment
+        and not dep.external_target
+    ]
+    new_dependencies = []
     for dependency in dependencies_list:
         eval_target_deployment = _get_deployment_from_target_func(
             sm,
@@ -475,12 +467,26 @@ def update_inter_deployment_dependencies(sm, deployment):
             )
         dependency.target_deployment = eval_target_deployment
         sm.update(dependency)
+        new_dependencies.append(dependency)
 
+    components_list = [
+        dep.target_deployment for dep in dependencies_list
+        if dep.dependency_creator.startswith('component.')
+        and dep.target_deployment
+    ]
+    shared_resources_list = [
+        dep.target_deployment for dep in dependencies_list
+        if dep.dependency_creator.startswith('sharedresource.')
+        and dep.target_deployment
+    ]
+    consumer_labels_to_add = set()
+
+    for dependency in new_dependencies:
         # Add source to target's consumers (except where target is a component)
         if dependency.target_deployment in components_list:
             continue
         consumer_labels_to_add.add((dependency.source_deployment_id,
-                                    eval_target_deployment))
+                                    dependency.target_deployment))
 
     # Add consumer labels for shared resources
     for shared_resource in shared_resources_list:

@@ -438,11 +438,6 @@ class TestUpdateIDDs(_DependencyTestUtils, BaseServerTestCase):
         assert len(target.source_of_dependency_in) == 0
         assert len(target.target_of_dependency_in) == 1
 
-    # this fails because update_idds prepares its `components_list`
-    # before the IDDs are actually filled in, and so it ends up with a
-    # None target deployment id, because the target deployment will only be
-    # figured out based on target_deployment_func later
-    @pytest.mark.xfail
     def test_component_dependency(self):
         source = self._deployment(id='source')
         target = self._deployment(id='target')
@@ -464,8 +459,6 @@ class TestUpdateIDDs(_DependencyTestUtils, BaseServerTestCase):
         assert len(target.source_of_dependency_in) == 0
         assert len(target.target_of_dependency_in) == 1
 
-    # this fails for the same reason as test_component_dependency
-    @pytest.mark.xfail
     def test_sharedresource_dependency(self):
         source = self._deployment(id='source')
         target = self._deployment(id='target')
