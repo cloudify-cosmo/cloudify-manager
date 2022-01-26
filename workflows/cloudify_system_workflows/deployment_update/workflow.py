@@ -525,6 +525,30 @@ def update_schedules(*, update_id):
             added_id, dep_up.deployment_id, **schedule)
 
 
+def update_operations(*, update_id):
+    dep_up = workflow_ctx.get_deployment_update(update_id)
+    workflow_ctx._update_operation_inputs()
+    for step in dep_up.steps:
+        if step.get('entity_type') != 'operation':
+            continue
+        parts = step['entity_id'].split(':')
+        if len(parts) == 4:
+            # eg: nodes:node2:operations:cloudify.interfaces.lifecycle.start
+            _, node_id, _, op_name = parts
+            workflow_ctx._update_operation_inputs(
+                deployment_id=dep_up.deployment_id,
+                node_id=node_id, operation=op_name)
+        elif len(parts) == 6:
+            # eg: nodes:node2:relationships:[0]:target_operations:
+            #     cloudify.interfaces.relationship_lifecycle.establish
+            _, node_id, _, rel_index, source_or_target, op_name = parts
+            rel_index = int(rel_index.strip('[]'))
+            workflow_ctx._update_operation_inputs(
+                deployment_id=dep_up.deployment_id,
+                node_id=node_id, operation=op_name, key=source_or_target,
+                rel_index=rel_index)
+
+
 def _get_uninstall_plugins_tasks(ctx, update_id):
     """Prepare all the plugin uninstall tasks
 
@@ -559,6 +583,9 @@ def _post_update_graph(ctx, update_id, **kwargs):
             'update_id': update_id,
         }, total_retries=0),
         ctx.local_task(update_schedules, kwargs={
+            'update_id': update_id,
+        }, total_retries=0),
+        ctx.local_task(update_operations, kwargs={
             'update_id': update_id,
         }, total_retries=0),
     )
