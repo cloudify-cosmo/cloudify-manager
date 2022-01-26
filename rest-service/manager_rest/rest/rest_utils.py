@@ -497,7 +497,11 @@ def update_inter_deployment_dependencies(sm, deployment):
 def _add_new_consumer_labels(sm, source_id, consumer_labels_to_add):
     existing_consumer_labels = {
         lb.deployment for lb in
-        sm.list(models.DeploymentLabel, filters={'key': 'csys-consumer-id'})
+        models.DeploymentLabel.query
+        .filter(models.DeploymentLabel.key == 'csys-consumer-id')
+        .filter(models.DeploymentLabel.value == source_id)
+        .distinct(models.DeploymentLabel._labeled_model_fk)
+        .all()
     }
     consumer_labels_to_add -= existing_consumer_labels
     for target in consumer_labels_to_add:
