@@ -111,6 +111,7 @@ class DeploymentUpdate(SecuredResource):
                 deployment=deployment,
                 workflow_id='update',
                 parameters=execution_args,
+                allow_custom_parameters=True,
             )
             sm.put(update_exec)
             dep_up.execution = update_exec
