@@ -1112,7 +1112,7 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             'csys_update_deployment':
                 'cloudify_system_workflows.deployment_environment.'
                 'update_deployment',
-            'csys_new_deployment_update':
+            'update':
                 'cloudify_system_workflows.deployment_update.workflow.'
                 'update_deployment',
         }.get(wf_id)
