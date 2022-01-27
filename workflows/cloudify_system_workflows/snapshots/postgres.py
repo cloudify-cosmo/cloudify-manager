@@ -540,7 +540,11 @@ class Postgres(object):
                 pg_catalog.pg_class
                 on pg_catalog.pg_trigger.tgrelid = pg_catalog.pg_class.oid
             where
-                pg_catalog.pg_trigger.tgname like 'audit_%'
+                pg_catalog.pg_trigger.tgname like 'audit_%' 
+            or 
+                pg_catalog.pg_trigger.tgname LIKE '%_total'
+            or 
+                pg_catalog.pg_trigger.tgname LIKE '%_max'
         """)
         action = 'disable' if disable else 'enable'
         return [
