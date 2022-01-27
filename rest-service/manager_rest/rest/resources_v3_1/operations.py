@@ -99,10 +99,10 @@ class Operations(SecuredResource):
             rel = node.relationships[rel_index]
             if key == 'target_operations':
                 node_id = rel['target_id']
-            operation = rel[key][operation_name]
+            operation = rel[key].get(operation_name, {})
         else:
-            operation = node.operations[operation_name]
-        return node_id, operation['inputs']
+            operation = node.operations.get(operation_name, {})
+        return node_id, operation.get('inputs')
 
     def _find_resumable_ops(self, sm, deployment, node_id, operation_name):
         executions = sm.list(models.Execution, filters={
