@@ -385,13 +385,16 @@ def _add_usage_collector_columns():
                                                server_default="0"))
     op.add_column('usage_collector', sa.Column('total_deployments',
                                                sa.Integer(),
-                                               nullable=False))
+                                               nullable=False,
+                                               server_default="0"))
     op.add_column('usage_collector', sa.Column('total_blueprints',
                                                sa.Integer(),
-                                               nullable=False))
+                                               nullable=False,
+                                               server_default="0"))
     op.add_column('usage_collector', sa.Column('total_executions',
                                                sa.Integer(),
-                                               nullable=False))
+                                               nullable=False,
+                                               server_default="0"))
     op.add_column('usage_collector', sa.Column('total_logins',
                                                sa.Integer(),
                                                nullable=False,
