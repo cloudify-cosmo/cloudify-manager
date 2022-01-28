@@ -289,8 +289,6 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
         workflows = [e['workflow_id'] for e in
                      self.client.executions.list(deployment_id=deployment.id,
                                                  _include=['workflow_id'])]
-
-        self.assertNotIn('update', workflows)
         self.assertIn('custom_workflow', workflows)
 
     def _test_skip_install(self, skip):
@@ -554,3 +552,17 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
         assert {s['id'] for s in schedules} == {'s1', 's2', 's3'}
         modified_sched = next(s for s in schedules if s['id'] == 's1')
         assert modified_sched['next_occurrence'].startswith('3535')
+
+    def test_old_workflow(self):
+        # the blueprint contains a 6.2-era update workflow definition
+        deployment, modified_bp_path = \
+            self._deploy_and_get_modified_bp_path('old_workflow')
+
+        assert deployment['description'] == 'old description'
+
+        self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
+        self._do_update(deployment.id, BLUEPRINT_ID)
+
+        deployment = self.client.deployments.get(deployment.id)
+        assert deployment['description'] == 'new description'
