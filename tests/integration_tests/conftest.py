@@ -92,7 +92,12 @@ sources = [
 sources_static = [
     (
         'cloudify-manager/resources/rest-service/cloudify/migrations',
-        ['/opt/manager/resources/cloudify/migrations']),
+        ['/opt/manager/resources/cloudify/migrations']
+    ),
+    (
+        'cloudify-manager/resources/rest-service/cloudify/types/types.yaml',
+        ['/opt/manager/resources/cloudify/types/types.yaml']
+    ),
 ]
 
 
