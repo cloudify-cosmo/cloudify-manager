@@ -97,11 +97,10 @@ def upload_blueprint(**kwargs):
 
     if blueprint.get(EXTERNAL_RESOURCE) and not blueprint_exists:
         raise NonRecoverableError(
-            'Blueprint ID \"{0}\" does not exist, '
-            'but {1} is {2}.'.format(
-                blueprint_id,
-                EXTERNAL_RESOURCE,
-                blueprint.get(EXTERNAL_RESOURCE)))
+            f'Blueprint ID "{blueprint_id}" does not exist '
+            f'on tenant "{ctx.tenant_name}", but {EXTERNAL_RESOURCE} '
+            f'is {blueprint.get(EXTERNAL_RESOURCE)}.'
+        )
     elif blueprint.get(EXTERNAL_RESOURCE) and blueprint_exists:
         ctx.logger.info("Using external blueprint.")
         return True

@@ -147,7 +147,7 @@ def connect_deployment(**kwargs):
         _get_idd(deployment_id, is_external_host, kwargs)
 
     ctx.logger.info('Validating that "%s" SharedResource\'s deployment '
-                    'exists...', deployment_id)
+                    'exists on tenant "%s"...', deployment_id, ctx.tenant_name)
     if is_external_host:
         manager.get_rest_client().inter_deployment_dependencies.create(
             **_local_dependency_params)
@@ -156,7 +156,8 @@ def connect_deployment(**kwargs):
     if not deployment:
         raise NonRecoverableError(
             f'SharedResource\'s deployment ID "{deployment_id}" does '
-            f'not exist, please verify the given ID.')
+            f'not exist on tenant "{ctx.tenant_name}", '
+            f'please verify the given ID.')
     _mark_verified_shared_resource_node(deployment_id)
     populate_runtime_with_wf_results(client, deployment_id)
     _checkin_resource_consumer(client, deployment_id)
