@@ -224,6 +224,21 @@ class FunctionEvaluationStorage(object):
         raise FunctionsEvaluationError('Cannot retrieve this entity-property '
                                        f'pair: {entity}-{prop}')
 
+    def get_consumers(self, prop):
+        deployment = self.sm.get(Deployment, self._deployment_id)
+        consumers_list = [lb.value for lb in deployment.labels
+                          if lb.key == 'csys-consumer-id']
+        if prop == 'ids':
+            return consumers_list
+        if prop == 'count':
+            return len(consumers_list)
+        if prop == 'names':
+            consumer_deployments = self.sm.list(
+                Deployment, filters={'id': consumers_list})
+            return [d.display_name for d in consumer_deployments]
+        raise FunctionsEvaluationError(
+            f'get_consumers has no property {prop}')
+
     def _normalize_group_cap_element_id(self, element_ids):
         get_with_ids = False
         if not isinstance(element_ids, list):
