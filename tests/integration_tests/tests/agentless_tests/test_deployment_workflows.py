@@ -40,7 +40,7 @@ class TestDeploymentWorkflows(AgentlessTestCase):
         deployment, _ = self.deploy_application(dsl_path)
         deployment_id = deployment.id
         workflows = self.client.deployments.get(deployment_id).workflows
-        self.assertEqual(16, len(workflows))
+        self.assertEqual(15, len(workflows))
         wf_ids = [x.name for x in workflows]
         self.assertIn('uninstall', wf_ids)
         self.assertIn('install', wf_ids)
@@ -49,7 +49,6 @@ class TestDeploymentWorkflows(AgentlessTestCase):
         self.assertIn('scale', wf_ids)
         self.assertIn('heal', wf_ids)
         self.assertIn('install_new_agents', wf_ids)
-        self.assertIn('update', wf_ids)
         self.assertIn('start', wf_ids)
         self.assertIn('stop', wf_ids)
         self.assertIn('restart', wf_ids)
