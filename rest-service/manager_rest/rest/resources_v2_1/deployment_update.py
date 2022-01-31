@@ -315,12 +315,11 @@ class DeploymentUpdates(SecuredResource):
             search=None,
             **kwargs):
         """List deployment updates"""
-        deployment_updates = \
-            get_deployment_updates_manager().list_deployment_updates(
-                include=_include,
-                filters=filters,
-                pagination=pagination,
-                sort=sort,
-                substr_filters=search
-            )
-        return deployment_updates
+        return get_storage_manager().list(
+            models.DeploymentUpdate,
+            include=_include,
+            filters=filters,
+            pagination=pagination,
+            sort=sort,
+            substr_filters=search,
+        )
