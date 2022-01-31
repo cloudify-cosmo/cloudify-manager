@@ -548,7 +548,8 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                          created_at=None,
                          plugin=wf.get('plugin', ''),
                          operation=wf.get('operation', ''),
-                         parameters=wf.get('parameters', dict()))
+                         parameters=wf.get('parameters', dict()),
+                         is_cascading=wf.get('is_cascading', False))
                 for wf_name, wf in deployment_workflows.items()]
 
     @classmethod
