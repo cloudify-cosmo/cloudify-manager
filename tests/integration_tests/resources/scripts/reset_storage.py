@@ -41,11 +41,16 @@ AUTH_TOKEN_LOCATION = '/opt/mgmtworker/work/admin_token'
 
 
 def setup_amqp_manager():
+    kwargs = {}
+    if config.instance.amqp_ca:
+        kwargs['cadata'] = config.instance.amqp_ca
+    else:
+        kwargs['verify'] = DEFAULT_CA_CERT
     amqp_manager = AMQPManager(
         host=config.instance.amqp_management_host or "localhost",
         username=config.instance.amqp_username or "cloudify",
         password=config.instance.amqp_password or "c10udify",
-        verify=config.instance.amqp_ca_path or DEFAULT_CA_CERT,
+        **kwargs,
     )
     return amqp_manager
 

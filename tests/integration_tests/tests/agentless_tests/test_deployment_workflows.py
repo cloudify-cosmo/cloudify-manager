@@ -49,11 +49,11 @@ class TestDeploymentWorkflows(AgentlessTestCase):
         self.assertIn('scale', wf_ids)
         self.assertIn('heal', wf_ids)
         self.assertIn('install_new_agents', wf_ids)
-        self.assertIn('update', wf_ids)
         self.assertIn('start', wf_ids)
         self.assertIn('stop', wf_ids)
         self.assertIn('restart', wf_ids)
         self.assertIn('check_status', wf_ids)
+        self.assertIn('check_drift', wf_ids)
 
     def test_workflow_parameters_pass_from_blueprint(self):
         dsl_path = resource('dsl/workflow_parameters.yaml')

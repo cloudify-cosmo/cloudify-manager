@@ -20,6 +20,7 @@ import zipfile
 import tempfile
 import requests
 import shutil
+from retrying import retry
 from contextlib import closing
 
 from packaging.specifiers import SpecifierSet, InvalidSpecifier
@@ -287,6 +288,14 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
                 distribution = f'{manager_data["distribution"]} ' \
                                f'{manager_data["distro_release"]}'.lower()
                 self._upload_missing_plugin(name, specifier_set, distribution)
+            except CloudifyClientError as e:
+                if e.status_code == 409:
+                    # This may happen if we try to auto-upload the same plugin
+                    # simultaneously.
+                    self._wait_for_matching_plugin_to_upload(
+                        filters, plugins, specifier_set, extra_constraint)
+                else:
+                    raise
             except FileNotFoundError:
                 version_message = ''
                 if version_specified:
@@ -353,3 +362,11 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
             blueprint.id)
         filename = os.path.join(blueprint_path, blueprint.main_file_name)
         return 'file://{0}'.format(filename)
+
+    @retry(stop_max_attempt_number=120, wait_fixed=1000)
+    def _wait_for_matching_plugin_to_upload(
+            self, filters, plugins, specifier_set, extra_constraint):
+        plugins = self.client.plugins.list(**filters)
+        matching_versions = self._find_matching_plugin_versions(
+            plugins, specifier_set, extra_constraint)
+        assert matching_versions

@@ -1,4 +1,5 @@
 from flask_security import current_user
+from flask_security.utils import hash_password
 
 from manager_rest import constants, config
 from manager_rest.storage import models, user_datastore
@@ -15,8 +16,10 @@ from cloudify._compat import text_type
 try:
     from cloudify_premium.multi_tenancy.secured_tenant_resource \
         import SecuredMultiTenancyResource
+    _PREMIUM = True
 except ImportError:
     SecuredMultiTenancyResource = MissingPremiumFeatureResource
+    _PREMIUM = False
 
 
 class User(SecuredResource):
@@ -96,7 +99,7 @@ class Users(SecuredMultiTenancyResource):
         )
 
 
-class UsersId(SecuredMultiTenancyResource):
+class UsersIdPremium(SecuredMultiTenancyResource):
     @rest_decorators.marshal_with(UserResponse)
     def post(self, username, multi_tenancy):
         """
@@ -154,6 +157,31 @@ class UsersId(SecuredMultiTenancyResource):
             return
 
         check_user_action_allowed('user_update')
+
+
+class UsersIdCommunity(SecuredResource):
+    @rest_decorators.marshal_with(UserResponse)
+    def post(self, username):
+        """
+        Change user's password
+        """
+        request_dict = rest_utils.get_json_and_verify_params()
+        password = request_dict.get('password')
+
+        if username != current_user.username:
+            raise BadParametersError('Cannot change password for '
+                                     'a different user')
+        if not password:
+            raise BadParametersError('No valid password provided.')
+
+        new_password = rest_utils.validate_and_decode_password(password)
+        user = user_datastore.get_user(current_user.username)
+        user.password = hash_password(new_password)
+        user_datastore.commit()
+        return user
+
+
+UsersId = UsersIdPremium if _PREMIUM else UsersIdCommunity
 
 
 class UsersActive(SecuredMultiTenancyResource):

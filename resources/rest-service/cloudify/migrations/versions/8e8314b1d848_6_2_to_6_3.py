@@ -77,9 +77,13 @@ def upgrade():
     _add_system_properties_column()
     _add_plugins_labels_and_tags_columns()
     _add_deployment_resource_tags_column()
+    _add_usage_collector_columns()
+    _create_usage_collector_triggers()
 
 
 def downgrade():
+    _drop_usage_collector_triggers()
+    _drop_usage_collector_columns()
     _drop_deployment_resource_tags_column()
     _drop_plugins_labels_and_tags_columns()
     _drop_system_properties_column()
@@ -360,3 +364,210 @@ def _add_deployment_resource_tags_column():
 
 def _drop_deployment_resource_tags_column():
     op.drop_column('deployments', 'resource_tags')
+
+
+def _add_usage_collector_columns():
+    op.add_column('usage_collector', sa.Column('max_deployments',
+                                               sa.Integer(),
+                                               nullable=False,
+                                               server_default="0"))
+    op.add_column('usage_collector', sa.Column('max_blueprints',
+                                               sa.Integer(),
+                                               nullable=False,
+                                               server_default="0"))
+    op.add_column('usage_collector', sa.Column('max_users',
+                                               sa.Integer(),
+                                               nullable=False,
+                                               server_default="0"))
+    op.add_column('usage_collector', sa.Column('max_tenants',
+                                               sa.Integer(),
+                                               nullable=False,
+                                               server_default="0"))
+    op.add_column('usage_collector', sa.Column('total_deployments',
+                                               sa.Integer(),
+                                               nullable=False,
+                                               server_default="0"))
+    op.add_column('usage_collector', sa.Column('total_blueprints',
+                                               sa.Integer(),
+                                               nullable=False,
+                                               server_default="0"))
+    op.add_column('usage_collector', sa.Column('total_executions',
+                                               sa.Integer(),
+                                               nullable=False,
+                                               server_default="0"))
+    op.add_column('usage_collector', sa.Column('total_logins',
+                                               sa.Integer(),
+                                               nullable=False,
+                                               server_default="0"))
+    op.add_column('usage_collector', sa.Column('total_logged_in_users',
+                                               sa.Integer(),
+                                               nullable=False,
+                                               server_default="0"))
+
+    uc_table = sa.table(
+        'usage_collector',
+        sa.Column('total_deployments'),
+        sa.Column('total_blueprints'),
+        sa.Column('total_executions'),
+    )
+    op.execute(
+       uc_table.update().values(
+          total_deployments=
+          sa.select([sa.func.count(1)]).select_from(sa.table('deployments'))
+          .scalar_subquery(),
+          total_blueprints=
+          sa.select([sa.func.count(1)]).select_from(sa.table('blueprints'))
+          .scalar_subquery(),
+          total_executions=
+          sa.select([sa.func.count(1)]).select_from(sa.table('executions'))
+          .scalar_subquery(),
+       )
+    )
+
+
+def _drop_usage_collector_columns():
+    op.drop_column('usage_collector', 'total_logged_in_users')
+    op.drop_column('usage_collector', 'total_logins')
+    op.drop_column('usage_collector', 'total_executions')
+    op.drop_column('usage_collector', 'total_blueprints')
+    op.drop_column('usage_collector', 'total_deployments')
+    op.drop_column('usage_collector', 'max_tenants')
+    op.drop_column('usage_collector', 'max_users')
+    op.drop_column('usage_collector', 'max_blueprints')
+    op.drop_column('usage_collector', 'max_deployments')
+
+
+def _create_usage_collector_triggers():
+    op.execute("""
+    CREATE FUNCTION increase_deployments_max() RETURNS TRIGGER AS $$
+        DECLARE
+            _count_deployments INTEGER;
+        BEGIN
+            SELECT COUNT(*) INTO _count_deployments FROM deployments; 
+            UPDATE usage_collector SET max_deployments = _count_deployments 
+            WHERE _count_deployments > max_deployments;
+            RETURN NULL; 
+        END;
+    $$ LANGUAGE plpgsql;
+    
+    CREATE FUNCTION increase_blueprints_max() RETURNS TRIGGER AS $$
+        DECLARE
+            _count_blueprints INTEGER;
+        BEGIN
+            SELECT COUNT(*) INTO _count_blueprints FROM blueprints; 
+            UPDATE usage_collector SET max_blueprints = _count_blueprints 
+            WHERE _count_blueprints > max_blueprints;
+            RETURN NULL;
+        END;
+    $$ LANGUAGE plpgsql; 
+    
+    CREATE FUNCTION increase_users_max() RETURNS TRIGGER AS $$
+        DECLARE
+            _count_users INTEGER;
+        BEGIN
+            SELECT COUNT(*) INTO _count_users FROM users; 
+            UPDATE usage_collector SET max_users = _count_users 
+            WHERE _count_users > max_users;
+            RETURN NULL;
+        END;
+    $$ LANGUAGE plpgsql; 
+    
+    CREATE FUNCTION increase_tenants_max() RETURNS TRIGGER AS $$
+        DECLARE
+            _count_tenants INTEGER;
+        BEGIN
+            SELECT COUNT(*) INTO _count_tenants FROM tenants; 
+            UPDATE usage_collector SET max_tenants = _count_tenants 
+            WHERE _count_tenants > max_tenants;
+            RETURN NULL;
+        END;
+    $$ LANGUAGE plpgsql; 
+
+    CREATE FUNCTION increase_deployments_total() RETURNS TRIGGER AS $$
+        BEGIN
+            UPDATE usage_collector
+            SET total_deployments = total_deployments + 1;
+            RETURN NULL;
+        END;
+    $$ LANGUAGE plpgsql;
+
+    CREATE FUNCTION increase_blueprints_total() RETURNS TRIGGER AS $$
+        BEGIN
+            UPDATE usage_collector SET total_blueprints = total_blueprints + 1;
+            RETURN NULL;
+        END;
+    $$ LANGUAGE plpgsql;
+    
+    CREATE FUNCTION increase_executions_total() RETURNS TRIGGER AS $$
+        BEGIN
+            UPDATE usage_collector SET total_executions = total_executions + 1;
+            RETURN NULL;
+        END;
+    $$ LANGUAGE plpgsql; 
+    
+    CREATE FUNCTION increase_logins_total() RETURNS TRIGGER AS $$
+        BEGIN
+            UPDATE usage_collector SET total_logins = total_logins + 1;
+            IF (OLD.last_login_at IS NULL)
+            AND NOT (NEW.last_login_at IS NULL) THEN
+                UPDATE usage_collector 
+                SET total_logged_in_users = total_logged_in_users + 1;
+            END IF;
+            RETURN NULL;
+        END;
+    $$ LANGUAGE plpgsql; 
+
+    CREATE TRIGGER increase_deployments_max
+    AFTER INSERT ON deployments FOR EACH STATEMENT
+    EXECUTE PROCEDURE increase_deployments_max();
+
+    CREATE TRIGGER increase_blueprints_max
+    AFTER INSERT ON blueprints FOR EACH STATEMENT
+    EXECUTE PROCEDURE increase_blueprints_max();
+
+    CREATE TRIGGER increase_users_max 
+    AFTER INSERT ON users FOR EACH STATEMENT
+    EXECUTE PROCEDURE increase_users_max();
+
+    CREATE TRIGGER increase_tenants_max 
+    AFTER INSERT ON tenants FOR EACH STATEMENT
+    EXECUTE PROCEDURE increase_tenants_max();
+
+    CREATE TRIGGER increase_deployments_total
+    AFTER INSERT ON deployments FOR EACH ROW
+    EXECUTE PROCEDURE increase_deployments_total();
+
+    CREATE TRIGGER increase_blueprints_total
+    AFTER INSERT ON blueprints FOR EACH ROW
+    EXECUTE PROCEDURE increase_blueprints_total();
+
+    CREATE TRIGGER increase_executions_total 
+    AFTER INSERT ON executions FOR EACH ROW
+    EXECUTE PROCEDURE increase_executions_total();
+    
+    CREATE TRIGGER increase_logins_total 
+    AFTER UPDATE OF last_login_at ON users FOR EACH ROW
+    EXECUTE PROCEDURE increase_logins_total();
+    """)
+
+
+def _drop_usage_collector_triggers():
+    op.execute("""
+    DROP TRIGGER increase_deployments_max ON deployments;
+    DROP TRIGGER increase_blueprints_max ON blueprints;
+    DROP TRIGGER increase_users_max ON users;
+    DROP TRIGGER increase_tenants_max ON tenants;
+    DROP TRIGGER increase_deployments_total ON deployments;
+    DROP TRIGGER increase_blueprints_total ON blueprints;
+    DROP TRIGGER increase_executions_total ON executions;
+    DROP TRIGGER increase_logins_total ON users;
+
+    DROP FUNCTION increase_deployments_max();
+    DROP FUNCTION increase_blueprints_max();
+    DROP FUNCTION increase_users_max();
+    DROP FUNCTION increase_tenants_max();
+    DROP FUNCTION increase_deployments_total();
+    DROP FUNCTION increase_blueprints_total();
+    DROP FUNCTION increase_executions_total();
+    DROP FUNCTION increase_logins_total();
+    """)

@@ -428,35 +428,27 @@ def update_deployment_dependencies_from_plan(deployment_id,
 
 
 def update_inter_deployment_dependencies(sm, deployment):
-    dependencies_list = (
+    dependencies = {
+        dep for dep in
         db.session.query(models.InterDeploymentDependencies)
         .filter(
             models.InterDeploymentDependencies._source_deployment
             == deployment._storage_id
         )
         .all()
-    )
-    components_list = [
-        dep.target_deployment for dep in dependencies_list
-        if dep.dependency_creator.startswith('component.')
-    ]
-    shared_resources_list = [
-        dep.target_deployment for dep in dependencies_list
-        if dep.dependency_creator.startswith('sharedresource.')
-    ]
-    dependencies_list = [
-        dep for dep in dependencies_list
-        if dep.target_deployment_func and not dep.external_target
-    ]
-    consumer_labels_to_add = set()
-    if not dependencies_list:
+        if dep.target_deployment_func or dep.target_deployment
+        and not dep.external_target
+    }
+    if not dependencies:
         return
+
     dependents = {
         d._source_deployment
         for d in deployment.get_dependents(fetch_deployments=False)
     } | {deployment._storage_id}
 
-    for dependency in dependencies_list:
+    new_dependency_deployments = set()
+    for dependency in dependencies:
         eval_target_deployment = _get_deployment_from_target_func(
             sm,
             dependency.target_deployment_func,
@@ -474,28 +466,34 @@ def update_inter_deployment_dependencies(sm, deployment):
             )
         dependency.target_deployment = eval_target_deployment
         sm.update(dependency)
+        new_dependency_deployments.add(dependency.target_deployment)
 
-        # Add source to target's consumers (except where target is a component)
-        if dependency.target_deployment in components_list:
-            continue
-        consumer_labels_to_add.add((dependency.source_deployment_id,
-                                    eval_target_deployment))
+    components = {
+        dep.target_deployment for dep in dependencies
+        if dep.dependency_creator.startswith('component.')
+        and dep.target_deployment
+    }
+    shared_resources = {
+        dep.target_deployment for dep in dependencies
+        if dep.dependency_creator.startswith('sharedresource.')
+        and dep.target_deployment
+    }
+    consumer_labels_to_add = (
+        new_dependency_deployments | shared_resources) - components
+    _add_new_consumer_labels(sm, deployment.id, consumer_labels_to_add)
 
-    # Add consumer labels for shared resources
-    for shared_resource in shared_resources_list:
-        consumer_labels_to_add.add((deployment.id, shared_resource))
 
-    _add_new_consumer_labels(sm, consumer_labels_to_add)
-
-
-def _add_new_consumer_labels(sm, consumer_labels_to_add):
+def _add_new_consumer_labels(sm, source_id, consumer_labels_to_add):
     existing_consumer_labels = {
-        (lb.value, lb.deployment) for lb in
-        sm.list(models.DeploymentLabel, filters={'key': 'csys-consumer-id'})
+        lb.deployment for lb in
+        models.DeploymentLabel.query
+        .filter(models.DeploymentLabel.key == 'csys-consumer-id')
+        .filter(models.DeploymentLabel.value == source_id)
+        .distinct(models.DeploymentLabel._labeled_model_fk)
+        .all()
     }
     consumer_labels_to_add -= existing_consumer_labels
-    for label in consumer_labels_to_add:
-        source_id, target = label
+    for target in consumer_labels_to_add:
         sm.put(models.DeploymentLabel(
             key='csys-consumer-id',
             value=source_id,

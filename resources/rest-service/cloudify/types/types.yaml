@@ -625,62 +625,18 @@ workflows:
       node_instance_ids:
         default: []
 
-
-  update:
-    mapping: default_workflows.cloudify.plugins.workflows.update
-    is_cascading: false
+  check_drift:
+    mapping: default_workflows.cloudify.plugins.workflows.check_drift
+    is_cascading: true
     parameters:
-      update_id:
-        default: ''
-      skip_install:
+      run_by_dependency_order:
         default: false
-      skip_uninstall:
-        default: false
-      added_instance_ids:
+      type_names:
         default: []
-        type: list
-      added_target_instances_ids:
+      node_ids:
         default: []
-        type: list
-      removed_instance_ids:
+      node_instance_ids:
         default: []
-        type: list
-      remove_target_instance_ids:
-        default: []
-        type: list
-      modified_entity_ids:
-        default: []
-        type: list
-      extended_instance_ids:
-        default: []
-        type: list
-      extend_target_instance_ids:
-        default: []
-        type: list
-      reduced_instance_ids:
-        default: []
-        type: list
-      reduce_target_instance_ids:
-        default: []
-        type: list
-      ignore_failure:
-        default: false
-        type: boolean
-      install_first:
-        default: false
-        type: boolean
-      node_instances_to_reinstall:
-        default: []
-        type: list
-      central_plugins_to_install:
-        default: []
-        type: list
-      central_plugins_to_uninstall:
-        default: []
-        type: list
-      update_plugins:
-        default: true
-        type: boolean
 
   uninstall:
     mapping: default_workflows.cloudify.plugins.workflows.uninstall

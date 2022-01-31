@@ -187,3 +187,8 @@ def workflow1(ctx):
             version=ni.version,
             runtime_properties={'custom_workflow': True}
         )
+
+
+def wait(ctx, delay=5, **kwargs):
+    time.sleep(delay)
+    ctx.logger.info('wait done; slept %s', delay)

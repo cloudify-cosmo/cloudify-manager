@@ -23,6 +23,7 @@ def test_run_update_workflow():
     storage.create_deployment_update('dep1', 'update1', {
         'id': 'update1',
         'new_blueprint_id': 'bp2',
+        'old_blueprint_id': 'bp1',
         'new_inputs': {},
         'runtime_only_evaluation': False,
         'deployment_id': 'dep1',

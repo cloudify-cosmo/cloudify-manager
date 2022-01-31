@@ -605,7 +605,7 @@ class BaseServerTestCase(unittest.TestCase):
         test_config.amqp_host = 'localhost'
         test_config.amqp_username = 'guest'
         test_config.amqp_password = 'guest'
-        test_config.amqp_ca_path = None
+        test_config.amqp_ca = None
         test_config.amqp_management_host = 'localhost'
         return test_config
 

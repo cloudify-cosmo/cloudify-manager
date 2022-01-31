@@ -19,6 +19,7 @@ from cloudify_types.utils import errors_nonrecoverable
 from cloudify.constants import SHARED_RESOURCE
 from cloudify.exceptions import NonRecoverableError
 from cloudify_rest_client.client import CloudifyClient
+from cloudify_rest_client.exceptions import CloudifyClientError
 from cloudify.deployment_dependencies import (dependency_creator_generator,
                                               create_deployment_dependency)
 
@@ -103,11 +104,28 @@ def _checkout_resource_consumer(client, deployment_id):
     deployment = client.deployments.get(deployment_id)
     type_labels = _get_label_values(deployment.labels, 'csys-obj-type')
     consumers_list = _get_label_values(deployment.labels, 'csys-consumer-id')
-    on_demand_uninstall = ('on-demand-resource' in type_labels or
-                           'on-demand-uninstall' in type_labels)
+    on_demand_uninstall = ('on-demand-resource' in type_labels and
+                           'on-demand-uninstall-off' not in type_labels)
     if (on_demand_uninstall and not consumers_list and
             deployment.installation_status == 'active'):
-        execute_workflow_base(client, 'uninstall', deployment_id)
+        try:
+            execute_workflow_base(client, 'uninstall', deployment_id)
+        except CloudifyClientError as e:
+            if e.status_code == 400:
+                ctx.logger.warning(
+                    'Uninstall of shared resource deployment "%s" is blocked. '
+                    'Error: %s.', deployment.id, str(e), ctx.deployment.id)
+            else:
+                raise
+
+
+def _verify_source_deployment_in_consumers(client, deployment_id):
+    deployment = client.deployments.get(deployment_id)
+    consumers_list = _get_label_values(deployment.labels, 'csys-consumer-id')
+    if ctx.deployment.id not in consumers_list:
+        ctx.logger.warning(
+            'Source deployment "%s" is not a consumer of shared resource '
+            'deployment "%s"!', ctx.deployment.id, deployment.id)
 
 
 def _get_label_values(labels_list, key):
@@ -129,7 +147,7 @@ def connect_deployment(**kwargs):
         _get_idd(deployment_id, is_external_host, kwargs)
 
     ctx.logger.info('Validating that "%s" SharedResource\'s deployment '
-                    'exists...', deployment_id)
+                    'exists on tenant "%s"...', deployment_id, ctx.tenant_name)
     if is_external_host:
         manager.get_rest_client().inter_deployment_dependencies.create(
             **_local_dependency_params)
@@ -138,7 +156,8 @@ def connect_deployment(**kwargs):
     if not deployment:
         raise NonRecoverableError(
             f'SharedResource\'s deployment ID "{deployment_id}" does '
-            f'not exist, please verify the given ID.')
+            f'not exist on tenant "{ctx.tenant_name}", '
+            f'please verify the given ID.')
     _mark_verified_shared_resource_node(deployment_id)
     populate_runtime_with_wf_results(client, deployment_id)
     _checkin_resource_consumer(client, deployment_id)
@@ -169,6 +188,7 @@ def disconnect_deployment(**kwargs):
         manager.get_rest_client().inter_deployment_dependencies.delete(
             **_local_dependency_params)
 
+    _verify_source_deployment_in_consumers(client, deployment_id)
     client.inter_deployment_dependencies.delete(**_inter_deployment_dependency)
     _checkout_resource_consumer(client, deployment_id)
     return True

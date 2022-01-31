@@ -161,12 +161,10 @@ def should_upload_plugin(plugin_yaml_path, existing_plugins):
     for plugin_info in plugins.values():
         package_name = plugin_info.get('package_name')
         package_version = str(plugin_info.get('package_version'))
-        distribution = plugin_info.get('distribution')
 
         for plugin in existing_plugins:
             if (plugin.package_name == package_name and
-                    plugin.package_version == package_version and
-                    plugin.distribution == distribution):
+                    plugin.package_version == package_version):
                 return False
     return True
 

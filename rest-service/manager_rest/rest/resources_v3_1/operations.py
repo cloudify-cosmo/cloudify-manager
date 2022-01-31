@@ -1,10 +1,12 @@
 from datetime import datetime
+from flask import request
 from flask_restful.reqparse import Argument
 
 from cloudify._compat import text_type
 from cloudify import constants as common_constants
-from cloudify.workflows import events as common_events
-
+from cloudify.workflows import events as common_events, tasks
+from cloudify.models_states import ExecutionState
+from sqlalchemy.dialects.postgresql import JSON
 from manager_rest.rest.rest_utils import (
     get_args_and_verify_arguments,
     get_json_and_verify_params,
@@ -44,6 +46,112 @@ class Operations(SecuredResource):
             pagination=pagination,
             include=_include
         )
+
+    @authorize('operations')
+    def post(self, **kwargs):
+        request_dict = get_json_and_verify_params({'action'})
+        action = request_dict['action']
+        if action == 'update-stored':
+            self._update_stored_operations()
+        return None, 204
+
+    def _update_stored_operations(self):
+        """Recompute operation inputs, for resumable ops of the given node
+
+        For deployment_id's node_id's operation, find stored operations that
+        weren't finished yet (so can be resumed), and update their inputs
+        to match the inputs given in the node spec (ie. coming from the plan).
+
+        This is useful in deployment-update, so that stored operations that
+        are resumed after the update, use the already updated values.
+        """
+        deployment_id = request.json['deployment_id']
+        if not deployment_id:
+            return None, 204
+        node_id = request.json['node_id']
+        op_name = request.json['operation']
+
+        sm = get_storage_manager()
+        with sm.transaction():
+            dep = sm.get(models.Deployment, deployment_id)
+            node_id, new_inputs = self._new_operation_details(
+                sm,
+                dep,
+                node_id,
+                op_name,
+                rel_index=request.json.get('rel_index'),
+                key=request.json.get('key'),
+            )
+            for op in self._find_resumable_ops(sm, dep, node_id, op_name):
+                self._update_operation_inputs(sm, op, new_inputs)
+
+    def _new_operation_details(self, sm, deployment, node_id, operation_name,
+                               rel_index=None, key=None):
+        """Find the node_id and new inputs of the updated operation
+
+        Note: the node_id might be different than the one we think we're
+        updating, because if the operation is a target interface of a
+        relationship, then we actually want the remote-side node of the rel.
+        """
+        node = sm.list(models.Node,
+                       filters={'deployment': deployment, 'id': node_id})[0]
+        if rel_index is not None:
+            rel = node.relationships[rel_index]
+            if key == 'target_operations':
+                node_id = rel['target_id']
+            operation = rel[key].get(operation_name, {})
+        else:
+            operation = node.operations.get(operation_name, {})
+        return node_id, operation.get('inputs')
+
+    def _find_resumable_ops(self, sm, deployment, node_id, operation_name):
+        executions = sm.list(models.Execution, filters={
+            'deployment': deployment,
+            'status': [
+                ExecutionState.PENDING,
+                ExecutionState.STARTED,
+                ExecutionState.CANCELLED,
+                ExecutionState.FAILED
+            ]
+        }, get_all_results=True)
+        if not executions:
+            return
+        graphs = sm.list(models.TasksGraph, filters={
+            'execution_id': [e.id for e in executions]
+        }, get_all_results=True)
+
+        def _filter_operation(column):
+            # path in the parameters dict that stores the node name
+            node_name_path = ('task_kwargs', 'kwargs',
+                              '__cloudify_context', 'node_name')
+            # ..and the operation interface name,
+            # eg. cloudify.interfaces.lifecycle.create
+            # (NOT eg. script.runner.tasks.run)
+            operation_name_path = ('task_kwargs', 'kwargs',
+                                   '__cloudify_context', 'operation', 'name')
+            # this will use postgres' json operators
+            json_column = db.cast(column, JSON)
+            return db.and_(
+                json_column[node_name_path].astext == node_id,
+                json_column[operation_name_path].astext == operation_name
+            )
+
+        return sm.list(models.Operation, filters={
+            'parameters': _filter_operation,
+            '_tasks_graph_fk': [tg._storage_id for tg in graphs],
+            'state': [tasks.TASK_RESCHEDULED,
+                      tasks.TASK_FAILED,
+                      tasks.TASK_PENDING]
+        }, get_all_results=True)
+
+    def _update_operation_inputs(self, sm, operation, new_inputs):
+        try:
+            operation.parameters['task_kwargs']['kwargs'].update(new_inputs)
+            operation.parameters['task_kwargs']['kwargs'][
+                '__cloudify_context']['has_intrinsic_functions'] = True
+        except KeyError:
+            return
+        sm.update(operation, modified_attrs=['parameters'])
 
 
 class OperationsId(SecuredResource):

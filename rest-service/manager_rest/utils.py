@@ -288,7 +288,7 @@ def send_event(event, message_type):
         amqp_port=BROKER_PORT_SSL,
         amqp_vhost='/',
         ssl_enabled=True,
-        ssl_cert_path=config.instance.amqp_ca_path
+        ssl_cert_data=config.instance.amqp_ca,
     )
 
     events_publisher.publish_message(event, message_type)
@@ -329,7 +329,7 @@ def get_amqp_client():
         amqp_port=BROKER_PORT_SSL,
         amqp_vhost='/',
         ssl_enabled=True,
-        ssl_cert_path=config.instance.amqp_ca_path,
+        ssl_cert_data=config.instance.amqp_ca,
         connect_timeout=3,
     )
 
