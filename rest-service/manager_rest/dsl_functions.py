@@ -226,8 +226,8 @@ class FunctionEvaluationStorage(object):
 
     def get_consumers(self, prop):
         deployment = self.sm.get(Deployment, self._deployment_id)
-        consumers_list = [lb.value for lb in deployment.labels
-                          if lb.key == 'csys-consumer-id']
+        consumers_list = [lbl.value for lbl in deployment.labels
+                          if lbl.key == 'csys-consumer-id']
         if prop == 'ids':
             return consumers_list
         if prop == 'count':
