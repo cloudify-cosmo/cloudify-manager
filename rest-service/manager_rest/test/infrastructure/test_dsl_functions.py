@@ -39,3 +39,43 @@ class TestIntrinsicFunctions(BaseServerTestCase):
         storage = dsl_functions.FunctionEvaluationStorage('dep2', self.sm)
         with self.assertRaisesRegex(FunctionsEvaluationError, 'not-known$'):
             storage.get_sys('not', 'known')
+
+    def test_get_consumers(self):
+        infra = models.Deployment(
+            id='infra',
+            blueprint=self.bp,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        models.Deployment(
+            id='app1',
+            display_name='My App',
+            blueprint=self.bp,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        models.Deployment(
+            id='app2',
+            display_name='Another app?',
+            blueprint=self.bp,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        models.DeploymentLabel(
+            deployment=infra,
+            key='csys-consumer-id',
+            value='app1',
+            creator=self.user
+        )
+        models.DeploymentLabel(
+            deployment=infra,
+            key='csys-consumer-id',
+            value='app2',
+            creator=self.user
+        )
+        assert len(self.sm.get(models.Deployment, 'infra').labels) == 2
+        storage = dsl_functions.FunctionEvaluationStorage('infra', self.sm)
+        assert set(storage.get_consumers('ids')) == {'app1', 'app2'}
+        assert set(storage.get_consumers('names')) == \
+               {'My App', 'Another app?'}
+        assert storage.get_consumers('count') == 2
