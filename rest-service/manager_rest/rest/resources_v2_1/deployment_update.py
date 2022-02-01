@@ -418,7 +418,7 @@ def _lookup_id(sm, model_type, search_id, cache=None):
         # function logic the same
         cache = {}
     if search_id not in cache:
-        result = sm.list(model_type, {'id': search_id})
+        result = sm.list(model_type, filters={'id': search_id})
         count = len(result)
         if count != 1:
             raise RuntimeError(f'Expected 1 result for {model_type} with '
