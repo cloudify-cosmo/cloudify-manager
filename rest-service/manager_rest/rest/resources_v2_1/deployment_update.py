@@ -23,7 +23,8 @@ from cloudify._compat import text_type
 
 from manager_rest.security import SecuredResource
 from manager_rest import manager_exceptions, workflow_executor
-from manager_rest.security.authorization import authorize
+from manager_rest.security.authorization import (authorize,
+                                                 check_user_action_allowed)
 from manager_rest.deployment_update.constants import (
     PHASES,
     STATES
@@ -39,7 +40,9 @@ from .. import rest_decorators
 from ..rest_utils import (
     verify_and_convert_bool,
     get_json_and_verify_params,
-    wait_for_execution
+    wait_for_execution,
+    lookup_and_validate_user,
+    remove_invalid_keys,
 )
 
 
@@ -323,3 +326,102 @@ class DeploymentUpdates(SecuredResource):
             sort=sort,
             substr_filters=search,
         )
+
+    @swagger.operation(
+        nickname="bulkInsertDeploymentUpdates",
+        notes="For internal use.",
+    )
+    @authorize('deployment_update_create')
+    def post(self):
+        request_dict = get_json_and_verify_params({
+            'deployment_updates': {'type': list},
+        })
+        sm = get_storage_manager()
+        raw_updates = request_dict['deployment_updates']
+        raw_steps = [raw_update.pop('steps') for raw_update in raw_updates]
+        if not raw_updates:
+            return None, 204
+        user_lookup_cache = {}
+        with sm.transaction():
+            self._prepare_raw_updates(sm, raw_updates, user_lookup_cache)
+            db.session.execute(
+                models.DeploymentUpdate.__table__.insert(),
+                raw_updates,
+            )
+            self._prepare_raw_steps(sm, raw_steps, user_lookup_cache)
+            db.session.execute(
+                models.DeploymentUpdateStep.__table__.insert(),
+                raw_steps,
+            )
+        return None, 201
+
+    def _prepare_raw_updates(self, sm, raw_updates, user_lookup_cache):
+        if any(item.get('creator') for item in raw_updates):
+            check_user_action_allowed('set_owner')
+
+        if any(item.get('created_at') for item in raw_updates):
+            check_user_action_allowed('set_timestamp')
+
+        valid_params = {'id', 'visibility', 'created_at', 'deployment_plan',
+                        'deployment_update_node_instances',
+                        'central_plugins_to_uninstall',
+                        'central_plugins_to_install',
+                        'deployment_update_nodes', 'modified_entity_ids',
+                        'old_inputs', 'new_inputs', 'state',
+                        'runtime_only_evaluation',
+                        'keep_old_deployment_dependencies', '_deployment_fk',
+                        'execution_id', '_old_blueprint_fk',
+                        '_new_blueprint_fk', 'tenant_name', '_creator_id',
+                        'steps'}
+
+        bp_cache = {}
+        dep_cache = {}
+        for raw_update in raw_updates:
+            creator = lookup_and_validate_user(raw_update.get('creator'),
+                                               user_lookup_cache)
+            raw_update['_creator_id'] = creator.id
+
+            raw_update['_old_blueprint_fk'] = _lookup_id(
+                sm, models.Blueprint, raw_update['old_blueprint_id'],
+                bp_cache)
+            raw_update['_new_blueprint_fk'] = _lookup_id(
+                sm, models.Blueprint, raw_update['new_blueprint_id'],
+                bp_cache)
+            raw_update['_deployment_fk'] = _lookup_id(
+                sm, models.Deployment, raw_update['deployment_id'],
+                dep_cache)
+
+            remove_invalid_keys(raw_update, valid_params)
+
+    def _prepare_raw_steps(self, sm, raw_steps, user_lookup_cache):
+        valid_params = {'id', 'visibility', 'action', 'entity_id',
+                        'entity_type', 'topology_order',
+                        '_deployment_update_fk', 'tenant_name',
+                        '_creator_id'}
+
+        dep_update_cache = {}
+        for raw_step in raw_steps:
+            creator = lookup_and_validate_user(raw_step.get('creator'),
+                                               user_lookup_cache)
+            raw_step['_creator_id'] = creator.id
+
+            raw_step['_deployment_update_fk'] = _lookup_id(
+                sm, models.DeploymentUpdate, raw_step['deployment_update_id'],
+                dep_update_cache)
+
+            remove_invalid_keys(raw_step, valid_params)
+
+
+def _lookup_id(sm, model_type, search_id, cache=None):
+    if cache is None:
+        # We won't cache the results, but set this to keep the rest of the
+        # function logic the same
+        cache = {}
+    if search_id not in cache:
+        result = sm.list(model_type, {'id': search_id})
+        count = len(result)
+        if count != 1:
+            raise RuntimeError(f'Expected 1 result for {model_type} with '
+                               'filters {filters}, but got {count}.')
+        cache[search_id] = result.items[0]._storage_id
+    return cache[search_id]
