@@ -422,6 +422,6 @@ def _lookup_id(sm, model_type, search_id, cache=None):
         count = len(result)
         if count != 1:
             raise RuntimeError(f'Expected 1 result for {model_type} with '
-                               'filters {filters}, but got {count}.')
+                               f'ID {search_id}, but got {count}.')
         cache[search_id] = result.items[0]._storage_id
     return cache[search_id]
