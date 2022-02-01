@@ -51,7 +51,8 @@ class BlueprintUploadTest(AgentlessTestCase):
         blueprint = self.client.blueprints.publish_archive(
             archive_url,
             blueprint_id)
-        self._verify_blueprint_uploaded(blueprint, blueprint_filename)
+        self._verify_blueprint_uploaded(blueprint, blueprint_filename,
+                                        blueprint_archive_ext='zip')
 
     def test_blueprint_upload_from_unavailable_url(self):
         blueprint_id = 'bp-url-unavailable'
@@ -187,13 +188,17 @@ class BlueprintUploadTest(AgentlessTestCase):
             resource('dsl/invalid_dsl.yaml'),
             entity_id=blueprint_id)
 
-    def _verify_blueprint_uploaded(self, blueprint, blueprint_filename):
+    def _verify_blueprint_uploaded(self, blueprint, blueprint_filename,
+                                   blueprint_archive_ext=None):
         self.assertEqual(blueprint.state, BlueprintUploadState.UPLOADED)
         self.assertEqual(blueprint.main_file_name, blueprint_filename)
         self.assertNotEqual(blueprint.plan, None)
-        self._verify_blueprint_files(blueprint.id, blueprint_filename)
+        blueprint_archive_ext = blueprint_archive_ext or 'tar.gz'
+        self._verify_blueprint_files(
+            blueprint.id, blueprint_filename, blueprint_archive_ext)
 
-    def _verify_blueprint_files(self, blueprint_id, blueprint_filename):
+    def _verify_blueprint_files(self, blueprint_id, blueprint_filename,
+                                blueprint_archive_ext):
         # blueprint available in manager resources
         admin_headers = self.client._client.headers
         resp = requests.get(
@@ -207,10 +212,11 @@ class BlueprintUploadTest(AgentlessTestCase):
         self.assertEqual(resp.status_code, requests.status_codes.codes.ok)
         # blueprint archive available in uploaded blueprints
         resp = requests.get(
-            'https://{0}:53333/uploaded-blueprints/default_tenant/'
-            '{1}/{1}.tar.gz'.format(
+            'https://{0}:53333/resources/uploaded-blueprints/default_tenant/'
+            '{1}/{1}.{2}'.format(
                 ipv6_url_compat(self.get_manager_ip()),
-                blueprint_id),
+                blueprint_id,
+                blueprint_archive_ext),
             headers=admin_headers,
             verify=False
         )
