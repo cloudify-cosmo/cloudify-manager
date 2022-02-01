@@ -787,3 +787,19 @@ def defines_component(sm, dep: models.DeploymentLabelsDependencies) -> bool:
                             'source_deployment': dep.target_deployment})
     return all(idd.dependency_creator.startswith('component.')
                for idd in idds) if idds else False
+
+
+def lookup_and_validate_user(username, cache):
+    if not username:
+        return current_user
+
+    if username not in cache:
+        cache[username] = valid_user(username)
+    user = cache[username]
+    return user
+
+
+def remove_invalid_keys(input_dict, valid_params):
+    clear = input_dict.keys() - valid_params
+    for param in clear:
+        input_dict.pop(param)
