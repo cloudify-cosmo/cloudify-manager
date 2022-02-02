@@ -207,6 +207,8 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
         matching_plugin_data = plugin['versions'][max_item[0]]
 
         p_yaml = matching_plugin_data['yaml']
+        if 'v2_yaml' in matching_plugin_data:
+            p_yaml = matching_plugin_data['v2_yaml']
         p_wagon = self.matching_distro_wagon(matching_plugin_data['wagons'],
                                              distribution)
         try:
