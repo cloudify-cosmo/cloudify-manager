@@ -40,7 +40,9 @@ BASE_SERVICES = {
     'cloudify-stage': 'Cloudify Console',
     'cloudify-amqp-postgres': 'AMQP-Postgres',
     'cloudify-mgmtworker': 'Management Worker',
-    'cloudify-restservice': 'Manager Rest-Service'
+    'cloudify-restservice': 'Manager Rest-Service',
+    'cloudify-api': 'Cloudify API',
+    'cloudify-execution-scheduler': 'Cloudify Execution Scheduler',
 }
 OPTIONAL_SERVICES = {
     'haproxy': 'Haproxy for DB HA',
