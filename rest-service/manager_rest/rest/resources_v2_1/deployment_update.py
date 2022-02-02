@@ -33,7 +33,8 @@ from manager_rest.execution_token import current_execution
 from manager_rest.storage import models, get_storage_manager, db
 from manager_rest.deployment_update.manager import \
     get_deployment_updates_manager
-from manager_rest.utils import create_filter_params_list_description
+from manager_rest.utils import (create_filter_params_list_description,
+                                current_tenant)
 
 from manager_rest.resource_manager import get_resource_manager
 from .. import rest_decorators
@@ -338,24 +339,28 @@ class DeploymentUpdates(SecuredResource):
         })
         sm = get_storage_manager()
         raw_updates = request_dict['deployment_updates']
-        raw_steps = [raw_update.pop('steps') for raw_update in raw_updates]
+        raw_steps = []
+        for raw_update in raw_updates:
+            raw_steps.extend(raw_update.pop('steps', []))
         if not raw_updates:
             return None, 204
-        user_lookup_cache = {}
+        user_cache = {}
+        tenant_cache = {}
         with sm.transaction():
-            self._prepare_raw_updates(sm, raw_updates, user_lookup_cache)
+            self._prepare_raw_updates(sm, raw_updates, user_cache,
+                                      tenant_cache)
             db.session.execute(
                 models.DeploymentUpdate.__table__.insert(),
                 raw_updates,
             )
-            self._prepare_raw_steps(sm, raw_steps, user_lookup_cache)
+            self._prepare_raw_steps(sm, raw_steps, user_cache, tenant_cache)
             db.session.execute(
                 models.DeploymentUpdateStep.__table__.insert(),
                 raw_steps,
             )
         return None, 201
 
-    def _prepare_raw_updates(self, sm, raw_updates, user_lookup_cache):
+    def _prepare_raw_updates(self, sm, raw_updates, user_cache, tenant_cache):
         if any(item.get('creator') for item in raw_updates):
             check_user_action_allowed('set_owner')
 
@@ -371,15 +376,22 @@ class DeploymentUpdates(SecuredResource):
                         'runtime_only_evaluation',
                         'keep_old_deployment_dependencies', '_deployment_fk',
                         'execution_id', '_old_blueprint_fk',
-                        '_new_blueprint_fk', 'tenant_name', '_creator_id',
+                        '_new_blueprint_fk', '_tenant_id', '_creator_id',
                         'steps'}
 
         bp_cache = {}
         dep_cache = {}
         for raw_update in raw_updates:
             creator = lookup_and_validate_user(raw_update.get('creator'),
-                                               user_lookup_cache)
+                                               user_cache)
             raw_update['_creator_id'] = creator.id
+
+            if 'tenant_name' in raw_update:
+                raw_update['_tenant_id'] = _lookup_id(
+                    sm, models.Tenant, raw_update['tenant_name'],
+                    tenant_cache)
+            else:
+                raw_update['_tenant_id'] = current_tenant.id
 
             raw_update['_old_blueprint_fk'] = _lookup_id(
                 sm, models.Blueprint, raw_update['old_blueprint_id'],
@@ -393,17 +405,24 @@ class DeploymentUpdates(SecuredResource):
 
             remove_invalid_keys(raw_update, valid_params)
 
-    def _prepare_raw_steps(self, sm, raw_steps, user_lookup_cache):
+    def _prepare_raw_steps(self, sm, raw_steps, user_cache, tenant_cache):
         valid_params = {'id', 'visibility', 'action', 'entity_id',
                         'entity_type', 'topology_order',
-                        '_deployment_update_fk', 'tenant_name',
+                        '_deployment_update_fk', '_tenant_id',
                         '_creator_id'}
 
         dep_update_cache = {}
         for raw_step in raw_steps:
             creator = lookup_and_validate_user(raw_step.get('creator'),
-                                               user_lookup_cache)
+                                               user_cache)
             raw_step['_creator_id'] = creator.id
+
+            if 'tenant_name' in raw_step:
+                raw_step['_tenant_id'] = _lookup_id(
+                    sm, models.Tenant, raw_step['tenant_name'],
+                    tenant_cache)
+            else:
+                raw_step['_tenant_id'] = current_tenant.id
 
             raw_step['_deployment_update_fk'] = _lookup_id(
                 sm, models.DeploymentUpdate, raw_step['deployment_update_id'],
@@ -417,11 +436,16 @@ def _lookup_id(sm, model_type, search_id, cache=None):
         # We won't cache the results, but set this to keep the rest of the
         # function logic the same
         cache = {}
+    search_prop = 'id'
+    id_prop = '_storage_id'
+    if model_type == models.Tenant:
+        search_prop = 'name'
+        id_prop = 'id'
     if search_id not in cache:
-        result = sm.list(model_type, filters={'id': search_id})
+        result = sm.list(model_type, filters={search_prop: search_id})
         count = len(result)
         if count != 1:
             raise RuntimeError(f'Expected 1 result for {model_type} with '
                                f'ID {search_id}, but got {count}.')
-        cache[search_id] = result.items[0]._storage_id
+        cache[search_id] = getattr(result.items[0], id_prop)
     return cache[search_id]
