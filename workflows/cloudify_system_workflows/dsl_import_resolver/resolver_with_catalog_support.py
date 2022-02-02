@@ -207,6 +207,8 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
         matching_plugin_data = plugin['versions'][max_item[0]]
 
         p_yaml = matching_plugin_data['yaml']
+        if 'v2_yaml' in matching_plugin_data:
+            p_yaml = matching_plugin_data['v2_yaml']
         p_wagon = self.matching_distro_wagon(matching_plugin_data['wagons'],
                                              distribution)
         try:
@@ -218,6 +220,7 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
         except Exception as e:
             raise InvalidBlueprintImport(download_error_msg.format(name, e))
 
+        os.remove(catalog_path)
         plugin_zip = plugin_target_path + '.zip'
         self._create_zip(plugin_target_path, plugin_zip,
                          include_folder=False)
