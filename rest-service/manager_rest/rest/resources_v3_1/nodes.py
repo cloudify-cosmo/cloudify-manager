@@ -1,7 +1,5 @@
 from collections import defaultdict
 
-from flask_security import current_user
-
 from ..resources_v3 import Nodes as v3_Nodes
 from ..resources_v2 import NodeInstances as v2_NodeInstances
 
@@ -53,8 +51,8 @@ class Nodes(v3_Nodes):
         for raw_node in raw_nodes:
             raw_node['_tenant_id'] = deployment._tenant_id
 
-            creator = _lookup_and_validate_user(raw_node.get('creator'),
-                                                user_lookup_cache)
+            creator = rest_utils.lookup_and_validate_user(
+                raw_node.get('creator'), user_lookup_cache)
             raw_node['_creator_id'] = creator.id
             raw_node['_deployment_fk'] = deployment._storage_id
             raw_node['visibility'] = deployment.visibility
@@ -68,7 +66,7 @@ class Nodes(v3_Nodes):
                 'scalable', {}).get(
                 'properties', {})
 
-            _remove_invalid_keys(raw_node, valid_params)
+            rest_utils.remove_invalid_keys(raw_node, valid_params)
 
             raw_node.setdefault('number_of_instances',
                                 scalable.get('current_instances', 1))
@@ -195,11 +193,11 @@ class NodeInstances(v2_NodeInstances):
             node = nodes[node_id]
             raw_instance['_node_fk'] = node._storage_id
             raw_instance['visibility'] = node.visibility
-            creator = _lookup_and_validate_user(raw_instance.get('creator'),
-                                                user_lookup_cache)
+            creator = rest_utils.lookup_and_validate_user(
+                raw_instance.get('creator'), user_lookup_cache)
             raw_instance['_creator_id'] = creator.id
 
-            _remove_invalid_keys(raw_instance, valid_params)
+            rest_utils.remove_invalid_keys(raw_instance, valid_params)
 
             raw_instance.setdefault('runtime_properties', {})
             raw_instance.setdefault('state', 'uninitialized')
@@ -207,19 +205,3 @@ class NodeInstances(v2_NodeInstances):
             raw_instance.setdefault('relationships', [])
             raw_instance.setdefault('scaling_groups', [])
             raw_instance.setdefault('host_id', None)
-
-
-def _lookup_and_validate_user(username, cache):
-    if not username:
-        return current_user
-
-    if username not in cache:
-        cache[username] = rest_utils.valid_user(username)
-    user = cache[username]
-    return user
-
-
-def _remove_invalid_keys(input_dict, valid_params):
-    clear = input_dict.keys() - valid_params
-    for param in clear:
-        input_dict.pop(param)
