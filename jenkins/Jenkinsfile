@@ -10,7 +10,7 @@ def vEnv(){
       virtualenv .venv
     ''', label: "creating virtualenv"
 }
-@Library('pipeline-shared-library') _
+@Library('pipeline-shared-library@get-version-from-private-repo') _
 
 pipeline {
   agent {
