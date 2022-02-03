@@ -50,8 +50,10 @@ class TestManagerStatus(AgentlessTestCase):
 
         # Services for all-in-one premium manager
         services = ['Webserver', 'Cloudify Console', 'AMQP-Postgres',
-                    'Management Worker', 'Manager Rest-Service', 'PostgreSQL',
-                    'RabbitMQ', 'Cloudify Composer', 'Monitoring Service']
+                    'Management Worker', 'Manager Rest-Service',
+                    'Cloudify API', 'Cloudify Execution Scheduler',
+                    'PostgreSQL', 'RabbitMQ', 'Cloudify Composer',
+                    'Monitoring Service']
         self.assertEqual(
             len(manager_status['services']),
             len(services))
