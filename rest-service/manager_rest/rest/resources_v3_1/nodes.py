@@ -111,6 +111,7 @@ class NodesId(SecuredResource):
             'operations': {'optional': True},
             'relationships': {'optional': True},
             'properties': {'optional': True},
+            'capabilities': {'optional': True},
         })
         sm = get_storage_manager()
         with sm.transaction():
@@ -125,6 +126,21 @@ class NodesId(SecuredResource):
                 node.relationships = request_dict['relationships']
             if request_dict.get('properties'):
                 node.properties = request_dict['properties']
+            if request_dict.get('capabilities'):
+                scalable = request_dict['capabilities'].get('scalable', {})\
+                    .get('properties', {})
+                if 'max_instances' in scalable:
+                    node.max_number_of_instances = scalable['max_instances']
+                if 'min_instances' in scalable:
+                    node.min_number_of_instances = scalable['min_instances']
+                if 'current_instances' in scalable:
+                    node.number_of_instances = scalable['current_instances']
+                if 'default_instances' in scalable:
+                    node.deploy_number_of_instances = \
+                        scalable['default_instances']
+                if 'planned_instances' in scalable:
+                    node.planned_number_of_instances = \
+                        scalable['planned_instances']
             sm.update(node)
         return None, 204
 

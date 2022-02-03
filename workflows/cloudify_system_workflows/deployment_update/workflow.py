@@ -96,6 +96,20 @@ def _modified_attr_nodes(steps):
     return modified
 
 
+def _diff_node_attrs(new_nodes, old_nodes):
+    """Check additional node attributes and return which ones changed.
+
+    This is for auxillary attributes that don't generate a Step.
+    """
+    for new_node in new_nodes:
+        node_id = new_node['id']
+        old_node = old_nodes.get(node_id)
+        if not old_node:
+            continue
+        if new_node.get('capabilities') != old_node.get('capabilities'):
+            yield node_id, ['capabilities']
+
+
 def _added_nodes(steps):
     """Based on the steps, find node ids that were added."""
     added = set()
@@ -133,6 +147,13 @@ def prepare_update_nodes(*, update_id):
         'add': _added_nodes(dep_up.steps),
         'remove': _removed_nodes(dep_up.steps),
     }
+
+    old_nodes_by_id = {node.id: node for node in old_nodes}
+    for node_id, changed_attrs in _diff_node_attrs(
+        new_nodes, old_nodes_by_id
+    ):
+        node_changes['modify_attributes'][node_id] += changed_attrs
+
     instance_changes['relationships_changed'] = \
         _relationship_changed_nodes(dep_up.steps)
     workflow_ctx.set_deployment_update_attributes(

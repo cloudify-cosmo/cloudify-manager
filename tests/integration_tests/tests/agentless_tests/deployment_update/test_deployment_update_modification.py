@@ -23,6 +23,33 @@ pytestmark = pytest.mark.group_deployments
 
 
 class TestDeploymentUpdateModification(DeploymentUpdateBase):
+    def test_scale(self):
+        # this test is WIP; it will be checking more things than just
+        # the declared numbers.
+        deployment, modified_bp_path = \
+            self._deploy_and_get_modified_bp_path('scale_instance')
+
+        self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
+
+        expected_instances = {
+            'site1': 1,
+            'site2': 3,
+        }
+        nodes = self.client.nodes.list(deployment_id=deployment.id)
+        assert expected_instances == {
+            n['id']: n['deploy_number_of_instances'] for n in nodes
+        }
+        self._do_update(deployment.id, BLUEPRINT_ID)
+        nodes = self.client.nodes.list(deployment_id=deployment.id)
+        expected_instances = {
+            'site1': 3,
+            'site2': 1,
+        }
+        assert expected_instances == {
+            n['id']: n['deploy_number_of_instances'] for n in nodes
+        }
+
     def test_modify_relationships(self):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('modify_relationship')
