@@ -118,6 +118,7 @@ from .nodes import (  # NOQA
     Nodes,
     NodesId,
     NodeInstances,
+    NodeInstancesId,
 )
 
 from .searches import (  # NOQA

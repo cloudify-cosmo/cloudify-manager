@@ -1,6 +1,9 @@
 from collections import defaultdict
 
-from ..resources_v3 import Nodes as v3_Nodes
+from ..resources_v3 import (
+    Nodes as v3_Nodes,
+    NodeInstancesId as v3_NodeInstancesId,
+)
 from ..resources_v2 import NodeInstances as v2_NodeInstances
 
 from manager_rest.rest import rest_utils
@@ -221,3 +224,14 @@ class NodeInstances(v2_NodeInstances):
             raw_instance.setdefault('relationships', [])
             raw_instance.setdefault('scaling_groups', [])
             raw_instance.setdefault('host_id', None)
+
+
+class NodeInstancesId(v3_NodeInstancesId):
+    @authorize('node_instance_delete')
+    @only_deployment_update
+    def delete(self, node_instance_id):
+        sm = get_storage_manager()
+        with sm.transaction():
+            instance = sm.get(models.NodeInstance, node_instance_id)
+            sm.delete(instance)
+        return None, 204

@@ -22,13 +22,11 @@ from manager_rest.test import base_test
 from manager_rest import manager_exceptions
 
 
-class NodesTest(base_test.BaseServerTestCase):
-    """Test the HTTP interface and the behaviour of node instance endpoints.
+class _NodeSetupMixin(object):
+    """A mixin useful in these tests, that exposes utils for creating nodes
 
-    Test cases that test the HTTP interface use shorthand methods like .patch()
-    or .get() to call the rest service endpoints with hand-crafted data.
-    Test cases that verify the behaviour use the rest client to construct
-    the requests.
+    Creating nodes otherwise is a pain because of how many arguments
+    they require
     """
     def setUp(self):
         super().setUp()
@@ -78,6 +76,15 @@ class NodesTest(base_test.BaseServerTestCase):
             instance_params['node'] = self._node('node1')
         return models.NodeInstance(**instance_params)
 
+
+class NodesTest(_NodeSetupMixin, base_test.BaseServerTestCase):
+    """Test the HTTP interface and the behaviour of node instance endpoints.
+
+    Test cases that test the HTTP interface use shorthand methods like .patch()
+    or .get() to call the rest service endpoints with hand-crafted data.
+    Test cases that verify the behaviour use the rest client to construct
+    the requests.
+    """
     def test_get_nonexisting_node(self):
         response = self.get('/node-instances/1234')
         self.assertEqual(404, response.status_code)
@@ -517,32 +524,18 @@ class NodesCreateTest(base_test.BaseServerTestCase):
         self.client.nodes.create_many('dep1', [])  # doesn't throw
 
 
-class NodeInstancesCreateTest(base_test.BaseServerTestCase):
-    def setUp(self):
-        super().setUp()
-        bp = models.Blueprint(
-            id='bp1',
-            creator=self.user,
-            tenant=self.tenant,
-        )
-        self.dep1 = models.Deployment(
-            id='dep1',
-            blueprint=bp,
-            creator=self.user,
-            tenant=self.tenant,
-        )
-
+class NodeInstancesCreateTest(_NodeSetupMixin, base_test.BaseServerTestCase):
     def test_empty_list(self):
-        self.client.node_instances.create_many('dep1', [])  # doesn't throw
+        self.client.node_instances.create_many('d1', [])  # doesn't throw
 
     def test_create_instances(self):
-        self.client.nodes.create_many('dep1', [
+        self.client.nodes.create_many('d1', [
             {
                 'id': 'test_node1',
                 'type': 'cloudify.nodes.Root'
             }
         ])
-        self.client.node_instances.create_many('dep1', [
+        self.client.node_instances.create_many('d1', [
             {
                 'id': 'test_node1_xyz123',
                 'node_id': 'test_node1'
@@ -553,7 +546,7 @@ class NodeInstancesCreateTest(base_test.BaseServerTestCase):
         assert node_instance.node == node
 
     def test_instance_index(self):
-        self.client.nodes.create_many('dep1', [
+        self.client.nodes.create_many('d1', [
             {
                 'id': 'test_node1',
                 'type': 'cloudify.nodes.Root'
@@ -563,14 +556,14 @@ class NodeInstancesCreateTest(base_test.BaseServerTestCase):
                 'type': 'cloudify.nodes.Root'
             },
         ])
-        self.client.node_instances.create_many('dep1', [
+        self.client.node_instances.create_many('d1', [
             {
                 'id': 'test_node1_1',
                 'node_id': 'test_node1'
             }
         ])
         instance1 = self.sm.get(models.NodeInstance, 'test_node1_1')
-        self.client.node_instances.create_many('dep1', [
+        self.client.node_instances.create_many('d1', [
             {
                 'id': 'test_node1_2',
                 'node_id': 'test_node1'
@@ -585,3 +578,40 @@ class NodeInstancesCreateTest(base_test.BaseServerTestCase):
         assert instance1.index == 1
         assert instance2.index == 2
         assert node2_instance1.index == 1
+
+
+@mock.patch('manager_rest.rest.rest_decorators.is_deployment_update')
+class NodeInstancesDeleteTest(_NodeSetupMixin, base_test.BaseServerTestCase):
+    def test_delete_instance(self, is_update_mock):
+        is_update_mock.return_value = True
+
+        node = self._node('node1')
+        ni = models.NodeInstance(
+            id='ni1_1',
+            node=node,
+            state='started',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        self.client.node_instances.delete(ni.id)
+
+    def test_delete_not_in_dep_update(self, is_update_mock):
+        is_update_mock.return_value = False
+
+        node = self._node('node1')
+        ni = models.NodeInstance(
+            id='ni1_1',
+            node=node,
+            state='started',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        with self.assertRaises(CloudifyClientError) as cm:
+            self.client.node_instances.delete(ni.id)
+        assert cm.exception.status_code == 403
+
+    def test_delete_nonexistent(self, is_update_mock):
+        is_update_mock.return_value = True
+        with self.assertRaises(CloudifyClientError) as cm:
+            self.client.node_instances.delete('nonexistent')
+        assert cm.exception.status_code == 404
