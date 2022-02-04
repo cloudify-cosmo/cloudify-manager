@@ -39,6 +39,12 @@ SERVICE_DESCRIPTIONS = {
     'cloudify-syncthing': {
         'name': 'Syncthing',
         'description': 'Syncthing service'},
+    'cloudify-api': {
+        'name': 'Cloudify API',
+        'description': 'Cloudify fastAPI service'},
+    'cloudify-execution-scheduler': {
+        'name': 'Cloudify Execution Scheduler',
+        'description': 'Execution scheduler for cloudify'},
     'etcd': {
         'name': 'Etcd key-value store',
         'description': 'Etcd distributed key-value store service'},
@@ -88,6 +94,8 @@ SERVICE_ASSIGNMENTS = {
         'cloudify-restservice',
         'cloudify-stage',
         'cloudify-syncthing',
+        'cloudify-api',
+        'cloudify-execution-scheduler',
         'haproxy',
         'nginx',
         'node_exporter',
