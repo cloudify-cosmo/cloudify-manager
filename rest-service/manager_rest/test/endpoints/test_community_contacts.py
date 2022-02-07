@@ -59,14 +59,6 @@ class TestCommunityContacts(base_test.BaseServerTestCase):
         assert cm.exception.status_code == 400
         assert "problem while submiting the form" in str(cm.exception)
 
-    def test_create_contact_already_exists(self):
-        data = self.data.copy()
-        return_value = {"status": 409, "message": "Contact already exists"}
-        with self.assertRaises(CloudifyClientError) as cm:
-            self._mock_post_contact(data, return_value)
-        assert cm.exception.status_code == 409
-        assert "conflict while submiting your details" in str(cm.exception)
-
     def test_create_contact_post_fails(self):
         data = self.data.copy()
         with self.assertRaises(CloudifyClientError) as cm:
