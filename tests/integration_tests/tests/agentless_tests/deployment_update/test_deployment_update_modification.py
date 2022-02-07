@@ -15,6 +15,8 @@
 import re
 import pytest
 
+from collections import Counter
+
 from . import DeploymentUpdateBase, BLUEPRINT_ID
 from integration_tests.tests.utils import wait_for_blueprint_upload
 from integration_tests.tests.utils import get_resource as resource
@@ -37,11 +39,18 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
             'site2': 3,
         }
         nodes = self.client.nodes.list(deployment_id=deployment.id)
+        instance_counts = Counter(
+            ni['node_id'] for ni in self.client.node_instances.list()
+        )
         assert expected_instances == {
             n['id']: n['deploy_number_of_instances'] for n in nodes
         }
+        assert instance_counts == expected_instances
         self._do_update(deployment.id, BLUEPRINT_ID)
         nodes = self.client.nodes.list(deployment_id=deployment.id)
+        instance_counts = Counter(
+            ni['node_id'] for ni in self.client.node_instances.list()
+        )
         expected_instances = {
             'site1': 3,
             'site2': 1,
@@ -49,6 +58,7 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         assert expected_instances == {
             n['id']: n['deploy_number_of_instances'] for n in nodes
         }
+        assert instance_counts == expected_instances
 
     def test_modify_relationships(self):
         deployment, modified_bp_path = \
