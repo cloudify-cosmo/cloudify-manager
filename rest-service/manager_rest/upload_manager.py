@@ -164,7 +164,7 @@ class UploadedDataManager(object):
                     content_payload = self._save_bytes(content)
                     # Handling yaml
                     if content.content_type == 'application/octet-stream':
-                        inputs = yaml.load(content_payload)
+                        inputs = yaml.safe_load(content_payload)
                     # Handling json
                     elif content.content_type == 'application/json':
                         inputs = json.load(content_payload)
@@ -893,7 +893,7 @@ class UploadedCaravanManager(UploadedPluginsManager):
         def _get_metadata(path):
             try:
                 with open(os.path.join(path, 'METADATA')) as metadata_file:
-                    metadata = yaml.load(metadata_file)
+                    metadata = yaml.safe_load(metadata_file)
             except Exception:
                 raise UploadedCaravanManager.InvalidCaravanException(
                     'Failed to get caravan metadata'
