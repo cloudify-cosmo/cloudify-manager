@@ -110,6 +110,22 @@ def _diff_node_attrs(new_nodes, old_nodes):
             yield node_id, ['capabilities']
 
 
+def _diff_planned_instances(new_nodes, old_nodes):
+    """Check for which nodes the planned instance count has changed"""
+    for new_node in new_nodes:
+        node_id = new_node['id']
+        old_node = old_nodes.get(node_id)
+        if not old_node:
+            continue
+        try:
+            new_planned = new_node['capabilities']['scalable']['properties'][
+                'planned_instances']
+        except KeyError:
+            continue
+        if new_planned != old_node.planned_number_of_instances:
+            yield node_id, new_planned
+
+
 def _added_nodes(steps):
     """Based on the steps, find node ids that were added."""
     added = set()
@@ -135,13 +151,6 @@ def prepare_update_nodes(*, update_id):
     new_nodes = dep_up.deployment_plan['nodes'].copy()
     old_instances = workflow_ctx.list_node_instances(
         deployment_id=dep_up.deployment_id)
-    instance_changes = tasks.modify_deployment(
-        nodes=new_nodes,
-        previous_nodes=old_nodes,
-        previous_node_instances=old_instances,
-        scaling_groups=deployment.scaling_groups,
-        modified_nodes=()
-    )
     node_changes = {
         'modify_attributes': _modified_attr_nodes(dep_up.steps),
         'add': _added_nodes(dep_up.steps),
@@ -153,6 +162,19 @@ def prepare_update_nodes(*, update_id):
         new_nodes, old_nodes_by_id
     ):
         node_changes['modify_attributes'][node_id] += changed_attrs
+    modified_nodes = {}
+    for node_id, instance_count in _diff_planned_instances(
+        new_nodes, old_nodes_by_id
+    ):
+        modified_nodes[node_id] = {'instances': instance_count}
+
+    instance_changes = tasks.modify_deployment(
+        nodes=new_nodes,
+        previous_nodes=old_nodes,
+        previous_node_instances=old_instances,
+        scaling_groups=deployment.scaling_groups,
+        modified_nodes=modified_nodes
+    )
 
     instance_changes['relationships_changed'] = \
         _relationship_changed_nodes(dep_up.steps)
@@ -520,6 +542,19 @@ def delete_removed_nodes(*, update_id):
         workflow_ctx.delete_node(dep_up.deployment_id, node_name)
 
 
+def delete_removed_instances(*, update_id):
+    dep_up = workflow_ctx.get_deployment_update(update_id)
+
+    update_instances = dep_up['deployment_update_node_instances']
+    if update_instances.get('removed_and_related'):
+        removed_instances = [
+            ni for ni in update_instances['removed_and_related']
+            if ni.get('modification') == 'removed'
+        ]
+        for ni in removed_instances:
+            workflow_ctx.delete_node_instance(ni['id'])
+
+
 def update_schedules(*, update_id):
     dep_up = workflow_ctx.get_deployment_update(update_id)
     new_schedules = (
@@ -601,6 +636,9 @@ def _post_update_graph(ctx, update_id, **kwargs):
             'update_id': update_id,
         }, total_retries=0),
         ctx.local_task(delete_removed_relationships, kwargs={
+            'update_id': update_id,
+        }, total_retries=0),
+        ctx.local_task(delete_removed_instances, kwargs={
             'update_id': update_id,
         }, total_retries=0),
         ctx.local_task(update_schedules, kwargs={
