@@ -143,6 +143,7 @@ def setup_resources(api):
         'Workflows': 'workflows',
         'WorkflowsSearches': 'searches/workflows',
         'NodeInstancesSearches': 'searches/node-instances',
+        'CommunityContacts': 'contacts',
     }
 
     # Set version endpoint as a non versioned endpoint
