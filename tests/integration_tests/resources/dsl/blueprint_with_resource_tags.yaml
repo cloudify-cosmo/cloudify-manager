@@ -1,0 +1,38 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - cloudify/types/types.yaml
+  - plugin:mock_labels
+
+inputs:
+  label_value:
+    default: bp_key2_val1
+
+blueprint_labels:
+  key2:
+    values:
+      - bp_key2_val1
+
+labels:
+  key1:
+    values:
+      - bp_key1_val1
+  key2:
+    values:
+      - { get_input: label_value }
+
+node_templates:
+  f:
+    type: cloudify.nodes.Root
+    interfaces:
+      test:
+        context:
+          executor: central_deployment_agent
+          implementation: scripts/workflows/test_context_resource_tags.py
+          inputs:
+            values:
+              deployment_id: dep
+              owner: admin
+              key1: value1
+              key2: value2
+              boolean_value: false
