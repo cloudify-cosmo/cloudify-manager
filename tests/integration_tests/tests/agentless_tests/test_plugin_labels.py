@@ -114,6 +114,9 @@ class PluginWithResourceTagsTest(AgentlessTestCase):
                {
                    'key1': 'value1',
                    'key2': 'value2',
+                   'boolean_value': False,
+                   'deployment_id': {'get_sys': ['deployment', 'id']},
+                   'owner': {'get_sys': ['deployment', 'owner']},
                }
 
         self.client.deployments.create('bp', 'dep')
@@ -123,7 +126,24 @@ class PluginWithResourceTagsTest(AgentlessTestCase):
                {
                    'key1': 'value1',
                    'key2': 'value2',
+                   'boolean_value': False,
+                   'deployment_id': {'get_sys': ['deployment', 'id']},
+                   'owner': {'get_sys': ['deployment', 'owner']},
                }
+
+        self.client.deployments.delete('dep')
+        self._wait_until_deployment_deleted('dep')
+        self.client.blueprints.delete('bp')
+
+    def test_resource_tags_intrinsic_functions(self):
+        self.client.blueprints.upload(
+            resource('dsl/blueprint_with_resource_tags.yaml'),
+            entity_id='bp')
+        self.client.deployments.create('bp', 'dep')
+        self.execute_workflow('execute_operation',
+                              'dep',
+                              parameters={'operation': 'test.context'},
+                              )
 
         self.client.deployments.delete('dep')
         self._wait_until_deployment_deleted('dep')

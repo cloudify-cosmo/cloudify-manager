@@ -25,3 +25,6 @@ labels:
 resource_tags:
   key1: value1
   key2: value2
+  deployment_id: { get_sys: [ deployment, id ] }
+  owner: { get_sys: [ deployment, owner ] }
+  boolean_value: false
