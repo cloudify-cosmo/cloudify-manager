@@ -31,7 +31,7 @@ class CommunityContacts(SecuredResource):
             "lastname": request_dict['last_name'],
             "email": request_dict['email'],
             "phone": request_dict['phone'],
-            'is_eula': request_dict['is_eula']
+            "is_eula": request_dict['is_eula'],
         })
         generic_error_msg = 'There was a problem while submiting the form, ' \
                             'please try later'
