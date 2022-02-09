@@ -62,6 +62,16 @@ class MissingPremiumPackage(ManagerException):
         super().__init__(message, *args, **kwargs)
 
 
+class CommunityOnly(ManagerException):
+    error_code = 'community_only_error'
+    status_code = 404
+
+    def __init__(self, *args, **kwargs):
+        message = ('This feature exists only in the community edition of '
+                   'Cloudify.')
+        super().__init__(message, *args, **kwargs)
+
+
 class ConflictError(ManagerException):
     error_code = 'conflict_error'
     status_code = 409
