@@ -130,3 +130,7 @@ from .searches import (  # NOQA
 from .workflows import (  # NOQA
     Workflows,
 )
+
+from .community_contacts import (  # NOQA
+    CommunityContacts,
+)
