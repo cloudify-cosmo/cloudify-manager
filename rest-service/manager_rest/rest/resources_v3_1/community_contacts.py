@@ -22,7 +22,6 @@ class CommunityContacts(SecuredResource):
             'email': {'type': text_type},
             'phone': {'type': text_type},
             'is_eula': {'type': bool},
-            'is_send_services_details': {'optional': True, 'type': bool}
         })
         if not request_dict['is_eula']:
             raise manager_exceptions.BadParametersError(
@@ -32,8 +31,7 @@ class CommunityContacts(SecuredResource):
             "lastname": request_dict['last_name'],
             "email": request_dict['email'],
             "phone": request_dict['phone'],
-            "send_services_details":
-                request_dict.get('is_send_services_details')
+            "is_eula": request_dict['is_eula'],
         })
         generic_error_msg = 'There was a problem while submiting the form, ' \
                             'please try later'
@@ -57,13 +55,6 @@ class CommunityContacts(SecuredResource):
         if r_status == 200:
             return {'customer_id': 'COM-{}-{}'.format(r_json['company_name'],
                                                       r_json['contact_id'])}
-        elif r_status == 409:
-            current_app.logger.error(error_log_msg,
-                                     request_dict['email'],
-                                     r_status,
-                                     r_json['message'])
-            raise manager_exceptions.ConflictError(
-                'There was a conflict while submiting your details')
         else:
             current_app.logger.error(error_log_msg,
                                      request_dict['email'],
