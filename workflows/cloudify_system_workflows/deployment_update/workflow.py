@@ -632,13 +632,13 @@ def _post_update_graph(ctx, update_id, **kwargs):
     graph = ctx.graph_mode()
     seq = graph.sequence()
     seq.add(
-        ctx.local_task(delete_removed_nodes, kwargs={
-            'update_id': update_id,
-        }, total_retries=0),
         ctx.local_task(delete_removed_relationships, kwargs={
             'update_id': update_id,
         }, total_retries=0),
         ctx.local_task(delete_removed_instances, kwargs={
+            'update_id': update_id,
+        }, total_retries=0),
+        ctx.local_task(delete_removed_nodes, kwargs={
             'update_id': update_id,
         }, total_retries=0),
         ctx.local_task(update_schedules, kwargs={
