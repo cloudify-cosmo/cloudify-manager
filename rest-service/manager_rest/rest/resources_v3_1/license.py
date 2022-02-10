@@ -76,6 +76,19 @@ class LicenseCommunity(SecuredResource):
 License = LicensePremium if _PREMIUM else LicenseCommunity
 
 
-class LicenseCheck(SecuredResource):
+class LicenseCheckPremium(SecuredResource):
     def get(self):
         return "OK", 200
+
+
+class LicenseCheckCommunity(SecuredResource):
+    def get(self):
+        licenses = get_storage_manager().list(models.License)
+        customer_id = str(licenses[0].customer_id) if licenses else None
+        if customer_id:
+            return customer_id, 200
+        return {"message": "No Customer ID found on the manager",
+                "error_code": "missing_cloudify_license"}, 400
+
+
+LicenseCheck = LicenseCheckPremium if _PREMIUM else LicenseCheckCommunity
