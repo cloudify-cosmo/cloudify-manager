@@ -468,18 +468,25 @@ def _strip_keys(struct: typing.Dict,
 
 
 def _get_node_state(node: dict):
-    if not node['services'] or not node['metrics']:
-        # Absence of failure (and everything else) is not success
-        return ServiceStatus.FAIL
+    node['failures'] = []
 
-    for service in node['services'].values():
+    # Absence of failure (and everything else) is not success
+    if not node['services']:
+        node['failures'].append('No services.')
+    if not node['metrics']:
+        node['failures'].append('No metrics')
+
+    for name, service in node['services'].items():
         if service['status'] != NodeServiceStatus.ACTIVE:
-            return ServiceStatus.FAIL
+            node['failures'].append(f'Service {name} not active.')
 
     for metric in node['metrics']:
         if not metric['healthy']:
-            return ServiceStatus.FAIL
+            name = metric['metric_name']
+            node['failures'].append(f'Metric {name} not healthy.')
 
+    if node['failures']:
+        return ServiceStatus.FAIL
     return ServiceStatus.HEALTHY
 
 
