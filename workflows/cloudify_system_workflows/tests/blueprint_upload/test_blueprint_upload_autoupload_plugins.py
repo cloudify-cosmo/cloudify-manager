@@ -1,30 +1,19 @@
 import os
 import mock
-import yaml
 import json
 import pytest
-import unittest
-import tempfile
 
-from cloudify import utils as cloudify_utils
-from cloudify_system_workflows.blueprint import upload, extract_parser_context
+from cloudify_system_workflows.blueprint import extract_parser_context
 from cloudify_system_workflows.dsl_import_resolver\
     .resolver_with_catalog_support import PLUGIN_CATALOG_URL
 from cloudify.exceptions import InvalidBlueprintImport
 
-from dsl_parser import constants, tasks
-from dsl_parser import utils as dsl_parser_utils
-from dsl_parser.exceptions import DSLParsingException
-
 
 mock_plugins_catalog = [
     {
-        "description": "A Cloudify Plugin that provisions resources in OpenStack using the OpenStack SDK. Note, this plugin is not compatible with the OpenStack plugin.",
-        "icon": "https://cloudify.co/wp-content/uploads/2019/08/oslogo.png",
         "name": "cloudify-openstack-plugin",
-        "releases": "https://github.com/cloudify-cosmo/cloudify-openstack-plugin/releases",
-        "title": "OpenStack",
-        "versions": {   
+        "icon": "https://cloudify.co/wp-content/uploads/2019/08/oslogo.png",
+        "versions": {
             "2.14.17": {
                 "wagons": [
                     {
@@ -69,12 +58,11 @@ def mock_client():
         'distribution': 'Centos',
         'distro_release': 'core',
     }]
-    with mock.patch(
-        'cloudify_system_workflows.dsl_import_resolver'
-        '.resolver_with_catalog_support.ResolverWithCatalogSupport'
-        '._download_file',
-        side_effect=local_download_file):
+    with mock.patch('cloudify_system_workflows.dsl_import_resolver'
+                    '.resolver_with_catalog_support.ResolverWithCatalogSupport'
+                    '._download_file', side_effect=local_download_file):
         yield client
+
 
 def local_download_file(url, dest_path, target_filename=None):
     if url == PLUGIN_CATALOG_URL:
@@ -126,7 +114,7 @@ class TestPluginAutoupload:
         with pytest.raises(
                 InvalidBlueprintImport,
                 match=r'Couldn\'t find plugin.* with version >=4.0.0'):
-            plugin = self._parse_plugin_import(
+            self._parse_plugin_import(
                 mock_client,
                 'plugin:cloudify-openstack-plugin?version= >=4.0.0')
 
@@ -134,7 +122,7 @@ class TestPluginAutoupload:
         with pytest.raises(
                 InvalidBlueprintImport,
                 match=r'Couldn\'t find plugin "my-custom-plugin\"'):
-            plugin = self._parse_plugin_import(
+            self._parse_plugin_import(
                 mock_client,
                 'plugin:my-custom-plugin')
 
