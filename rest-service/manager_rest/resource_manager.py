@@ -2351,7 +2351,9 @@ class ResourceManager(object):
 
         # Check if the resource is unique
         max_resource_number = 0 if create_resource else 1
-        if self.sm.count(model_class, unique_filter) > max_resource_number:
+        if self.sm.count(
+            model_class, unique_filter, all_tenants=True
+        ) > max_resource_number:
             raise manager_exceptions.IllegalActionError(
                 "Can't set or create the resource `{0}`, it's visibility "
                 "can't be global because it also exists in other tenants"
