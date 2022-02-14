@@ -678,7 +678,10 @@ class SQLStorageManager(object):
             locking=locking,
         )
         pagination = {'total': total, 'size': size, 'offset': offset}
-        filtered = (self.count(model_class) - total) if filter_rules else None
+        if filter_rules:
+            filtered = self.count(model_class, all_tenants=all_tenants) - total
+        else:
+            filtered = None
 
         current_app.logger.debug('Returning: %s', results)
         return ListResult(items=results, metadata={'pagination': pagination,
@@ -709,8 +712,11 @@ class SQLStorageManager(object):
 
         return ListResult(items=results, metadata={'pagination': pagination})
 
-    def count(self, model_class, filters=None, distinct_by=None):
+    def count(self, model_class, filters=None, distinct_by=None,
+              all_tenants=False):
         query = model_class.query
+        if not all_tenants:
+            self._add_tenant_filter(query, model_class, all_tenants=False)
         if filters:
             query = self._add_value_filter(query, filters)
         if distinct_by:
