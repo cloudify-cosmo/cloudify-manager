@@ -72,8 +72,10 @@ class Nodes(resources_v1.Nodes):
             if not hasattr(node, 'deployment'):
                 continue
             scale_by = 1
-            scaling_groups = node.deployment.scaling_groups.values()
-            for group in scaling_groups:
+            scaling_groups = node.deployment.scaling_groups
+            if not scaling_groups:
+                continue
+            for group in scaling_groups.values():
                 if {node.id, node.host_id} & set(group['members']):
                     scale_by *= group['properties']['planned_instances']
             node.set_actual_planned_node_instances(
