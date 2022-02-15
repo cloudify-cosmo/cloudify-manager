@@ -172,7 +172,7 @@ def prepare_update_nodes(*, update_id):
         nodes=new_nodes,
         previous_nodes=old_nodes,
         previous_node_instances=old_instances,
-        scaling_groups=deployment.scaling_groups,
+        scaling_groups=deployment.scaling_groups or {},
         modified_nodes=modified_nodes
     )
 
