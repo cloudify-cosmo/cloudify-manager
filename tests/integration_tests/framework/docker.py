@@ -12,6 +12,7 @@ def run_manager(image, service_management, resource_mapping=None,):
 manager:
     security:
         admin_password: admin
+        ssl_enabled: true
 validations:
     skip_validations: true
 sanity:
