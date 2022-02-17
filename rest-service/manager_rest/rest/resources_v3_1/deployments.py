@@ -1337,7 +1337,8 @@ class DeploymentGroupsId(SecuredResource):
                 for dep in group.deployments:
                     rm.check_deployment_delete(dep, force=args.force)
                     delete_exc = dep.make_delete_environment_execution(
-                        delete_logs=args.delete_logs
+                        delete_logs=args.delete_logs,
+                        force=args.force,
                     )
                     delete_exc_group.executions.append(delete_exc)
                 messages = delete_exc_group.start_executions(sm, rm)
