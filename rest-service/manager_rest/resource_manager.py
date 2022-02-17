@@ -134,10 +134,12 @@ class ResourceManager(object):
                 if override_status is not None:
                     status = override_status
 
+        parameters = None
         affected_parent_deployments = set()
         with self.sm.transaction():
             execution = self.sm.get(models.Execution, execution_id,
                                     locking=True)
+            parameters = execution.parameters
             if execution._deployment_fk:
                 affected_parent_deployments.add(execution._deployment_fk)
                 deployment = execution.deployment
@@ -209,10 +211,15 @@ class ResourceManager(object):
                     self.sm.update(plugin_update.temp_blueprint)
 
         if workflow_id == 'delete_deployment_environment' and \
-                status == ExecutionState.TERMINATED:
+                status in ExecutionState.END_STATES:
             # render the execution here, because immediately afterwards
             # we'll delete it, and then we won't be able to render it anymore
-            affected_parent_deployments |= self.delete_deployment(deployment)
+            if status == ExecutionState.TERMINATED or (
+                status == ExecutionState.FAILED and
+                parameters and parameters.get('force')
+            ):
+                affected_parent_deployments |= self.delete_deployment(
+                    deployment)
 
         if affected_parent_deployments:
             self.recalc_ancestors(affected_parent_deployments)
