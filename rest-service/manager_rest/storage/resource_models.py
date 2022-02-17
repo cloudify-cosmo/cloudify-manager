@@ -1177,7 +1177,8 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             if not constraints or name not in parameters:
                 continue
             try:
-                validate_input_value(name, constraints, parameters[name])
+                validate_input_value(name, constraints, parameters[name],
+                                     param.get('type'), None)
             except (dsl_exceptions.DSLParsingException,
                     dsl_exceptions.ConstraintException) as ex:
                 constraint_violations[name] = ex
