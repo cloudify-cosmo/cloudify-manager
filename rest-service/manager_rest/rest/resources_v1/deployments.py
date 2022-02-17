@@ -161,7 +161,9 @@ class DeploymentsId(SecuredResource):
         rm = get_resource_manager()
         rm.check_deployment_delete(dep, force=args.force)
         delete_execution = dep.make_delete_environment_execution(
-            delete_logs=args.delete_logs)
+            delete_logs=args.delete_logs,
+            force=args.force,
+        )
         messages = rm.prepare_executions(
             [delete_execution], bypass_maintenance=bypass_maintenance)
         workflow_executor.execute_workflow(messages)

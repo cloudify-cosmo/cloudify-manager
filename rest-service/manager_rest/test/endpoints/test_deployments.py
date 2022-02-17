@@ -1493,3 +1493,44 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         )
         dep = self.sm.get(models.Deployment, 'dep1')
         assert dep.display_name == 'y'
+
+
+class DeploymentsDeleteTest(base_test.BaseServerTestCase):
+    def setUp(self):
+        super().setUp()
+        self.blueprint = models.Blueprint(
+            id='bp1',
+            tenant=self.tenant,
+            creator=self.user,
+        )
+        self.deployment = models.Deployment(
+            id='dep1',
+            blueprint=self.blueprint,
+            tenant=self.tenant,
+            creator=self.user,
+        )
+
+    def test_deleted_on_success(self):
+        delete_exc = self.deployment.make_delete_environment_execution()
+        self.sm.put(delete_exc)
+        self.client.executions.update(delete_exc.id, ExecutionState.TERMINATED)
+        assert models.Deployment.query.count() == 0
+
+    def test_not_deleted_on_fail(self):
+        delete_exc = self.deployment.make_delete_environment_execution()
+        self.sm.put(delete_exc)
+        self.client.executions.update(delete_exc.id, ExecutionState.FAILED)
+        assert models.Deployment.query.count() == 1
+
+    def test_not_deleted_on_cancel(self):
+        delete_exc = self.deployment.make_delete_environment_execution()
+        self.sm.put(delete_exc)
+        self.client.executions.update(delete_exc.id, ExecutionState.CANCELLED)
+        assert models.Deployment.query.count() == 1
+
+    def test_deleted_fail_with_force(self):
+        delete_exc = self.deployment.make_delete_environment_execution(
+            force=True)
+        self.sm.put(delete_exc)
+        self.client.executions.update(delete_exc.id, ExecutionState.FAILED)
+        assert models.Deployment.query.count() == 0

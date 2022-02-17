@@ -699,12 +699,12 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                 f'{ ", ".join(undeclared_inputs) }'
             )
 
-    def make_delete_environment_execution(self, delete_logs=True):
+    def make_delete_environment_execution(self, delete_logs=True, force=False):
         return Execution(
             workflow_id='delete_deployment_environment',
             deployment=self,
             status=ExecutionState.PENDING,
-            parameters={'delete_logs': delete_logs},
+            parameters={'delete_logs': delete_logs, 'force': force},
         )
 
     @hybrid_property
