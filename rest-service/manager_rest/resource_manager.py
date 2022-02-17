@@ -169,6 +169,8 @@ class ResourceManager(object):
             execution = self.sm.update(execution)
             self.update_deployment_statuses(execution)
             self._send_hook(execution)
+            # render the execution here, because immediately afterwards
+            # we'll delete it, and then we won't be able to render it anymore
             res = execution.to_response()
             # do not use `execution` after this transaction ends, because it
             # would possibly require refetching the related objects, and by
@@ -212,8 +214,6 @@ class ResourceManager(object):
 
         if workflow_id == 'delete_deployment_environment' and \
                 status in ExecutionState.END_STATES:
-            # render the execution here, because immediately afterwards
-            # we'll delete it, and then we won't be able to render it anymore
             if status == ExecutionState.TERMINATED or (
                 status == ExecutionState.FAILED and
                 parameters and parameters.get('force')
