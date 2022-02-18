@@ -1,9 +1,11 @@
 from collections import defaultdict
+from functools import partial
 import time
 import typing
 
 from cloudify.decorators import workflow
 from cloudify.exceptions import NonRecoverableError
+from cloudify.manager import get_rest_client
 from cloudify.state import workflow_ctx, workflow_parameters
 from cloudify.models_states import ExecutionState
 from cloudify.plugins import lifecycle
@@ -12,6 +14,7 @@ from dsl_parser import constants, tasks
 
 from .. import idd
 from ..deployment_environment import format_plan_schedule
+from ..search_utils import get_deployments_with_rest
 
 from .step_extractor import extract_steps
 
@@ -29,11 +32,18 @@ def prepare_plan(*, update_id):
         k: v for k, v in dep_up.new_inputs.items()
         if k in bp.plan.get('inputs', {})
     }
+    if not workflow_ctx.local:
+        client = get_rest_client(tenant=workflow_ctx.tenant_name)
+        get_deployments_method = partial(get_deployments_with_rest, client)
+    else:
+        get_deployments_method = None
+
     deployment_plan = tasks.prepare_deployment_plan(
         bp.plan,
-        workflow_ctx.get_secret,
-        new_inputs,
-        runtime_only_evaluation=dep_up.runtime_only_evaluation
+        inputs=new_inputs,
+        runtime_only_evaluation=dep_up.runtime_only_evaluation,
+        get_secret_method=workflow_ctx.get_secret,
+        get_deployments_method=get_deployments_method
     )
     workflow_ctx.set_deployment_update_attributes(
         update_id, plan=deployment_plan)
@@ -99,7 +109,7 @@ def _modified_attr_nodes(steps):
 def _diff_node_attrs(new_nodes, old_nodes):
     """Check additional node attributes and return which ones changed.
 
-    This is for auxillary attributes that don't generate a Step.
+    This is for auxiliary attributes that don't generate a Step.
     """
     for new_node in new_nodes:
         node_id = new_node['id']

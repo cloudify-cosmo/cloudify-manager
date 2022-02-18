@@ -1,7 +1,7 @@
 from manager_rest.test import base_test
 from manager_rest.storage import models
 from manager_rest.rest.filters_utils import FilterRule
-from manager_rest.rest.resources_v3_1.searches import get_filter_rules
+from manager_rest.rest.search_utils import get_filter_rules
 
 
 class SearchesTestCase(base_test.BaseServerTestCase):

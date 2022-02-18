@@ -3,6 +3,7 @@ import os
 import shutil
 import errno
 from datetime import datetime
+from functools import partial
 import unicodedata
 
 from retrying import retry
@@ -16,6 +17,7 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 from dsl_parser import tasks
 
 from . import idd
+from .search_utils import get_deployments_with_rest
 
 
 def _get_display_name(display_name, settings):
@@ -103,8 +105,12 @@ def create(ctx, labels=None, inputs=None, skip_plugins_validation=False,
     client = get_rest_client(tenant=ctx.tenant_name)
     bp = client.blueprints.get(ctx.blueprint.id)
     deployment_plan = tasks.prepare_deployment_plan(
-        bp.plan, client.secrets.get, inputs,
-        runtime_only_evaluation=ctx.deployment.runtime_only_evaluation)
+        bp.plan,
+        inputs=inputs,
+        runtime_only_evaluation=ctx.deployment.runtime_only_evaluation,
+        get_secret_method=client.secrets.get,
+        get_deployments_method=partial(get_deployments_with_rest, client)
+    )
     nodes = deployment_plan['nodes']
     node_instances = deployment_plan['node_instances']
 
