@@ -5,6 +5,7 @@ import uuid
 from os import path
 from datetime import datetime
 from collections import namedtuple
+from functools import partial
 
 from flask_restful import fields as flask_fields
 
@@ -979,6 +980,8 @@ class Execution(CreatedAtMixin, SQLResourceBase):
         # before parameters
         self.allow_custom_parameters = kwargs.pop(
             'allow_custom_parameters', False)
+        self._storage_manager = kwargs.pop(
+            'storage_manager', None)
         super().__init__(**kwargs)
 
     __tablename__ = 'executions'
@@ -1141,6 +1144,10 @@ class Execution(CreatedAtMixin, SQLResourceBase):
     def merge_workflow_parameters(self, parameters, deployment, workflow_id):
         if not deployment or not deployment.workflows:
             return
+
+        # Keep this import line here because of circular dependencies
+        from manager_rest.rest.search_utils import get_deployments_with_sm
+
         workflow = self.get_workflow(deployment, workflow_id)
         workflow_parameters = workflow.get('parameters', {})
         custom_parameters = parameters.keys() - workflow_parameters.keys()
@@ -1178,7 +1185,9 @@ class Execution(CreatedAtMixin, SQLResourceBase):
                 continue
             try:
                 validate_input_value(name, constraints, parameters[name],
-                                     param.get('type'), None)
+                                     param.get('type'),
+                                     partial(get_deployments_with_sm,
+                                             self._storage_manager))
             except (dsl_exceptions.DSLParsingException,
                     dsl_exceptions.ConstraintException) as ex:
                 constraint_violations[name] = ex

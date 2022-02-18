@@ -9,10 +9,8 @@ from manager_rest.constants import (ATTRS_OPERATORS,
                                     LABELS_OPERATORS)
 
 from ..responses_v2 import ListResponse
+from ..search_utils import get_filter_rules
 from .. import rest_decorators, rest_utils
-from ..filters_utils import (create_filter_rules_list,
-                             FilterRule,
-                             get_filter_rules_from_filter_id)
 
 from .workflows import workflows_list_response
 
@@ -108,26 +106,6 @@ class ResourceSearches(SecuredResource):
         )
 
         return ListResponse(items=result.items, metadata=result.metadata)
-
-
-def get_filter_rules(raw_filter_rules,
-                     resource_model,
-                     filters_model,
-                     filter_id):
-    filter_rules = create_filter_rules_list(raw_filter_rules, resource_model)
-    if filter_id:
-        existing_filter_rules = get_filter_rules_from_filter_id(
-            filter_id, filters_model)
-        for existing_filter_rule in existing_filter_rules:
-            filter_rule_elem = FilterRule(existing_filter_rule['key'],
-                                          existing_filter_rule['values'],
-                                          existing_filter_rule['operator'],
-                                          existing_filter_rule['type'])
-            if filter_rule_elem in filter_rules:
-                continue
-            filter_rules.append(filter_rule_elem)
-
-    return filter_rules
 
 
 class DeploymentsSearches(ResourceSearches):

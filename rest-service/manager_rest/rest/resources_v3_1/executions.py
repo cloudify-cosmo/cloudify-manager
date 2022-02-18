@@ -205,7 +205,7 @@ class ExecutionGroups(SecuredResource):
         sm.put(group)
         rm = get_resource_manager()
         if executions:
-            # This is a pre-populated group, so shoudl be part of a restore,
+            # This is a pre-populated group, so should be part of a restore,
             # don't actually run anything!
             return group
         with sm.transaction():
@@ -218,6 +218,7 @@ class ExecutionGroups(SecuredResource):
                         deployment=dep,
                         parameters=params,
                         status=ExecutionState.PENDING,
+                        storage_manager=sm,
                     )
                 except NonexistentWorkflowError as ex:
                     log = models.Log(
