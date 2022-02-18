@@ -4,7 +4,7 @@ from functools import wraps
 from collections import OrderedDict
 
 from dateutil.parser import parse as parse_datetime
-from flask_restful import marshal
+from flask_restful import fields, marshal
 from flask_restful.utils import unpack
 from flask import request
 from voluptuous import (
@@ -111,6 +111,8 @@ class marshal_with(object):
             def wrap_list_items(response):
                 wrapped_items = self.wrap_with_response_object(
                     response.items, fields_to_include)
+                if self._include_hash():
+                    fields_to_include['password_hash'] = fields.String
                 response.items = marshal(wrapped_items, fields_to_include)
                 return response
 
