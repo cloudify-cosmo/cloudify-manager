@@ -44,7 +44,6 @@ def upgrade():
     op.add_column('executions', sa.Column('ended_at',
                                           UTCDateTime(),
                                           nullable=True))
-    op.execute('COMMIT')
     op.execute("alter type execution_status add value 'kill_cancelling'")
 
 

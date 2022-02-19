@@ -50,7 +50,6 @@ def upgrade():
     op.add_column('executions',
                   sa.Column('scheduled_for', UTCDateTime(), nullable=True))
 
-    op.execute('COMMIT')
     # Add new execution status
     op.execute("alter type execution_status add value 'scheduled'")
     op.add_column(
