@@ -70,42 +70,42 @@ def upgrade():
             ),
             dict(
                 name='ldap_server',
-                value=None,
+                value=op.inline_literal('null'),
                 scope='rest',
                 schema={'type': 'string'},
                 is_editable=True
             ),
             dict(
                 name='ldap_username',
-                value=None,
+                value=op.inline_literal('null'),
                 scope='rest',
                 schema={'type': 'string'},
                 is_editable=True
             ),
             dict(
                 name='ldap_password',
-                value=None,
+                value=op.inline_literal('null'),
                 scope='rest',
                 schema={'type': 'string'},
                 is_editable=True
             ),
             dict(
                 name='ldap_domain',
-                value=None,
+                value=op.inline_literal('null'),
                 scope='rest',
                 schema={'type': 'string'},
                 is_editable=True
             ),
             dict(
                 name='ldap_is_active_directory',
-                value=None,
+                value=op.inline_literal('null'),
                 scope='rest',
                 schema={'type': 'boolean'},
                 is_editable=True
             ),
             dict(
                 name='ldap_dn_extra',
-                value=None,
+                value=op.inline_literal('null'),
                 scope='rest',
                 schema=None,
                 is_editable=True
@@ -175,7 +175,7 @@ def upgrade():
             ),
             dict(
                 name='public_ip',
-                value=None,
+                value=op.inline_literal('null'),
                 scope='rest',
                 schema=None,
                 is_editable=False

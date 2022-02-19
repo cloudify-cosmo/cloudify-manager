@@ -48,7 +48,7 @@ def upgrade():
     op.bulk_insert(config_table, [
         dict(
             name='ldap_ca_path',
-            value=None,
+            value=op.inline_literal('null'),
             scope='rest',
             schema={'type': 'string'},
             is_editable=True

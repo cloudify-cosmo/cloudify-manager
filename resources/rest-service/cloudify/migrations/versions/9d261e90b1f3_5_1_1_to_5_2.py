@@ -79,7 +79,7 @@ def add_new_config_entries():
         [
             dict(
                 name=name,
-                value=None,
+                value=op.inline_literal('null'),
                 scope='rest',
                 schema={'type': 'string'},
                 is_editable=True,
