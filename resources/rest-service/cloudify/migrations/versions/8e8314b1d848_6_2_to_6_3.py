@@ -446,45 +446,45 @@ def _create_usage_collector_triggers():
         DECLARE
             _count_deployments INTEGER;
         BEGIN
-            SELECT COUNT(*) INTO _count_deployments FROM deployments; 
-            UPDATE usage_collector SET max_deployments = _count_deployments 
+            SELECT COUNT(*) INTO _count_deployments FROM deployments;
+            UPDATE usage_collector SET max_deployments = _count_deployments
             WHERE _count_deployments > max_deployments;
-            RETURN NULL; 
+            RETURN NULL;
         END;
     $$ LANGUAGE plpgsql;
-    
+
     CREATE FUNCTION increase_blueprints_max() RETURNS TRIGGER AS $$
         DECLARE
             _count_blueprints INTEGER;
         BEGIN
-            SELECT COUNT(*) INTO _count_blueprints FROM blueprints; 
-            UPDATE usage_collector SET max_blueprints = _count_blueprints 
+            SELECT COUNT(*) INTO _count_blueprints FROM blueprints;
+            UPDATE usage_collector SET max_blueprints = _count_blueprints
             WHERE _count_blueprints > max_blueprints;
             RETURN NULL;
         END;
-    $$ LANGUAGE plpgsql; 
-    
+    $$ LANGUAGE plpgsql;
+
     CREATE FUNCTION increase_users_max() RETURNS TRIGGER AS $$
         DECLARE
             _count_users INTEGER;
         BEGIN
-            SELECT COUNT(*) INTO _count_users FROM users; 
-            UPDATE usage_collector SET max_users = _count_users 
+            SELECT COUNT(*) INTO _count_users FROM users;
+            UPDATE usage_collector SET max_users = _count_users
             WHERE _count_users > max_users;
             RETURN NULL;
         END;
-    $$ LANGUAGE plpgsql; 
-    
+    $$ LANGUAGE plpgsql;
+
     CREATE FUNCTION increase_tenants_max() RETURNS TRIGGER AS $$
         DECLARE
             _count_tenants INTEGER;
         BEGIN
-            SELECT COUNT(*) INTO _count_tenants FROM tenants; 
-            UPDATE usage_collector SET max_tenants = _count_tenants 
+            SELECT COUNT(*) INTO _count_tenants FROM tenants;
+            UPDATE usage_collector SET max_tenants = _count_tenants
             WHERE _count_tenants > max_tenants;
             RETURN NULL;
         END;
-    $$ LANGUAGE plpgsql; 
+    $$ LANGUAGE plpgsql;
 
     CREATE FUNCTION increase_deployments_total() RETURNS TRIGGER AS $$
         BEGIN
@@ -500,25 +500,25 @@ def _create_usage_collector_triggers():
             RETURN NULL;
         END;
     $$ LANGUAGE plpgsql;
-    
+
     CREATE FUNCTION increase_executions_total() RETURNS TRIGGER AS $$
         BEGIN
             UPDATE usage_collector SET total_executions = total_executions + 1;
             RETURN NULL;
         END;
-    $$ LANGUAGE plpgsql; 
-    
+    $$ LANGUAGE plpgsql;
+
     CREATE FUNCTION increase_logins_total() RETURNS TRIGGER AS $$
         BEGIN
             UPDATE usage_collector SET total_logins = total_logins + 1;
             IF (OLD.last_login_at IS NULL)
             AND NOT (NEW.last_login_at IS NULL) THEN
-                UPDATE usage_collector 
+                UPDATE usage_collector
                 SET total_logged_in_users = total_logged_in_users + 1;
             END IF;
             RETURN NULL;
         END;
-    $$ LANGUAGE plpgsql; 
+    $$ LANGUAGE plpgsql;
 
     CREATE TRIGGER increase_deployments_max
     AFTER INSERT ON deployments FOR EACH STATEMENT
@@ -528,11 +528,11 @@ def _create_usage_collector_triggers():
     AFTER INSERT ON blueprints FOR EACH STATEMENT
     EXECUTE PROCEDURE increase_blueprints_max();
 
-    CREATE TRIGGER increase_users_max 
+    CREATE TRIGGER increase_users_max
     AFTER INSERT ON users FOR EACH STATEMENT
     EXECUTE PROCEDURE increase_users_max();
 
-    CREATE TRIGGER increase_tenants_max 
+    CREATE TRIGGER increase_tenants_max
     AFTER INSERT ON tenants FOR EACH STATEMENT
     EXECUTE PROCEDURE increase_tenants_max();
 
@@ -544,11 +544,11 @@ def _create_usage_collector_triggers():
     AFTER INSERT ON blueprints FOR EACH ROW
     EXECUTE PROCEDURE increase_blueprints_total();
 
-    CREATE TRIGGER increase_executions_total 
+    CREATE TRIGGER increase_executions_total
     AFTER INSERT ON executions FOR EACH ROW
     EXECUTE PROCEDURE increase_executions_total();
-    
-    CREATE TRIGGER increase_logins_total 
+
+    CREATE TRIGGER increase_logins_total
     AFTER UPDATE OF last_login_at ON users FOR EACH ROW
     EXECUTE PROCEDURE increase_logins_total();
     """)
