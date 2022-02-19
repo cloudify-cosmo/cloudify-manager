@@ -413,13 +413,16 @@ def _add_usage_collector_columns():
     op.execute(
        uc_table.update().values(
           total_deployments=
-          sa.select([sa.func.count(1)]).select_from(sa.table('deployments'))
+          sa.select([sa.func.count(op.inline_literal(1))])
+          .select_from(sa.table('deployments'))
           .scalar_subquery(),
           total_blueprints=
-          sa.select([sa.func.count(1)]).select_from(sa.table('blueprints'))
+          sa.select([sa.func.count(op.inline_literal(1))])
+          .select_from(sa.table('blueprints'))
           .scalar_subquery(),
           total_executions=
-          sa.select([sa.func.count(1)]).select_from(sa.table('executions'))
+          sa.select([sa.func.count(op.inline_literal(1))])
+          .select_from(sa.table('executions'))
           .scalar_subquery(),
        )
     )

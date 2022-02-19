@@ -95,9 +95,13 @@ def _change_number_to_integer_in_config_schema():
     for config_row in CONFIG_SCHEMA_UPDATE:
         op.execute(
             config_table.update().
-            where(sa.and_(config_table.c.name == config_row.name,
-                          config_table.c.scope == config_row.scope)).
-            values(schema=config_row.schema_6_1)
+            where(
+                sa.and_(
+                    config_table.c.name == op.inline_literal(config_row.name),
+                    config_table.c.scope == op.inline_literal(config_row.scope)
+                )
+            ).
+            values(schema=op.inline_literal(config_row.schema_6_1))
         )
 
 
@@ -105,7 +109,11 @@ def _change_integer_to_number_in_config_schema():
     for config_row in CONFIG_SCHEMA_UPDATE:
         op.execute(
             config_table.update().
-            where(sa.and_(config_table.c.name == config_row.name,
-                          config_table.c.scope == config_row.scope)).
-            values(schema=config_row.schema_6_0)
+            where(
+                sa.and_(
+                    config_table.c.name == op.inline_literal(config_row.name),
+                    config_table.c.scope == op.inline_literal(config_row.scope)
+                )
+            ).
+            values(schema=op.inline_literal(config_row.schema_6_0))
         )
