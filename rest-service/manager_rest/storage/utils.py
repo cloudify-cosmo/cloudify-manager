@@ -12,6 +12,9 @@ def get_column(model_class, column_name):
     if is_orm_attribute(column):
         return column
     else:
+        if not hasattr(column, 'remote_attr'):
+            # This is a property or similar, not a real column
+            return None
         # We need to get to the underlying attribute, so we move on to the
         # next remote_attr until we reach one
         while not is_orm_attribute(column.remote_attr):
@@ -30,6 +33,9 @@ def get_joins(model_class, columns):
     for column_name in columns:
         column = getattr(model_class, column_name)
         while not is_orm_attribute(column):
+            if not hasattr(column, 'local_attr'):
+                # This is a property or similar, not a real column
+                break
             join_attr = column.local_attr
 
             # This is a hack, to deal with the fact that SQLA doesn't

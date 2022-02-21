@@ -47,6 +47,10 @@ def add_attrs_filter_to_query(query, model_class, filter_rule,
 
     joins = get_joins(model_class, [column_name])
     column = get_column(model_class, column_name)
+    if not column:
+        # The attribute passed in via _include isn't a database object,
+        # don't try to filter on it in the DB
+        return query
     for joined_attr in joins:
         target_mapper = joined_attr.prop.mapper
         if target_mapper not in joined_columns_set:
