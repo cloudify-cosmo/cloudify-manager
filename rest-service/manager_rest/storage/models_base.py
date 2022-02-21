@@ -17,6 +17,7 @@ import json
 
 from collections import OrderedDict
 
+from alembic.util.sqla_compat import _literal_bindparam
 from dateutil import parser as date_parser
 from flask_sqlalchemy import SQLAlchemy, inspect, BaseQuery
 from flask_restful import fields as flask_fields
@@ -105,7 +106,13 @@ class JSONString(db.TypeDecorator):
 
     def process_bind_param(self, value, dialect):
         """Encode object to a string before inserting into database."""
-        return json.dumps(value)
+        try:
+            return json.dumps(value)
+        except TypeError:
+            if isinstance(value, _literal_bindparam):
+                # this is only ever _literal_bindparam in migrations
+                return json.dumps(value.value)
+            raise
 
     def process_result_value(self, value, engine):
         """Decode string to an object after selecting from database."""

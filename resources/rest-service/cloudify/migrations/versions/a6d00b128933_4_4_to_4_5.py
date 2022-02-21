@@ -20,8 +20,6 @@ def upgrade():
     op.add_column('executions',
                   sa.Column('started_at', UTCDateTime(), nullable=True))
 
-    op.execute('COMMIT')
-
     # Add new execution status
     op.execute("alter type execution_status add value 'queued'")
 
