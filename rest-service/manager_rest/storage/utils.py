@@ -8,7 +8,10 @@ def get_column(model_class, column_name):
     would need to be performed. Can be either an attribute of the class,
     or an association proxy linked to a relationship the class has
     """
-    column = getattr(model_class, column_name)
+    column = getattr(model_class, column_name, None)
+    if column is None:
+        # This is some sort of derived thing like tenant_roles in User
+        return None
     if is_orm_attribute(column):
         return column
     else:
@@ -31,7 +34,10 @@ def get_joins(model_class, columns):
     # Using an ordered dict because the order of the joins is important
     joins = OrderedDict()
     for column_name in columns:
-        column = getattr(model_class, column_name)
+        column = getattr(model_class, column_name, None)
+        if column is None:
+            # This is some sort of derived thing like tenant_roles in User
+            continue
         while not is_orm_attribute(column):
             if not hasattr(column, 'local_attr'):
                 # This is a property or similar, not a real column
