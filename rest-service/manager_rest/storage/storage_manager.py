@@ -420,11 +420,17 @@ class SQLStorageManager(object):
         replace column names with actual SQLA column objects
         """
         include = [get_column(model_class, c) for c in include]
+        include = [item for item in include if item is not None]
         filters = {get_column(model_class, c): filters[c] for c in filters}
+        filters = {k: v for k, v in filters.items() if k is not None}
         substr_filters = {get_column(model_class, c): substr_filters[c]
                           for c in substr_filters}
-        sort = OrderedDict((get_column(model_class, c), sort[c]) for c in sort)
+        substr_filters = {k: v for k, v in substr_filters.items()
+                          if k is not None}
+        sort = OrderedDict((get_column(model_class, c), sort[c]) for c in sort
+                           if get_column(model_class, c) is not None)
         distinct = [get_column(model_class, c) for c in distinct]
+        distinct = [item for item in distinct if item if item is not None]
 
         return include, filters, substr_filters, sort, distinct
 
