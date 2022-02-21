@@ -1,0 +1,26 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - cloudify/types/types.yaml
+
+workflows:
+  test_parameters:
+    mapping: scripts/workflows/test_deployment_id_parameters.py
+    parameters:
+      to_be_tested:
+        type: list
+        default:
+          - a_deployment_id
+      a_deployment_id:
+        description: A deployment identifier
+        type: deployment_id
+        constraints:
+          - filter_id: test-filter
+          - labels:
+              - foo: bar
+              - lorem: ipsum
+          - name_pattern:
+              ends_with: A
+              contains: deployment
+          - tenants:
+              - other_tenant
