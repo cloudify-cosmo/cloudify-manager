@@ -134,12 +134,10 @@ class ResourceManager(object):
                 if override_status is not None:
                     status = override_status
 
-        parameters = None
         affected_parent_deployments = set()
         with self.sm.transaction():
             execution = self.sm.get(models.Execution, execution_id,
                                     locking=True)
-            parameters = execution.parameters
             if execution._deployment_fk:
                 affected_parent_deployments.add(execution._deployment_fk)
                 deployment = execution.deployment
@@ -165,6 +163,12 @@ class ResourceManager(object):
 
             if status in ExecutionState.END_STATES:
                 execution.ended_at = utils.get_formatted_timestamp()
+
+                if workflow_id == 'delete_deployment_environment':
+                    deleted_dep_parents = \
+                        self._on_deployment_environment_deleted(execution)
+                    if deleted_dep_parents:
+                        affected_parent_deployments |= deleted_dep_parents
 
             execution = self.sm.update(execution)
             self.update_deployment_statuses(execution)
@@ -212,18 +216,17 @@ class ResourceManager(object):
                     plugin_update.temp_blueprint.is_hidden = False
                     self.sm.update(plugin_update.temp_blueprint)
 
-        if workflow_id == 'delete_deployment_environment' and \
-                status in ExecutionState.END_STATES:
-            if status == ExecutionState.TERMINATED or (
-                status == ExecutionState.FAILED and
-                parameters and parameters.get('force')
-            ):
-                affected_parent_deployments |= self.delete_deployment(
-                    deployment)
-
         if affected_parent_deployments:
             self.recalc_ancestors(affected_parent_deployments)
         return res
+
+    def _on_deployment_environment_deleted(self, execution):
+        if execution.status == ExecutionState.TERMINATED:
+            return self.delete_deployment(execution.deployment)
+
+        if execution.status == ExecutionState.FAILED:
+            if execution.parameters and execution.parameters.get('force'):
+                return self.delete_deployment(execution.deployment)
 
     def start_queued_executions(self):
         """Dequeue and start executions.
