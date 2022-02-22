@@ -34,7 +34,7 @@ def get_deployments_with_sm(sm,
     if labels:
         filter_rules.extend(
             {"key": list(label.keys())[0],
-             "values": [list(label.values())[0]],
+             "values": [str(list(label.values())[0])],
              "operator": "any_of",
              "type": "label"}
             for label in labels
@@ -42,7 +42,7 @@ def get_deployments_with_sm(sm,
     if tenants:
         filter_rules.append(
             {"key": "tenant_name",
-             "values": tenants,
+             "values": [str(t) for t in tenants],
              "operator": "any_of",
              "type": "attribute"}
         )
@@ -50,7 +50,7 @@ def get_deployments_with_sm(sm,
         for op, spec in display_name_specs.items():
             filter_rules.append(
                 {"key": "display_name",
-                 "values": [spec],
+                 "values": [str(spec)],
                  "operator": "any_of" if op == "equals_to" else op,
                  "type": "attribute"})
 
@@ -62,7 +62,7 @@ def get_deployments_with_sm(sm,
     result = sm.list(
         Deployment,
         include=['id'],
-        filters={'id': deployment_id},
+        filters={'id': str(deployment_id)},
         get_all_results=True,
         filter_rules=filter_rules
     )
