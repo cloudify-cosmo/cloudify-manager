@@ -1,3 +1,6 @@
+from collections import defaultdict
+
+
 def get_deployments_with_rest(client,
                               deployment_id,
                               filter_id=None,
@@ -76,3 +79,19 @@ def get_blueprints_with_rest(client,
                                   _include=['id'],
                                   _get_all_results=True,
                                   **kwargs)
+
+
+def get_instance_ids_by_node_ids(client, node_ids):
+    ni_ids = defaultdict(set)
+    offset = 0
+    ni_num = 0
+    while True:
+        nis = client.node_instances.list(node_id=node_ids, _offset=offset)
+        for ni in nis:
+            ni_ids[ni['node_id']].add(ni['id'])
+        ni_num += len(nis)
+        if ni_num < nis.metadata.pagination.total:
+            offset += nis.metadata.pagination.size
+        else:
+            break
+    return ni_ids

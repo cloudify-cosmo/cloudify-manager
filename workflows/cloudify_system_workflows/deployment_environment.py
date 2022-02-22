@@ -17,7 +17,9 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 from dsl_parser import tasks
 
 from . import idd
-from .search_utils import get_deployments_with_rest, get_blueprints_with_rest
+from .search_utils import (get_deployments_with_rest,
+                           get_blueprints_with_rest,
+                           get_instance_ids_by_node_ids)
 
 
 def _get_display_name(display_name, settings):
@@ -104,6 +106,8 @@ def create(ctx, labels=None, inputs=None, skip_plugins_validation=False,
            display_name=None, **_):
     client = get_rest_client(tenant=ctx.tenant_name)
     bp = client.blueprints.get(ctx.blueprint.id)
+    plan_node_ids = [n['id'] for n in bp.plan['nodes']]
+    existing_ni_ids = get_instance_ids_by_node_ids(client, plan_node_ids)
     deployment_plan = tasks.prepare_deployment_plan(
         bp.plan,
         inputs=inputs,
@@ -111,6 +115,7 @@ def create(ctx, labels=None, inputs=None, skip_plugins_validation=False,
         get_secret_method=client.secrets.get,
         get_deployments_method=partial(get_deployments_with_rest, client),
         get_blueprints_method=partial(get_blueprints_with_rest, client),
+        existing_ni_ids=existing_ni_ids,
     )
     nodes = deployment_plan['nodes']
     node_instances = deployment_plan['node_instances']
