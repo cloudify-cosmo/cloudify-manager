@@ -1146,7 +1146,8 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             return
 
         # Keep this import line here because of circular dependencies
-        from manager_rest.rest.search_utils import get_deployments_with_sm
+        from manager_rest.rest.search_utils import (get_deployments_with_sm,
+                                                    get_blueprints_with_sm)
 
         workflow = self.get_workflow(deployment, workflow_id)
         workflow_parameters = workflow.get('parameters', {})
@@ -1184,10 +1185,16 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             if not constraints or name not in parameters:
                 continue
             try:
+                if param.get('type') == 'deployment_id':
+                    get_method = partial(get_deployments_with_sm,
+                                         self._storage_manager)
+                elif param.get('type') == 'blueprint_id':
+                    get_method = partial(get_blueprints_with_sm,
+                                         self._storage_manager)
+                else:
+                    get_method = None
                 validate_input_value(name, constraints, parameters[name],
-                                     param.get('type'),
-                                     partial(get_deployments_with_sm,
-                                             self._storage_manager))
+                                     param.get('type'), get_method)
             except (dsl_exceptions.DSLParsingException,
                     dsl_exceptions.ConstraintException) as ex:
                 constraint_violations[name] = ex

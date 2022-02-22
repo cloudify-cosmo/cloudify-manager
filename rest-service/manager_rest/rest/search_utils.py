@@ -1,4 +1,5 @@
-from manager_rest.storage.models import Deployment, DeploymentsFilter
+from manager_rest.storage.models import (Blueprint, BlueprintsFilter,
+                                         Deployment, DeploymentsFilter)
 from manager_rest.rest.filters_utils import (get_filter_rules_from_filter_id,
                                              create_filter_rules_list,
                                              FilterRule)
@@ -59,7 +60,7 @@ def get_deployments_with_sm(sm,
                                     DeploymentsFilter,
                                     filter_id)
 
-    result = sm.list(
+    return sm.list(
         Deployment,
         include=['id'],
         filters={'id': str(deployment_id)},
@@ -67,4 +68,46 @@ def get_deployments_with_sm(sm,
         filter_rules=filter_rules
     )
 
-    return result
+
+def get_blueprints_with_sm(sm,
+                           blueprint_id,
+                           filter_id=None,
+                           labels=None,
+                           tenants=None,
+                           id_specs=None):
+    filter_rules = []
+    if labels:
+        filter_rules.extend(
+            {"key": list(label.keys())[0],
+             "values": [str(list(label.values())[0])],
+             "operator": "any_of",
+             "type": "label"}
+            for label in labels
+        )
+    if tenants:
+        filter_rules.append(
+            {"key": "tenant_name",
+             "values": [str(t) for t in tenants],
+             "operator": "any_of",
+             "type": "attribute"}
+        )
+    if id_specs:
+        for op, spec in id_specs.items():
+            filter_rules.append(
+                {"key": "id",
+                 "values": [str(spec)],
+                 "operator": "any_of" if op == "equals_to" else op,
+                 "type": "attribute"})
+
+    filter_rules = get_filter_rules(filter_rules,
+                                    Blueprint,
+                                    BlueprintsFilter,
+                                    filter_id)
+
+    return sm.list(
+        Blueprint,
+        include=['id'],
+        filters={'id': str(blueprint_id)},
+        get_all_results=True,
+        filter_rules=filter_rules
+    )

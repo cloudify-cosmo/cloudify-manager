@@ -14,7 +14,7 @@ from dsl_parser import constants, tasks
 
 from .. import idd
 from ..deployment_environment import format_plan_schedule
-from ..search_utils import get_deployments_with_rest
+from ..search_utils import get_deployments_with_rest, get_blueprints_with_rest
 
 from .step_extractor import extract_steps
 
@@ -35,15 +35,18 @@ def prepare_plan(*, update_id):
     if not workflow_ctx.local:
         client = get_rest_client(tenant=workflow_ctx.tenant_name)
         get_deployments_method = partial(get_deployments_with_rest, client)
+        get_blueprints_method = partial(get_blueprints_with_rest, client)
     else:
         get_deployments_method = None
+        get_blueprints_method = None
 
     deployment_plan = tasks.prepare_deployment_plan(
         bp.plan,
         inputs=new_inputs,
         runtime_only_evaluation=dep_up.runtime_only_evaluation,
         get_secret_method=workflow_ctx.get_secret,
-        get_deployments_method=get_deployments_method
+        get_deployments_method=get_deployments_method,
+        get_blueprints_method=get_blueprints_method,
     )
     workflow_ctx.set_deployment_update_attributes(
         update_id, plan=deployment_plan)
