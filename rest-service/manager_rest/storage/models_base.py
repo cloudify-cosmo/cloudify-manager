@@ -96,7 +96,7 @@ class JSONString(db.TypeDecorator):
         except TypeError:
             if isinstance(value, _literal_bindparam):
                 # this is only ever _literal_bindparam in migrations
-                return json.dumps(value.value)
+                return value.value
             raise
 
     def process_result_value(self, value, engine):
