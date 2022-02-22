@@ -9,10 +9,10 @@ https://github.com/cloudify-cosmo/cloudify-agent/archive/master.zip
 # test dependencies
 aiohttp==3.7.4.post0
 dataclasses==0.8
-fasteners==0.16
+fasteners==0.17.3
 pytest==6.2.5
 pytest-asyncio==0.15.1
 python-dateutil==2.8.2
-requests==2.26.0
+requests==2.27.1
 retrying==1.3.3
 wagon[venv]==0.11.0
