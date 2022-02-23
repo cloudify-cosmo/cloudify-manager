@@ -44,7 +44,8 @@ def upgrade():
     op.add_column('executions', sa.Column('ended_at',
                                           UTCDateTime(),
                                           nullable=True))
-    op.execute("alter type execution_status add value 'kill_cancelling'")
+    with op.get_context().autocommit_block():
+        op.execute("alter type execution_status add value 'kill_cancelling'")
 
 
 def downgrade():

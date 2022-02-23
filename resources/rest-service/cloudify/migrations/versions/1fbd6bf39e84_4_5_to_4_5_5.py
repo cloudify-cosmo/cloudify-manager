@@ -51,7 +51,8 @@ def upgrade():
                   sa.Column('scheduled_for', UTCDateTime(), nullable=True))
 
     # Add new execution status
-    op.execute("alter type execution_status add value 'scheduled'")
+    with op.get_context().autocommit_block():
+        op.execute("alter type execution_status add value 'scheduled'")
     op.add_column(
         'deployments',
         sa.Column('capabilities', sa.PickleType(comparator=lambda *a: False))
