@@ -129,7 +129,7 @@ class Blueprint(CreatedAtMixin, SQLResourceBase):
 
     @classproperty
     def allowed_filter_attrs(cls):
-        return ['created_by', 'state']
+        return ['created_by', 'state', 'id', 'tenant_name']
 
     def to_response(self, include=None, **kwargs):
         include = include or self.response_fields
