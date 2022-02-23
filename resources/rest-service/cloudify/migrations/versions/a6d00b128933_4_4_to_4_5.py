@@ -20,8 +20,9 @@ def upgrade():
     op.add_column('executions',
                   sa.Column('started_at', UTCDateTime(), nullable=True))
 
-    # Add new execution status
-    op.execute("alter type execution_status add value 'queued'")
+    with op.get_context().autocommit_block():
+        # Add new execution status
+        op.execute("alter type execution_status add value 'queued'")
 
     # add execution_fk index to logs and events
     op.create_index(
