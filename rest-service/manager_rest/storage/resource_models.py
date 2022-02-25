@@ -1182,7 +1182,7 @@ class Execution(CreatedAtMixin, SQLResourceBase):
         constraint_violations = {}
         for name, param in workflow_parameters.items():
             constraints = extract_constraints(param)
-            if not constraints or name not in parameters:
+            if name not in parameters:
                 continue
             try:
                 if param.get('type') == 'deployment_id':
@@ -1193,6 +1193,8 @@ class Execution(CreatedAtMixin, SQLResourceBase):
                                          self._storage_manager)
                 else:
                     get_method = None
+                    if not constraints:
+                        continue
                 validate_input_value(name, constraints, parameters[name],
                                      param.get('type'), get_method)
             except (dsl_exceptions.DSLParsingException,
