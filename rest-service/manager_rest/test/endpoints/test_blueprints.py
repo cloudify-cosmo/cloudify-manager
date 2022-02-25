@@ -19,6 +19,8 @@ import mock
 import tempfile
 import shutil
 
+import pytest
+
 from manager_rest import archiving
 from manager_rest.test import base_test
 from manager_rest.storage.resource_models import Blueprint, db
@@ -28,6 +30,11 @@ from cloudify_rest_client import exceptions
 from cloudify.exceptions import WorkflowFailed, InvalidBlueprintImport
 
 from .test_utils import generate_progress_func
+
+try:
+    import bz2
+except ImportError:
+    bz2 = None
 
 
 def mocked_requests_get(*args, **kwargs):
@@ -148,6 +155,7 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
     def test_put_tar_archive(self):
         self._test_put_blueprint_archive(archiving.make_tarfile, 'tar')
 
+    @pytest.mark.skipif(bz2 is None, reason='bz2 module not available')
     def test_put_bz2_archive(self):
         self._test_put_blueprint_archive(archiving.make_tarbz2file, 'tar.bz2')
 
