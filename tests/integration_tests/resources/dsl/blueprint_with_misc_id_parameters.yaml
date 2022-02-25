@@ -24,3 +24,17 @@ workflows:
               contains: deployment
           - tenants:
               - other_tenant
+      a_blueprint_id:
+        description: A blueprint identifier
+        type: blueprint_id
+        constraints:
+          - labels:
+              - alpha: bravo
+          - name_pattern:
+              contains: bp
+              ends_with: basic
+          - tenants:
+              - default_tenant
+      b_blueprint_id:
+        description: Just a blueprint identifier (without constraints)
+        type: blueprint_id
