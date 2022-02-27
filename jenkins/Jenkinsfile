@@ -44,10 +44,7 @@ pipeline {
       steps {
         repoCheckout('https://github.com/cloudify-cosmo/cloudify-manager.git',"${env.PROJECT}","${env.BRANCH}")
         container('python'){
-          sh '''
-            apt-get update
-            apt-get install libldap-dev libsasl2-dev libldap2-dev
-          '''
+          sh 'apt-get install -y libldap-dev libsasl2-dev libldap2-dev'
         }
       }
     }
