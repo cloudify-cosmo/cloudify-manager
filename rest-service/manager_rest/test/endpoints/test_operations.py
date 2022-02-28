@@ -1,26 +1,49 @@
 import uuid
 from datetime import datetime
 
+import pytest
+
 from cloudify import constants
+from cloudify_rest_client.exceptions import CloudifyClientError
 
 from manager_rest.test import base_test
 from manager_rest.storage import models
 
 
-class OperationsTestCase(base_test.BaseServerTestCase):
-
+class OperationsTestBase(object):
     def setUp(self):
-        super(OperationsTestCase, self).setUp()
+        super(OperationsTestBase, self).setUp()
+        self.execution = self._execution()
 
-        self.execution = models.Execution(
+    def _execution(self, **kwargs):
+        return models.Execution(
             created_at=datetime.utcnow(),
             id='execution_{}'.format(uuid.uuid4()),
             is_system_workflow=False,
             workflow_id='install',
             creator=self.user,
             tenant=self.tenant,
+            **kwargs
         )
 
+    def _graph(self, **kwargs):
+        exc = kwargs.pop('execution', self.execution)
+        return models.TasksGraph(
+            execution=exc,
+            creator=self.user,
+            tenant=self.tenant,
+            **kwargs
+        )
+
+    def _operation(self, **kwargs):
+        return models.Operation(
+            creator=self.user,
+            tenant=self.tenant,
+            **kwargs
+        )
+
+
+class OperationsTestCase(OperationsTestBase, base_test.BaseServerTestCase):
     def test_operations_created_embedded(self):
         """Create operations when sending the tasks graph
 
@@ -72,3 +95,57 @@ class OperationsTestCase(base_test.BaseServerTestCase):
         self.client.operations.update(op1['id'], constants.TASK_SUCCEEDED)
         self.sm.refresh(self.execution)
         assert self.execution.finished_operations == 1
+
+
+class TasksGraphsTestCase(OperationsTestBase, base_test.BaseServerTestCase):
+    def setUp(self):
+        super(TasksGraphsTestCase, self).setUp()
+        self.execution = self._execution()
+
+    def _execution(self, **kwargs):
+        return models.Execution(
+            created_at=datetime.utcnow(),
+            id='execution_{}'.format(uuid.uuid4()),
+            is_system_workflow=False,
+            workflow_id='install',
+            creator=self.user,
+            tenant=self.tenant,
+            **kwargs
+        )
+
+    def _graph(self, **kwargs):
+        exc = kwargs.pop('execution', self.execution)
+        return models.TasksGraph(
+            execution=exc,
+            creator=self.user,
+            tenant=self.tenant,
+            **kwargs
+        )
+
+    def test_list_invalid(self):
+        with pytest.raises(CloudifyClientError) as cm:
+            self.client.tasks_graphs.list(execution_id='nonexistent')
+        assert cm.value.status_code == 404
+
+        tgs = self.client.tasks_graphs.list(
+            execution_id=self.execution.id, name='nonexistent')
+        assert len(tgs) == 0
+
+    def test_list_by_execution(self):
+        exc2 = self._execution()
+        tg1 = self._graph(id='tg1', execution=self.execution)
+        tg2 = self._graph(id='tg2', execution=exc2)
+        tgs1 = self.client.tasks_graphs.list(execution_id=self.execution.id)
+        tgs2 = self.client.tasks_graphs.list(execution_id=exc2.id)
+        assert {t.id for t in tgs1} == {tg1.id}
+        assert {t.id for t in tgs2} == {tg2.id}
+
+    def test_list_by_name(self):
+        tg1 = self._graph(id='tg1', execution=self.execution, name='wf1')
+        tg2 = self._graph(id='tg2', execution=self.execution, name='wf2')
+        tgs1 = self.client.tasks_graphs.list(
+            execution_id=self.execution.id, name='wf1')
+        tgs2 = self.client.tasks_graphs.list(
+            execution_id=self.execution.id, name='wf2')
+        assert {t.id for t in tgs1} == {tg1.id}
+        assert {t.id for t in tgs2} == {tg2.id}
