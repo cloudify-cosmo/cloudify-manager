@@ -34,6 +34,7 @@ LDAP_CA_NAME = '_auth-ldap-ca'
 class Setting(object):
     def __init__(self, name, default=NOT_SET, from_db=True):
         self._name = name
+        self._default = default
         self._value = default
         self._from_db = from_db
 
@@ -49,7 +50,7 @@ class Setting(object):
         self._value = value
 
     def __delete__(self, instance):
-        self._value = NOT_SET
+        self._value = self._default
 
 
 class Config(object):
