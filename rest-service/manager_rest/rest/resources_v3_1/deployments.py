@@ -234,7 +234,7 @@ class DeploymentsId(resources_v1.DeploymentsId):
                 try:
                     workdir_path = _get_workdir_path(deployment_id,
                                                      deployment.tenant_name)
-                    os.mkdir(workdir_path)
+                    os.makedirs(workdir_path)
                     zip_path = os.path.join(tmpdir_path, 'dep.zip')
                     with open(zip_path, 'wb') as zip_handle:
                         zip_handle.write(
