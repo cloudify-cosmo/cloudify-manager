@@ -102,10 +102,6 @@ class OperationsTestCase(OperationsTestBase, base_test.BaseServerTestCase):
         assert cm.value.status_code == 400
 
         with pytest.raises(CloudifyClientError) as cm:
-            self.client.operations.list(execution_id='a', graph_id='b')
-        assert cm.value.status_code == 400
-
-        with pytest.raises(CloudifyClientError) as cm:
             self.client.operations.list(execution_id='nonexistent')
         assert cm.value.status_code == 404
 
