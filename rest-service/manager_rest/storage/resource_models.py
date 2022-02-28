@@ -2051,7 +2051,7 @@ class Agent(CreatedAtMixin, SQLResourceBase):
         return agent_dict
 
 
-class TasksGraph(SQLResourceBase):
+class TasksGraph(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'tasks_graphs'
     __table_args__ = (
         db.Index(
@@ -2064,7 +2064,6 @@ class TasksGraph(SQLResourceBase):
 
     id = db.Column(db.Text, index=True, default=lambda: str(uuid.uuid4()))
     name = db.Column(db.Text, index=True)
-    created_at = db.Column(UTCDateTime, nullable=False, index=True)
 
     _execution_fk = foreign_key(Execution._storage_id)
 
