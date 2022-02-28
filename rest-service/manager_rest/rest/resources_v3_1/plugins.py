@@ -325,7 +325,7 @@ class PluginsId(resources_v2_1.PluginsId):
             check_user_action_allowed('set_owner', None, True)
             creator = rest_utils.valid_user(request_dict['creator'])
             plugin.creator = creator
-        for key in ['blueprint_labels', 'labels']:
+        for key in ['blueprint_labels', 'labels', 'resource_tags']:
             if key not in request_dict:
                 continue
             setattr(plugin, key, request_dict[key])
