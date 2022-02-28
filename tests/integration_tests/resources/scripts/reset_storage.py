@@ -121,6 +121,7 @@ def clean_dirs():
         '/opt/mgmtworker/env/source_plugins',
         '/opt/mgmtworker/work/deployments',
         '/opt/manager/resources/blueprints',
+        '/opt/manager/resources/deployments',
         '/opt/manager/resources/uploaded-blueprints',
         '/opt/manager/resources/snapshots/'
     ]

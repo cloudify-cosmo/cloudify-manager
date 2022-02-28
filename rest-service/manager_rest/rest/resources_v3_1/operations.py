@@ -348,16 +348,20 @@ class TasksGraphs(SecuredResource):
     def get(self, _include=None, pagination=None, **kwargs):
         args = get_args_and_verify_arguments([
             Argument('execution_id', type=text_type, required=True),
-            Argument('name', type=text_type, required=True)
+            Argument('name', type=text_type, required=False)
         ])
         sm = get_storage_manager()
         execution_id = args.get('execution_id')
         name = args.get('name')
-        execution = sm.list(models.Execution, filters={'id': execution_id})[0]
+        execution = sm.get(models.Execution, execution_id)
+        filters = {'execution': execution}
+        if name:
+            filters['name'] = name
         return sm.list(
             models.TasksGraph,
-            filters={'execution': execution, 'name': name},
-            pagination=pagination
+            filters=filters,
+            pagination=pagination,
+            include=_include,
         )
 
 
