@@ -7,6 +7,8 @@ from cloudify import constants as common_constants
 from cloudify.workflows import events as common_events, tasks
 from cloudify.models_states import ExecutionState
 from sqlalchemy.dialects.postgresql import JSON
+
+from manager_rest import manager_exceptions
 from manager_rest.rest.rest_utils import (
     get_args_and_verify_arguments,
     get_json_and_verify_params,
@@ -35,16 +37,40 @@ class Operations(SecuredResource):
     @paginate
     def get(self, _include=None, pagination=None, **kwargs):
         args = get_args_and_verify_arguments([
-            Argument('graph_id', type=text_type, required=True)
+            Argument('graph_id', type=text_type, required=False),
+            Argument('execution_id', type=text_type, required=False),
+            Argument('state', type=text_type, required=False),
+            Argument('skip_internal', type=bool, required=False),
         ])
         sm = get_storage_manager()
         graph_id = args.get('graph_id')
-        tasks_graph = sm.list(models.TasksGraph, filters={'id': graph_id})[0]
+        exc_id = args.get('execution_id')
+        state = args.get('state')
+        skip_internal = args.get('skip_internal')
+
+        filters = {}
+        if graph_id and exc_id:
+            raise manager_exceptions.BadParametersError(
+                'Pass either graph_id or execution_id, not both')
+        elif graph_id:
+            filters['tasks_graph'] = sm.get(models.TasksGraph, graph_id)
+        elif exc_id:
+            execution = sm.get(models.Execution, exc_id)
+            filters['_tasks_graph_fk'] = [
+                tg._storage_id for tg in execution.tasks_graphs]
+        else:
+            raise manager_exceptions.BadParametersError(
+                'Missing required param: graph_id or execution_id')
+        if state is not None:
+            filters['state'] = state
+        if skip_internal:
+            filters['type'] = ['SubgraphTask', 'RemoteWorkflowTask']
+
         return sm.list(
             models.Operation,
-            filters={'tasks_graph': tasks_graph},
+            filters=filters,
             pagination=pagination,
-            include=_include
+            include=_include,
         )
 
     @authorize('operations')

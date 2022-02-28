@@ -96,6 +96,89 @@ class OperationsTestCase(OperationsTestBase, base_test.BaseServerTestCase):
         self.sm.refresh(self.execution)
         assert self.execution.finished_operations == 1
 
+    def test_list_invalid_filters(self):
+        with pytest.raises(CloudifyClientError) as cm:
+            self.client.operations.list()
+        assert cm.value.status_code == 400
+
+        with pytest.raises(CloudifyClientError) as cm:
+            self.client.operations.list(execution_id='a', graph_id='b')
+        assert cm.value.status_code == 400
+
+        with pytest.raises(CloudifyClientError) as cm:
+            self.client.operations.list(execution_id='nonexistent')
+        assert cm.value.status_code == 404
+
+        with pytest.raises(CloudifyClientError) as cm:
+            self.client.operations.list(graph_id='nonexistent')
+        assert cm.value.status_code == 404
+
+    def test_list_for_graph(self):
+        tg1 = self._graph(id='tg-1', name='workflow1')
+        tg2 = self._graph(id='tg-2', name='workflow2')
+        self._operation(id='op1', tasks_graph=tg1, state='pending')
+        self._operation(id='op2', tasks_graph=tg1, state='pending')
+        self._operation(id='op3', tasks_graph=tg2, state='pending')
+
+        operations = self.client.operations.list(tg1.id)
+        assert len(operations) == 2
+        assert {op.id for op in operations} == {'op1', 'op2'}
+
+    def test_list_for_execution(self):
+        tg1 = self._graph(id='tg-1', name='workflow1')
+        tg2 = self._graph(id='tg-2', name='workflow2')
+        self._operation(id='op1', tasks_graph=tg1, state='pending')
+        self._operation(id='op2', tasks_graph=tg1, state='pending')
+        self._operation(id='op3', tasks_graph=tg2, state='pending')
+        exc2 = self._execution()
+        tg3 = self._graph(id='tg-3', name='worfklow3', execution=exc2)
+        self._operation(id='op4', tasks_graph=tg3, state='pending')
+
+        operations = self.client.operations.list(
+            execution_id=self.execution.id)
+        assert len(operations) == 3
+        assert {op.id for op in operations} == {'op1', 'op2', 'op3'}
+
+    def test_list_state(self):
+        tg1 = self._graph(id='g1', name='workflow1')
+        self._operation(id='op1', tasks_graph=tg1, state='pending')
+        self._operation(id='op2', tasks_graph=tg1, state='started')
+
+        all_ops = self.client.operations.list(graph_id='g1')
+        pending = self.client.operations.list(graph_id='g1', state='pending')
+        started = self.client.operations.list(graph_id='g1', state='started')
+        empty = self.client.operations.list(graph_id='g1', state='nonexistent')
+
+        assert {o.id for o in all_ops} == {'op1', 'op2'}
+        assert {o.id for o in pending} == {'op1'}
+        assert {o.id for o in started} == {'op2'}
+        assert len(empty) == 0
+
+    def test_skip_internal(self):
+        tg1 = self._graph(id='g1', name='workflow1')
+        self._operation(id='op1', tasks_graph=tg1, state='pending',
+                        type='SendNodeEventTask')
+        self._operation(id='op2', tasks_graph=tg1, state='started',
+                        type='RemoteWorkflowTask')
+        self._operation(id='op3', tasks_graph=tg1, state='started',
+                        type='SubgraphTask')
+
+        all_ops = self.client.operations.list(graph_id='g1')
+        skip = self.client.operations.list(graph_id='g1', skip_internal=True)
+
+        assert {o.id for o in all_ops} == {'op1', 'op2', 'op3'}
+        assert {o.id for o in skip} == {'op2', 'op3'}
+
+    def test_get_operation(self):
+        tg1 = self._graph(id='g1', name='workflow1')
+        self._operation(id='op1', tasks_graph=tg1, state='pending',
+                        type='SendNodeEventTask')
+        with pytest.raises(CloudifyClientError) as cm:
+            self.client.operations.get('nonexistent')
+        assert cm.value.status_code == 404
+        op = self.client.operations.get('op1')
+        assert op.id == 'op1'
+
 
 class TasksGraphsTestCase(OperationsTestBase, base_test.BaseServerTestCase):
     def test_list_invalid(self):
