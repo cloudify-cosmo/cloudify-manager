@@ -98,30 +98,6 @@ class OperationsTestCase(OperationsTestBase, base_test.BaseServerTestCase):
 
 
 class TasksGraphsTestCase(OperationsTestBase, base_test.BaseServerTestCase):
-    def setUp(self):
-        super(TasksGraphsTestCase, self).setUp()
-        self.execution = self._execution()
-
-    def _execution(self, **kwargs):
-        return models.Execution(
-            created_at=datetime.utcnow(),
-            id='execution_{}'.format(uuid.uuid4()),
-            is_system_workflow=False,
-            workflow_id='install',
-            creator=self.user,
-            tenant=self.tenant,
-            **kwargs
-        )
-
-    def _graph(self, **kwargs):
-        exc = kwargs.pop('execution', self.execution)
-        return models.TasksGraph(
-            execution=exc,
-            creator=self.user,
-            tenant=self.tenant,
-            **kwargs
-        )
-
     def test_list_invalid(self):
         with pytest.raises(CloudifyClientError) as cm:
             self.client.tasks_graphs.list(execution_id='nonexistent')
