@@ -590,6 +590,7 @@ class BaseServerTestCase(unittest.TestCase):
         test_config.rest_service_log_files_backup_count = 7
         test_config.maintenance_folder = cls.maintenance_mode_dir
         test_config.security_hash_salt = 'hash_salt'
+        test_config.default_page_size = 1000
         test_config.security_secret_key = 'secret_key'
         test_config.security_encoding_alphabet = \
             'L7SMZ4XebsuIK8F6aVUBYGQtW0P12Rn'
