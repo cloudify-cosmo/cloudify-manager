@@ -29,6 +29,15 @@ spec:
     args:
       - "-c"
       - "max_connections=800"
+      # the following settings make the database very fast FOR TESTS, but will
+      # remove all resistance to crashes and power losses.
+      # NEVER USE IN PRODUCTION!!! SERIOUSLY! YOU WILL LOSE ALL YOUR DATA!
+      - "-c"
+      - "fsync=off"  # never use in production
+      - "-c"
+      - "synchronous_commit=off"  # never use in production
+      - "-c"
+      - "full_page_writes=off"  # never use in production
     env:
     - name: POSTGRES_USER
       value: cloudify

@@ -1,61 +1,98 @@
+import itertools
+
 from manager_rest.constants import LabelsOperator
+from manager_rest.storage import models
 from manager_rest.rest.filters_utils import FilterRule
 from manager_rest.test import base_test
 
 
 class WorkflowsTestCase(base_test.BaseServerTestCase):
+    def _label(self, deployment, key, value):
+        deployment.labels.append(models.DeploymentLabel(
+            key=key,
+            value=value,
+            creator=deployment.creator,
+        ))
 
-    def _put_deployments(self, deployment_ids):
-        if 'd1' in deployment_ids:
-            self.put_deployment(
-                deployment_id='d1',
-                blueprint_id='b1',
-                blueprint_file_name='blueprint.yaml',
-                labels=[{'zxc': '1'}, {'asd': '1'}]
-            )
-        if 'd2' in deployment_ids:
-            self.put_deployment(
-                deployment_id='d2',
-                blueprint_id='b2',
-                blueprint_file_name='blueprint_with_workflows.yaml',
-                labels=[{'zxc': '1'}, {'asd': '2'}]
-            )
-        if 'd3' in deployment_ids:
-            self.put_deployment(
-                deployment_id='d3',
-                blueprint_id='b3',
-                blueprint_file_name='blueprint_with_workflows_with_parameters_'
-                                    'types.yaml',
-                labels=[{'zxc': '2'}, {'asd': '2'}]
-            )
+    def _deployment(self, dep_id, **kwargs):
+        labels = kwargs.pop('labels', [])
+        bp = models.Blueprint(
+            id=dep_id + '_bp',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        dep = models.Deployment(
+            id=dep_id,
+            blueprint=bp,
+            creator=self.user,
+            tenant=self.tenant,
+            **kwargs
+        )
+        for key, value in labels:
+            self._label(dep, key, value)
+        return dep
 
-    def test_workflows_list_with_additional_workflow(self):
-        self._put_deployments(['d2'])
+    def test_workflows_list(self):
+        self._deployment('d2', workflows={
+            'install': {},
+            'mock_workflow': {}
+        })
         workflows = self.client.workflows.list(id='d2')
-        assert 'mock_workflow' in (w.name for w in workflows.items)
+        assert {w.name for w in workflows.items} == \
+            {'install', 'mock_workflow'}
 
     def test_workflows_list_workflow_with_params(self):
-        self._put_deployments(['d3'])
+        parameters = {
+            'a': {'type': 'int'},
+            'b': {'type': 'string'},
+        }
+        self._deployment('d3', workflows={
+            'mock_workflow': {'parameters': parameters},
+        })
         workflows = self.client.workflows.list(id='d3')
-        mock_workflows = [w for w in workflows if w.name == 'mock_workflow']
-        assert len(mock_workflows) == 1
-        assert len(mock_workflows[0].parameters.keys()) > 0
+        assert len(workflows) == 1
+        assert workflows[0].parameters == parameters
 
     def test_workflows_list_nonexistent(self):
-        self._put_deployments(['d1'])
+        self._deployment('d1')
         workflows = self.client.workflows.list(id='nonexistent')
         assert workflows.items == []
 
     def test_workflows_list_group(self):
-        self._put_deployments(['d2', 'd3'])
+        self._deployment('d2', workflows={
+            'install': {},
+            'mock_workflow': {}
+        })
+        self._deployment('d3', workflows={
+            'install': {},
+            'uninstall': {},
+        })
         self.client.deployment_groups.put('g1', deployment_ids=['d2', 'd3'])
         workflows_for_g1 = self.client.workflows.list(deployment_group_id='g1')
         assert workflows_for_g1
         workflows_for_d2 = self.client.workflows.list(id='d2')
-        assert len(workflows_for_g1.items) == len(workflows_for_d2.items)
+        workflows_for_d3 = self.client.workflows.list(id='d3')
+        assert {w.name for w in workflows_for_g1} == {
+            w.name for w in itertools.chain(workflows_for_d2, workflows_for_d3)
+        }
 
     def test_workflows_by_filter_rule(self):
-        self._put_deployments(['d1', 'd2', 'd3'])
+        self._deployment(
+            'd1',
+            workflows={'workflow_d1': {}},
+            labels=[('zxc', '1'), ('abc', '1')],
+        )
+        self._deployment(
+            'd2',
+            workflows={'workflow_d2': {}},
+            labels=[],
+        )
+        self._deployment(
+            'd3',
+            workflows={'workflow_d3': {}},
+            labels=[('zxc', '2')],
+        )
+
         workflows_by_filter = self.client.workflows.list(
             filter_rules=[FilterRule('zxc', ['1'], LabelsOperator.NOT_ANY_OF,
                                      'label')])
@@ -63,7 +100,21 @@ class WorkflowsTestCase(base_test.BaseServerTestCase):
         assert workflows_by_filter.items == workflows_for_d3.items
 
     def test_workflows_by_filter_id(self):
-        self._put_deployments(['d1', 'd2', 'd3'])
+        self._deployment(
+            'd1',
+            workflows={'a': {}},
+            labels=[('zxc', '1'), ('asd', '1')]
+        )
+        self._deployment(
+            'd2',
+            workflows={'a': {},  'mock_workflow': {}},
+            labels=[('zxc', '1'), ('asd', '2')]
+        )
+        self._deployment(
+            'd3',
+            workflows={'a': {},  'mock_workflow': {}},
+            labels=[('zxc', '2'), ('asd', '2')]
+        )
         self.create_filter(
             self.client.deployments_filters, 'f1',
             [FilterRule('zxc', ['1'], LabelsOperator.ANY_OF, 'label'),
