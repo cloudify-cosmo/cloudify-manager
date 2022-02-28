@@ -28,28 +28,19 @@ inputs:
       - name_pattern:
           starts_with: d
           contains: deployment
-
-node_types:
-  mock_type:
-    properties:
-      deployment_id:
-        type: deployment_id
-        required: true
-
-node_templates:
-  node_a:
-    type: mock_type
-    properties:
-      deployment_id: { get_input: a_deployment_id }
-  node_b:
-    type: mock_type
-    properties:
-      deployment_id: { get_input: b_deployment_id }
-  node_c:
-    type: mock_type
-    properties:
-      deployment_id: { get_input: c_deployment_id }
-  node_d:
-    type: mock_type
-    properties:
-      deployment_id: { get_input: d_deployment_id }
+  a_blueprint_id:
+    type: blueprint_id
+#    required: false
+    constraints:
+      - labels:
+          - alpha: bravo
+      - name_pattern:
+          starts_with: bp
+          ends_with: basic
+  b_blueprint_id:
+    type: blueprint_id
+#    required: false
+    constraints:
+      - filter_id: test-filter
+      - tenants:
+          - default_tenant

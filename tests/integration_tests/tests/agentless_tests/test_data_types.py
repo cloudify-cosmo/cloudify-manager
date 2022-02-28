@@ -9,7 +9,7 @@ pytestmark = pytest.mark.group_deployments
 
 
 @pytest.mark.usefixtures('cloudmock_plugin')
-class TestDeploymentIdInputs(AgentlessTestCase):
+class TestMiscellaneousIdInputs(AgentlessTestCase):
     def setUp(self):
         self.client.tenants.create('other_tenant')
         self.client.tenants.add_user('admin', 'other_tenant', 'manager')
@@ -24,8 +24,10 @@ class TestDeploymentIdInputs(AgentlessTestCase):
             'bp-basic')
         utils.wait_for_blueprint_upload('bp-basic', self.client)
         self.client.blueprints.set_visibility('bp-basic', 'global')
+        self.client.blueprints.update('bp-basic',
+                                      {'labels': [{'alpha': 'bravo'}]})
         self.client.blueprints.upload(
-            utils.get_resource('dsl/blueprint_with_deployment_id_inputs.yaml'),
+            utils.get_resource('dsl/blueprint_with_misc_id_inputs.yaml'),
             'bp')
         utils.wait_for_blueprint_upload('bp', self.client)
         self.client.deployments_filters.create(
@@ -34,8 +36,14 @@ class TestDeploymentIdInputs(AgentlessTestCase):
               'values': ['rty'],
               'operator': 'any_of',
               'type': 'label'}])
+        self.client.blueprints_filters.create(
+            'test-filter',
+            [{'key': 'alpha',
+              'values': ['bravo'],
+              'operator': 'any_of',
+              'type': 'label'}])
 
-    def test_successful(self):
+    def setup_valid_deployments(self):
         self.client.deployments.create('bp-basic', 'deploymentA',
                                        labels=[{'qwe': 'rty'},
                                                {'foo': 'bar'}])
@@ -46,12 +54,16 @@ class TestDeploymentIdInputs(AgentlessTestCase):
         self.other_client.deployments.set_visibility('deploymentC', 'global')
         self.client.deployments.create('bp-basic', 'deploymentD')
 
+    def test_successful(self):
+        self.setup_valid_deployments()
         self.client.deployments.create(
             'bp', 'd1',
             inputs={'a_deployment_id': 'deploymentA',
                     'b_deployment_id': 'deploymentB',
                     'c_deployment_id': 'deploymentC',
-                    'd_deployment_id': 'deploymentD'})
+                    'd_deployment_id': 'deploymentD',
+                    'a_blueprint_id': 'bp-basic',
+                    'b_blueprint_id': 'bp-basic'})
         install_execution = self.client.executions.create('d1', 'install')
         self.wait_for_execution_to_end(install_execution)
 
@@ -68,7 +80,7 @@ class TestDeploymentIdInputs(AgentlessTestCase):
             else:
                 assert False
 
-    def test_filter_id_constraint_error(self):
+    def test_deployment_id_errors(self):
         self.client.deployments.create('bp-basic', 'deploymentA',
                                        labels=[{'qwe': 'rty'},
                                                {'foo': 'bar'}])
@@ -79,7 +91,7 @@ class TestDeploymentIdInputs(AgentlessTestCase):
         self.other_client.deployments.set_visibility('deploymentC', 'global')
         self.client.deployments.create('bp-basic', 'deploymentD')
 
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             CloudifyClientError,
             r'^400:.+ConstraintException:.+filter_id',
             self.client.deployments.create,
@@ -87,9 +99,11 @@ class TestDeploymentIdInputs(AgentlessTestCase):
             inputs={'a_deployment_id': 'deploymentD',
                     'b_deployment_id': 'deploymentB',
                     'c_deployment_id': 'deploymentC',
-                    'd_deployment_id': 'deploymentD'})
+                    'd_deployment_id': 'deploymentD',
+                    'a_blueprint_id': 'bp-basic',
+                    'b_blueprint_id': 'bp-basic'})
 
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             CloudifyClientError,
             r'^400:.+ConstraintException:.+labels',
             self.client.deployments.create,
@@ -97,9 +111,11 @@ class TestDeploymentIdInputs(AgentlessTestCase):
             inputs={'a_deployment_id': 'deploymentA',
                     'b_deployment_id': 'deploymentA',
                     'c_deployment_id': 'deploymentC',
-                    'd_deployment_id': 'deploymentD'})
+                    'd_deployment_id': 'deploymentD',
+                    'a_blueprint_id': 'bp-basic',
+                    'b_blueprint_id': 'bp-basic'})
 
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             CloudifyClientError,
             r'^400:.+ConstraintException:.+tenants',
             self.client.deployments.create,
@@ -107,10 +123,12 @@ class TestDeploymentIdInputs(AgentlessTestCase):
             inputs={'a_deployment_id': 'deploymentA',
                     'b_deployment_id': 'deploymentB',
                     'c_deployment_id': 'deploymentB',
-                    'd_deployment_id': 'deploymentD'})
+                    'd_deployment_id': 'deploymentD',
+                    'a_blueprint_id': 'bp-basic',
+                    'b_blueprint_id': 'bp-basic'})
 
         self.client.deployments.create('bp-basic', 'not_a_deploymentD')
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             CloudifyClientError,
             r'^400:.+ConstraintException:.+name_pattern',
             self.client.deployments.create,
@@ -118,11 +136,40 @@ class TestDeploymentIdInputs(AgentlessTestCase):
             inputs={'a_deployment_id': 'deploymentA',
                     'b_deployment_id': 'deploymentB',
                     'c_deployment_id': 'deploymentC',
-                    'd_deployment_id': 'not_a_deploymentD'})
+                    'd_deployment_id': 'not_a_deploymentD',
+                    'a_blueprint_id': 'bp-basic',
+                    'b_blueprint_id': 'bp-basic'})
+
+    def test_blueprint_id_errors(self):
+        self.setup_valid_deployments()
+
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            r'^400:.+ConstraintException:.+a_blueprint_id.+labels',
+            self.client.deployments.create,
+            'bp', 'd1',
+            inputs={'a_deployment_id': 'deploymentA',
+                    'b_deployment_id': 'deploymentB',
+                    'c_deployment_id': 'deploymentC',
+                    'd_deployment_id': 'deploymentD',
+                    'a_blueprint_id': 'bp',
+                    'b_blueprint_id': 'bp-basic'})
+
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            r'^400:.+ConstraintException:.+b_blueprint_id.+filter_id',
+            self.client.deployments.create,
+            'bp', 'd1',
+            inputs={'a_deployment_id': 'deploymentA',
+                    'b_deployment_id': 'deploymentB',
+                    'c_deployment_id': 'deploymentC',
+                    'd_deployment_id': 'deploymentD',
+                    'a_blueprint_id': 'bp-basic',
+                    'b_blueprint_id': 'bp'})
 
 
 @pytest.mark.usefixtures('cloudmock_plugin')
-class TestDeploymentIdParameters(AgentlessTestCase):
+class TestMiscellaneousIdParams(AgentlessTestCase):
     def setUp(self):
         self.client.tenants.create('other_tenant')
         self.client.tenants.add_user('admin', 'other_tenant', 'manager')
@@ -136,10 +183,12 @@ class TestDeploymentIdParameters(AgentlessTestCase):
             utils.get_resource('dsl/basic.yaml'),
             'bp-basic')
         utils.wait_for_blueprint_upload('bp-basic', self.client)
+        self.client.blueprints.update('bp-basic',
+                                      {'labels': [{'alpha': 'bravo'}]})
         self.client.blueprints.set_visibility('bp-basic', 'global')
         self.client.blueprints.upload(
             utils.get_resource(
-                'dsl/blueprint_with_deployment_id_parameters.yaml'),
+                'dsl/blueprint_with_misc_id_parameters.yaml'),
             'bp')
         utils.wait_for_blueprint_upload('bp', self.client)
         self.client.deployments_filters.create(
@@ -155,22 +204,26 @@ class TestDeploymentIdParameters(AgentlessTestCase):
             'deploymentA',
             labels=[{'qwe': 'rty'}, {'foo': 'bar'}, {'lorem': 'ipsum'}])
         self.other_client.deployments.set_visibility('deploymentA', 'global')
-
         self.client.deployments.create('bp', 'd1')
+
         test_execution = self.client.executions.create(
             'd1', 'test_parameters', allow_custom_parameters=True,
-            parameters={'a_deployment_id': 'deploymentA'},
+            parameters={'a_deployment_id': 'deploymentA',
+                        'a_blueprint_id': 'bp-basic',
+                        'b_blueprint_id': 'bp'},
         )
         self.wait_for_execution_to_end(test_execution)
 
-    def test_not_deployment_id_error(self):
+    def test_deployment_id_error(self):
         self.client.deployments.create('bp', 'd1')
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             CloudifyClientError,
-            r'^400:.+Parameter.+constraints:.+filter_id',
+            r'^400:.+Parameter.+constraints:.+a_deployment_id',
             self.client.executions.create,
             'd1', 'test_parameters', allow_custom_parameters=True,
-            parameters={'a_deployment_id': 3.14},
+            parameters={'a_deployment_id': 3.14,
+                        'a_blueprint_id': 'bp-basic',
+                        'b_blueprint_id': 'bp'},
         )
 
         self.other_client.deployments.create(
@@ -178,12 +231,14 @@ class TestDeploymentIdParameters(AgentlessTestCase):
             'deploymentA',
             labels=[{'foo': 'bar'}, {'sit': 'amet'}])
         self.other_client.deployments.set_visibility('deploymentA', 'global')
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             CloudifyClientError,
             r'^400:.+Parameter.+constraints:.+filter_id',
             self.client.executions.create,
             'd1', 'test_parameters', allow_custom_parameters=True,
-            parameters={'a_deployment_id': 'deploymentA'},
+            parameters={'a_deployment_id': 'deploymentA',
+                        'a_blueprint_id': 'bp-basic',
+                        'b_blueprint_id': 'bp'},
         )
 
         self.other_client.deployments.create(
@@ -191,12 +246,14 @@ class TestDeploymentIdParameters(AgentlessTestCase):
             'deploymentAA',
             labels=[{'qwe': 'rty'}, {'foo': 'bar'}])
         self.other_client.deployments.set_visibility('deploymentAA', 'global')
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             CloudifyClientError,
             r'^400:.+Parameter.+constraints:.+labels',
             self.client.executions.create,
             'd1', 'test_parameters', allow_custom_parameters=True,
-            parameters={'a_deployment_id': 'deploymentAA'},
+            parameters={'a_deployment_id': 'deploymentAA',
+                        'a_blueprint_id': 'bp-basic',
+                        'b_blueprint_id': 'bp'},
         )
 
         self.client.deployments.create(
@@ -204,12 +261,14 @@ class TestDeploymentIdParameters(AgentlessTestCase):
             'deploymentAAA',
             labels=[{'qwe': 'rty'}, {'foo': 'bar'}, {'lorem': 'ipsum'}])
         self.client.deployments.set_visibility('deploymentAAA', 'global')
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             CloudifyClientError,
             r'^400:.+Parameter.+constraints:.+tenants',
             self.client.executions.create,
             'd1', 'test_parameters', allow_custom_parameters=True,
-            parameters={'a_deployment_id': 'deploymentAAA'},
+            parameters={'a_deployment_id': 'deploymentAAA',
+                        'a_blueprint_id': 'bp-basic',
+                        'b_blueprint_id': 'bp'},
         )
 
         self.other_client.deployments.create(
@@ -217,10 +276,50 @@ class TestDeploymentIdParameters(AgentlessTestCase):
             'deploymentABC',
             labels=[{'qwe': 'rty'}, {'foo': 'bar'}, {'lorem': 'ipsum'}])
         self.other_client.deployments.set_visibility('deploymentABC', 'global')
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             CloudifyClientError,
             r'^400:.+Parameter.+constraints:.+name_pattern',
             self.client.executions.create,
             'd1', 'test_parameters', allow_custom_parameters=True,
-            parameters={'a_deployment_id': 'deploymentABC'},
+            parameters={'a_deployment_id': 'deploymentABC',
+                        'a_blueprint_id': 'bp-basic',
+                        'b_blueprint_id': 'bp'},
+        )
+
+    def test_blueprint_id_errors(self):
+        self.other_client.deployments.create(
+            'bp-basic',
+            'deploymentA',
+            labels=[{'qwe': 'rty'}, {'foo': 'bar'}, {'lorem': 'ipsum'}])
+        self.other_client.deployments.set_visibility('deploymentA', 'global')
+        self.client.deployments.create('bp', 'd1')
+
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            r'^400:.+Parameter.+constraints:.+a_blueprint_id',
+            self.client.executions.create,
+            'd1', 'test_parameters',
+            parameters={'a_deployment_id': 'deploymentA',
+                        'a_blueprint_id': -99,
+                        'b_blueprint_id': 'bp'},
+        )
+
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            r'^400:.+Parameter.+constraints:.+b_blueprint_id',
+            self.client.executions.create,
+            'd1', 'test_parameters',
+            parameters={'a_deployment_id': 'deploymentA',
+                        'a_blueprint_id': 'bp-basic',
+                        'b_blueprint_id': 'non-existent'},
+        )
+
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            r'^400:.+Parameter.+constraints:.+a_blueprint_id.+labels',
+            self.client.executions.create,
+            'd1', 'test_parameters', allow_custom_parameters=True,
+            parameters={'a_deployment_id': 'deploymentA',
+                        'a_blueprint_id': 'bp',
+                        'b_blueprint_id': 'bp-basic'},
         )
