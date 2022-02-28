@@ -59,6 +59,10 @@ class SecretsKey(resources_v3.SecretsKey):
         update_if_exists is set to true
         """
         secret = self._get_secret_params(key)
+        if not secret.get('value'):
+            raise manager_exceptions.BadParametersError(
+                'Cannot create a secret with empty value: {0}'.format(key)
+            )
         try:
             return create_secret(key=key, secret=secret, tenant=current_tenant)
         except manager_exceptions.ConflictError:
