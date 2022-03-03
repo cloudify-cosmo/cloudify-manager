@@ -387,10 +387,18 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         self.deploy(shared_bp_path, 'shared2', 'shared2')
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('modify_idd')
-
         idds = self.client.inter_deployment_dependencies.list(
             source_deployment_id=deployment.id)
         assert len(idds) == 2  # sharedresource + get_capability
+
+        self.client.inter_deployment_dependencies.create(
+            dependency_creator='custom.idd',
+            source_deployment=idds[0].source_deployment_id,
+            target_deployment=idds[0].target_deployment_id,
+        )
+        idds = self.client.inter_deployment_dependencies.list(
+            source_deployment_id=deployment.id)
+        assert len(idds) == 3  # sharedresource + get_capability + custom
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
         wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
@@ -398,7 +406,8 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
 
         idds = self.client.inter_deployment_dependencies.list(
             source_deployment_id=deployment.id)
-        assert len(idds) == 2
+        assert len(idds) == 3
+        assert any(idd.dependency_creator == 'custom.idd' for idd in idds)
 
     def test_modify_capability(self):
         deployment, modified_bp_path = \

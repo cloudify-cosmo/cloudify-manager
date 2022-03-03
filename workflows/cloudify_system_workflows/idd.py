@@ -5,6 +5,7 @@ from cloudify.workflows.workflow_context import CloudifyWorkflowContext
 from cloudify_rest_client.client import CloudifyClient
 from dsl_parser import constants as dsl_constants
 from dsl_parser import models as dsl_models
+from dsl_parser import functions as dsl_functions
 
 
 def create(ctx: CloudifyWorkflowContext,
@@ -28,6 +29,33 @@ def create(ctx: CloudifyWorkflowContext,
             external_dependencies)
 
 
+def _drop_on_update(idd):
+    """During a dep-update, should this idd be deleted? (and re-created)
+
+    Component and SharedResource IDDs don't need to be deleted, because
+    they will be deleted/created by the Component itself, while uninstalling.
+
+    Custom IDDs, created by the user via the rest-client, ie. not coming from
+    an intrinsic functions, should be kept as well.
+    """
+    creator = idd['dependency_creator']
+    if creator.startswith(
+        ('component.', 'sharedresource.')
+    ):
+        return False
+
+    _, _, last_segment = creator.rpartition('.')
+    if last_segment in dsl_functions.TEMPLATE_FUNCTIONS:
+        func = dsl_functions.TEMPLATE_FUNCTIONS[last_segment]
+        if issubclass(
+                func, dsl_functions.InterDeploymentDependencyCreatingFunction):
+            # this idd was created by the function, because it is a
+            # idd-creating-function, so it does need to be removed, not kept
+            return True
+
+    return False
+
+
 def update(ctx: CloudifyWorkflowContext, deployment_plan: dsl_models.Plan):
     """Update inter-deployment dependencies based on the deployment_plan."""
     local_dependencies, external_dependencies, ext_client = _prepare(
@@ -40,9 +68,7 @@ def update(ctx: CloudifyWorkflowContext, deployment_plan: dsl_models.Plan):
 
     preexisting = ctx.list_idds(source_deployment_id=ctx.deployment.id)
     for entry in preexisting:
-        if not entry['dependency_creator'].startswith(
-            ('component.', 'sharedresource.')
-        ):
+        if _drop_on_update(entry):
             continue
         keep_entry = {
             'dependency_creator': entry['dependency_creator'],
