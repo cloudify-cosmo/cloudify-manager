@@ -65,7 +65,7 @@ def _get_idd(deployment_id, is_external_host, kwargs):
     local_dependency_params = None
     if is_external_host:
         client_config = _get_desired_operation_input('client', kwargs)
-        manager_ips = [mgr.private_ip for mgr in
+        manager_ips = [mgr.public_ip for mgr in
                        manager.get_rest_client().manager.get_managers()]
         local_dependency_params = \
             inter_deployment_dependency.copy()
