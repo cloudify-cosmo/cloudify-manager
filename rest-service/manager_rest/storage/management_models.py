@@ -481,17 +481,17 @@ class User(SQLModelBase, UserMixin):
         return False
 
 
-class Token(SQLModelBase, CreatedAtMixin):
+class Token(CreatedAtMixin, SQLModelBase):
     __tablename__ = 'tokens'
 
     id = db.Column(db.String(10), primary_key=True, index=True)
-    secret = db.Column(db.String(255), nullable=False)
+    secret_hash = db.Column(db.String(255), nullable=False)
     last_used = db.Column(UTCDateTime)
+    expiration_date = db.Column(UTCDateTime)
     _user_fk = foreign_key('users.id')
-
-    @declared_attr
-    def user(cls):
-        return one_to_many_relationship(cls, User, cls._user_fk, 'id')
+    user = db.relationship('User')
+    _execution_fk = foreign_key('executions._storage_id')
+    execution = db.relationship('Execution')
 
 
 class UserTenantAssoc(SQLModelBase):

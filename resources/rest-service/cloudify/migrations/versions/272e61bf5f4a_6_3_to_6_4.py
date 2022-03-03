@@ -23,16 +23,25 @@ def upgrade():
         'tokens',
         sa.Column('created_at', UTCDateTime(), nullable=False),
         sa.Column('id', sa.String(length=10), nullable=False),
-        sa.Column('secret', sa.String(length=255), nullable=False),
+        sa.Column('secret_hash', sa.String(length=255), nullable=False),
         sa.Column('last_used', UTCDateTime(), nullable=True),
+        sa.Column('expiration_date', UTCDateTime(), nullable=True),
         sa.Column('_user_fk', sa.Integer(), nullable=False),
+        sa.Column('_execution_fk', sa.Integer(), nullable=True),
         sa.ForeignKeyConstraint(
             ['_user_fk'], ['users.id'],
             name=op.f('tokens__user_fk_fkey'), ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(
+            ['_execution_fk'], ['executions._storage_id'],
+            name=op.f('tokens__execution_fk_fkey'), ondelete='CASCADE'),
         sa.PrimaryKeyConstraint('id', name=op.f('tokens_pkey'))
     )
     op.create_index(op.f('tokens_last_used_idx'),
                     'tokens', ['last_used'], unique=False)
+    op.create_index(op.f('tokens__execution_fk_idx'),
+                    'tokens', ['_execution_fk'], unique=False)
+    op.create_index(op.f('tokens__user_fk_idx'),
+                    'tokens', ['_user_fk'], unique=False)
     op.create_index(op.f('tokens_created_at_idx'),
                     'tokens', ['created_at'], unique=False)
     op.create_index(op.f('tokens_id_idx'), 'tokens', ['id'], unique=True)
