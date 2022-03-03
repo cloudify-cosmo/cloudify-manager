@@ -66,16 +66,52 @@ def _get_desired_operation_input(key, args):
 def _get_client(kwargs):
     client_config = _get_desired_operation_input('client', kwargs)
     if client_config:
-        return CloudifyClient(**client_config)
+        client = CloudifyClient(**client_config)
+
+        # for determining an external client:
+        manager_ips = [mgr.private_ip for mgr in
+                       manager.get_rest_client().manager.get_managers()]
+        internal_hosts = ({'127.0.0.1', 'localhost'} | set(manager_ips))
+        host = {client.host} if type(client.host) == str \
+            else set(client.host)
+        is_external_host = not (host & internal_hosts)
     else:
-        return manager.get_rest_client()
+        client = manager.get_rest_client()
+        is_external_host = False
+    return client, is_external_host
+
+
+def _get_idd(deployment_id, is_external_host, kwargs):
+    inter_deployment_dependency = create_deployment_dependency(
+        dependency_creator_generator(COMPONENT, ctx.instance.id),
+        source_deployment=ctx.deployment.id,
+        target_deployment=deployment_id
+    )
+    local_dependency_params = None
+    if is_external_host:
+        client_config = _get_desired_operation_input('client', kwargs)
+        manager_ips = [mgr.private_ip for mgr in
+                       manager.get_rest_client().manager.get_managers()]
+        local_dependency_params = \
+            inter_deployment_dependency.copy()
+        local_dependency_params['target_deployment'] = ' '
+        local_dependency_params['external_target'] = {
+            'deployment': deployment_id,
+            'client_config': client_config
+        }
+        inter_deployment_dependency['external_source'] = {
+            'deployment': ctx.deployment.id,
+            'tenant': ctx.tenant_name,
+            'host': manager_ips
+        }
+    return inter_deployment_dependency, local_dependency_params
 
 
 @operation(resumable=True)
 @errors_nonrecoverable
 def upload_blueprint(**kwargs):
     resource_config = _get_desired_operation_input('resource_config', kwargs)
-    client = _get_client(kwargs)
+    client, is_external_host = _get_client(kwargs)
 
     blueprint = resource_config.get('blueprint', {})
     blueprint_id = blueprint.get('id') or ctx.instance.id
@@ -266,18 +302,20 @@ def _wait_for_deployment_create(client, deployment_id,
 
 
 @no_rerun_on_resume('_component_create_idd')
-def _create_inter_deployment_dependency(client, deployment_id):
-    client.inter_deployment_dependencies.create(**create_deployment_dependency(
-        dependency_creator_generator(COMPONENT, ctx.instance.id),
-        source_deployment=ctx.deployment.id,
-        target_deployment=deployment_id
-    ))
+def _create_inter_deployment_dependency(client, deployment_id,
+                                        is_external_host, kwargs):
+    _inter_deployment_dependency, _local_dependency_params = \
+        _get_idd(deployment_id, is_external_host, kwargs)
+    if is_external_host:
+        manager.get_rest_client().inter_deployment_dependencies.create(
+            **_local_dependency_params)
+    client.inter_deployment_dependencies.create(**_inter_deployment_dependency)
 
 
 @operation(resumable=True)
 @errors_nonrecoverable
 def create(timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL, **kwargs):
-    client = _get_client(kwargs)
+    client, is_external_host = _get_client(kwargs)
     secrets = _get_desired_operation_input('secrets', kwargs)
     _set_secrets(client, secrets)
     plugins = _get_desired_operation_input('plugins', kwargs)
@@ -322,7 +360,8 @@ def create(timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL, **kwargs):
              'labels': deployment_labels},
         )
         ctx.logger.info('Creating "%s" component deployment', deployment_id)
-        _create_inter_deployment_dependency(client, deployment_id)
+        _create_inter_deployment_dependency(client, deployment_id,
+                                            is_external_host, kwargs)
 
     return _wait_for_deployment_create(
         client,
@@ -389,7 +428,7 @@ def _update_labels(labels: list, new_labels: list):
 @operation(resumable=True)
 @errors_nonrecoverable
 def delete(timeout=EXECUTIONS_TIMEOUT, **kwargs):
-    client = _get_client(kwargs)
+    client, is_external_host = _get_client(kwargs)
     ctx.logger.info("Wait for component's stop deployment operation "
                     "related executions.")
     config = _get_desired_operation_input('resource_config', kwargs)
@@ -404,9 +443,8 @@ def delete(timeout=EXECUTIONS_TIMEOUT, **kwargs):
     blueprint = config.get('blueprint', {})
     blueprint_id = blueprint.get('id') or ctx.instance.id
 
-    _inter_deployment_dependency = create_deployment_dependency(
-        dependency_creator_generator(COMPONENT, ctx.instance.id),
-        ctx.deployment.id)
+    _inter_deployment_dependency, _local_dependency_params = \
+        _get_idd(deployment_id, is_external_host, kwargs)
 
     poll_with_timeout(
         lambda: is_all_executions_finished(client, deployment_id),
@@ -451,6 +489,11 @@ def delete(timeout=EXECUTIONS_TIMEOUT, **kwargs):
     _inter_deployment_dependency['is_component_deletion'] = True
     client.inter_deployment_dependencies.delete(**_inter_deployment_dependency)
 
+    if is_external_host:
+        _local_dependency_params['is_component_deletion'] = True
+        manager.get_rest_client().inter_deployment_dependencies.delete(
+            **_local_dependency_params)
+
     _delete_plugins(client)
     _delete_secrets(client, _get_desired_operation_input('secrets', kwargs))
     _delete_runtime_properties()
@@ -462,7 +505,7 @@ def delete(timeout=EXECUTIONS_TIMEOUT, **kwargs):
 @errors_nonrecoverable
 def execute_start(timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL,
                   **kwargs):
-    client = _get_client(kwargs)
+    client, _ = _get_client(kwargs)
     config = _get_desired_operation_input('resource_config', kwargs)
 
     runtime_deployment_prop = ctx.instance.runtime_properties.get(
@@ -519,7 +562,7 @@ def execute_start(timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL,
 @operation(resumable=True)
 @errors_nonrecoverable
 def refresh(**kwargs):
-    client = _get_client(kwargs)
+    client, _ = _get_client(kwargs)
     config = _get_desired_operation_input('resource_config', kwargs)
 
     runtime_deployment_prop = ctx.instance.runtime_properties.get(
