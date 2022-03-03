@@ -75,13 +75,17 @@ class PermissionsRoleId(SecuredResource):
     def delete(self, role_name, permission_name):
         """Disallow role_name the permission permission_name"""
         sm = get_storage_manager()
-        role = sm.get(models.Role, None, filters={'name': role_name})
-        perm = sm.get(models.Permission, None, filters={
-            'role_name': role_name,
-            'name': permission_name
-        })
         with sm.transaction():
+            role = sm.get(models.Role, None, filters={'name': role_name})
+            perms = sm.list(models.Permission, None, filters={
+                'role_name': role_name,
+                'name': permission_name
+            })
+            if not perms:
+                raise manager_exceptions.NotFoundError(
+                    f'{role_name} does not have {permission_name}')
+            for perm in perms:
+                sm.delete(perm)
             role.updated_at = datetime.utcnow()
-            sm.delete(perm)
             sm.put(role)
         return None, 204

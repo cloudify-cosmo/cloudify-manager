@@ -76,3 +76,43 @@ class TestPermissions(base_test.BaseServerTestCase):
         for role in role1, role2:
             retrieved = self.client.permissions.list(role=role.name)
             assert permission_name in {p['permission'] for p in retrieved}
+
+    def test_delete_nonexistent(self):
+        permission_name = 'something very unique'
+        with pytest.raises(CloudifyClientError) as cm:
+            self.client.permissions.delete(
+                permission=permission_name,
+                role='a role that surely does not exist',
+            )
+        assert cm.value.status_code == 404
+
+        role = models.Role.query.first()
+        with pytest.raises(CloudifyClientError) as cm:
+            self.client.permissions.delete(
+                permission=permission_name,
+                role=role.name,
+            )
+        assert cm.value.status_code == 404
+
+    def test_delete_duplicated(self):
+        """In case there's duplicated permissions, still allow deleting them.
+
+        Someone might've introduced duplicated permissions by using the
+        DB directly, or maybe by using an older version of Cloudify.
+        Anyway, they should have a way to clean that mess up!
+        """
+        permission_name = 'something very unique'
+        role = models.Role.query.first()
+        for _ in range(5):
+            db.session.add(models.Permission(
+                role=role,
+                name=permission_name
+            ))
+        self.client.permissions.delete(
+            permission=permission_name,
+            role=role.name,
+        )
+        assert models.Permission.query.filter_by(
+            role=role,
+            name=permission_name
+        ).count() == 0
