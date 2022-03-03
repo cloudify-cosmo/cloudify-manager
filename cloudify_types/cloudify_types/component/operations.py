@@ -53,6 +53,62 @@ def _is_valid_url(candidate):
     return not (parse_url.netloc and parse_url.scheme)
 
 
+<<<<<<< HEAD
+=======
+def _get_desired_operation_input(key, args):
+    """ Resolving a key's value from kwargs or
+    runtime properties, node properties in the order of priority.
+    """
+    return (args.get(key) or
+            ctx.instance.runtime_properties.get(key) or
+            ctx.node.properties.get(key))
+
+
+def _get_client(kwargs):
+    client_config = _get_desired_operation_input('client', kwargs)
+    if client_config:
+        client = CloudifyClient(**client_config)
+
+        # for determining an external client:
+        manager_ips = [mgr.private_ip for mgr in
+                       manager.get_rest_client().manager.get_managers()]
+        internal_hosts = ({'127.0.0.1', 'localhost'} | set(manager_ips))
+        host = {client.host} if type(client.host) == str \
+            else set(client.host)
+        is_external_host = not (host & internal_hosts)
+    else:
+        client = manager.get_rest_client()
+        is_external_host = False
+    return client, is_external_host
+
+
+def _get_idd(deployment_id, is_external_host, kwargs):
+    inter_deployment_dependency = create_deployment_dependency(
+        dependency_creator_generator(COMPONENT, ctx.instance.id),
+        source_deployment=ctx.deployment.id,
+        target_deployment=deployment_id
+    )
+    local_dependency_params = None
+    if is_external_host:
+        client_config = _get_desired_operation_input('client', kwargs)
+        manager_ips = [mgr.public_ip for mgr in
+                       manager.get_rest_client().manager.get_managers()]
+        local_dependency_params = \
+            inter_deployment_dependency.copy()
+        local_dependency_params['target_deployment'] = ' '
+        local_dependency_params['external_target'] = {
+            'deployment': deployment_id,
+            'client_config': client_config
+        }
+        inter_deployment_dependency['external_source'] = {
+            'deployment': ctx.deployment.id,
+            'tenant': ctx.tenant_name,
+            'host': manager_ips
+        }
+    return inter_deployment_dependency, local_dependency_params
+
+
+>>>>>>> 150e1774d (RD-4420 Public IPs in Ext.IDDs ?)
 @operation(resumable=True)
 @errors_nonrecoverable
 def upload_blueprint(**kwargs):
