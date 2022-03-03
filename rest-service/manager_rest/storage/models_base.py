@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 
 from collections import OrderedDict
@@ -298,3 +299,13 @@ def is_orm_attribute(item):
     if not hasattr(item, 'is_attribute'):
         return False
     return item.is_attribute
+
+
+class CreatedAtMixin(object):
+    created_at = db.Column(UTCDateTime, nullable=False, index=True,
+                           default=lambda: datetime.utcnow())
+
+    @classmethod
+    def default_sort_column(cls):
+        """Models that have created_at, sort on it by default."""
+        return cls.created_at

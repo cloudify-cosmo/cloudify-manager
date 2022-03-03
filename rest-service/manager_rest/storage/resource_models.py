@@ -39,6 +39,7 @@ from manager_rest.constants import (FILE_SERVER_PLUGINS_FOLDER,
                                     AUDIT_OPERATIONS)
 
 from .models_base import (
+    CreatedAtMixin,
     db,
     JSONString,
     UTCDateTime,
@@ -59,16 +60,6 @@ if typing.TYPE_CHECKING:
 
 RELATIONSHIP = 'relationship'
 NODE = 'node'
-
-
-class CreatedAtMixin(object):
-    created_at = db.Column(UTCDateTime, nullable=False, index=True,
-                           default=lambda: datetime.utcnow())
-
-    @classmethod
-    def default_sort_column(cls):
-        """Models that have created_at, sort on it by default."""
-        return cls.created_at
 
 
 # region Top Level Resources

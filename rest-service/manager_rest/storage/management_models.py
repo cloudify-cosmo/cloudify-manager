@@ -25,7 +25,14 @@ from .relationships import (
     many_to_many_relationship,
     one_to_many_relationship
 )
-from .models_base import db, SQLModelBase, UTCDateTime, CIColumn, JSONString
+from .models_base import (
+    CIColumn,
+    CreatedAtMixin,
+    db,
+    JSONString,
+    SQLModelBase,
+    UTCDateTime,
+)
 
 
 class ProviderContext(SQLModelBase):
@@ -472,6 +479,19 @@ class User(SQLModelBase, UserMixin):
             if last_failed_login + lockout_period > datetime.utcnow():
                 return True
         return False
+
+
+class Token(CreatedAtMixin, SQLModelBase):
+    __tablename__ = 'tokens'
+
+    id = db.Column(db.String(10), primary_key=True, index=True)
+    secret_hash = db.Column(db.String(255), nullable=False)
+    last_used = db.Column(UTCDateTime)
+    expiration_date = db.Column(UTCDateTime)
+    _user_fk = foreign_key('users.id')
+    user = db.relationship('User')
+    _execution_fk = foreign_key('executions._storage_id')
+    execution = db.relationship('Execution')
 
 
 class UserTenantAssoc(SQLModelBase):
