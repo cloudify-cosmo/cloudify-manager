@@ -39,7 +39,4 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_index(op.f('tokens_last_used_idx'), table_name='tokens')
-    op.drop_index(op.f('tokens_id_idx'), table_name='tokens')
-    op.drop_index(op.f('tokens_created_at_idx'), table_name='tokens')
     op.drop_table('tokens')
