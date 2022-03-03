@@ -55,7 +55,7 @@ class Permission(SQLModelBase):
     role_id = foreign_key('roles.id')
     name = db.Column(db.Text, nullable=False)
 
-    role = db.relationship(Role)
+    role = db.relationship(Role, backref='permissions')
     role_name = association_proxy('role', 'name')
 
     def to_response(self, include=None, get_data=False, **kwargs):
