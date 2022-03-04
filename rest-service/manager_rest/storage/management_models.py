@@ -486,6 +486,7 @@ class Token(CreatedAtMixin, SQLModelBase):
 
     id = db.Column(db.String(10), primary_key=True, index=True)
     secret_hash = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.String(255))
     last_used = db.Column(UTCDateTime)
     expiration_date = db.Column(UTCDateTime)
     _user_fk = foreign_key('users.id')

@@ -24,6 +24,7 @@ def upgrade():
         sa.Column('created_at', UTCDateTime(), nullable=False),
         sa.Column('id', sa.String(length=10), nullable=False),
         sa.Column('secret_hash', sa.String(length=255), nullable=False),
+        sa.Column('description', sa.String(length=255), nullable=True),
         sa.Column('last_used', UTCDateTime(), nullable=True),
         sa.Column('expiration_date', UTCDateTime(), nullable=True),
         sa.Column('_user_fk', sa.Integer(), nullable=False),
