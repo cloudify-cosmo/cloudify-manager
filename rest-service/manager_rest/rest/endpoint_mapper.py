@@ -108,7 +108,6 @@ def setup_resources(api):
         'SummarizeExecutions': 'summary/executions',
         'SummarizeBlueprints': 'summary/blueprints',
         'SummarizeExecutionSchedules': 'summary/execution_schedules',
-        'UserTokens': 'user-tokens/<string:user_id>',
         'Operations': 'operations',
         'OperationsId': 'operations/<string:operation_id>',
         'TasksGraphs': 'tasks_graphs',

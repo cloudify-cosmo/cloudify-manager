@@ -1,5 +1,5 @@
 from .license import License, LicenseCheck       # NOQA
-from .tokens import UserTokens                   # NOQA
+from .tokens import Tokens                       # NOQA
 from .sites import Sites, SitesName              # NOQA
 from .agents import Agents, AgentsName           # NOQA
 from .executions import (     # NOQA
