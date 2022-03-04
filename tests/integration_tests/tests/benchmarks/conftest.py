@@ -44,6 +44,6 @@ def pytest_sessionstart(session):
 
 def pytest_sessionfinish(session, exitstatus):
     print('\nBENCHMARK RESULTS')
-    for name, timings in session.stash['benchstorage'].items():
+    for name, timings in session.stash.get('benchstorage', {}).items():
         for timing, (start, stop) in timings.records.items():
             log_result(name, timing, start, stop)
