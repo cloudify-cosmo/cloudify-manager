@@ -15,71 +15,20 @@
 from cloudify import manager, ctx
 from cloudify.decorators import operation
 
-from cloudify_types.utils import errors_nonrecoverable
 from cloudify.constants import SHARED_RESOURCE
 from cloudify.exceptions import NonRecoverableError
-from cloudify_rest_client.client import CloudifyClient
 from cloudify_rest_client.exceptions import CloudifyClientError
-from cloudify.deployment_dependencies import (dependency_creator_generator,
-                                              create_deployment_dependency)
 
-from cloudify_types.utils import get_deployment_by_id
+from cloudify_types.utils import (errors_nonrecoverable,
+                                  get_desired_operation_input,
+                                  get_deployment_by_id,
+                                  get_client, get_idd)
+
 from cloudify_types.component.utils import (
     populate_runtime_with_wf_results)
 from .constants import WORKFLOW_EXECUTION_TIMEOUT
 from .execute_shared_resource_workflow import (
     execute_shared_resource_workflow, execute_workflow_base)
-
-
-def _get_desired_operation_input(key, args):
-    """ Resolving a key's value from kwargs or
-    node properties in the order of priority.
-    """
-    return (args.get(key) or ctx.node.properties.get(key))
-
-
-def _get_client(kwargs):
-    client_config = _get_desired_operation_input('client', kwargs)
-    if client_config:
-        client = CloudifyClient(**client_config)
-
-        # for determining an external client:
-        manager_ips = [mgr.private_ip for mgr in
-                       manager.get_rest_client().manager.get_managers()]
-        internal_hosts = ({'127.0.0.1', 'localhost'} | set(manager_ips))
-        host = {client.host} if type(client.host) == str \
-            else set(client.host)
-        is_external_host = not (host & internal_hosts)
-    else:
-        client = manager.get_rest_client()
-        is_external_host = False
-    return client, is_external_host
-
-
-def _get_idd(deployment_id, is_external_host, kwargs):
-    inter_deployment_dependency = create_deployment_dependency(
-        dependency_creator_generator(SHARED_RESOURCE, ctx.instance.id),
-        ctx.deployment.id,
-        deployment_id
-    )
-    local_dependency_params = None
-    if is_external_host:
-        client_config = _get_desired_operation_input('client', kwargs)
-        manager_ips = [mgr.public_ip for mgr in
-                       manager.get_rest_client().manager.get_managers()]
-        local_dependency_params = \
-            inter_deployment_dependency.copy()
-        local_dependency_params['target_deployment'] = ' '
-        local_dependency_params['external_target'] = {
-            'deployment': deployment_id,
-            'client_config': client_config
-        }
-        inter_deployment_dependency['external_source'] = {
-            'deployment': ctx.deployment.id,
-            'tenant': ctx.tenant_name,
-            'host': manager_ips
-        }
-    return inter_deployment_dependency, local_dependency_params
 
 
 def _mark_verified_shared_resource_node(deployment_id):
@@ -139,12 +88,12 @@ def _get_label_values(labels_list, key):
 @operation(resumable=True)
 @errors_nonrecoverable
 def connect_deployment(**kwargs):
-    config = _get_desired_operation_input('resource_config', kwargs)
+    config = get_desired_operation_input('resource_config', kwargs)
     deployment = config.get('deployment', '')
     deployment_id = deployment.get('id', '')
-    client, is_external_host = _get_client(kwargs)
+    client, is_external_host = get_client(kwargs)
     _inter_deployment_dependency, _local_dependency_params = \
-        _get_idd(deployment_id, is_external_host, kwargs)
+        get_idd(deployment_id, is_external_host, SHARED_RESOURCE, kwargs)
 
     ctx.logger.info('Validating that "%s" SharedResource\'s deployment '
                     'exists on tenant "%s"...', deployment_id, ctx.tenant_name)
@@ -168,15 +117,15 @@ def connect_deployment(**kwargs):
 @operation(resumable=True)
 @errors_nonrecoverable
 def disconnect_deployment(**kwargs):
-    client, is_external_host = _get_client(kwargs)
-    config = _get_desired_operation_input('resource_config', kwargs)
+    client, is_external_host = get_client(kwargs)
+    config = get_desired_operation_input('resource_config', kwargs)
     deployment = config.get('deployment', '')
     deployment_id = deployment.get('id', '')
     runtime_deployment_prop = ctx.instance.runtime_properties.get(
         'deployment', {})
     runtime_deployment_id = runtime_deployment_prop.get('id')
     _inter_deployment_dependency, _local_dependency_params = \
-        _get_idd(deployment_id, is_external_host, kwargs)
+        get_idd(deployment_id, is_external_host, SHARED_RESOURCE, kwargs)
     target_deployment = runtime_deployment_id or deployment_id
     ctx.logger.info('Removing inter-deployment dependency between this '
                     'deployment ("%s") and "%s" SharedResource\'s '
@@ -210,8 +159,8 @@ def execute_workflow(workflow_id,
 @operation(resumable=True)
 @errors_nonrecoverable
 def refresh(**kwargs):
-    config = _get_desired_operation_input('resource_config', kwargs)
+    config = get_desired_operation_input('resource_config', kwargs)
     deployment = config.get('deployment', '')
     deployment_id = deployment.get('id', '')
-    client, _ = _get_client(kwargs)
+    client, _ = get_client(kwargs)
     populate_runtime_with_wf_results(client, deployment_id)
