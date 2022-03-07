@@ -73,7 +73,7 @@ def get_client(kwargs):
         client = CloudifyClient(**client_config)
 
         # for determining an external client:
-        manager_ips = {}
+        manager_ips = set()
         for mgr in manager.get_rest_client().manager.get_managers():
             manager_ips |= {mgr.private_ip, mgr.public_ip}
         internal_hosts = ({'127.0.0.1', 'localhost'} | manager_ips)
@@ -100,7 +100,7 @@ def get_idd(deployment_id, is_external_host, dependency_type, kwargs):
     local_dependency = None
     if is_external_host:
         client_config = get_desired_operation_input('client', kwargs)
-        manager_ips = {}
+        manager_ips = set()
         for mgr in manager.get_rest_client().manager.get_managers():
             manager_ips |= {mgr.public_ip}
         local_dependency = create_deployment_dependency(
