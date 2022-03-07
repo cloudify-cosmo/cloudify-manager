@@ -12,6 +12,7 @@ from collections import defaultdict, namedtuple
 from flask import current_app
 from flask_security import current_user
 from sqlalchemy.orm import aliased
+from sqlalchemy.sql.expression import text
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy import or_ as sql_or, and_ as sql_and
 
@@ -2438,8 +2439,14 @@ class ResourceManager(object):
                 )
                 .exists()
             )
+            .filter(~sql_and(idd.external_source != text("'null'"),
+                             idd.dependency_creator.like('component.%')))
             .limit(limit)
         )
+        # TODO: the last filter is a temporary measure to allow external
+        #  components to be uninstalled during their parent's uninstall
+        #  (RD-4420). This should be solved properly.
+
         return children.all() + component_creators.all()
 
     def _verify_dependencies_not_affected(self, execution, force):
