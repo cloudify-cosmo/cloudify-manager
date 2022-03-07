@@ -1,4 +1,6 @@
+from datetime import datetime
 import string
+
 from flask import current_app
 from flask_security.utils import verify_password
 from itsdangerous import BadSignature, SignatureExpired
@@ -107,6 +109,13 @@ def get_token_status(token):
                     data = [str(token._user_fk), 'no_hash_needed']
                     invalid = False
                     error = None
+
+            if token.expiration_date is not None:
+                time_format = '%Y-%m-%dT%H:%M:%S.%fZ'
+                expiry = datetime.strptime(token.expiration_date, time_format)
+                now = datetime.utcnow()
+                if expiry <= now:
+                    expired = True
         else:
             error = 'Invalid token structure.'
     else:
