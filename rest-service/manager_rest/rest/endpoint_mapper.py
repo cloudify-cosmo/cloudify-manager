@@ -59,6 +59,7 @@ def setup_resources(api):
         'Version': 'version',
         'EvaluateFunctions': 'evaluate/functions',
         'Tokens': 'tokens',
+        'TokensId': 'tokens/<string:token_id>',
         'Plugins': 'plugins',
         'PluginsId': 'plugins/<string:plugin_id>',
         'PluginsUpdate':
