@@ -1,4 +1,3 @@
-from datetime import datetime
 import string
 
 from flask import current_app
@@ -15,6 +14,7 @@ from manager_rest.storage import user_datastore, get_storage_manager
 from manager_rest.execution_token import (set_current_execution,
                                           get_current_execution_by_token,
                                           get_execution_token_from_request)
+from manager_rest.utils import is_expired
 
 
 ENCODED_ID_LENGTH = 5
@@ -111,11 +111,7 @@ def get_token_status(token):
                     error = None
 
             if token.expiration_date is not None:
-                time_format = '%Y-%m-%dT%H:%M:%S.%fZ'
-                expiry = datetime.strptime(token.expiration_date, time_format)
-                now = datetime.utcnow()
-                if expiry <= now:
-                    expired = True
+                expired = is_expired(token.expiration_date)
         else:
             error = 'Invalid token structure.'
     else:

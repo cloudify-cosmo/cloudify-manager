@@ -6,12 +6,14 @@ from cloudify.utils import parse_utc_datetime
 from flask_security import current_user
 from flask_security.utils import hash_password
 
+from manager_rest.manager_exceptions import BadParametersError
 from manager_rest.rest import responses
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.rest.rest_decorators import marshal_with
 from manager_rest.rest.rest_utils import get_json_and_verify_params
+from manager_rest.utils import is_expired
 
 
 class Tokens(SecuredResource):
@@ -41,6 +43,8 @@ class Tokens(SecuredResource):
         expiration_date = request_dict.get('expiration_date')
         if expiration_date:
             expiration_date = parse_utc_datetime(expiration_date)
+        if is_expired(expiration_date):
+            raise BadParametersError("Expiration date was in the past.")
 
         token = models.Token(
             id=_random_string(),
