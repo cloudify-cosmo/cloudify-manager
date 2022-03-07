@@ -1,3 +1,4 @@
+from manager_rest.manager_exceptions import BadParametersError
 from manager_rest.storage.models import (Blueprint, BlueprintsFilter,
                                          Deployment, DeploymentsFilter)
 from manager_rest.rest.filters_utils import (get_filter_rules_from_filter_id,
@@ -48,10 +49,8 @@ class GetEntitiesWithStorageManager:
                      "operator": "any_of" if op == "equals_to" else op,
                      "type": "attribute"})
 
-        filter_rules = get_filter_rules(filter_rules,
-                                        Deployment,
-                                        DeploymentsFilter,
-                                        filter_id)
+        filter_rules = get_filter_rules(Deployment, DeploymentsFilter,
+                                        filter_id, filter_rules, None)
 
         return self.sm.list(
             Deployment,
@@ -90,10 +89,8 @@ class GetEntitiesWithStorageManager:
                      "operator": "any_of" if op == "equals_to" else op,
                      "type": "attribute"})
 
-        filter_rules = get_filter_rules(filter_rules,
-                                        Blueprint,
-                                        BlueprintsFilter,
-                                        filter_id)
+        filter_rules = get_filter_rules(Blueprint, BlueprintsFilter,
+                                        filter_id, filter_rules, None)
 
         return self.sm.list(
             Blueprint,
@@ -107,11 +104,25 @@ class GetEntitiesWithStorageManager:
         raise NotImplementedError('get_capability_value not implemented')
 
 
-def get_filter_rules(raw_filter_rules,
-                     resource_model,
+def get_filter_rules(resource_model,
                      filters_model,
-                     filter_id):
-    filter_rules = create_filter_rules_list(raw_filter_rules, resource_model)
+                     raw_filter_id,
+                     raw_filter_rules,
+                     dsl_constraints):
+    raw_filter = raw_filter_rules or raw_filter_id
+    if raw_filter and not dsl_constraints:
+        filter_rules = create_filter_rules_list(raw_filter_rules,
+                                                resource_model)
+        filter_id = raw_filter_id
+    elif not raw_filter and dsl_constraints:
+        filter_id, filter_rules = parse_constraints(dsl_constraints)
+    elif not raw_filter and not dsl_constraints:
+        return []
+    else:
+        raise BadParametersError(
+            "You should provide either filter_id/filter_rules "
+            "or DSL constraints, not both")
+
     if filter_id:
         existing_filter_rules = get_filter_rules_from_filter_id(
             filter_id, filters_model)
@@ -125,3 +136,43 @@ def get_filter_rules(raw_filter_rules,
             filter_rules.append(filter_rule_elem)
 
     return filter_rules
+
+
+def parse_constraints(dsl_constraints):
+    filter_id = dsl_constraints.get('filter_id')
+    filter_rules = []
+    labels = dsl_constraints.get('labels')
+    if labels:
+        filter_rules.extend(
+            {"key": list(label.keys())[0],
+             "values": [list(label.values())[0]],
+             "operator": "any_of",
+             "type": "label"}
+            for label in labels
+        )
+    tenants = dsl_constraints.get('tenants')
+    if tenants:
+        filter_rules.append(
+            {"key": "tenant_name",
+             "values": tenants,
+             "operator": "any_of",
+             "type": "attribute"}
+        )
+    display_name_specs = dsl_constraints.get('display_name_specs')
+    if display_name_specs:
+        for op, spec in display_name_specs.items():
+            filter_rules.append(
+                {"key": "display_name",
+                 "values": [spec],
+                 "operator": "any_of" if op == "equals_to" else op,
+                 "type": "attribute"})
+    id_specs = dsl_constraints.get('id_specs')
+    if id_specs:
+        for op, spec in id_specs.items():
+            filter_rules.append(
+                {"key": "id",
+                 "values": [spec],
+                 "operator": "any_of" if op == "equals_to" else op,
+                 "type": "attribute"})
+
+    return filter_id, filter_rules

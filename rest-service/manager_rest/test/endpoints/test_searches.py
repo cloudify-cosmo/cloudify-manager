@@ -96,9 +96,11 @@ class SearchesTestCase(base_test.BaseServerTestCase):
     def test_searches_get_filter_rules(self):
         self.create_filter(self.client.deployments_filters, self.FILTER_ID,
                            self.FILTER_RULES)
-        filter_rules = get_filter_rules(self.FILTER_RULES, models.Deployment,
+        filter_rules = get_filter_rules(models.Deployment,
                                         models.DeploymentsFilter,
-                                        self.FILTER_ID)
+                                        self.FILTER_ID,
+                                        self.FILTER_RULES,
+                                        None)
         self.assertEqual(filter_rules, self.FILTER_RULES)
 
     def _test_list_resources_with_filter_rules_and_filter_id(

@@ -86,12 +86,14 @@ class ResourceSearches(SecuredResource):
             '_get_all_results',
             request.args.get('_get_all_results', False)
         )
-        request_schema = {'filter_rules': {'optional': False, 'type': list}}
+        request_schema = {'filter_rules': {'optional': True, 'type': list},
+                          'constraints': {'optional': True, 'type': dict}}
         request_dict = rest_utils.get_json_and_verify_params(request_schema)
 
-        filter_rules = get_filter_rules(request_dict['filter_rules'],
-                                        resource_model, filters_model,
-                                        filter_id)
+        filter_rules = get_filter_rules(resource_model, filters_model,
+                                        filter_id,
+                                        request_dict.get('filter_rules'),
+                                        request_dict.get('constraints'))
 
         result = get_storage_manager().list(
             resource_model,
