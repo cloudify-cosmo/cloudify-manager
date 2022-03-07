@@ -2443,6 +2443,10 @@ class ResourceManager(object):
                              idd.dependency_creator.like('component.%')))
             .limit(limit)
         )
+        # TODO: the last filter is a temporary measure to allow external
+        #  components to be uninstalled during their parent's uninstall
+        #  (RD-4420). This should be solved properly.
+
         return children.all() + component_creators.all()
 
     def _verify_dependencies_not_affected(self, execution, force):
