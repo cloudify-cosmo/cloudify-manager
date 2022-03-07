@@ -262,6 +262,17 @@ class TestCheckDeploymentDelete(base_test.BaseServerTestCase):
         )
         self.rm.check_deployment_delete(dep1)  # doesnt throw
 
+    def test_external_component_creator(self):
+        dep1 = self._deployment(id='dep1')
+        models.InterDeploymentDependencies(
+            target_deployment=dep1,
+            dependency_creator='component.x',
+            external_source='{source_json: values}',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        self.rm.check_deployment_delete(dep1)  # doesnt throw
+
 
 class TestValidateExecutionDependencies(base_test.BaseServerTestCase):
     def setUp(self):
