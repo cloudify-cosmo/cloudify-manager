@@ -106,7 +106,6 @@ def get_idd(deployment_id, is_external_host, dependency_type, kwargs):
         local_dependency = create_deployment_dependency(
             dependency_creator_generator(dependency_type, ctx.instance.id),
             source_deployment=ctx.deployment.id,
-            target_deployment=' ',
             external_target={
                 'deployment': deployment_id,
                 'client_config': client_config
