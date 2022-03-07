@@ -181,7 +181,10 @@ class Authentication(object):
         elif not user:
             raise NoAuthProvided()
         else:
-            self._verify_token(token=data[1], user=user)
+            # If we get here, we already validated the new token. Only legacy
+            # tokens need an extra check.
+            if not token.startswith('ctok-'):
+                self._verify_token(token=data[1], user=user)
 
         return user
 

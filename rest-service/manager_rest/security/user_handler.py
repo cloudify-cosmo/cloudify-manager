@@ -1,27 +1,13 @@
-#########
-# Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 import string
 from flask import current_app
+from flask_security.utils import verify_password
 from itsdangerous import BadSignature, SignatureExpired
 
 from ..storage.idencoder import get_encoder
 
 from cloudify.constants import CLOUDIFY_API_AUTH_TOKEN_HEADER
 
-from manager_rest.storage.models import User
+from manager_rest.storage.models import Token, User
 from manager_rest.manager_exceptions import NotFoundError
 from manager_rest.storage import user_datastore, get_storage_manager
 from manager_rest.execution_token import (set_current_execution,
@@ -102,22 +88,42 @@ def get_token_status(token):
     :param token: The token to decrypt
     :return: A tuple: (expired, invalid, user, data)
     """
-    security = current_app.extensions['security']
-    serializer = security.remember_token_serializer
-    max_age = security.token_max_age
-
     user, data, error = None, None, None
-    expired, invalid = False, False
+    expired, invalid = False, True
 
-    try:
-        data = serializer.loads(token, max_age=max_age)
-    except SignatureExpired:
-        expired = True
-    except (BadSignature, TypeError, ValueError) as e:
-        invalid = True
-        error = e
+    if token.startswith('ctok-'):
+        token_parts = token.split('-')
+        if len(token_parts) == 3:
+            _, tok_id, tok_secret = token_parts
 
-    if data:
-        user = user_datastore.find_user(id=data[0])
+            sm = get_storage_manager()
+            token = sm.get(Token, tok_id)
+
+            error = 'Unauthorized.'
+            if token:
+                if verify_password(tok_secret, token.secret_hash):
+                    user = user_datastore.find_user(id=token._user_fk)
+                    # Legacy data structure
+                    data = [str(token._user_fk), 'no_hash_needed']
+                    invalid = False
+                    error = None
+        else:
+            error = 'Invalid token structure.'
+    else:
+        security = current_app.extensions['security']
+        serializer = security.remember_token_serializer
+        max_age = security.token_max_age
+
+        try:
+            data = serializer.loads(token, max_age=max_age)
+            invalid = False
+        except SignatureExpired:
+            expired = True
+            invalid = False
+        except (BadSignature, TypeError, ValueError) as e:
+            error = e
+
+        if data:
+            user = user_datastore.find_user(id=data[0])
 
     return expired, invalid, user, data, error
