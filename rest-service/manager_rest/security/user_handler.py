@@ -99,7 +99,7 @@ def get_token_status(token):
             _, tok_id, tok_secret = token_parts
 
             sm = get_storage_manager()
-            token = sm.get(Token, tok_id)
+            token = sm.get(Token, tok_id, fail_silently=True)
 
             error = 'Unauthorized.'
             if token:
@@ -110,8 +110,8 @@ def get_token_status(token):
                     invalid = False
                     error = None
 
-            if token.expiration_date is not None:
-                expired = is_expired(token.expiration_date)
+                if token.expiration_date is not None:
+                    expired = is_expired(token.expiration_date)
         else:
             error = 'Invalid token structure.'
     else:
