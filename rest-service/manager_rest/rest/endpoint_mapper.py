@@ -59,6 +59,7 @@ def setup_resources(api):
         'Version': 'version',
         'EvaluateFunctions': 'evaluate/functions',
         'Tokens': 'tokens',
+        'TokensId': 'tokens/<string:token_id>',
         'Plugins': 'plugins',
         'PluginsId': 'plugins/<string:plugin_id>',
         'PluginsUpdate':
@@ -108,7 +109,6 @@ def setup_resources(api):
         'SummarizeExecutions': 'summary/executions',
         'SummarizeBlueprints': 'summary/blueprints',
         'SummarizeExecutionSchedules': 'summary/execution_schedules',
-        'UserTokens': 'user-tokens/<string:user_id>',
         'Operations': 'operations',
         'OperationsId': 'operations/<string:operation_id>',
         'TasksGraphs': 'tasks_graphs',

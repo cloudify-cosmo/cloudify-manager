@@ -1,32 +1,26 @@
-#########
-# Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
+from datetime import datetime
 import string
+
 from flask import current_app
+from flask_security.utils import verify_password, verify_hash
 from itsdangerous import BadSignature, SignatureExpired
 
 from ..storage.idencoder import get_encoder
 
 from cloudify.constants import CLOUDIFY_API_AUTH_TOKEN_HEADER
 
-from manager_rest.storage.models import User
-from manager_rest.manager_exceptions import NotFoundError
+from manager_rest.storage.models import Token, User
+from manager_rest.storage.models_base import db
+from manager_rest.manager_exceptions import (
+    NoAuthProvided,
+    NotFoundError,
+    UnauthorizedError,
+)
 from manager_rest.storage import user_datastore, get_storage_manager
 from manager_rest.execution_token import (set_current_execution,
                                           get_current_execution_by_token,
                                           get_execution_token_from_request)
+from manager_rest.utils import is_expired
 
 
 ENCODED_ID_LENGTH = 5
@@ -53,8 +47,7 @@ def user_loader(request):
         return execution.creator if execution else None
     token = get_token_from_request(request)
     if token:
-        _, _, user, _, _ = get_token_status(token)
-        return user
+        return get_token_status(token)
     api_token = get_api_token_from_request(request)
     if api_token:
         user, user_token_key = extract_api_token(api_token)
@@ -97,27 +90,58 @@ def get_api_token_from_request(request):
 
 
 def get_token_status(token):
-    """Mimic flask_security.utils.get_token_status with some changes
 
-    :param token: The token to decrypt
-    :return: A tuple: (expired, invalid, user, data)
-    """
-    security = current_app.extensions['security']
-    serializer = security.remember_token_serializer
-    max_age = security.token_max_age
+    user = None
+    error = None
 
-    user, data, error = None, None, None
-    expired, invalid = False, False
+    if token.startswith('ctok-'):
+        token_parts = token.split('-')
+        if len(token_parts) == 3:
+            _, tok_id, tok_secret = token_parts
 
-    try:
-        data = serializer.loads(token, max_age=max_age)
-    except SignatureExpired:
-        expired = True
-    except (BadSignature, TypeError, ValueError) as e:
-        invalid = True
-        error = e
+            sm = get_storage_manager()
+            token = sm.get(Token, tok_id, fail_silently=True)
 
-    if data:
-        user = user_datastore.find_user(id=data[0])
+            error = 'Unauthorized'
+            if token:
+                if verify_password(tok_secret, token.secret_hash):
+                    user = user_datastore.find_user(id=token._user_fk)
+                    error = None
 
-    return expired, invalid, user, data, error
+                if token.expiration_date is not None:
+                    if is_expired(token.expiration_date):
+                        error = 'Token is expired'
+
+            if not error:
+                token.last_used = datetime.utcnow()
+                db.session.commit()
+        else:
+            error = 'Invalid token structure'
+    else:
+        security = current_app.extensions['security']
+        serializer = security.remember_token_serializer
+        max_age = security.token_max_age
+
+        user_id = None
+        token_secret = None
+        try:
+            user_id, token_secret = serializer.loads(token, max_age=max_age)
+        except SignatureExpired:
+            error = 'Token is expired'
+        except (BadSignature, TypeError, ValueError) as e:
+            error = f'Authentication token is invalid:\n{e}'
+
+        if user_id is not None and token_secret and not error:
+            error = 'Unauthorized'
+            user = user_datastore.find_user(id=user_id)
+            if verify_hash(compare_data=user.password,
+                           hashed_data=token_secret):
+                error = None
+
+    if error:
+        raise UnauthorizedError(error)
+
+    if not user:
+        raise NoAuthProvided()
+
+    return user

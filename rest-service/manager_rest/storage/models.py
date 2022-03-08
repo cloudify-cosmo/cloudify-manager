@@ -33,6 +33,7 @@ from .management_models import (
     UsageCollector,
     Permission,
     MaintenanceMode,
+    Token,
 )
 
 from .resource_models import (
