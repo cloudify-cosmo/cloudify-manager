@@ -1,3 +1,4 @@
+from datetime import datetime
 import string
 
 from flask import current_app
@@ -9,6 +10,7 @@ from ..storage.idencoder import get_encoder
 from cloudify.constants import CLOUDIFY_API_AUTH_TOKEN_HEADER
 
 from manager_rest.storage.models import Token, User
+from manager_rest.storage.models_base import db
 from manager_rest.manager_exceptions import (
     NoAuthProvided,
     NotFoundError,
@@ -109,6 +111,10 @@ def get_token_status(token):
                 if token.expiration_date is not None:
                     if is_expired(token.expiration_date):
                         error = 'Token is expired'
+
+            if not error:
+                token.last_used = datetime.utcnow()
+                db.session.commit()
         else:
             error = 'Invalid token structure'
     else:
