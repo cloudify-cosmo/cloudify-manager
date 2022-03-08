@@ -356,68 +356,58 @@ class Config(object):
                 .format(len(matching_entries)))
         return matching_entries[0]
 
-    @property
-    def db_url(self):
-        host = self._find_db_host(self.postgresql_host)
+    def _get_sql_params(self):
         params = {}
         params.update(self.postgresql_connection_options)
         if self.postgresql_ssl_enabled:
-            ssl_mode = 'verify-full'
             if self.postgresql_ssl_client_verification:
                 params.update({
                     'sslcert': self.postgresql_ssl_cert_path,
                     'sslkey': self.postgresql_ssl_key_path,
                 })
             params.update({
-                'sslmode': ssl_mode,
-                'sslrootcert': self.postgresql_ca_cert_path
+                'sslmode': 'verify-full',
+                'sslrootcert': self.postgresql_ca_cert_path,
             })
+        else:
+            params['sslmode'] = 'disable'
+        return params
 
+    def _render_db_url(self, *, params=None, **kwargs):
+        connkwargs = {
+            'dialect': SQL_DIALECT,
+            'username': self.postgresql_username,
+            'password': self.postgresql_password,
+            'db_name': self.postgresql_db_name,
+        }
+        connkwargs.update(kwargs)
+        if 'host' not in connkwargs:
+            connkwargs['host'] = ipv6_url_compat(
+                self._find_db_host(self.postgresql_host))
         db_url = '{dialect}://{username}:{password}@{host}/{db_name}'.format(
-            dialect=SQL_DIALECT,
-            username=self.postgresql_username,
-            password=self.postgresql_password,
-            host=ipv6_url_compat(host),
-            db_name=self.postgresql_db_name
-        )
-        if any(params.values()):
-            query = '&'.join('{0}={1}'.format(key, value)
-                             for key, value in params.items()
-                             if value)
-            db_url = '{0}?{1}'.format(db_url, query)
+            **connkwargs)
+        if params and any(params.values()):
+            query_string = '&'.join(f'{k}={v}' for k, v in params.items() if v)
+            db_url = f'{db_url}?{query_string}'
         return db_url
 
     @property
+    def db_url(self):
+        params = self._get_sql_params()
+        return self._render_db_url(params=params)
+
+    @property
     def sqlalchemy_async_dsn(self):
-        dsn = self.asyncpg_dsn
-        if not dsn.startswith(SQL_DIALECT):
-            return dsn
-        _, _, dsn = dsn.partition(SQL_DIALECT)
-        return f'{SQL_ASYNC_DIALECT}{dsn}'
+        params = self._get_sql_params()
+        params.pop('connect_timeout', None)
+        params['ssl'] = params.pop('sslmode')
+        return self._render_db_url(params=params, dialect=SQL_ASYNC_DIALECT)
 
     @property
     def asyncpg_dsn(self):
-        host = ipv6_url_compat(self._find_db_host(self.postgresql_host))
-        dsn = f'{SQL_DIALECT}://'\
-              f'{self.postgresql_username}:'\
-              f'{self.postgresql_password}@'\
-              f'{host}/'\
-              f'{self.postgresql_db_name}'
-        params = {}
-        if self.postgresql_ssl_enabled:
-            if self.postgresql_ssl_client_verification:
-                params.update({
-                    'sslcert': self.postgresql_ssl_cert_path,
-                    'sslkey': self.postgresql_ssl_key_path,
-                })
-            params.update({
-                'sslmode': 'vefify-full',
-                'sslrootcert': self.postgresql_ca_cert_path,
-            })
-        if any(params.values()):
-            query_string = '&'.join(f'{k}={v}' for k, v in params.items() if v)
-            dsn = f'{dsn}?{query_string}'
-        return dsn
+        params = self._get_sql_params()
+        params.pop('connect_timeout', None)
+        return self._render_db_url(params=params)
 
     @property
     def db_host(self):
