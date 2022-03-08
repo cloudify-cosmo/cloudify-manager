@@ -44,8 +44,8 @@ class Tokens(SecuredResource):
         expiration_date = request_dict.get('expiration_date')
         if expiration_date:
             expiration_date = parse_utc_datetime(expiration_date)
-        if is_expired(expiration_date):
-            raise BadParametersError("Expiration date was in the past.")
+            if is_expired(expiration_date):
+                raise BadParametersError("Expiration date was in the past.")
 
         token = models.Token(
             id=_random_string(),
