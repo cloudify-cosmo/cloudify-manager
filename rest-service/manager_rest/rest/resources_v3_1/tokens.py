@@ -80,7 +80,7 @@ class TokensId(SecuredResource):
             sm.delete(token)
             return None, 204
         else:
-            raise NotFoundError()
+            raise NotFoundError(f'Could not find token {token_id}')
 
     @marshal_with(responses.Tokens)
     @authorize('list_token')
@@ -97,7 +97,7 @@ class TokensId(SecuredResource):
                         last_used=token.last_used,
                         token_id=token.id)
         else:
-            raise NotFoundError()
+            raise NotFoundError(f'Could not find token {token_id}')
 
 
 def _can_manage_token(token):
