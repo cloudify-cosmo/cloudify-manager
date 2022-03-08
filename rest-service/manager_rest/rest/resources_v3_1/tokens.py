@@ -108,8 +108,8 @@ def _can_manage_token(token):
     return False
 
 
-# A bit more user friendly than uuids
 def _random_string(length=10):
+    """A random string that is a bit more user friendly than uuids"""
     charset = string.ascii_uppercase + string.ascii_lowercase + string.digits
     return ''.join(random.choice(charset) for i in range(length))
 
