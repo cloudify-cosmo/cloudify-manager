@@ -118,22 +118,21 @@ def get_token_status(token):
         serializer = security.remember_token_serializer
         max_age = security.token_max_age
 
+        user_id = None
+        token_secret = None
         try:
-            data = serializer.loads(token, max_age=max_age)
+            user_id, token_secret = serializer.loads(token, max_age=max_age)
         except SignatureExpired:
             error = 'Token is expired'
         except (BadSignature, TypeError, ValueError) as e:
             error = f'Authentication token is invalid:\n{e}'
 
-        if data and not error:
-            user = user_datastore.find_user(id=data[0])
-
-            if not isinstance(data, list) or len(data) != 2:
-                error = 'Token error'
-            else:
-                if not verify_hash(compare_data=user.password,
-                                   hashed_data=token):
-                    error = 'Unauthorized'
+        if user_id is not None and token_secret and not error:
+            error = 'Unauthorized'
+            user = user_datastore.find_user(id=user_id)
+            if verify_hash(compare_data=user.password,
+                           hashed_data=token_secret):
+                error = None
 
     if error:
         raise UnauthorizedError(error)
