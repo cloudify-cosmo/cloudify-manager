@@ -60,8 +60,6 @@ class Tokens(SecuredResource):
         )
         sm.put(token)
 
-        # Keeping the same structure as old tokens to make migration easier,
-        # but adding relevant extra details.
         return dict(username=current_user.username,
                     value=f'ctok-{token.id}-{secret}',
                     role=current_user.role,
