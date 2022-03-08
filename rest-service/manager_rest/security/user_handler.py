@@ -104,8 +104,6 @@ def get_token_status(token):
             if token:
                 if verify_password(tok_secret, token.secret_hash):
                     user = user_datastore.find_user(id=token._user_fk)
-                    # Legacy data structure
-                    data = [str(token._user_fk), 'no_hash_needed']
                     error = None
 
                 if token.expiration_date is not None:
