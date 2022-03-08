@@ -1,3 +1,4 @@
+from datetime import datetime
 import random
 import string
 
@@ -12,6 +13,7 @@ from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import (authorize,
                                                  is_user_action_allowed)
 from manager_rest.storage import models, get_storage_manager
+from manager_rest.storage.models_base import db
 from manager_rest.rest.rest_decorators import marshal_with
 from manager_rest.rest.rest_utils import get_json_and_verify_params
 from manager_rest.utils import is_expired
@@ -32,6 +34,8 @@ class Tokens(SecuredResource):
     @authorize('create_token')
     def post(self):
         """Create a new token."""
+        _purge_expired_user_tokens()
+
         request_dict = get_json_and_verify_params({
             'description': {'type': str},
             'expiration_date': {'optional': True},
@@ -108,3 +112,15 @@ def _can_manage_token(token):
 def _random_string(length=10):
     charset = string.ascii_uppercase + string.ascii_lowercase + string.digits
     return ''.join(random.choice(charset) for i in range(length))
+
+
+def _purge_expired_user_tokens():
+    """Delete all expired tokens for the current user."""
+    expired = models.Token.query.filter_by(
+        _user_fk=current_user.id).filter(
+        models.Token.expiration_date <= datetime.utcnow()
+    ).all()
+    if expired:
+        for token in expired:
+            db.session.delete(token)
+        db.session.commit()
