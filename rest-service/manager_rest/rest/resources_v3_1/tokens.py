@@ -99,11 +99,10 @@ class TokensId(SecuredResource):
 
 
 def _can_manage_token(token):
-    if token._user_fk == current_user.id:
-        return True
-    elif is_user_action_allowed('manage_others_tokens'):
-        return True
-    return False
+    return (
+        token._user_fk == current_user.id
+        or is_user_action_allowed('manage_others_tokens')
+    )
 
 
 def _random_string(length=10):
