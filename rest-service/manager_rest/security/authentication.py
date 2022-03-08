@@ -17,7 +17,7 @@ from datetime import datetime
 from collections import namedtuple
 
 from flask import current_app, Response
-from flask_security.utils import verify_password, verify_hash
+from flask_security.utils import verify_password
 
 from cloudify.workflows import tasks
 from cloudify.models_states import ExecutionState
@@ -25,7 +25,6 @@ from cloudify.models_states import ExecutionState
 from manager_rest.utils import is_sanity_mode
 from manager_rest.security import user_handler
 from manager_rest.storage import user_datastore
-from manager_rest.security.hash_request_cache import HashVerifyRequestCache
 from manager_rest.security import audit
 from manager_rest.execution_token import (
     current_execution,
@@ -42,7 +41,6 @@ failed_auth_message = 'Authentication failed for <User username=`{0}`>. ' \
 class Authentication(object):
     def __init__(self):
         self.token_based_auth = False
-        self.token_verified_cache = HashVerifyRequestCache()
 
     @property
     def logger(self):
@@ -151,16 +149,6 @@ class Authentication(object):
             raise UnauthorizedError(failed_auth_message.format(username))
         return user
 
-    def _verify_token(self, token, user):
-        if not self.token_verified_cache.get_verify_hash_result(token,
-                                                                user.id):
-            if not verify_hash(compare_data=user.password, hashed_data=token):
-                raise UnauthorizedError(
-                    failed_auth_message.format(user.username))
-            else:
-                self.token_verified_cache.cache_verify_hash_result(token,
-                                                                   user.id)
-
     def _authenticate_token(self, token):
         """Make sure that the token passed exists, is valid, is not expired,
         and that the user contained within it exists in the DB
@@ -169,24 +157,7 @@ class Authentication(object):
         :return: A tuple: (A user object, its hashed password)
         """
         self.logger.debug('Authenticating token')
-        expired, invalid, user, data, error = \
-            user_handler.get_token_status(token)
-
-        if expired:
-            raise UnauthorizedError('Token is expired')
-        elif invalid or (not isinstance(data, list) or len(data) != 2):
-            raise UnauthorizedError(
-                'Authentication token is invalid:\n{0}'.format(error)
-            )
-        elif not user:
-            raise NoAuthProvided()
-        else:
-            # If we get here, we already validated the new token. Only legacy
-            # tokens need an extra check.
-            if not token.startswith('ctok-'):
-                self._verify_token(token=data[1], user=user)
-
-        return user
+        return user_handler.get_token_status(token)
 
     def _authenticate_execution_token(self):
         """Make sure the token passed exists and valid (by verifying the
