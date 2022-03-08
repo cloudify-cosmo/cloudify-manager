@@ -1,5 +1,5 @@
 from datetime import datetime
-import random
+import secrets
 import string
 
 from cloudify.utils import parse_utc_datetime
@@ -109,7 +109,7 @@ def _can_manage_token(token):
 def _random_string(length=10):
     """A random string that is a bit more user friendly than uuids"""
     charset = string.ascii_uppercase + string.ascii_lowercase + string.digits
-    return ''.join(random.choice(charset) for i in range(length))
+    return ''.join(secrets.choice(charset) for i in range(length))
 
 
 def _purge_expired_user_tokens():
