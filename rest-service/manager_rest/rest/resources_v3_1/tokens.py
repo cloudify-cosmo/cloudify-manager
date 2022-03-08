@@ -37,7 +37,7 @@ class Tokens(SecuredResource):
         _purge_expired_user_tokens()
 
         request_dict = get_json_and_verify_params({
-            'description': {'type': str},
+            'description': {'type': str, 'optional': True},
             'expiration_date': {'optional': True},
         })
 
@@ -53,7 +53,7 @@ class Tokens(SecuredResource):
 
         token = models.Token(
             id=_random_string(),
-            description=request_dict.get('description', ''),
+            description=request_dict.get('description'),
             secret_hash=hash_password(secret),
             expiration_date=expiration_date,
             _user_fk=current_user.id,
