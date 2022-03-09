@@ -21,7 +21,7 @@ from manager_rest.utils import is_expired
 
 class Tokens(SecuredResource):
 
-    @authorize('user_token')
+    @authorize('token_get')
     def get(self):
         """
         Get token by user id
