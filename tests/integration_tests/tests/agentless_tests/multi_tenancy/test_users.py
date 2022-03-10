@@ -40,7 +40,7 @@ class UsersTest(AgentlessTestCase):
                        active=True,
                        tenants=None):
         user = self.client.users.get(username)
-        self.assertDictContainsSubset(
+        self._assertDictContainsSubset(
             self._get_user_dict(
                 username=username,
                 role=role,
@@ -63,7 +63,7 @@ class UsersTest(AgentlessTestCase):
     def test_default_user(self):
         users = self.client.users.list()
         self.assertEqual(len(users), 1)
-        self.assertDictContainsSubset(
+        self._assertDictContainsSubset(
             self._get_user_dict(
                 'admin',
                 role=ADMIN_ROLE,
@@ -130,7 +130,7 @@ class UsersTest(AgentlessTestCase):
                 username='{0}_{1}'.format(self.test_username, i),
                 get_data=get_data
             )
-            self.assertDictContainsSubset(user_dict, users[i])
+            self._assertDictContainsSubset(user_dict, users[i])
 
     def test_list_users_get_data(self):
         self._test_list_users(get_data=True)

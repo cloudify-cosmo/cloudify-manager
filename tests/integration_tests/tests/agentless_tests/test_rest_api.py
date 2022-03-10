@@ -157,8 +157,8 @@ class RestAPITest(AgentlessTestCase):
         self.assertEqual(1, len(blueprints))
         blueprint_id = blueprints[0].id
         blueprint_by_id = self.client.blueprints.get(blueprint_id)
-        self.assertDictContainsSubset(blueprint_by_id, blueprints[0])
-        self.assertDictContainsSubset(blueprints[0], blueprint_by_id)
+        self._assertDictContainsSubset(blueprint_by_id, blueprints[0])
+        self._assertDictContainsSubset(blueprints[0], blueprint_by_id)
 
     def test_deployments(self):
         self._create_basic_deployment()
@@ -166,8 +166,8 @@ class RestAPITest(AgentlessTestCase):
         self.assertEqual(1, len(deployments))
         deployment_id = deployments[0].id
         deployment_by_id = self.client.deployments.get(deployment_id)
-        self.assertDictContainsSubset(deployment_by_id, deployments[0])
-        self.assertDictContainsSubset(deployments[0], deployment_by_id)
+        self._assertDictContainsSubset(deployment_by_id, deployments[0])
+        self._assertDictContainsSubset(deployments[0], deployment_by_id)
 
     def test_executions(self):
         self._deploy_basic_blueprint()

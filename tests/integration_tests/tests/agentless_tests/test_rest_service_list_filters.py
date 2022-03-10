@@ -200,10 +200,7 @@ class TestRestServiceListFilters(AgentlessTestCase):
 
         self.assertEqual(len(response), 1, 'expecting 1 plugin result, '
                                            'got {0}'.format(len(response)))
-        self.assertDictContainsSubset(filter_field, response[0],
-                                      'expecting filtered results having '
-                                      'filters {0}, got {1}'
-                                      .format(filter_field, response[0]))
+        self._assertDictContainsSubset(filter_field, response[0])
 
     def test_plugins_list_no_filters(self):
         test_utils.upload_mock_plugin(
