@@ -33,7 +33,7 @@ def _set_latest_execution():
                 exc_table.c._deployment_fk == dep_table.c._storage_id
             ).order_by(
                 exc_table.c.created_at.desc()
-            ).scalar_subquery().limit(1)
+            ).limit(1).scalar_subquery()
         )
     )
     db.session.execute(upd_query)
