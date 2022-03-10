@@ -106,7 +106,7 @@ class AuthenticationTests(SecurityTestBase):
 
         with self.use_secured_client(username='alice',
                                      password='alice_password'):
-            token = self.client.tokens.get()
+            token = self.client.tokens.create()
         self._assert_user_authorized(token=token.value)
 
     def test_invalid_token_authentication(self):
@@ -115,7 +115,7 @@ class AuthenticationTests(SecurityTestBase):
     def test_token_returns_role(self):
         with self.use_secured_client(username='alice',
                                      password='alice_password'):
-            token = self.client.tokens.get()
+            token = self.client.tokens.create()
         self.assertEqual(token.role, ADMIN_ROLE)
 
         with self.use_secured_client(username='bob',
@@ -147,14 +147,14 @@ class AuthenticationTests(SecurityTestBase):
                                      password='alice_password'):
             # Remove the the tenant header from the client
             self.client._client.headers.pop(CLOUDIFY_TENANT_HEADER, None)
-            token = self.client.tokens.get()
+            token = self.client.tokens.create()
         self._assert_user_authorized(token=token.value)
 
     def test_sequential_authorized_user_calls(self):
         with self.use_secured_client(username='alice',
                                      password='alice_password'):
             self.client._client.headers.pop(CLOUDIFY_TENANT_HEADER, None)
-            token = self.client.tokens.get()
+            token = self.client.tokens.create()
 
         with self.use_secured_client(token=token.value):
             self.client.deployments.list()
