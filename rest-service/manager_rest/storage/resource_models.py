@@ -1137,7 +1137,7 @@ class Execution(CreatedAtMixin, SQLResourceBase):
 
         # Keep this import line here because of circular dependencies
         from manager_rest.rest.search_utils \
-            import GetEntitiesWithStorageManager
+            import GetValuesWithStorageManager
 
         workflow = self.get_workflow(deployment, workflow_id)
         workflow_parameters = workflow.get('parameters', {})
@@ -1175,7 +1175,7 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             if name not in parameters:
                 continue
             try:
-                getter = GetEntitiesWithStorageManager(self._storage_manager)
+                getter = GetValuesWithStorageManager(self._storage_manager)
                 if param.get('type') not in ['blueprint_id', 'deployment_id',
                                              'capability_value'] \
                         and not constraints:

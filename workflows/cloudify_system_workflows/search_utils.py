@@ -1,17 +1,20 @@
 from collections import defaultdict
 
 
-class GetEntitiesWithRest:
+class GetValuesWithRest:
     def __init__(self, client):
         self.client = client
 
-    def get(self, data_type, entity_id, **kwargs):
+    def get(self, data_type, value, **kwargs):
         if data_type == 'blueprint_id':
-            return self.get_blueprints(entity_id, **kwargs)
+            return [b.id for b in self.get_blueprints(value, **kwargs)]
         elif data_type == 'deployment_id':
-            return self.get_deployments(entity_id, **kwargs)
+            return [d.id for d in self.get_deployments(value, **kwargs)]
         elif data_type == 'capability_value':
-            return self.get_capability_value(entity_id, **kwargs)
+            return [cap_details['value']
+                    for dep_cap in self.get_capability_values(value, **kwargs)
+                    for cap in dep_cap['capabilities']
+                    for cap_details in cap.values()]
         raise NotImplementedError("Getter function not defined for "
                                   f"data type '{data_type}'")
 

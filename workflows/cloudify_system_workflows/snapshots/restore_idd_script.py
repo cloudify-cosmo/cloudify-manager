@@ -9,7 +9,6 @@ from os import environ
 from os.path import join
 
 from contextlib import contextmanager
-from functools import partial
 from logging.handlers import WatchedFileHandler
 
 from manager_rest import utils
@@ -19,7 +18,7 @@ from manager_rest.storage import get_storage_manager, models
 from manager_rest.constants import FILE_SERVER_BLUEPRINTS_FOLDER
 from manager_rest.flask_utils import (setup_flask_app, set_admin_current_user,
                                       get_tenant_by_name, set_tenant_in_app)
-from manager_rest.rest.search_utils import GetEntitiesWithStorageManager
+from manager_rest.rest.search_utils import GetValuesWithStorageManager
 
 from cloudify.constants import SHARED_RESOURCE, COMPONENT
 from cloudify.deployment_dependencies import dependency_creator_generator
@@ -134,7 +133,7 @@ def restore_inter_deployment_dependencies(deployment_id,
             blueprint, app_dir, app_blueprint)
         deployment_plan = rest_utils.get_deployment_plan(
             parsed_deployment, deployment.inputs,
-            entities_getter=GetEntitiesWithStorageManager(sm))
+            values_getter=GetValuesWithStorageManager(sm))
         logger.info('{0}: Parsed plan'.format(deployment.id))
 
         rest_utils.update_deployment_dependencies_from_plan(

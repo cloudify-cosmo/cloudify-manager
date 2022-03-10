@@ -52,7 +52,7 @@ from manager_rest.rest.rest_utils import (
     get_parsed_deployment,
     verify_blueprint_uploaded_state,
 )
-from manager_rest.rest.search_utils import GetEntitiesWithStorageManager
+from manager_rest.rest.search_utils import GetValuesWithStorageManager
 from manager_rest.execution_token import current_execution
 
 
@@ -120,7 +120,7 @@ class DeploymentUpdateManager(object):
             parsed_deployment, new_inputs,
             runtime_only_evaluation,
             auto_correct_types,
-            entities_getter=GetEntitiesWithStorageManager(self.sm),
+            values_getter=GetValuesWithStorageManager(self.sm),
         )
 
         deployment_update_id = '{0}-{1}'.format(deployment.id, uuid.uuid4())

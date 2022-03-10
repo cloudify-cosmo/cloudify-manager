@@ -16,7 +16,7 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 from dsl_parser import tasks
 
 from . import idd
-from .search_utils import GetEntitiesWithRest, get_instance_ids_by_node_ids
+from .search_utils import GetValuesWithRest, get_instance_ids_by_node_ids
 
 
 def _get_display_name(display_name, settings):
@@ -110,7 +110,7 @@ def create(ctx, labels=None, inputs=None, skip_plugins_validation=False,
         inputs=inputs,
         runtime_only_evaluation=ctx.deployment.runtime_only_evaluation,
         get_secret_method=client.secrets.get,
-        entities_getter=GetEntitiesWithRest(client),
+        values_getter=GetValuesWithRest(client),
         existing_ni_ids=existing_ni_ids,
     )
     nodes = deployment_plan['nodes']

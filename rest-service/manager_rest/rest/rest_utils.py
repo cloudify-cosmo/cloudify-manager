@@ -349,13 +349,13 @@ def get_deployment_plan(parsed_deployment,
                         inputs,
                         runtime_only_evaluation=False,
                         auto_correct_types=False,
-                        entities_getter=None):
+                        values_getter=None):
     try:
         return tasks.prepare_deployment_plan(
             parsed_deployment, get_secret_method, inputs=inputs,
             runtime_only_evaluation=runtime_only_evaluation,
             auto_correct_types=auto_correct_types,
-            entities_getter=entities_getter)
+            values_getter=values_getter)
     except parser_exceptions.MissingRequiredInputError as e:
         raise manager_exceptions.MissingRequiredDeploymentInputError(
             str(e))

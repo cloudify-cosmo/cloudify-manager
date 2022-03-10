@@ -13,7 +13,7 @@ from dsl_parser import constants, tasks
 
 from .. import idd
 from ..deployment_environment import format_plan_schedule
-from ..search_utils import GetEntitiesWithRest, get_instance_ids_by_node_ids
+from ..search_utils import GetValuesWithRest, get_instance_ids_by_node_ids
 
 from .step_extractor import extract_steps
 
@@ -33,12 +33,12 @@ def prepare_plan(*, update_id):
     }
     if not workflow_ctx.local:
         client = get_rest_client(tenant=workflow_ctx.tenant_name)
-        entities_getter = GetEntitiesWithRest(client)
+        values_getter = GetValuesWithRest(client)
 
         plan_node_ids = [n['id'] for n in bp.plan['nodes']]
         existing_ni_ids = get_instance_ids_by_node_ids(client, plan_node_ids)
     else:
-        entities_getter = None
+        values_getter = None
         existing_ni_ids = None
 
     deployment_plan = tasks.prepare_deployment_plan(
@@ -46,7 +46,7 @@ def prepare_plan(*, update_id):
         inputs=new_inputs,
         runtime_only_evaluation=dep_up.runtime_only_evaluation,
         get_secret_method=workflow_ctx.get_secret,
-        entities_getter=entities_getter,
+        values_getter=values_getter,
         existing_ni_ids=existing_ni_ids,
     )
     workflow_ctx.set_deployment_update_attributes(
