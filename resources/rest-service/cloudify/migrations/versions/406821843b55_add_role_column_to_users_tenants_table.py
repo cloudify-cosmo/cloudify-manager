@@ -44,7 +44,7 @@ def update_system_role(from_role_id, to_role_id):
     op.execute(
         users_roles.update()
         .where(users_roles.c.role_id == op.inline_literal(from_role_id))
-        .values(role_id=to_role_id).scalar_subquery()
+        .values(role_id=to_role_id)
     )
 
 
@@ -53,7 +53,7 @@ def _get_role_id(role_name):
     Return a SELECT statement that retrieves a role ID from a role name
     """
     return sa.select([roles.c.id]).where(
-        roles.c.name == op.inline_literal(role_name))
+        roles.c.name == op.inline_literal(role_name)).scalar_subquery()
 
 
 def upgrade():
@@ -77,7 +77,7 @@ def upgrade():
     # Set 'user' role as the default for every user in a tenant
     op.execute(
         users_tenants.update()
-        .values(role_id=_get_role_id('user')).scalar_subquery()
+        .values(role_id=_get_role_id('user'))
     )
     op.alter_column('users_tenants', 'role_id', nullable=False)
 
