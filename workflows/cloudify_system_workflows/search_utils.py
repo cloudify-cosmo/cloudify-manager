@@ -1,5 +1,7 @@
 from collections import defaultdict
 
+from cloudify.exceptions import NonRecoverableError
+
 
 class GetValuesWithRest:
     def __init__(self, client):
@@ -30,8 +32,19 @@ class GetValuesWithRest:
                                             _get_all_results=True,
                                             constraints=kwargs)
 
-    def get_capability_value(self, id, **kwargs):
-        raise NotImplementedError('get_capability_value not implemented')
+    def get_capability_values(self, capability_value, **kwargs):
+        try:
+            deployment_id = kwargs.pop('deployment_id')
+        except KeyError:
+            raise NonRecoverableError(
+                "You should provide 'deployment_id' when getting capability "
+                "values.  Make sure you have `deployment_id` constraint "
+                "declared for your 'capability_value' parameter.")
+        return self.client.deployments.capabilities.list(
+            deployment_id,
+            _search=capability_value,
+            _get_all_results=True,
+            constraints=kwargs)
 
 
 def get_instance_ids_by_node_ids(client, node_ids):

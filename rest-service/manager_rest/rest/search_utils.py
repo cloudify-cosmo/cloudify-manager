@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from manager_rest.manager_exceptions import BadParametersError
 from manager_rest.storage.models import (Blueprint, BlueprintsFilter,
                                          Deployment, DeploymentsFilter)
@@ -103,8 +105,58 @@ class GetValuesWithStorageManager:
             filter_rules=filter_rules
         )
 
-    def get_capability_value(self, id, **kwargs):
-        raise NotImplementedError('get_capability_value not implemented')
+    def get_capability_values(self, capability_value,
+                              deployment_id=None,
+                              valid_values=None,
+                              capability_key_specs=None):
+        if not deployment_id:
+            raise BadParametersError(
+                "You should provide 'deployment_id' when getting capability "
+                "values.  Make sure you have `deployment_id` constraint "
+                "declared for your 'capability_value' parameter.")
+        deployments = self.sm.list(
+            Deployment,
+            include=['id', 'capabilities'],
+            filters={'id': str(deployment_id)},
+            get_all_results=True,
+        )
+        dep_capabilities = defaultdict(lambda: [])
+        for dep in deployments:
+            if not dep.capabilities:
+                continue
+            for key, capability in dep.capabilities.items():
+                if capability_matches(key, capability, capability_value,
+                                      valid_values, capability_key_specs):
+                    dep_capabilities[dep.id].append({key: capability})
+        return [{'deployment_id': k, 'capabilities': v}
+                for k, v in dep_capabilities.items()]
+
+
+def capability_matches(capability_key, capability, search_value,
+                       valid_values=None,
+                       capability_key_specs=None):
+    if capability_key_specs:
+        for operator, value in capability_key_specs:
+            if operator == 'contains':
+                if value not in capability_key:
+                    return False
+            elif operator == 'starts_with':
+                if not capability_key.starts_with(value):
+                    return False
+            elif operator == 'end_with':
+                if not capability_key.ends_with(value):
+                    return False
+            elif operator == 'equals_to':
+                if capability_key != value:
+                    return False
+        if valid_values:
+            if capability['value'] not in valid_values:
+                return False
+
+    if search_value:
+        return capability['value'] == search_value
+
+    return True
 
 
 def get_filter_rules(resource_model,
