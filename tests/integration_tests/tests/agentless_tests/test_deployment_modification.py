@@ -201,7 +201,7 @@ class TestDeploymentModification(AgentlessTestCase):
         self.assertEqual(modification.status, expected_status)
         self.assertEqual(modification.deployment_id, deployment_id)
         self.assertEqual(modification.modified_nodes, modified_nodes)
-        self.assertDictContainsSubset({
+        self._assertDictContainsSubset({
             'workflow_id': workflow_id,
             'execution_id': execution.id,
             'deployment_id': deployment_id,

@@ -1,23 +1,9 @@
-#########
-# Copyright (c) 2015 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 from datetime import datetime
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 from manager_rest import manager_exceptions
 from manager_rest.storage import models
+from manager_rest.test import _assertDictContainsSubset
 from manager_rest.test.infrastructure.base_list_test import BaseListTest
 
 TEST_PACKAGE_NAME = 'cloudify-script-plugin'
@@ -46,10 +32,7 @@ class ResourceListFiltersTestCase(BaseListTest):
 
         self.assertEqual(len(response), 1, 'expecting 1 deployment result, '
                                            'got {0}'.format(len(response)))
-        self.assertDictContainsSubset(filter_fields, response[0],
-                                      'expecting filtered results having '
-                                      'filters {0}, got {1}'
-                                      .format(filter_fields, response[0]))
+        _assertDictContainsSubset(filter_fields, response[0])
 
     def test_deployments_list_with_filters_multiple_values(self):
         filter_fields = \
@@ -238,10 +221,7 @@ class ResourceListFiltersTestCase(BaseListTest):
                                            'results, got {0}'
                          .format(len(response)))
         modification = response[0]
-        self.assertDictContainsSubset(filter_params, modification,
-                                      'expecting results having '
-                                      'values {0}, got {1}'
-                                      .format(filter_params, modification))
+        _assertDictContainsSubset(filter_params, modification)
         self.assertEqual(modification['status'], 'finished')
 
     def test_deployment_modifications_list_with_filters_multiple_values(self):
@@ -270,10 +250,7 @@ class ResourceListFiltersTestCase(BaseListTest):
         self.assertEqual(1, len(response), 'expecting 1 blueprint result,'
                                            ' got {0}'.format(len(response)))
         blueprint = response[0]
-        self.assertDictContainsSubset(filter_params, blueprint,
-                                      'expecting results having '
-                                      'values {0}, got {1}'
-                                      .format(filter_params, blueprint))
+        _assertDictContainsSubset(filter_params, blueprint)
         self.assertEqual(self.first_blueprint_id, blueprint['id'])
 
     def test_blueprints_list_with_filters_multiple_values(self):
@@ -327,10 +304,7 @@ class ResourceListFiltersTestCase(BaseListTest):
 
         self.assertEqual(len(response), 1, 'expecting 1 plugin result, '
                                            'got {0}'.format(len(response)))
-        self.assertDictContainsSubset(filter_field, response[0],
-                                      'expecting filtered results having '
-                                      'filters {0}, got {1}'
-                                      .format(filter_field, response[0]))
+        _assertDictContainsSubset(filter_field, response[0])
 
     def test_plugins_list_non_existing_filters(self):
         filter_fields = {'non_existing_field': 'just_some_value'}

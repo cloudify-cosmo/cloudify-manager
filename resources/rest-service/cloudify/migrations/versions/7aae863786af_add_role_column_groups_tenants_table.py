@@ -51,6 +51,7 @@ def upgrade():
         .values(role_id=(
             sa.select([roles.c.id])
             .where(roles.c.name == op.inline_literal('user'))
+            .scalar_subquery()
         ))
     )
     op.alter_column('groups_tenants', 'role_id', nullable=False)

@@ -2327,7 +2327,7 @@ class DeploymentLabelsDependencies(BaseDeploymentDependencies):
         deployment.
         """
         if cls._children_summary_query_cache is None:
-            cols = db.session.query(
+            cols = db.select(
                 db.func.count(1),
                 db.func.sum(Deployment.sub_services_count),
                 db.func.sum(Deployment.sub_environments_count),

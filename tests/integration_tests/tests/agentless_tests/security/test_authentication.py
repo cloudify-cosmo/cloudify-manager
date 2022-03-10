@@ -39,7 +39,7 @@ class AuthenticationTest(TestAuthenticationBase):
         self._assert_unauthorized(username=None, password=None)
 
     def test_valid_token_authenticates(self):
-        token = self.client.tokens.get().value
+        token = self.client.tokens.create().value
         self._assert_authorized(token=token, username=None)
 
     def test_invalid_token_fails(self):

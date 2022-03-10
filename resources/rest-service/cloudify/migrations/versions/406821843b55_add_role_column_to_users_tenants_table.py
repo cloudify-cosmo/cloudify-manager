@@ -53,7 +53,7 @@ def _get_role_id(role_name):
     Return a SELECT statement that retrieves a role ID from a role name
     """
     return sa.select([roles.c.id]).where(
-        roles.c.name == op.inline_literal(role_name))
+        roles.c.name == op.inline_literal(role_name)).scalar_subquery()
 
 
 def upgrade():

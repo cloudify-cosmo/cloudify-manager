@@ -16,7 +16,7 @@ class TenantsTest(AgentlessTestCase):
     def test_default_tenant(self):
         tenants = self.client.tenants.list()
         self.assertEqual(len(tenants), 1)
-        self.assertDictContainsSubset(
+        self._assertDictContainsSubset(
             {
                 'name': 'default_tenant',
                 'groups': 0,
@@ -27,7 +27,7 @@ class TenantsTest(AgentlessTestCase):
         )
         tenants = self.client.tenants.list(_get_data=True)
         self.assertEqual(len(tenants), 1)
-        self.assertDictContainsSubset(
+        self._assertDictContainsSubset(
             {
                 'name': 'default_tenant',
                 'groups': {},

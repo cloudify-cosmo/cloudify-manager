@@ -70,7 +70,7 @@ class TestLicense(AgentlessTestCase):
         license on the Manager: tenants, status, license, snapshots, tokens,
         maintenance.
         """
-        self.client.tokens.get()
+        self.client.tokens.create()
         self.client.tenants.list()
         self.client.license.list()
         self.client.manager.get_status()
