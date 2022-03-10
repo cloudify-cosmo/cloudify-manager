@@ -14,21 +14,30 @@ from manager_rest.security.authorization import (authorize,
                                                  is_user_action_allowed)
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.storage.models_base import db
-from manager_rest.rest.rest_decorators import marshal_with
+from manager_rest.rest.rest_decorators import marshal_with, paginate
 from manager_rest.rest.rest_utils import get_json_and_verify_params
 from manager_rest.utils import is_expired
 
 
 class Tokens(SecuredResource):
 
+    @marshal_with(responses.Tokens)
+    @paginate
     @authorize('token_get')
-    def get(self):
+    def get(self, filters=None, pagination=None, sort=None):
         """
-        Get token by user id
+        Get a list of tokens.
         """
-        token = current_user.get_auth_token()
-        return dict(username=current_user.username,
-                    value=token, role=current_user.role)
+        filters = filters or {}
+        if not is_user_action_allowed('manage_others_tokens'):
+            filters['_user_fk'] = current_user.id
+
+        sm = get_storage_manager()
+
+        result = sm.list(models.Token, filters=filters,
+                         pagination=pagination, sort=sort)
+
+        return result
 
     @marshal_with(responses.Tokens)
     @authorize('create_token')
@@ -60,12 +69,9 @@ class Tokens(SecuredResource):
         )
         sm.put(token)
 
-        return dict(username=current_user.username,
-                    value=f'ctok-{token.id}-{secret}',
-                    role=current_user.role,
-                    expiration_date=token.expiration_date,
-                    last_used=token.last_used,
-                    token_id=token.id)
+        # Return the token with the secret or it'll never be usable
+        token._secret = secret
+        return token
 
 
 class TokensId(SecuredResource):
@@ -87,13 +93,7 @@ class TokensId(SecuredResource):
         token = sm.get(models.Token, token_id, fail_silently=True)
 
         if token and _can_manage_token(token):
-            token_user = sm.get(models.User, token._user_fk)
-            return dict(username=token_user.username,
-                        value=f'ctok-{token.id}-********',
-                        role=token_user.role,
-                        expiration_date=token.expiration_date,
-                        last_used=token.last_used,
-                        token_id=token.id)
+            return token
         else:
             raise NotFoundError(f'Could not find token {token_id}')
 

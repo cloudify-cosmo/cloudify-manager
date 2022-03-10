@@ -493,6 +493,20 @@ class Token(CreatedAtMixin, SQLModelBase):
     user = db.relationship('User')
     _execution_fk = foreign_key('executions._storage_id')
     execution = db.relationship('Execution')
+    _secret = None
+
+    def to_response(self, include=None, get_data=False, **kwargs):
+        # Allow token creation to return the full token including secret
+        secret = self._secret or '********'
+        return {
+            'id': self.id,
+            'value': f'ctok-{self.id}-{secret}',
+            'username': self.user.username,
+            'role': self.user.role,
+            'expiration_date': self.expiration_date,
+            'last_used': self.last_used,
+            'description': self.description,
+        }
 
 
 class UserTenantAssoc(SQLModelBase):
