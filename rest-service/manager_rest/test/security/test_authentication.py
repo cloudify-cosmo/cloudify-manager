@@ -120,7 +120,7 @@ class AuthenticationTests(SecurityTestBase):
 
         with self.use_secured_client(username='bob',
                                      password='bob_password'):
-            token = self.client.tokens.get()
+            token = self.client.tokens.create()
         self.assertEqual(token.role, USER_ROLE)
 
     def test_secured_manager_blueprints_upload(self):
