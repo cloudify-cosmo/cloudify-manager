@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from flask import request
 from flask_restful_swagger import swagger
 
@@ -10,7 +12,7 @@ from manager_rest.constants import (ATTRS_OPERATORS,
 
 from ..responses_v2 import ListResponse
 from ..search_utils import get_filter_rules
-from .. import rest_decorators, rest_utils
+from .. import rest_decorators, rest_utils, responses_v3
 
 from .workflows import workflows_list_response
 
@@ -122,7 +124,7 @@ class DeploymentsSearches(ResourceSearches):
     @rest_decorators.filter_id
     def post(self, _include=None, pagination=None, sort=None,
              all_tenants=None, search=None, filter_id=None, **kwargs):
-        """List deployments using filter rules"""
+        """List deployments using filter rules or DSL constraints"""
         filters = rest_utils.deployment_group_id_filter()
         return super().post(models.Deployment, models.DeploymentsFilter,
                             _include, filters, pagination, sort, all_tenants,
@@ -141,7 +143,7 @@ class BlueprintsSearches(ResourceSearches):
     @rest_decorators.filter_id
     def post(self, _include=None, pagination=None, sort=None,
              all_tenants=None, search=None, filter_id=None, **kwargs):
-        """List blueprints using filter rules"""
+        """List blueprints using filter rules or DSL constraints"""
         filters = {'is_hidden': False}
         return super().post(models.Blueprint, models.BlueprintsFilter,
                             _include, filters, pagination, sort, all_tenants,
@@ -191,3 +193,113 @@ class NodeInstancesSearches(ResourceSearches):
         return super().post(models.NodeInstance, None,
                             _include, {}, pagination, sort, all_tenants,
                             search, filter_id, **kwargs)
+
+
+class CapabilitiesSearches(ResourceSearches):
+    @swagger.operation(
+        responseClass=f'List[{responses_v3.DeploymentCapabilities.__name__}]',
+        nickname="list",
+        notes="Returns a filtered list of existing capabilities of a specific "
+              "deployment.",
+        parameters=[
+            {
+                'in': 'query',
+                'name': '_include',
+                'type': 'string',
+                'required': 'false'
+            },
+            {
+                'in': 'query',
+                'name': '_size',
+                'type': 'integer',
+                'required': 'false'
+            },
+            {
+                'in': 'query',
+                'name': '_offset',
+                'type': 'integer',
+                'required': 'false'
+            },
+            {
+                'in': 'query',
+                'name': '_all_tenants',
+                'type': 'boolean',
+                'required': 'false'
+            },
+            {
+                'in': 'query',
+                'name': '_get_all_results',
+                'type': 'boolean',
+                'required': 'false'
+            },
+        ]
+    )
+    @authorize('deployment_capabilities')
+    @rest_decorators.marshal_with(responses_v3.DeploymentCapabilities)
+    @rest_decorators.paginate
+    @rest_decorators.search('value')
+    @rest_decorators.all_tenants
+    def post(self, _deployment_id=None, search=None, _include=None,
+             pagination=None, all_tenants=None, **kwargs):
+        """List capabilities using DSL constraints"""
+        get_all_results = rest_utils.verify_and_convert_bool(
+            '_get_all_results',
+            request.args.get('_get_all_results', False)
+        )
+        request_schema = {'constraints': {'optional': False, 'type': dict}}
+        request_dict = rest_utils.get_json_and_verify_params(request_schema)
+        constraints = request_dict['constraints']
+
+        deployments = get_storage_manager().list(
+            models.Deployment,
+            include=_include,
+            substr_filters=_deployment_id,
+            pagination=pagination,
+            all_tenants=all_tenants,
+            get_all_results=get_all_results,
+        )
+        metadata = deployments.metadata
+
+        dep_capabilities = defaultdict(lambda: [])
+        for dep in deployments:
+            if not dep.capabilities:
+                continue
+            for key, capability in dep.capabilities.items():
+                if capability_matches(key, capability, constraints, search):
+                    dep_capabilities[dep.id].append({key: capability})
+
+            metadata['filtered'] = \
+                metadata['pagination']['total'] - len(dep_capabilities)
+            metadata['pagination']['total'] = len(dep_capabilities)
+            return ListResponse(
+                items=[{'deployment_id': k, 'capabilities': v}
+                       for k, v in dep_capabilities.items()],
+                metadata=metadata
+            )
+
+
+def capability_matches(capability_key, capability, constraints, search_value):
+    for constraint, specification in constraints.items():
+        if constraint == 'capability_key_specs':
+            for operator, value in specification.items():
+                if operator == 'contains':
+                    if value not in capability_key:
+                        return False
+                elif operator == 'starts_with':
+                    if not capability_key.starts_with(value):
+                        return False
+                elif operator == 'end_with':
+                    if not capability_key.ends_with(value):
+                        return False
+                elif operator == 'equals_to':
+                    if capability_key != value:
+                        return False
+        elif constraint == 'valid_values':
+            if capability['value'] not in specification:
+                return False
+
+    if search_value:
+        return any(capability[k] == search_value[k]
+                   for k in search_value.keys())
+
+    return True

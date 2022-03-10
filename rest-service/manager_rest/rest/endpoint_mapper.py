@@ -143,6 +143,7 @@ def setup_resources(api):
         'Workflows': 'workflows',
         'WorkflowsSearches': 'searches/workflows',
         'NodeInstancesSearches': 'searches/node-instances',
+        'CapabilitiesSearches': 'searches/capabilities',
         'CommunityContacts': 'contacts',
     }
 
