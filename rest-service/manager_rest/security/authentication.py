@@ -108,6 +108,7 @@ class Authentication(object):
             audit.set_audit_method('execution_token')
         elif token:  # Token authentication
             user = self._authenticate_token(token)
+            self._check_if_user_is_locked(user, user)
             audit.set_audit_method('token')
         elif api_token:  # API token authentication
             user, user_token_key = user_handler.extract_api_token(api_token)
