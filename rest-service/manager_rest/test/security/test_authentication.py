@@ -17,11 +17,9 @@ from base64 import b64encode
 
 from manager_rest.storage import management_models
 from manager_rest.maintenance import remove_maintenance_state
-from manager_rest.constants import (CLOUDIFY_TENANT_HEADER,
-                                    BASIC_AUTH_PREFIX,
+from manager_rest.constants import (BASIC_AUTH_PREFIX,
                                     CLOUDIFY_AUTH_HEADER)
 from .test_base import SecurityTestBase
-from ..security_utils import ADMIN_ROLE, USER_ROLE
 
 FAILED_LOGINS_NUMBER = 6
 
@@ -101,9 +99,6 @@ class AuthenticationTests(SecurityTestBase):
 
     def test_missing_password(self):
         self._assert_user_unauthorized(username='alice', password=None)
-
-    def test_invalid_token_authentication(self):
-        self._assert_user_unauthorized(token='wrong token')
 
     def test_secured_manager_blueprints_upload(self):
         with self.use_secured_client(username='alice',

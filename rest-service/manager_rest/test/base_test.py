@@ -111,7 +111,8 @@ auth_dict = {
         'deployment_list': permitted_roles,
         'blueprint_list': permitted_roles,
         'secret_create': ['sys_admin', 'manager', 'user'],
-        'maintenance_mode_set': ['sys_admin']
+        'maintenance_mode_set': ['sys_admin'],
+        'manage_others_tokens': ['sys_admin'],
     }
 }
 
