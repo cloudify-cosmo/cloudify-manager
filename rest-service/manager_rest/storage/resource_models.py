@@ -5,7 +5,6 @@ import uuid
 from os import path
 from datetime import datetime
 from collections import namedtuple
-from functools import partial
 
 from flask_restful import fields as flask_fields
 
@@ -1137,8 +1136,8 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             return
 
         # Keep this import line here because of circular dependencies
-        from manager_rest.rest.search_utils import (get_deployments_with_sm,
-                                                    get_blueprints_with_sm)
+        from manager_rest.rest.search_utils \
+            import GetValuesWithStorageManager
 
         workflow = self.get_workflow(deployment, workflow_id)
         workflow_parameters = workflow.get('parameters', {})
@@ -1176,18 +1175,13 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             if name not in parameters:
                 continue
             try:
-                if param.get('type') == 'deployment_id':
-                    get_method = partial(get_deployments_with_sm,
-                                         self._storage_manager)
-                elif param.get('type') == 'blueprint_id':
-                    get_method = partial(get_blueprints_with_sm,
-                                         self._storage_manager)
-                else:
-                    get_method = None
-                    if not constraints:
-                        continue
+                getter = GetValuesWithStorageManager(self._storage_manager)
+                if param.get('type') not in ['blueprint_id', 'deployment_id',
+                                             'capability_value'] \
+                        and not constraints:
+                    continue
                 validate_input_value(name, constraints, parameters[name],
-                                     param.get('type'), get_method)
+                                     param.get('type'), getter)
             except (dsl_exceptions.DSLParsingException,
                     dsl_exceptions.ConstraintException) as ex:
                 constraint_violations[name] = ex

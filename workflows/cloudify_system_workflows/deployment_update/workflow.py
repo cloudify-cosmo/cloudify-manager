@@ -1,5 +1,4 @@
 from collections import defaultdict
-from functools import partial
 import time
 import typing
 
@@ -14,9 +13,7 @@ from dsl_parser import constants, tasks
 
 from .. import idd
 from ..deployment_environment import format_plan_schedule
-from ..search_utils import (get_deployments_with_rest,
-                            get_blueprints_with_rest,
-                            get_instance_ids_by_node_ids)
+from ..search_utils import GetValuesWithRest, get_instance_ids_by_node_ids
 
 from .step_extractor import extract_steps
 
@@ -36,14 +33,12 @@ def prepare_plan(*, update_id):
     }
     if not workflow_ctx.local:
         client = get_rest_client(tenant=workflow_ctx.tenant_name)
-        get_deployments_method = partial(get_deployments_with_rest, client)
-        get_blueprints_method = partial(get_blueprints_with_rest, client)
+        values_getter = GetValuesWithRest(client)
 
         plan_node_ids = [n['id'] for n in bp.plan['nodes']]
         existing_ni_ids = get_instance_ids_by_node_ids(client, plan_node_ids)
     else:
-        get_deployments_method = None
-        get_blueprints_method = None
+        values_getter = None
         existing_ni_ids = None
 
     deployment_plan = tasks.prepare_deployment_plan(
@@ -51,8 +46,7 @@ def prepare_plan(*, update_id):
         inputs=new_inputs,
         runtime_only_evaluation=dep_up.runtime_only_evaluation,
         get_secret_method=workflow_ctx.get_secret,
-        get_deployments_method=get_deployments_method,
-        get_blueprints_method=get_blueprints_method,
+        values_getter=values_getter,
         existing_ni_ids=existing_ni_ids,
     )
     workflow_ctx.set_deployment_update_attributes(

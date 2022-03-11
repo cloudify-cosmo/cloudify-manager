@@ -96,9 +96,11 @@ class SearchesTestCase(base_test.BaseServerTestCase):
     def test_searches_get_filter_rules(self):
         self.create_filter(self.client.deployments_filters, self.FILTER_ID,
                            self.FILTER_RULES)
-        filter_rules = get_filter_rules(self.FILTER_RULES, models.Deployment,
+        filter_rules = get_filter_rules(models.Deployment,
                                         models.DeploymentsFilter,
-                                        self.FILTER_ID)
+                                        self.FILTER_ID,
+                                        self.FILTER_RULES,
+                                        None)
         self.assertEqual(filter_rules, self.FILTER_RULES)
 
     def _test_list_resources_with_filter_rules_and_filter_id(
@@ -135,3 +137,36 @@ class SearchesTestCase(base_test.BaseServerTestCase):
             filter_rules=any_blueprint, _search='asd', _search_name='coi')
         self.assertEqual(len(deployments), 3)
         self.assertEqual(deployments[0].id, 'qwe1')
+
+    def test_deployments_search_with_constraints(self):
+        self.put_deployment(deployment_id='d1', blueprint_id='b1',
+                            labels=[{'type': 'test'}, {'one': 'yes'}])
+        self.put_deployment(deployment_id='d2', blueprint_id='b2',
+                            labels=[{'type': 'test'}])
+        self.create_filter(self.client.deployments_filters, 'filter1',
+                           [FilterRule('one', ['yes'], 'any_of', 'label')])
+        deployments = self.client.deployments.list(
+            constraints={'filter_id': 'filter1'})
+        self.assertEqual(len(deployments), 1)
+        deployments = self.client.deployments.list(
+            constraints={'labels': [{'type': 'test'}]})
+        self.assertEqual(len(deployments), 2)
+        deployments = self.client.deployments.list(
+            constraints={'filter_id': 'filter1'}, _search='d2')
+        self.assertEqual(len(deployments), 0)
+
+    def test_deployments_search_valid_params(self):
+        self.put_deployment(deployment_id='d1', blueprint_id='b1',
+                            labels=[{'type': 'test'}, {'one': 'yes'}])
+        self.create_filter(self.client.deployments_filters, 'filter1',
+                           [FilterRule('one', ['yes'], 'any_of', 'label')])
+        self.assertRaisesRegex(
+            ValueError, 'not both',
+            self.client.deployments.list,
+            constraints={'labels': [{'type': 'text'}]},
+            filter_id='filter1')
+        self.assertRaisesRegex(
+            ValueError, 'not both',
+            self.client.deployments.list,
+            constraints={'labels': [{'type': 'text'}]},
+            filter_rules=[FilterRule('one', ['yes'], 'any_of', 'label')])
