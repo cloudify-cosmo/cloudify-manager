@@ -24,13 +24,3 @@ class TokenTests(SecurityTestBase):
             self.client._client.headers.pop(CLOUDIFY_TENANT_HEADER, None)
             token = self.client.tokens.create()
         self._assert_user_authorized(token=token.value)
-
-    def test_sequential_authorized_user_calls(self):
-        with self.use_secured_client(username='alice',
-                                     password='alice_password'):
-            self.client._client.headers.pop(CLOUDIFY_TENANT_HEADER, None)
-            token = self.client.tokens.create()
-
-        with self.use_secured_client(token=token.value):
-            self.client.deployments.list()
-            self.client.deployments.list()
