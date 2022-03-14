@@ -249,7 +249,7 @@ class TestMiscellaneousIdParams(AgentlessTestCase):
         )
 
         self.client.blueprints.upload(
-            utils.get_resource('dsl/basic.yaml'),
+            utils.get_resource('dsl/blueprint_with_two_capabilities.yaml'),
             'bp-basic')
         utils.wait_for_blueprint_upload('bp-basic', self.client)
         self.client.blueprints.update('bp-basic',
@@ -279,7 +279,9 @@ class TestMiscellaneousIdParams(AgentlessTestCase):
             'd1', 'test_parameters', allow_custom_parameters=True,
             parameters={'a_deployment_id': 'deploymentA',
                         'a_blueprint_id': 'bp-basic',
-                        'b_blueprint_id': 'bp'},
+                        'b_blueprint_id': 'bp',
+                        'a_capability_value': 'capability2_value',
+                        'b_capability_value': 'capability1_value'},
         )
         self.wait_for_execution_to_end(test_execution)
 
@@ -292,7 +294,9 @@ class TestMiscellaneousIdParams(AgentlessTestCase):
             'd1', 'test_parameters', allow_custom_parameters=True,
             parameters={'a_deployment_id': 3.14,
                         'a_blueprint_id': 'bp-basic',
-                        'b_blueprint_id': 'bp'},
+                        'b_blueprint_id': 'bp',
+                        'a_capability_value': 'capability2_value',
+                        'b_capability_value': 'capability1_value'},
         )
 
         self.other_client.deployments.create(
@@ -307,7 +311,9 @@ class TestMiscellaneousIdParams(AgentlessTestCase):
             'd1', 'test_parameters', allow_custom_parameters=True,
             parameters={'a_deployment_id': 'deploymentA',
                         'a_blueprint_id': 'bp-basic',
-                        'b_blueprint_id': 'bp'},
+                        'b_blueprint_id': 'bp',
+                        'a_capability_value': 'capability2_value',
+                        'b_capability_value': 'capability1_value'},
         )
 
         self.other_client.deployments.create(
@@ -322,7 +328,9 @@ class TestMiscellaneousIdParams(AgentlessTestCase):
             'd1', 'test_parameters', allow_custom_parameters=True,
             parameters={'a_deployment_id': 'deploymentAA',
                         'a_blueprint_id': 'bp-basic',
-                        'b_blueprint_id': 'bp'},
+                        'b_blueprint_id': 'bp',
+                        'a_capability_value': 'capability2_value',
+                        'b_capability_value': 'capability1_value'},
         )
 
         self.client.deployments.create(
@@ -337,7 +345,9 @@ class TestMiscellaneousIdParams(AgentlessTestCase):
             'd1', 'test_parameters', allow_custom_parameters=True,
             parameters={'a_deployment_id': 'deploymentAAA',
                         'a_blueprint_id': 'bp-basic',
-                        'b_blueprint_id': 'bp'},
+                        'b_blueprint_id': 'bp',
+                        'a_capability_value': 'capability2_value',
+                        'b_capability_value': 'capability1_value'},
         )
 
         self.other_client.deployments.create(
@@ -352,7 +362,9 @@ class TestMiscellaneousIdParams(AgentlessTestCase):
             'd1', 'test_parameters', allow_custom_parameters=True,
             parameters={'a_deployment_id': 'deploymentABC',
                         'a_blueprint_id': 'bp-basic',
-                        'b_blueprint_id': 'bp'},
+                        'b_blueprint_id': 'bp',
+                        'a_capability_value': 'capability2_value',
+                        'b_capability_value': 'capability1_value'},
         )
 
     def test_blueprint_id_errors(self):
@@ -370,7 +382,9 @@ class TestMiscellaneousIdParams(AgentlessTestCase):
             'd1', 'test_parameters',
             parameters={'a_deployment_id': 'deploymentA',
                         'a_blueprint_id': -99,
-                        'b_blueprint_id': 'bp'},
+                        'b_blueprint_id': 'bp',
+                        'a_capability_value': 'capability2_value',
+                        'b_capability_value': 'capability1_value'},
         )
 
         self.assertRaisesRegex(
@@ -380,7 +394,9 @@ class TestMiscellaneousIdParams(AgentlessTestCase):
             'd1', 'test_parameters',
             parameters={'a_deployment_id': 'deploymentA',
                         'a_blueprint_id': 'bp-basic',
-                        'b_blueprint_id': 'non-existent'},
+                        'b_blueprint_id': 'non-existent',
+                        'a_capability_value': 'capability2_value',
+                        'b_capability_value': 'capability1_value'},
         )
 
         self.assertRaisesRegex(
@@ -390,5 +406,39 @@ class TestMiscellaneousIdParams(AgentlessTestCase):
             'd1', 'test_parameters', allow_custom_parameters=True,
             parameters={'a_deployment_id': 'deploymentA',
                         'a_blueprint_id': 'bp',
-                        'b_blueprint_id': 'bp-basic'},
+                        'b_blueprint_id': 'bp-basic',
+                        'a_capability_value': 'capability2_value',
+                        'b_capability_value': 'capability1_value'},
+        )
+
+    def test_capability_value_errors(self):
+        self.other_client.deployments.create(
+            'bp-basic',
+            'deploymentA',
+            labels=[{'qwe': 'rty'}, {'foo': 'bar'}, {'lorem': 'ipsum'}])
+        self.other_client.deployments.set_visibility('deploymentA', 'global')
+        self.client.deployments.create('bp', 'd1')
+
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            r'^400:.+Parameter.+constraints:.+a_capability_value',
+            self.client.executions.create,
+            'd1', 'test_parameters',
+            parameters={'a_deployment_id': 'deploymentA',
+                        'a_blueprint_id': 'bp-basic',
+                        'b_blueprint_id': 'bp',
+                        'a_capability_value': 'capability1_value',
+                        'b_capability_value': 'capability1_value'},
+        )
+
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            r'^400:.+Parameter.+constraints:.+b_capability_value',
+            self.client.executions.create,
+            'd1', 'test_parameters',
+            parameters={'a_deployment_id': 'deploymentA',
+                        'a_blueprint_id': 'bp-basic',
+                        'b_blueprint_id': 'bp',
+                        'a_capability_value': 'capability2_value',
+                        'b_capability_value': 'capability3_value'},
         )
