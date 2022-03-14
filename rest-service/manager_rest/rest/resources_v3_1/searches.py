@@ -1,8 +1,10 @@
 from collections import defaultdict
 
 from flask import request
+from flask_restful.reqparse import Argument
 from flask_restful_swagger import swagger
 
+from manager_rest import manager_exceptions
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager
@@ -204,6 +206,12 @@ class CapabilitiesSearches(ResourceSearches):
         parameters=[
             {
                 'in': 'query',
+                'name': '_deployment_id',
+                'type': 'string',
+                'required': 'true'
+            },
+            {
+                'in': 'query',
                 'name': '_include',
                 'type': 'string',
                 'required': 'false'
@@ -234,26 +242,37 @@ class CapabilitiesSearches(ResourceSearches):
             },
         ]
     )
-    @authorize('deployment_capabilities')
+    @authorize('deployment_capabilities', allow_all_tenants=True)
     @rest_decorators.marshal_with(responses_v3.DeploymentCapabilities)
     @rest_decorators.paginate
-    @rest_decorators.search('value')
     @rest_decorators.all_tenants
-    def post(self, _deployment_id=None, search=None, _include=None,
+    def post(self, search=None, _include=None,
              pagination=None, all_tenants=None, **kwargs):
         """List capabilities using DSL constraints"""
-        get_all_results = rest_utils.verify_and_convert_bool(
-            '_get_all_results',
-            request.args.get('_get_all_results', False)
-        )
+        args = rest_utils.get_args_and_verify_arguments([
+            Argument('_deployment_id', required=True),
+            Argument('_search', required=False),
+        ])
+        deployment_id = args._deployment_id
+        search = args._search
+        if not deployment_id:
+            raise manager_exceptions.BadParametersError(
+                "You should provide a valid '_deployment_id' when searching "
+                " for capabilities.")
+
         request_schema = {'constraints': {'optional': False, 'type': dict}}
         request_dict = rest_utils.get_json_and_verify_params(request_schema)
         constraints = request_dict['constraints']
 
+        get_all_results = rest_utils.verify_and_convert_bool(
+            '_get_all_results',
+            request.args.get('_get_all_results', False)
+        )
+
         deployments = get_storage_manager().list(
             models.Deployment,
             include=_include,
-            substr_filters=_deployment_id,
+            substr_filters={'id': deployment_id},
             pagination=pagination,
             all_tenants=all_tenants,
             get_all_results=get_all_results,
@@ -286,10 +305,10 @@ def capability_matches(capability_key, capability, constraints, search_value):
                     if value not in capability_key:
                         return False
                 elif operator == 'starts_with':
-                    if not capability_key.starts_with(value):
+                    if not capability_key.startswith(value):
                         return False
                 elif operator == 'end_with':
-                    if not capability_key.ends_with(value):
+                    if not capability_key.endswith(value):
                         return False
                 elif operator == 'equals_to':
                     if capability_key != value:
@@ -298,8 +317,4 @@ def capability_matches(capability_key, capability, constraints, search_value):
             if capability['value'] not in specification:
                 return False
 
-    if search_value:
-        return any(capability[k] == search_value[k]
-                   for k in search_value.keys())
-
-    return True
+    return capability['value'] == search_value

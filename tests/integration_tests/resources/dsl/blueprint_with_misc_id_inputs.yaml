@@ -30,7 +30,6 @@ inputs:
           contains: deployment
   a_blueprint_id:
     type: blueprint_id
-#    required: false
     constraints:
       - labels:
           - alpha: bravo
