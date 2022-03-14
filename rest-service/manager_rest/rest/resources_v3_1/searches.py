@@ -284,17 +284,18 @@ class CapabilitiesSearches(ResourceSearches):
             if not dep.capabilities:
                 continue
             for key, capability in dep.capabilities.items():
+                # from celery.contrib import rdb; rdb.set_trace()
                 if capability_matches(key, capability, constraints, search):
                     dep_capabilities[dep.id].append({key: capability})
 
-            metadata['filtered'] = \
-                metadata['pagination']['total'] - len(dep_capabilities)
-            metadata['pagination']['total'] = len(dep_capabilities)
-            return ListResponse(
-                items=[{'deployment_id': k, 'capabilities': v}
-                       for k, v in dep_capabilities.items()],
-                metadata=metadata
-            )
+        metadata['filtered'] = \
+            metadata['pagination']['total'] - len(dep_capabilities)
+        metadata['pagination']['total'] = len(dep_capabilities)
+        return ListResponse(
+            items=[{'deployment_id': k, 'capabilities': v}
+                   for k, v in dep_capabilities.items()],
+            metadata=metadata
+        )
 
 
 def capability_matches(capability_key, capability, constraints, search_value):
@@ -305,16 +306,22 @@ def capability_matches(capability_key, capability, constraints, search_value):
                     if value not in capability_key:
                         return False
                 elif operator == 'starts_with':
-                    if not capability_key.startswith(value):
+                    if not capability_key.startswith(str(value)):
                         return False
-                elif operator == 'end_with':
-                    if not capability_key.endswith(value):
+                elif operator == 'ends_with':
+                    if not capability_key.endswith(str(value)):
                         return False
                 elif operator == 'equals_to':
-                    if capability_key != value:
+                    if capability_key != str(value):
                         return False
+                else:
+                    raise NotImplementedError('Unknown capabilities name '
+                                              f'pattern operator: {operator}')
         elif constraint == 'valid_values':
             if capability['value'] not in specification:
                 return False
 
-    return capability['value'] == search_value
+    if search_value:
+        return capability['value'] == search_value
+
+    return True

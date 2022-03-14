@@ -128,6 +128,7 @@ class GetValuesWithStorageManager:
                 if capability_matches(key, capability, capability_value,
                                       valid_values, capability_key_specs):
                     dep_capabilities[dep.id].append({key: capability})
+        # from celery.contrib import rdb; rdb.set_trace()
         return [{'deployment_id': k, 'capabilities': v}
                 for k, v in dep_capabilities.items()]
 
@@ -136,19 +137,22 @@ def capability_matches(capability_key, capability, search_value,
                        valid_values=None,
                        capability_key_specs=None):
     if capability_key_specs:
-        for operator, value in capability_key_specs:
+        for operator, value in capability_key_specs.items():
             if operator == 'contains':
                 if value not in capability_key:
                     return False
             elif operator == 'starts_with':
-                if not capability_key.starts_with(value):
+                if not capability_key.startswith(str(value)):
                     return False
-            elif operator == 'end_with':
-                if not capability_key.ends_with(value):
+            elif operator == 'ends_with':
+                if not capability_key.endswith(str(value)):
                     return False
             elif operator == 'equals_to':
                 if capability_key != value:
                     return False
+            else:
+                raise NotImplementedError(
+                    f'Unknown capabilities name pattern operator: {operator}')
         if valid_values:
             if capability['value'] not in valid_values:
                 return False
