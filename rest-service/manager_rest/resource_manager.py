@@ -2310,9 +2310,22 @@ class ResourceManager(object):
                                                      blueprint.id,
                                                      blueprint.visibility)
             )
-        return self.set_visibility(models.Deployment,
-                                   deployment_id,
-                                   visibility)
+
+        # Also update visibility of nodes and node-instances
+        params = {'filters': {'deployment_id': deployment_id},
+                  'get_all_results': True}
+        nodes = self.sm.list(models.Node, **params)
+        node_instances = self.sm.list(models.NodeInstance, **params)
+
+        with self.sm.transaction():
+            result = self.set_visibility(models.Deployment,
+                                         deployment_id,
+                                         visibility)
+            for node in nodes:
+                self.set_visibility(models.Node, node.id, visibility)
+            for ni in node_instances:
+                self.set_visibility(models.NodeInstance, ni.id, visibility)
+        return result
 
     def set_visibility(self, model_class, resource_id, visibility):
         resource = self.sm.get(model_class, resource_id)
