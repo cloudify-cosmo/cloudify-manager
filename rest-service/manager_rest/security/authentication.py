@@ -100,7 +100,7 @@ class Authentication(object):
         self.token_based_auth = token or api_token or execution_token
         if auth:  # Basic authentication (User + Password)
             user = user_handler.get_user_from_auth(auth)
-            self._check_if_user_is_locked(user, auth)
+            self._check_if_user_is_enabled(user, auth)
             user = self._authenticate_password(user, auth)
             audit.set_audit_method('http_basic')
         elif execution_token:  # Execution Token authentication
@@ -108,7 +108,7 @@ class Authentication(object):
             audit.set_audit_method('execution_token')
         elif token:  # Token authentication
             user = self._authenticate_token(token)
-            self._check_if_user_is_locked(user, user)
+            self._check_if_user_is_enabled(user, user)
             audit.set_audit_method('token')
         elif api_token:  # API token authentication
             user, user_token_key = user_handler.extract_api_token(api_token)
@@ -117,10 +117,10 @@ class Authentication(object):
             audit.set_audit_method('api_token')
         return user
 
-    def _check_if_user_is_locked(self, user, auth):
+    def _check_if_user_is_enabled(self, user, auth):
         if self.external_auth_configured:
             return user
-        if not user or user.is_locked:
+        if not user or user.is_locked or not user.active:
             raise UnauthorizedError(failed_auth_message.format(auth.username))
 
     def _authenticate_password(self, user, auth):
