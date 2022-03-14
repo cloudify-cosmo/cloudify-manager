@@ -97,6 +97,10 @@ class AuthenticationTests(SecurityTestBase):
         self._assert_user_unauthorized(username=None,
                                        password='alice_password')
 
+    def test_inactive_user_unauthorized(self):
+        self._assert_user_unauthorized(username='clair',
+                                       password='clair_password')
+
     def test_missing_password(self):
         self._assert_user_unauthorized(username='alice', password=None)
 
