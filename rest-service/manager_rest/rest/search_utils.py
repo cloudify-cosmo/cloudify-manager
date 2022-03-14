@@ -128,7 +128,6 @@ class GetValuesWithStorageManager:
                 if capability_matches(key, capability, capability_value,
                                       valid_values, capability_key_specs):
                     dep_capabilities[dep.id].append({key: capability})
-        # from celery.contrib import rdb; rdb.set_trace()
         return [{'deployment_id': k, 'capabilities': v}
                 for k, v in dep_capabilities.items()]
 

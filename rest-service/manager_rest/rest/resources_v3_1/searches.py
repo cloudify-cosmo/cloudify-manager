@@ -284,7 +284,6 @@ class CapabilitiesSearches(ResourceSearches):
             if not dep.capabilities:
                 continue
             for key, capability in dep.capabilities.items():
-                # from celery.contrib import rdb; rdb.set_trace()
                 if capability_matches(key, capability, constraints, search):
                     dep_capabilities[dep.id].append({key: capability})
 
