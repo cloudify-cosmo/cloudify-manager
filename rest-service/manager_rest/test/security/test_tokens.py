@@ -1,12 +1,15 @@
 from datetime import datetime
 
-from flask_security.utils import hash_password
 import pytest
 
 from cloudify_rest_client.exceptions import UserUnauthorizedError
 
 from manager_rest.constants import CLOUDIFY_TENANT_HEADER
-from manager_rest.storage import models, get_storage_manager, user_datastore
+from manager_rest.storage import user_datastore
+from manager_rest.test.token_utils import (
+    create_expired_token,
+    sm_create_token_for_user,
+)
 
 from .test_base import SecurityTestBase
 from ..security_utils import ADMIN_ROLE, USER_ROLE
@@ -33,32 +36,8 @@ class TokenTests(SecurityTestBase):
             tok_secret=tok_secret or orig_id,
         )
 
-    def _create_expired_token(self):
-        tok_id = 'abc123'
-        tok_secret = 'seekrit'
-        token = models.Token(
-            id=tok_id,
-            description='Some old token',
-            secret_hash=hash_password(tok_secret),
-            expiration_date=datetime.utcfromtimestamp(1),
-            _user_fk=0,
-        )
-        get_storage_manager().put(token)
-        token._secret = tok_secret
-        return token.to_response()
-
     def _create_inactive_user_token(self):
-        tok_id = 'ugkbpVnamU'
-        tok_secret = 'yxBxDS8uIjqY1oLtRo3ZgjOQPYKUsjtoY7zANyvb'
-        user = user_datastore.get_user('clair')
-        token = models.Token(
-            id=tok_id,
-            secret_hash=hash_password(tok_secret),
-            _user_fk=user.id,
-        )
-        get_storage_manager().put(token)
-        token._secret = tok_secret
-        return token.to_response()
+        return sm_create_token_for_user('clair')
 
     def _lock_alice(self):
         user = user_datastore.get_user('alice')
@@ -102,7 +81,7 @@ class TokenTests(SecurityTestBase):
                                         error='Invalid token structure')
 
     def test_expired_token_fails_auth(self):
-        token = self._create_expired_token()
+        token = create_expired_token()
         self._assert_token_unauthorized(token=token['value'],
                                         error='Token is expired')
 

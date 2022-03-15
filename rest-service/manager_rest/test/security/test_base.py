@@ -13,41 +13,17 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from contextlib import contextmanager
-
 from cloudify_rest_client.exceptions import UserUnauthorizedError
-from manager_rest.utils import create_auth_header
 from manager_rest.test.base_test import BaseServerTestCase
-from manager_rest.test.security_utils import get_test_users, add_users_to_db
-from manager_rest.constants import DEFAULT_TENANT_NAME, CLOUDIFY_TENANT_HEADER
 
 
 class SecurityTestBase(BaseServerTestCase):
-    def setUp(self):
-        super(SecurityTestBase, self).setUp()
-        add_users_to_db(get_test_users())
-
     @staticmethod
     def _get_app(flask_app, user=None):
         # security tests use a not-authenticated client by default
         if user is None:
             user = {'username': '', 'password': ''}
         return BaseServerTestCase._get_app(flask_app, user=user)
-
-    @contextmanager
-    def use_secured_client(self, headers=None, **kwargs):
-        client = self.client
-        try:
-            self.client = self.get_secured_client(headers, **kwargs)
-            yield
-        finally:
-            self.client = client
-
-    @classmethod
-    def get_secured_client(cls, headers=None, **kwargs):
-        headers = headers or create_auth_header(**kwargs)
-        headers.setdefault(CLOUDIFY_TENANT_HEADER, DEFAULT_TENANT_NAME)
-        return cls.create_client(headers)
 
     def _assert_user_authorized(self, headers=None, **kwargs):
         with self.use_secured_client(headers, **kwargs):

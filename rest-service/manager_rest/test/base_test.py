@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from contextlib import contextmanager
 import os
 import json
 import time
@@ -57,8 +58,12 @@ from manager_rest.rest.filters_utils import FilterRule
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.flask_utils import set_admin_current_user
 from manager_rest.storage.filters import add_filter_rules_to_query
-from manager_rest.test.security_utils import (get_admin_user,
-                                              get_status_reporters)
+from manager_rest.test.security_utils import (
+    add_users_to_db,
+    get_admin_user,
+    get_status_reporters,
+    get_test_users,
+)
 from manager_rest import utils, config, constants, archiving
 from manager_rest.storage import get_storage_manager, models
 from manager_rest.storage.storage_utils import (
@@ -159,6 +164,21 @@ class BaseServerTestCase(unittest.TestCase):
         FilterRule('arch', ['k8s'], LabelsOperator.ANY_OF, 'label'),
         FilterRule('created_by', ['admin'], AttrsOperator.ANY_OF, 'attribute'),
     ]
+
+    @contextmanager
+    def use_secured_client(self, headers=None, **kwargs):
+        client = self.client
+        try:
+            self.client = self.get_secured_client(headers, **kwargs)
+            yield
+        finally:
+            self.client = client
+
+    @classmethod
+    def get_secured_client(cls, headers=None, **kwargs):
+        headers = headers or utils.create_auth_header(**kwargs)
+        headers.setdefault(CLOUDIFY_TENANT_HEADER, DEFAULT_TENANT_NAME)
+        return cls.create_client(headers)
 
     def assertEmpty(self, obj):
         self.assertIsNotNone(obj)
@@ -299,6 +319,7 @@ class BaseServerTestCase(unittest.TestCase):
         self.addCleanup(self._clean_tmpdir)
         self.user = db.session.query(models.User).first()
         self.tenant = db.session.query(models.Tenant).first()
+        add_users_to_db(get_test_users())
 
     @staticmethod
     def _drop_db(keep_tables=None):
