@@ -497,7 +497,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
     @classproperty
     def allowed_filter_attrs(cls):
         return ['blueprint_id', 'created_by', 'site_name', 'schedules',
-                'tenant_name', 'display_name']
+                'tenant_name', 'display_name', 'installation_status']
 
     def to_response(self, include=None, **kwargs):
         include = include or self.response_fields
