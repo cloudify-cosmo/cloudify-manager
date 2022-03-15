@@ -437,13 +437,30 @@ class BaseServerTestCase(unittest.TestCase):
             upgrade(directory=MIGRATION_DIR)
         except sqlalchemy.exc.OperationalError:
             logger = logging.getLogger()
-            logger.error("Could not connect to the database - is a "
-                         "postgresql server running on localhost?")
-            logger.error("HINT: Create a docker container running postgresql "
-                         "by doing `docker run --name cloudify-db-unit-test "
-                         "-e POSTGRES_PASSWORD=cloudify -e POSTGRES_USER="
-                         "cloudify -e POSTGRES_DB=cloudify_test_db "
-                         "-p 5432:5432 -d postgres`")
+            logger.error(
+                "Could not connect to the database - is a postgresql server "
+                "running on localhost?")
+            logger.error(
+                "These tests need to be able to connect to a postgresql "
+                "server using:")
+            for name, value in [
+                ('host', config.instance.postgresql_host),
+                ('port', 5432),
+                ('username', config.instance.postgresql_username),
+                ('password', config.instance.postgresql_password),
+                ('dbname', config.instance.postgresql_db_name),
+                ('ssl', 'off'),
+                ('if using xdist', 'user must be superuser'),
+            ]:
+                logger.error("\t* %s: %s", name, value)
+            logger.error(
+                "HINT: Create a docker container running postgresql by doing:")
+            logger.error(
+                "\tdocker run --name cloudify-db-unit-test "
+                f"-e POSTGRES_PASSWORD={config.instance.postgresql_password} "
+                f"-e POSTGRES_USER={config.instance.postgresql_username} "
+                f"-e POSTGRES_DB={config.instance.postgresql_db_name} "
+                "-p 5432:5432 -d postgres")
             raise
         admin_user = get_admin_user()
 
