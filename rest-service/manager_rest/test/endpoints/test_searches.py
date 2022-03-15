@@ -1,3 +1,5 @@
+from cloudify.models_states import DeploymentState
+
 from manager_rest.test import base_test
 from manager_rest.storage import models
 from manager_rest.rest.filters_utils import FilterRule
@@ -170,3 +172,44 @@ class SearchesTestCase(base_test.BaseServerTestCase):
             self.client.deployments.list,
             constraints={'labels': [{'type': 'text'}]},
             filter_rules=[FilterRule('one', ['yes'], 'any_of', 'label')])
+
+    def test_deployments_search_installation_status(self):
+        bp = models.Blueprint(
+            id='bp1',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        for dep_id, state in [
+            ('active', DeploymentState.ACTIVE),
+            ('inactive', DeploymentState.INACTIVE),
+            ('null', None),
+        ]:
+            models.Deployment(
+                id=dep_id,
+                blueprint=bp,
+                installation_status=state,
+                creator=self.user,
+                tenant=self.tenant,
+            )
+
+        search_all = self.client.deployments.list()
+        search_active = self.client.deployments.list(filter_rules=[
+            FilterRule(
+                'installation_status',
+                [DeploymentState.ACTIVE],
+                'any_of',
+                'attribute'
+            ),
+        ])
+        search_inactive = self.client.deployments.list(filter_rules=[
+            FilterRule(
+                'installation_status',
+                [DeploymentState.INACTIVE],
+                'any_of',
+                'attribute'
+            ),
+        ])
+
+        assert len(search_all) == 3
+        assert {d.id for d in search_active} == {'active'}
+        assert {d.id for d in search_inactive} == {'inactive'}
