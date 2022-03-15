@@ -197,6 +197,21 @@ class NodeInstancesSearches(ResourceSearches):
                             search, filter_id, **kwargs)
 
 
+class SecretsSearches(ResourceSearches):
+    @swagger.operation(**_swagger_searches_docs(models.Secret,
+                                                'secrets'))
+    @authorize('secret_list', allow_all_tenants=False)
+    @rest_decorators.marshal_with(models.Secret)
+    @rest_decorators.paginate
+    @rest_decorators.sortable(models.Secret)
+    @rest_decorators.search('id')
+    def post(self, _include=None, pagination=None, sort=None,
+             search=None, **kwargs):
+        """List secrets using filter rules or DSL constraints"""
+        return super().post(models.Secret, None, _include, {}, pagination,
+                            sort, False, search, None, **kwargs)
+
+
 class CapabilitiesSearches(ResourceSearches):
     @swagger.operation(
         responseClass=f'List[{responses_v3.DeploymentCapabilities.__name__}]',
