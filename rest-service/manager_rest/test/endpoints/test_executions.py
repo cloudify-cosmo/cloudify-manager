@@ -1067,49 +1067,71 @@ class ExecutionQueueingTests(BaseServerTestCase):
         executions beforehand, and those executions must re-evaluated
         before actually running.
         """
-        self.put_blueprint()
-        dep = self.client.deployments.create('blueprint', 'd1')
-        # mock the check so that the execution is queued
-        with mock.patch(
-                'manager_rest.resource_manager.ResourceManager.'
-                'check_for_executions', return_value=True):
-            exc = self.client.executions.start(
-                'd1', 'execute_operation', parameters={
-                    'operation': 'some.operation'
-                }, queue=True)
-        self.create_deployment_environment(dep)
-        with mock.patch(
-                'manager_rest.resource_manager.ResourceManager.'
-                'check_for_executions', return_value=True):
-            exc2 = self.client.executions.start(
-                'd1', 'execute_operation', parameters={
-                    'operation': 'some.operation'
-                }, queue=True)
-        sm_exc = self.sm.get(models.Execution, exc.id)
-        sm_exc2 = self.sm.get(models.Execution, exc2.id)
-        assert sm_exc.parameters == sm_exc2.parameters
+        dep = models.Deployment(
+            id='d1',
+            blueprint=self.bp,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        create_dep_env = dep.make_create_environment_execution()
+        exc = models.Execution(
+            workflow_id='workflow1',
+            parameters={
+                'param1': 'value1',
+            },
+            status=ExecutionState.QUEUED,
+            deployment=dep,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        dep.workflows = {
+            'workflow1': {
+                'parameters': {
+                    'param1': {'default': 'default1'},
+                    'param2': {'default': 'default2'}
+                },
+            }
+        }
+
+        self.rm.update_execution_status(
+            create_dep_env.id, ExecutionState.TERMINATED, None)
+
+        assert not exc.error
+        assert exc.status == ExecutionState.PENDING
+        # now, the execution did get updated with the parameters from the plan,
+        # when create-dep-env finished
+        assert exc.parameters == {
+            'param1': 'value1',
+            'param2': 'default2',
+        }
 
     @mock.patch('manager_rest.resource_manager.send_event', mock.Mock())
     def test_queue_nonexistent_workflow(self):
-        """Dequeueing an execution of a nonexistent workflow, fails.
-        """
-        self.put_blueprint()
-        dep = self.client.deployments.create('blueprint', 'd1')
-        # mock the check so that the execution is queued
-        with mock.patch(
-                'manager_rest.resource_manager.ResourceManager.'
-                'check_for_executions', return_value=True):
-            exc = self.client.executions.start(
-                'd1', 'nonexistent', queue=True)
-            exc2 = self.client.executions.start(
-                'd1', 'install', queue=True)
-        self.create_deployment_environment(dep)
-        sm_exc = self.sm.get(models.Execution, exc.id)
-        sm_exc2 = self.sm.get(models.Execution, exc2.id)
-        assert sm_exc.status == ExecutionState.FAILED
-        assert 'nonexistent' in sm_exc.error
-        assert sm_exc2.status in (
-            ExecutionState.PENDING, ExecutionState.TERMINATED)
+        """Dequeueing an execution of a nonexistent workflow, fails."""
+        dep = models.Deployment(
+            id='d1',
+            blueprint=self.bp,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        create_dep_env = dep.make_create_environment_execution()
+        exc = models.Execution(
+            workflow_id='nonexistent1',
+            parameters={
+                'param1': 'value1',
+            },
+            status=ExecutionState.QUEUED,
+            deployment=dep,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+
+        self.rm.update_execution_status(
+            create_dep_env.id, ExecutionState.TERMINATED, None)
+
+        assert exc.error
+        assert 'nonexistent1' in exc.error
+        assert exc.status == ExecutionState.FAILED
 
     def test_install_before_create(self):
         # make a create_dep_env execution, and an install execution; the
