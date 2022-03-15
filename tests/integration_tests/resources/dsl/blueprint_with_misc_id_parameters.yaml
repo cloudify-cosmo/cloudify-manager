@@ -38,3 +38,21 @@ workflows:
       b_blueprint_id:
         description: Just a blueprint identifier (without constraints)
         type: blueprint_id
+      a_capability_value:
+        description: A capability value
+        type: capability_value
+        required: False
+        constraints:
+          - deployment_id: deploymentA
+          - name_pattern:
+              starts_with: capability
+              ends_with: 2
+          - valid_values:
+              - capability1_value
+              - capability2_value
+      b_capability_value:
+        description: A capability value with just a deployment_id constraint
+        type: capability_value
+        required: False
+        constraints:
+          - deployment_id: deploymentA
