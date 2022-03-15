@@ -30,7 +30,6 @@ inputs:
           contains: deployment
   a_blueprint_id:
     type: blueprint_id
-#    required: false
     constraints:
       - labels:
           - alpha: bravo
@@ -39,8 +38,24 @@ inputs:
           ends_with: basic
   b_blueprint_id:
     type: blueprint_id
-#    required: false
     constraints:
       - filter_id: test-filter
       - tenants:
           - default_tenant
+  a_capability_value:
+    type: capability_value
+    constraints:
+      - deployment_id: deploymentA
+      - valid_values:
+          - capability1_value
+  b_capability_value:
+    type: capability_value
+    constraints:
+      - deployment_id: deploymentB
+      - name_pattern:
+          starts_with: capability
+          ends_with: 2
+  c_capability_value:
+    type: capability_value
+    constraints:
+      - deployment_id: deploymentC

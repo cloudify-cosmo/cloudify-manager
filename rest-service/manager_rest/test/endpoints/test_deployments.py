@@ -1505,6 +1505,24 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         dep = self.sm.get(models.Deployment, 'dep1')
         assert dep.display_name == 'y'
 
+    def test_set_visibility(self):
+        self.put_deployment(
+            deployment_id='d',
+            blueprint_file_name='blueprint.yaml'
+        )
+        dep = self.sm.get(models.Deployment, 'd')
+        assert dep.visibility == VisibilityState.TENANT
+        for node in self.sm.list(models.Node, filters={'deployment_id': 'd'}):
+            assert node.visibility == VisibilityState.TENANT
+
+        self.client.blueprints.set_visibility(
+            'blueprint', VisibilityState.GLOBAL)
+        self.client.deployments.set_visibility('d', VisibilityState.GLOBAL)
+
+        assert dep.visibility == VisibilityState.GLOBAL
+        for node in self.sm.list(models.Node, filters={'deployment_id': 'd'}):
+            assert node.visibility == VisibilityState.GLOBAL
+
 
 class DeploymentsDeleteTest(base_test.BaseServerTestCase):
     def setUp(self):
