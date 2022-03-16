@@ -288,6 +288,10 @@ class Secret(CreatedAtMixin, SQLResourceBase):
         fields['key'] = fields.pop('id')
         return fields
 
+    @classproperty
+    def allowed_filter_attrs(cls):
+        return ['key']
+
 
 class Site(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'sites'

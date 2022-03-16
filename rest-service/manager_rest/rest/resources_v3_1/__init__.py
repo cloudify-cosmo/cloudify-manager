@@ -126,6 +126,7 @@ from .searches import (  # NOQA
     BlueprintsSearches,
     WorkflowsSearches,
     NodeInstancesSearches,
+    SecretsSearches,
     CapabilitiesSearches,
 )
 
