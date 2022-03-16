@@ -13,7 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from contextlib import contextmanager
 import os
 import json
 import time
@@ -164,21 +163,6 @@ class BaseServerTestCase(unittest.TestCase):
         FilterRule('arch', ['k8s'], LabelsOperator.ANY_OF, 'label'),
         FilterRule('created_by', ['admin'], AttrsOperator.ANY_OF, 'attribute'),
     ]
-
-    @contextmanager
-    def use_secured_client(self, headers=None, **kwargs):
-        client = self.client
-        try:
-            self.client = self.get_secured_client(headers, **kwargs)
-            yield
-        finally:
-            self.client = client
-
-    @classmethod
-    def get_secured_client(cls, headers=None, **kwargs):
-        headers = headers or utils.create_auth_header(**kwargs)
-        headers.setdefault(CLOUDIFY_TENANT_HEADER, DEFAULT_TENANT_NAME)
-        return cls.create_client(headers)
 
     def assertEmpty(self, obj):
         self.assertIsNotNone(obj)
