@@ -50,6 +50,7 @@ from .relationships import (
     one_to_many_relationship,
     many_to_many_relationship
 )
+from manager_rest.storage.storage_manager import get_storage_manager
 
 
 if typing.TYPE_CHECKING:
@@ -970,8 +971,6 @@ class Execution(CreatedAtMixin, SQLResourceBase):
         # before parameters
         self.allow_custom_parameters = kwargs.pop(
             'allow_custom_parameters', False)
-        self._storage_manager = kwargs.pop(
-            'storage_manager', None)
         super().__init__(**kwargs)
 
     __tablename__ = 'executions'
@@ -1175,7 +1174,7 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             if name not in parameters:
                 continue
             try:
-                getter = GetValuesWithStorageManager(self._storage_manager)
+                getter = GetValuesWithStorageManager(get_storage_manager())
                 if param.get('type') not in ['blueprint_id', 'deployment_id',
                                              'capability_value'] \
                         and not constraints:

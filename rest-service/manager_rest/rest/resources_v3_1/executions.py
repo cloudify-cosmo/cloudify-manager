@@ -218,7 +218,6 @@ class ExecutionGroups(SecuredResource):
                         deployment=dep,
                         parameters=params,
                         status=ExecutionState.PENDING,
-                        storage_manager=sm,
                     )
                 except NonexistentWorkflowError as ex:
                     log = models.Log(
