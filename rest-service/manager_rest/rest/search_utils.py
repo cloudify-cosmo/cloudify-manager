@@ -173,6 +173,13 @@ def get_filter_rules(resource_model,
                                                 resource_model)
         filter_id = raw_filter_id
     elif not raw_filter and dsl_constraints:
+        if 'name_pattern' in dsl_constraints:
+            if resource_model == Deployment:
+                dsl_constraints['display_name_specs'] = \
+                    dsl_constraints.pop('name_pattern')
+            elif resource_model == Blueprint:
+                dsl_constraints['id_specs'] = \
+                    dsl_constraints.pop('name_pattern')
         filter_id, filter_rules = parse_constraints(dsl_constraints)
     elif not raw_filter and not dsl_constraints:
         return []
