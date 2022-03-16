@@ -2,7 +2,8 @@ from collections import defaultdict
 
 from manager_rest.manager_exceptions import BadParametersError
 from manager_rest.storage.models import (Blueprint, BlueprintsFilter,
-                                         Deployment, DeploymentsFilter)
+                                         Deployment, DeploymentsFilter,
+                                         Secret)
 from manager_rest.rest.filters_utils import (get_filter_rules_from_filter_id,
                                              create_filter_rules_list,
                                              FilterRule)
@@ -17,6 +18,8 @@ class GetValuesWithStorageManager:
             return [b.id for b in self.get_blueprints(value, **kwargs)]
         elif data_type == 'deployment_id':
             return [d.id for d in self.get_deployments(value, **kwargs)]
+        elif data_type == 'secret_key':
+            return [s.key for s in self.get_secrets(value, **kwargs)]
         elif data_type == 'capability_value':
             return [cap_details['value']
                     for dep_cap in self.get_capability_values(value, **kwargs)
@@ -101,6 +104,34 @@ class GetValuesWithStorageManager:
             Deployment,
             include=['id'],
             filters={'id': str(deployment_id)},
+            get_all_results=True,
+            filter_rules=filter_rules
+        )
+
+    def get_secrets(self, secret_key,
+                    key_specs=None,
+                    valid_values=None):
+        filter_rules = []
+        if key_specs:
+            for op, spec in key_specs.items():
+                filter_rules.append(
+                    {"key": "key",
+                     "values": [str(spec)],
+                     "operator": "any_of" if op == "equals_to" else op,
+                     "type": "attribute"})
+        if valid_values:
+            filter_rules.append(
+                {"key": "key",
+                 "values": [str(v) for v in valid_values],
+                 "operator": "any_of",
+                 "type": "attribute"})
+
+        filter_rules = get_filter_rules(Secret, None, None, filter_rules, None)
+
+        return self.sm.list(
+            Secret,
+            include=['key'],
+            filters={'key': str(secret_key)},
             get_all_results=True,
             filter_rules=filter_rules
         )
