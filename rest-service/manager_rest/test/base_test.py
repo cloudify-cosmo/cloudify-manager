@@ -57,8 +57,10 @@ from manager_rest.rest.filters_utils import FilterRule
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.flask_utils import set_admin_current_user
 from manager_rest.storage.filters import add_filter_rules_to_query
-from manager_rest.test.security_utils import (get_admin_user,
-                                              get_status_reporters)
+from manager_rest.test.security_utils import (
+    get_admin_user,
+    get_status_reporters,
+)
 from manager_rest import utils, config, constants, archiving
 from manager_rest.storage import get_storage_manager, models
 from manager_rest.storage.storage_utils import (
@@ -111,7 +113,8 @@ auth_dict = {
         'deployment_list': permitted_roles,
         'blueprint_list': permitted_roles,
         'secret_create': ['sys_admin', 'manager', 'user'],
-        'maintenance_mode_set': ['sys_admin']
+        'maintenance_mode_set': ['sys_admin'],
+        'manage_others_tokens': ['sys_admin'],
     }
 }
 
