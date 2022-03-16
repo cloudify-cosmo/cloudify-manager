@@ -58,10 +58,8 @@ from manager_rest.resource_manager import get_resource_manager
 from manager_rest.flask_utils import set_admin_current_user
 from manager_rest.storage.filters import add_filter_rules_to_query
 from manager_rest.test.security_utils import (
-    add_users_to_db,
     get_admin_user,
     get_status_reporters,
-    get_test_users,
 )
 from manager_rest import utils, config, constants, archiving
 from manager_rest.storage import get_storage_manager, models
@@ -303,7 +301,6 @@ class BaseServerTestCase(unittest.TestCase):
         self.addCleanup(self._clean_tmpdir)
         self.user = db.session.query(models.User).first()
         self.tenant = db.session.query(models.Tenant).first()
-        add_users_to_db(get_test_users())
 
     @staticmethod
     def _drop_db(keep_tables=None):

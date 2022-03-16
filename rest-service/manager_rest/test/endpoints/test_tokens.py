@@ -3,6 +3,7 @@ import pytest
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from manager_rest.test.base_test import BaseServerTestCase
+from manager_rest.test.security_utils import add_users_to_db, get_test_users
 from manager_rest.test.token_utils import (
     create_expired_token,
     sm_create_token_for_user,
@@ -10,6 +11,10 @@ from manager_rest.test.token_utils import (
 
 
 class TokensTestCase(BaseServerTestCase):
+    def setUp(self):
+        super(TokensTestCase, self).setUp()
+        add_users_to_db(get_test_users())
+
     def _check_token(self, token, description=None, expiry=None,
                      user='alice'):
         assert token['description'] == description
