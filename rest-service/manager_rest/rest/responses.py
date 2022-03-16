@@ -127,19 +127,23 @@ class EvaluatedFunctions(object):
 class Tokens(object):
 
     resource_fields = {
+        'id': fields.String,
         'username': fields.String,
         'value': fields.String,
         'role': fields.String,
         'expiration_date': fields.String,
         'last_used': fields.String,
+        'description': fields.String,
     }
 
     def __init__(self, **kwargs):
+        self.id = kwargs.get('id')
         self.username = kwargs.get('username')
         self.value = kwargs.get('value')
         self.role = kwargs.get('role')
         self.expiration_date = kwargs.get('expiration_date')
         self.last_used = kwargs.get('last_used')
+        self.description = kwargs.get('description')
 
 
 @swagger.model

@@ -89,11 +89,6 @@ def get_current_user_roles(tenant_name=None, allow_all_tenants=False):
 
 
 def is_user_action_allowed(action, tenant_name=None, allow_all_tenants=False):
-    if not current_user.active:
-        raise ForbiddenError(
-            'Authorization failed: '
-            'User `{0}` is deactivated'.format(current_user.username)
-        )
     user_roles = get_current_user_roles(tenant_name, allow_all_tenants)
     action_roles = config.instance.authorization_permissions[action]
     return set(user_roles) & set(action_roles)

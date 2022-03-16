@@ -18,7 +18,7 @@ from contextlib import contextmanager
 from cloudify_rest_client.exceptions import UserUnauthorizedError
 from manager_rest.utils import create_auth_header
 from manager_rest.test.base_test import BaseServerTestCase
-from manager_rest.test.security_utils import get_test_users, add_users_to_db
+from manager_rest.test.security_utils import add_users_to_db, get_test_users
 from manager_rest.constants import DEFAULT_TENANT_NAME, CLOUDIFY_TENANT_HEADER
 
 

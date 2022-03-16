@@ -17,11 +17,9 @@ from base64 import b64encode
 
 from manager_rest.storage import management_models
 from manager_rest.maintenance import remove_maintenance_state
-from manager_rest.constants import (CLOUDIFY_TENANT_HEADER,
-                                    BASIC_AUTH_PREFIX,
+from manager_rest.constants import (BASIC_AUTH_PREFIX,
                                     CLOUDIFY_AUTH_HEADER)
 from .test_base import SecurityTestBase
-from ..security_utils import ADMIN_ROLE, USER_ROLE
 
 FAILED_LOGINS_NUMBER = 6
 
@@ -99,29 +97,12 @@ class AuthenticationTests(SecurityTestBase):
         self._assert_user_unauthorized(username=None,
                                        password='alice_password')
 
+    def test_inactive_user_unauthorized(self):
+        self._assert_user_unauthorized(username='clair',
+                                       password='clair_password')
+
     def test_missing_password(self):
         self._assert_user_unauthorized(username='alice', password=None)
-
-    def test_valid_token_authentication(self):
-
-        with self.use_secured_client(username='alice',
-                                     password='alice_password'):
-            token = self.client.tokens.create()
-        self._assert_user_authorized(token=token.value)
-
-    def test_invalid_token_authentication(self):
-        self._assert_user_unauthorized(token='wrong token')
-
-    def test_token_returns_role(self):
-        with self.use_secured_client(username='alice',
-                                     password='alice_password'):
-            token = self.client.tokens.create()
-        self.assertEqual(token.role, ADMIN_ROLE)
-
-        with self.use_secured_client(username='bob',
-                                     password='bob_password'):
-            token = self.client.tokens.create()
-        self.assertEqual(token.role, USER_ROLE)
 
     def test_secured_manager_blueprints_upload(self):
         with self.use_secured_client(username='alice',
@@ -141,21 +122,3 @@ class AuthenticationTests(SecurityTestBase):
             self.assertEqual(response.requested_by, 'alice')
         finally:
             remove_maintenance_state()
-
-    def test_token_does_not_require_tenant_header(self):
-        with self.use_secured_client(username='alice',
-                                     password='alice_password'):
-            # Remove the the tenant header from the client
-            self.client._client.headers.pop(CLOUDIFY_TENANT_HEADER, None)
-            token = self.client.tokens.create()
-        self._assert_user_authorized(token=token.value)
-
-    def test_sequential_authorized_user_calls(self):
-        with self.use_secured_client(username='alice',
-                                     password='alice_password'):
-            self.client._client.headers.pop(CLOUDIFY_TENANT_HEADER, None)
-            token = self.client.tokens.create()
-
-        with self.use_secured_client(token=token.value):
-            self.client.deployments.list()
-            self.client.deployments.list()
