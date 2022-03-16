@@ -213,3 +213,54 @@ class SearchesTestCase(base_test.BaseServerTestCase):
         assert len(search_all) == 3
         assert {d.id for d in search_active} == {'active'}
         assert {d.id for d in search_inactive} == {'inactive'}
+
+    def test_secrets_search_by_key(self):
+        for key, value in [
+            ('secret1', 'value1'),
+            ('secret2', 'value2'),
+        ]:
+            models.Secret(
+                id=key,
+                value=value,
+                creator=self.user,
+                tenant=self.tenant,
+            )
+
+        search_all = self.client.secrets.list()
+        search_secret1 = self.client.secrets.list(_search='secret1')
+
+        assert len(search_all) == 2
+        assert [s.key for s in search_secret1] == ['secret1']
+
+    def test_secrets_search_filter_by_key(self):
+        for key, value in [
+            ('secret1', 'value1'),
+            ('secret2', 'value2'),
+        ]:
+            models.Secret(
+                id=key,
+                value=value,
+                creator=self.user,
+                tenant=self.tenant,
+            )
+
+        search_secret1 = self.client.secrets.list(filter_rules=[
+            FilterRule(
+                'key',
+                ['secret1'],
+                'any_of',
+                'attribute'
+            )
+        ])
+        search_secret1_or_secret2 = self.client.secrets.list(filter_rules=[
+            FilterRule(
+                'key',
+                ['secret1', 'secret2'],
+                'any_of',
+                'attribute'
+            )
+        ])
+
+        assert [s.key for s in search_secret1] == ['secret1']
+        assert {s.key for s in search_secret1_or_secret2} == \
+               {'secret1', 'secret2'}
