@@ -315,6 +315,10 @@ class TestMiscellaneousIdParams(AgentlessTestCase):
               'operator': 'any_of',
               'type': 'label'}])
 
+        self.client.secrets.create('secret_one', 'value1')
+        self.client.secrets.create('secret_two', 'value2')
+        self.client.secrets.create('secret_three', 'value3')
+
     def test_successful(self):
         self.other_client.deployments.create(
             'bp-basic',
@@ -329,7 +333,8 @@ class TestMiscellaneousIdParams(AgentlessTestCase):
                         'a_blueprint_id': 'bp-basic',
                         'b_blueprint_id': 'bp',
                         'a_capability_value': 'capability2_value',
-                        'b_capability_value': 'capability1_value'},
+                        'b_capability_value': 'capability1_value',
+                        'a_secret_key': 'secret_one'},
         )
         self.wait_for_execution_to_end(test_execution)
 
@@ -344,7 +349,8 @@ class TestMiscellaneousIdParams(AgentlessTestCase):
                         'a_blueprint_id': 'bp-basic',
                         'b_blueprint_id': 'bp',
                         'a_capability_value': 'capability2_value',
-                        'b_capability_value': 'capability1_value'},
+                        'b_capability_value': 'capability1_value',
+                        'a_secret_key': 'secret_one'},
         )
 
         self.other_client.deployments.create(
@@ -361,7 +367,8 @@ class TestMiscellaneousIdParams(AgentlessTestCase):
                         'a_blueprint_id': 'bp-basic',
                         'b_blueprint_id': 'bp',
                         'a_capability_value': 'capability2_value',
-                        'b_capability_value': 'capability1_value'},
+                        'b_capability_value': 'capability1_value',
+                        'a_secret_key': 'secret_one'},
         )
 
         self.other_client.deployments.create(
@@ -378,7 +385,8 @@ class TestMiscellaneousIdParams(AgentlessTestCase):
                         'a_blueprint_id': 'bp-basic',
                         'b_blueprint_id': 'bp',
                         'a_capability_value': 'capability2_value',
-                        'b_capability_value': 'capability1_value'},
+                        'b_capability_value': 'capability1_value',
+                        'a_secret_key': 'secret_one'},
         )
 
         self.client.deployments.create(
@@ -395,7 +403,8 @@ class TestMiscellaneousIdParams(AgentlessTestCase):
                         'a_blueprint_id': 'bp-basic',
                         'b_blueprint_id': 'bp',
                         'a_capability_value': 'capability2_value',
-                        'b_capability_value': 'capability1_value'},
+                        'b_capability_value': 'capability1_value',
+                        'a_secret_key': 'secret_one'},
         )
 
         self.other_client.deployments.create(
@@ -412,7 +421,8 @@ class TestMiscellaneousIdParams(AgentlessTestCase):
                         'a_blueprint_id': 'bp-basic',
                         'b_blueprint_id': 'bp',
                         'a_capability_value': 'capability2_value',
-                        'b_capability_value': 'capability1_value'},
+                        'b_capability_value': 'capability1_value',
+                        'a_secret_key': 'secret_one'},
         )
 
     def test_blueprint_id_errors(self):
@@ -432,7 +442,8 @@ class TestMiscellaneousIdParams(AgentlessTestCase):
                         'a_blueprint_id': -99,
                         'b_blueprint_id': 'bp',
                         'a_capability_value': 'capability2_value',
-                        'b_capability_value': 'capability1_value'},
+                        'b_capability_value': 'capability1_value',
+                        'a_secret_key': 'secret_one'},
         )
 
         self.assertRaisesRegex(
@@ -444,7 +455,8 @@ class TestMiscellaneousIdParams(AgentlessTestCase):
                         'a_blueprint_id': 'bp-basic',
                         'b_blueprint_id': 'non-existent',
                         'a_capability_value': 'capability2_value',
-                        'b_capability_value': 'capability1_value'},
+                        'b_capability_value': 'capability1_value',
+                        'a_secret_key': 'secret_one'},
         )
 
         self.assertRaisesRegex(
@@ -456,7 +468,43 @@ class TestMiscellaneousIdParams(AgentlessTestCase):
                         'a_blueprint_id': 'bp',
                         'b_blueprint_id': 'bp-basic',
                         'a_capability_value': 'capability2_value',
-                        'b_capability_value': 'capability1_value'},
+                        'b_capability_value': 'capability1_value',
+                        'a_secret_key': 'secret_one'},
+        )
+
+    def test_secret_key_errors(self):
+        self.other_client.deployments.create(
+            'bp-basic',
+            'deploymentA',
+            labels=[{'qwe': 'rty'}, {'foo': 'bar'}, {'lorem': 'ipsum'}])
+        self.other_client.deployments.set_visibility('deploymentA', 'global')
+        self.client.deployments.create('bp', 'd1')
+
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            r'^400:.+Parameter.+constraints:.+a_secret_key',
+            self.client.executions.create,
+            'd1', 'test_parameters',
+            allow_custom_parameters=True,
+            parameters={'a_deployment_id': 'deploymentA',
+                        'a_blueprint_id': 'bp-basic',
+                        'b_blueprint_id': 'bp',
+                        'a_capability_value': 'capability2_value',
+                        'b_capability_value': 'capability1_value',
+                        'a_secret_key': 'secret_two'},
+        )
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            r'^400:.+Parameter.+constraints:.+a_secret_key',
+            self.client.executions.create,
+            'd1', 'test_parameters',
+            allow_custom_parameters=True,
+            parameters={'a_deployment_id': 'deploymentA',
+                        'a_blueprint_id': 'bp-basic',
+                        'b_blueprint_id': 'bp',
+                        'a_capability_value': 'capability2_value',
+                        'b_capability_value': 'capability1_value',
+                        'a_secret_key': 'secret_five'},
         )
 
     def test_capability_value_errors(self):
@@ -476,7 +524,8 @@ class TestMiscellaneousIdParams(AgentlessTestCase):
                         'a_blueprint_id': 'bp-basic',
                         'b_blueprint_id': 'bp',
                         'a_capability_value': 'capability1_value',
-                        'b_capability_value': 'capability1_value'},
+                        'b_capability_value': 'capability1_value',
+                        'a_secret_key': 'secret_one'},
         )
 
         self.assertRaisesRegex(
@@ -488,5 +537,6 @@ class TestMiscellaneousIdParams(AgentlessTestCase):
                         'a_blueprint_id': 'bp-basic',
                         'b_blueprint_id': 'bp',
                         'a_capability_value': 'capability2_value',
-                        'b_capability_value': 'capability3_value'},
+                        'b_capability_value': 'capability3_value',
+                        'a_secret_key': 'secret_one'},
         )
