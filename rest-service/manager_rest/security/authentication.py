@@ -95,9 +95,8 @@ class Authentication(object):
         user = None
         auth = request.authorization
         token = user_handler.get_token_from_request(request)
-        api_token = user_handler.get_api_token_from_request(request)
         execution_token = get_execution_token_from_request(request)
-        self.token_based_auth = token or api_token or execution_token
+        self.token_based_auth = token or execution_token
         if auth:  # Basic authentication (User + Password)
             user = user_handler.get_user_from_auth(auth)
             self._check_if_user_is_enabled(user, auth)
@@ -110,11 +109,6 @@ class Authentication(object):
             user = self._authenticate_token(token)
             self._check_if_user_is_enabled(user, user)
             audit.set_audit_method('token')
-        elif api_token:  # API token authentication
-            user, user_token_key = user_handler.extract_api_token(api_token)
-            if not user or user.api_token_key != user_token_key:
-                raise UnauthorizedError('API token authentication failed')
-            audit.set_audit_method('api_token')
         return user
 
     def _check_if_user_is_enabled(self, user, auth):

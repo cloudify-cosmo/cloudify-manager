@@ -509,9 +509,6 @@ class SnapshotRestore(object):
         self._post_restore_commands.append(
             'sudo {0}'.format(ADMIN_TOKEN_SCRIPT))
 
-    def _get_admin_user_token(self):
-        return self._load_admin_dump()['api_token_key']
-
     def _trigger_post_restore_commands(self):
         # The last thing the workflow does is delete the tempdir.
         command = 'while [[ -d {tempdir} ]]; do sleep 0.5; done; '.format(
@@ -796,27 +793,6 @@ class SnapshotRestore(object):
     def _get_script_path(self, script_name):
         return os.path.join(os.path.dirname(os.path.abspath(__file__)),
                             script_name)
-
-    def _get_api_token(self, token_info):
-        # The token info's UID here is referring to the creator of the
-        # deployment that an API token is needed for.
-        # If this is the admin user and the snapshot contains a hash salt then
-        # we will be restoring the admin user from the old manager, including
-        # its API token, so we should use that instead of the one currently in
-        # the database.
-        if token_info['uid'] == 0 and self._load_hash_salt():
-            token_info['token'] = self._get_admin_user_token()
-
-        prefix = self._get_encoded_user_id(token_info['uid'])
-        return prefix + token_info['token']
-
-    def _get_encoded_user_id(self, user_id):
-        return utils.run([
-            MANAGER_PYTHON,
-            self._get_script_path('getencodeduser.py'),
-            '--user_id',
-            str(user_id),
-        ]).aggr_stdout.strip()
 
     def _restore_scheduled_executions(self):
         """Restore executions scheduled for a time after snapshot creation."""
