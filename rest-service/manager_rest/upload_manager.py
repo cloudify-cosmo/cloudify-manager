@@ -620,11 +620,10 @@ class UploadedBlueprintsValidator(UploadedBlueprintsManager):
                     "chunked.".format(self._get_kind()))
             blueprint_url = request.args[self._get_data_url_key()]
 
-        self._prepare_and_process_doc(
+        return self._prepare_and_process_doc(
             blueprint_id,
             blueprint_url,
             application_file_name=args.application_file_name)
-        return "", 204
 
     def _prepare_and_process_doc(self, data_id, blueprint_url,
                                  application_file_name):
@@ -660,6 +659,7 @@ class UploadedBlueprintsValidator(UploadedBlueprintsManager):
             self.cleanup_blueprint_archive_from_file_server(
                 data_id, current_tenant.name)
             raise
+        return temp_blueprint.upload_execution
 
 
 class UploadedPluginsManager(UploadedDataManager):

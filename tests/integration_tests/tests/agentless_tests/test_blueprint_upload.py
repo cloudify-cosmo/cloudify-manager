@@ -251,20 +251,16 @@ class BlueprintValidateTest(AgentlessTestCase):
 
     def _verify_blueprint_validation_with_message(
             self, blueprint_id, blueprint_resource, message):
-        self.client.blueprints.validate(
+        exc = self.client.blueprints.validate(
             blueprint_resource,
             entity_id=blueprint_id
         )
+        print('exc', exc.id)
         temp_blueprint_id = self._assert_blueprint_validation_message(
-            blueprint_id, message)
+            exc, message)
         self._assert_cleanup(temp_blueprint_id)
 
-    def _assert_blueprint_validation_message(self, blueprint_id, message):
-        execution = [
-            ex for ex in
-            self.client.executions.list(workflow_id='upload_blueprint') if
-            blueprint_id in ex['parameters']['blueprint_id']
-        ][-1]   # get latest upload execution for blueprint
+    def _assert_blueprint_validation_message(self, execution, message):
         try:
             self.wait_for_execution_to_end(execution)
         except RuntimeError as e:

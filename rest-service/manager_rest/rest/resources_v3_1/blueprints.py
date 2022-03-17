@@ -348,6 +348,7 @@ def _validate_imported_blueprints(sm, blueprint, imported_blueprints):
 
 class BlueprintsIdValidate(BlueprintsId):
     @authorize('blueprint_upload')
+    @rest_decorators.marshal_with(models.Execution)
     def put(self, blueprint_id, **kwargs):
         """
         Validate a blueprint (id specified)
