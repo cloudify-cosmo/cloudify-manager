@@ -255,7 +255,6 @@ class BlueprintValidateTest(AgentlessTestCase):
             blueprint_resource,
             entity_id=blueprint_id
         )
-        print('exc', exc.id)
         temp_blueprint_id = self._assert_blueprint_validation_message(
             exc, message)
         self._assert_cleanup(temp_blueprint_id)
