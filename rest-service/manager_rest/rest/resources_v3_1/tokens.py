@@ -14,16 +14,19 @@ from manager_rest.security.authorization import (authorize,
                                                  is_user_action_allowed)
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.storage.models_base import db
-from manager_rest.rest.rest_decorators import marshal_with, paginate
+from manager_rest.rest.rest_decorators import (
+    create_filters, marshal_with, paginate, sortable)
 from manager_rest.rest.rest_utils import get_json_and_verify_params
 from manager_rest.utils import is_expired
 
 
 class Tokens(SecuredResource):
 
-    @marshal_with(responses.Tokens)
-    @paginate
     @authorize('token_get')
+    @marshal_with(responses.Tokens)
+    @create_filters(models.Token)
+    @paginate
+    @sortable(models.Token)
     def get(self, filters=None, pagination=None, sort=None):
         """
         Get a list of tokens.
