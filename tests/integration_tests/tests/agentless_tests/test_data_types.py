@@ -54,8 +54,14 @@ class TestMiscellaneousIdInputs(AgentlessTestCase):
         self.other_client.deployments.set_visibility('deploymentC', 'global')
         self.client.deployments.create('bp-basic', 'deploymentD')
 
+    def setup_valid_secrets(self):
+        self.client.secrets.create('secret_one', 'value1')
+        self.client.secrets.create('secret_two', 'value2')
+        self.client.secrets.create('secret_three', 'value3')
+
     def test_successful(self):
         self.setup_valid_deployments()
+        self.setup_valid_secrets()
         self.client.deployments.create(
             'bp', 'd1',
             inputs={'a_deployment_id': 'deploymentA',
@@ -66,7 +72,8 @@ class TestMiscellaneousIdInputs(AgentlessTestCase):
                     'b_blueprint_id': 'bp-basic',
                     'a_capability_value': 'capability1_value',
                     'b_capability_value': 'capability2_value',
-                    'c_capability_value': 'capability2_value'})
+                    'c_capability_value': 'capability2_value',
+                    'a_secret_key': 'secret_one'})
         install_execution = self.client.executions.create('d1', 'install')
         self.wait_for_execution_to_end(install_execution)
 
@@ -107,7 +114,8 @@ class TestMiscellaneousIdInputs(AgentlessTestCase):
                     'b_blueprint_id': 'bp-basic',
                     'a_capability_value': 'capability1_value',
                     'b_capability_value': 'capability2_value',
-                    'c_capability_value': 'capability1_value'})
+                    'c_capability_value': 'capability1_value',
+                    'a_secret_key': 'secret_one'})
 
         self.assertRaisesRegex(
             CloudifyClientError,
@@ -122,7 +130,8 @@ class TestMiscellaneousIdInputs(AgentlessTestCase):
                     'b_blueprint_id': 'bp-basic',
                     'a_capability_value': 'capability1_value',
                     'b_capability_value': 'capability2_value',
-                    'c_capability_value': 'capability1_value'})
+                    'c_capability_value': 'capability1_value',
+                    'a_secret_key': 'secret_one'})
 
         self.assertRaisesRegex(
             CloudifyClientError,
@@ -137,7 +146,8 @@ class TestMiscellaneousIdInputs(AgentlessTestCase):
                     'b_blueprint_id': 'bp-basic',
                     'a_capability_value': 'capability1_value',
                     'b_capability_value': 'capability2_value',
-                    'c_capability_value': 'capability1_value'})
+                    'c_capability_value': 'capability1_value',
+                    'a_secret_key': 'secret_one'})
 
         self.client.deployments.create('bp-basic', 'not_a_deploymentD')
         self.assertRaisesRegex(
@@ -153,11 +163,12 @@ class TestMiscellaneousIdInputs(AgentlessTestCase):
                     'b_blueprint_id': 'bp-basic',
                     'a_capability_value': 'capability1_value',
                     'b_capability_value': 'capability2_value',
-                    'c_capability_value': 'capability1_value'})
+                    'c_capability_value': 'capability1_value',
+                    'a_secret_key': 'secret_one'})
 
     def test_blueprint_id_errors(self):
         self.setup_valid_deployments()
-
+        self.setup_valid_secrets()
         self.assertRaisesRegex(
             CloudifyClientError,
             r'^400:.+ConstraintException:.+a_blueprint_id.+labels',
@@ -171,7 +182,8 @@ class TestMiscellaneousIdInputs(AgentlessTestCase):
                     'b_blueprint_id': 'bp-basic',
                     'a_capability_value': 'capability1_value',
                     'b_capability_value': 'capability2_value',
-                    'c_capability_value': 'capability1_value'})
+                    'c_capability_value': 'capability1_value',
+                    'a_secret_key': 'secret_one'})
 
         self.assertRaisesRegex(
             CloudifyClientError,
@@ -186,11 +198,46 @@ class TestMiscellaneousIdInputs(AgentlessTestCase):
                     'b_blueprint_id': 'bp',
                     'a_capability_value': 'capability1_value',
                     'b_capability_value': 'capability2_value',
-                    'c_capability_value': 'capability1_value'})
+                    'c_capability_value': 'capability1_value',
+                    'a_secret_key': 'secret_one'})
+
+    def test_secret_key_errors(self):
+        self.setup_valid_deployments()
+        self.setup_valid_secrets()
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            r'^400:.+ConstraintException:.+a_secret_key',
+            self.client.deployments.create,
+            'bp', 'd1',
+            inputs={'a_deployment_id': 'deploymentA',
+                    'b_deployment_id': 'deploymentB',
+                    'c_deployment_id': 'deploymentC',
+                    'd_deployment_id': 'deploymentD',
+                    'a_blueprint_id': 'bp-basic',
+                    'b_blueprint_id': 'bp-basic',
+                    'a_capability_value': 'capability1_value',
+                    'b_capability_value': 'capability2_value',
+                    'c_capability_value': 'capability2_value',
+                    'a_secret_key': 'secret_two'})
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            r'^400:.+ConstraintException:.+a_secret_key',
+            self.client.deployments.create,
+            'bp', 'd1',
+            inputs={'a_deployment_id': 'deploymentA',
+                    'b_deployment_id': 'deploymentB',
+                    'c_deployment_id': 'deploymentC',
+                    'd_deployment_id': 'deploymentD',
+                    'a_blueprint_id': 'bp-basic',
+                    'b_blueprint_id': 'bp-basic',
+                    'a_capability_value': 'capability1_value',
+                    'b_capability_value': 'capability2_value',
+                    'c_capability_value': 'capability2_value',
+                    'a_secret_key': 'secret_five'})
 
     def test_capability_value_errors(self):
         self.setup_valid_deployments()
-
+        self.setup_valid_secrets()
         self.assertRaisesRegex(
             CloudifyClientError,
             r'^400:.+ConstraintException:.+a_capability_value',
@@ -204,8 +251,8 @@ class TestMiscellaneousIdInputs(AgentlessTestCase):
                     'b_blueprint_id': 'bp-basic',
                     'a_capability_value': 'non existent value',
                     'b_capability_value': 'capability1_value',
-                    'c_capability_value': 'capability1_value'})
-
+                    'c_capability_value': 'capability1_value',
+                    'a_secret_key': 'secret_one'})
         self.assertRaisesRegex(
             CloudifyClientError,
             r'^400:.+ConstraintException:.+b_capability_value',
@@ -219,8 +266,8 @@ class TestMiscellaneousIdInputs(AgentlessTestCase):
                     'b_blueprint_id': 'bp-basic',
                     'a_capability_value': 'capability1_value',
                     'b_capability_value': 'capability1_value',
-                    'c_capability_value': 'capability1_value'})
-
+                    'c_capability_value': 'capability1_value',
+                    'a_secret_key': 'secret_one'})
         self.assertRaisesRegex(
             CloudifyClientError,
             r'^400:.+ConstraintException:.+c_capability_value',
@@ -234,7 +281,8 @@ class TestMiscellaneousIdInputs(AgentlessTestCase):
                     'b_blueprint_id': 'bp-basic',
                     'a_capability_value': 'capability1_value',
                     'b_capability_value': 'capability2_value',
-                    'c_capability_value': 'capability3_value'})
+                    'c_capability_value': 'capability3_value',
+                    'a_secret_key': 'secret_one'})
 
 
 @pytest.mark.usefixtures('cloudmock_plugin')
