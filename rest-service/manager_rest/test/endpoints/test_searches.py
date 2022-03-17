@@ -264,3 +264,72 @@ class SearchesTestCase(base_test.BaseServerTestCase):
         assert [s.key for s in search_secret1] == ['secret1']
         assert {s.key for s in search_secret1_or_secret2} == \
                {'secret1', 'secret2'}
+
+    def test_secrets_filter_by_name_pattern_constraints(self):
+        for key, value in [
+            ('secret1', 'value1'),
+            ('secret2', 'value2'),
+            ('secret3', 'value3'),
+        ]:
+            models.Secret(
+                id=key,
+                value=value,
+                creator=self.user,
+                tenant=self.tenant,
+            )
+
+        search = self.client.secrets.list(
+            constraints={'name_pattern': {'contains': 'ret1'}}
+        )
+        assert [s.key for s in search] == ['secret1']
+
+        search = self.client.secrets.list(
+            constraints={'name_pattern': {'ends_with': 'ret2'}}
+        )
+        assert [s.key for s in search] == ['secret2']
+
+        search = self.client.secrets.list(
+            constraints={'name_pattern': {'starts_with': 'secret'}}
+        )
+        assert {s.key for s in search} == {'secret1', 'secret2', 'secret3'}
+
+        search = self.client.secrets.list(
+            constraints={'name_pattern': {'equals_to': 'secret3'}}
+        )
+        assert [s.key for s in search] == ['secret3']
+
+        search = self.client.secrets.list(
+            constraints={'name_pattern': {'equals_to': 'secret3'}},
+            _search='secret1'
+        )
+        assert [s.key for s in search] == []
+
+    def test_secrets_filter_by_valid_values_constraints(self):
+        for key, value in [
+            ('secret1', 'value1'),
+            ('secret2', 'value2'),
+            ('secret3', 'value3'),
+        ]:
+            models.Secret(
+                id=key,
+                value=value,
+                creator=self.user,
+                tenant=self.tenant,
+            )
+
+        search = self.client.secrets.list(
+            constraints={'valid_values': ['secret1', 'secret2']}
+        )
+        assert {s.key for s in search} == {'secret1', 'secret2'}
+
+        search = self.client.secrets.list(
+            constraints={'valid_values': ['secret1', 'secret2']},
+            _search='secret2'
+        )
+        assert [s.key for s in search] == ['secret2']
+
+        search = self.client.secrets.list(
+            constraints={'valid_values': ['secret1', 'secret2']},
+            _search='secret3'
+        )
+        assert [s.key for s in search] == []
