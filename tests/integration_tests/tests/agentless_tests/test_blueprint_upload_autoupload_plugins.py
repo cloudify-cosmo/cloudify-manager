@@ -29,7 +29,7 @@ class BlueprintUploadAutouploadPluginsTest(AgentlessTestCase):
         blueprint_id = 'bp_bad_version'
         blueprint_filename = 'blueprint_with_plugins_from_' \
                              'catalog_bad_version.yaml'
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             CloudifyClientError,
             'Couldn\'t find plugin "cloudify-openstack-plugin" with.*=3.1.99',
             self.client.blueprints.upload,
@@ -42,7 +42,7 @@ class BlueprintUploadAutouploadPluginsTest(AgentlessTestCase):
         blueprint_id = 'bp_bad_plugin'
         blueprint_filename = 'blueprint_with_plugins_from_' \
                              'catalog_bad_plugin.yaml'
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             CloudifyClientError,
             'Couldn\'t find plugin "my-custom-plugin"',
             self.client.blueprints.upload,
@@ -55,7 +55,7 @@ class BlueprintUploadAutouploadPluginsTest(AgentlessTestCase):
         blueprint_id = 'bp_two_plugin_versions'
         blueprint_filename = 'blueprint_with_plugins_from_' \
                              'catalog_conflicting_versions.yaml'
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             CloudifyClientError,
             'Could not merge \'plugins\' due to conflict on \'openstack\'',
             self.client.blueprints.upload,

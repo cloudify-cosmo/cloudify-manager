@@ -33,8 +33,8 @@ class TestAgentAliveVerification(AgentlessTestCase):
                                   })
 
     def test_install(self):
-        with self.assertRaisesRegexp(RuntimeError,
-                                     "Workflow execution failed:"):
+        with self.assertRaisesRegex(RuntimeError,
+                                    "Workflow execution failed:"):
             self.deploy_application(
                     resource("dsl/basic_start_not_exists.yaml"))
 
