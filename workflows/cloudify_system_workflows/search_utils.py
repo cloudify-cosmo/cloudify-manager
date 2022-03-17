@@ -12,6 +12,8 @@ class GetValuesWithRest:
             return [b.id for b in self.get_blueprints(value, **kwargs)]
         elif data_type == 'deployment_id':
             return [d.id for d in self.get_deployments(value, **kwargs)]
+        elif data_type == 'secret_key':
+            return [s.key for s in self.get_secrets(value, **kwargs)]
         elif data_type == 'capability_value':
             return [cap_details['value']
                     for dep_cap in self.get_capability_values(value, **kwargs)
@@ -31,6 +33,12 @@ class GetValuesWithRest:
                                             _include=['id'],
                                             _get_all_results=True,
                                             constraints=kwargs)
+
+    def get_secrets(self, secret_key, **kwargs):
+        return self.client.secrets.list(_search=secret_key,
+                                        _include=['key'],
+                                        _get_all_results=True,
+                                        constraints=kwargs)
 
     def get_capability_values(self, capability_value, **kwargs):
         try:

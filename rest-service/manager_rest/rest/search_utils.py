@@ -2,7 +2,8 @@ from collections import defaultdict
 
 from manager_rest.manager_exceptions import BadParametersError
 from manager_rest.storage.models import (Blueprint, BlueprintsFilter,
-                                         Deployment, DeploymentsFilter)
+                                         Deployment, DeploymentsFilter,
+                                         Secret)
 from manager_rest.rest.filters_utils import (get_filter_rules_from_filter_id,
                                              create_filter_rules_list,
                                              FilterRule)
@@ -17,6 +18,8 @@ class GetValuesWithStorageManager:
             return [b.id for b in self.get_blueprints(value, **kwargs)]
         elif data_type == 'deployment_id':
             return [d.id for d in self.get_deployments(value, **kwargs)]
+        elif data_type == 'secret_key':
+            return [s.key for s in self.get_secrets(value, **kwargs)]
         elif data_type == 'capability_value':
             return [cap_details['value']
                     for dep_cap in self.get_capability_values(value, **kwargs)
@@ -105,6 +108,34 @@ class GetValuesWithStorageManager:
             filter_rules=filter_rules
         )
 
+    def get_secrets(self, secret_key,
+                    key_specs=None,
+                    valid_values=None):
+        filter_rules = []
+        if key_specs:
+            for op, spec in key_specs.items():
+                filter_rules.append(
+                    {"key": "key",
+                     "values": [str(spec)],
+                     "operator": "any_of" if op == "equals_to" else op,
+                     "type": "attribute"})
+        if valid_values:
+            filter_rules.append(
+                {"key": "key",
+                 "values": [str(v) for v in valid_values],
+                 "operator": "any_of",
+                 "type": "attribute"})
+
+        filter_rules = get_filter_rules(Secret, None, None, filter_rules, None)
+
+        return self.sm.list(
+            Secret,
+            include=['key'],
+            filters={'key': str(secret_key)},
+            get_all_results=True,
+            filter_rules=filter_rules
+        )
+
     def get_capability_values(self, capability_value,
                               deployment_id=None,
                               valid_values=None,
@@ -173,13 +204,7 @@ def get_filter_rules(resource_model,
                                                 resource_model)
         filter_id = raw_filter_id
     elif not raw_filter and dsl_constraints:
-        if 'name_pattern' in dsl_constraints:
-            if resource_model == Deployment:
-                dsl_constraints['display_name_specs'] = \
-                    dsl_constraints.pop('name_pattern')
-            elif resource_model == Blueprint:
-                dsl_constraints['id_specs'] = \
-                    dsl_constraints.pop('name_pattern')
+        constraints_for_model(resource_model, dsl_constraints)
         filter_id, filter_rules = parse_constraints(dsl_constraints)
     elif not raw_filter and not dsl_constraints:
         return []
@@ -203,6 +228,20 @@ def get_filter_rules(resource_model,
     return filter_rules
 
 
+def constraints_for_model(resource_model, dsl_constraints):
+    if 'name_pattern' in dsl_constraints:
+        if resource_model == Blueprint:
+            dsl_constraints['id_specs'] = \
+                dsl_constraints.pop('name_pattern')
+        elif resource_model == Deployment:
+            dsl_constraints['display_name_specs'] = \
+                dsl_constraints.pop('name_pattern')
+        elif resource_model == Secret:
+            dsl_constraints['key_specs'] = \
+                dsl_constraints.pop('name_pattern')
+    return dsl_constraints
+
+
 def parse_constraints(dsl_constraints):
     filter_id = dsl_constraints.get('filter_id')
     filter_rules = []
@@ -223,6 +262,13 @@ def parse_constraints(dsl_constraints):
              "operator": "any_of",
              "type": "attribute"}
         )
+    valid_values = dsl_constraints.get('valid_values')
+    if valid_values:
+        filter_rules.append(
+            {"key": "key",
+             "values": valid_values,
+             "operator": "any_of",
+             "type": "attribute"})
     display_name_specs = dsl_constraints.get('display_name_specs')
     if display_name_specs:
         for op, spec in display_name_specs.items():
@@ -236,6 +282,14 @@ def parse_constraints(dsl_constraints):
         for op, spec in id_specs.items():
             filter_rules.append(
                 {"key": "id",
+                 "values": [spec],
+                 "operator": "any_of" if op == "equals_to" else op,
+                 "type": "attribute"})
+    key_specs = dsl_constraints.get('key_specs')
+    if key_specs:
+        for op, spec in key_specs.items():
+            filter_rules.append(
+                {"key": "key",
                  "values": [spec],
                  "operator": "any_of" if op == "equals_to" else op,
                  "type": "attribute"})
