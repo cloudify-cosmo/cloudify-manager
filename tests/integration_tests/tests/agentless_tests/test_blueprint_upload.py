@@ -57,7 +57,7 @@ class BlueprintUploadTest(AgentlessTestCase):
     def test_blueprint_upload_from_unavailable_url(self):
         blueprint_id = 'bp-url-unavailable'
         archive_url = 'http://www.fake.url/does/not/exist'
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             CloudifyClientError,
             'failed uploading.* Max retries exceeded with url',
             self.client.blueprints.publish_archive,
@@ -84,7 +84,7 @@ class BlueprintUploadTest(AgentlessTestCase):
         blueprint_id = 'bp-url-bad-format'
         archive_url = 'https://cloudify-tests-files.s3-eu-west-1.amazonaws' \
                       '.com/index.html'
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             CloudifyClientError,
             'failed uploading.* '
             'Blueprint archive is of an unrecognized format',
@@ -96,7 +96,7 @@ class BlueprintUploadTest(AgentlessTestCase):
         blueprint_id = 'bp-url-bad-structure'
         archive_url = 'https://cloudify-tests-files.s3-eu-west-1.amazonaws' \
                       '.com/blueprints/not-a-valid-archive.zip'
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             CloudifyClientError,
             'failed extracting.* '
             'Archive must contain exactly 1 directory',
@@ -109,7 +109,7 @@ class BlueprintUploadTest(AgentlessTestCase):
         blueprint_filename = 'fancy_name.yaml'
         archive_url = 'https://cloudify-tests-files.s3-eu-west-1.amazonaws' \
                       '.com/blueprints/the-not-blueprint-master.zip'
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             CloudifyClientError,
             'failed extracting.* {0} does not exist in the application '
             'directory'.format(blueprint_filename),
@@ -121,11 +121,11 @@ class BlueprintUploadTest(AgentlessTestCase):
     def test_blueprint_reupload_after_fail(self):
         blueprint_id = 're-bp'
         # this should fail due to cloudmock plugin not uploaded
-        self.assertRaisesRegexp(CloudifyClientError,
-                                'Couldn\'t find plugin "cloudmock"',
-                                self.client.blueprints.upload,
-                                resource('dsl/basic.yaml'),
-                                entity_id=blueprint_id)
+        self.assertRaisesRegex(CloudifyClientError,
+                               'Couldn\'t find plugin "cloudmock"',
+                               self.client.blueprints.upload,
+                               resource('dsl/basic.yaml'),
+                               entity_id=blueprint_id)
         blueprint = self.client.blueprints.get(blueprint_id)
         self.assertEqual(blueprint['state'], BlueprintUploadState.INVALID)
         self.assertEqual(blueprint.plan, None)
@@ -169,7 +169,7 @@ class BlueprintUploadTest(AgentlessTestCase):
                                            {'cloudify': cloudify_section})
 
         blueprint_id = 'bp-resolver-error'
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             CloudifyClientError,
             'failed parsing.* Failed to instantiate resolver',
             self.client.blueprints.upload,
@@ -181,7 +181,7 @@ class BlueprintUploadTest(AgentlessTestCase):
 
     def test_blueprint_upload_malformed_dsl(self):
         blueprint_id = 'bp-malformed-dsl'
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             CloudifyClientError,
             "invalid.* Expected 'dict' type but found 'string' type",
             self.client.blueprints.upload,
@@ -251,20 +251,16 @@ class BlueprintValidateTest(AgentlessTestCase):
 
     def _verify_blueprint_validation_with_message(
             self, blueprint_id, blueprint_resource, message):
-        self.client.blueprints.validate(
+        exc = self.client.blueprints.validate(
             blueprint_resource,
             entity_id=blueprint_id
         )
+        print('exc', exc.id)
         temp_blueprint_id = self._assert_blueprint_validation_message(
-            blueprint_id, message)
+            exc, message)
         self._assert_cleanup(temp_blueprint_id)
 
-    def _assert_blueprint_validation_message(self, blueprint_id, message):
-        execution = [
-            ex for ex in
-            self.client.executions.list(workflow_id='upload_blueprint') if
-            blueprint_id in ex['parameters']['blueprint_id']
-        ][-1]   # get latest upload execution for blueprint
+    def _assert_blueprint_validation_message(self, execution, message):
         try:
             self.wait_for_execution_to_end(execution)
         except RuntimeError as e:
@@ -278,10 +274,10 @@ class BlueprintValidateTest(AgentlessTestCase):
 
     def _assert_cleanup(self, blueprint_id):
         # blueprint entry deleted
-        self.assertRaisesRegexp(CloudifyClientError,
-                                '404: .* not found',
-                                self.client.blueprints.get,
-                                blueprint_id)
+        self.assertRaisesRegex(CloudifyClientError,
+                               '404: .* not found',
+                               self.client.blueprints.get,
+                               blueprint_id)
         admin_headers = self.client._client.headers
         # blueprint folder deleted from uploaded blueprints
         resp = requests.get(

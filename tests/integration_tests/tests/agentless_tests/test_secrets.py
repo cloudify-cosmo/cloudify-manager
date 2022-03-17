@@ -43,7 +43,7 @@ class SecretsTest(AgentlessTestCase):
         self.assertEqual('test_value2', updated_secret.value)
 
     def test_get_secret_not_found(self):
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             CloudifyClientError,
             '404: Requested `Secret` with ID `test_key` was not found',
             self.client.secrets.get,
@@ -53,7 +53,7 @@ class SecretsTest(AgentlessTestCase):
     def test_get_secret_intrinsic_function(self):
         dsl_path = resource("dsl/basic_get_secret.yaml")
         error_msg = "Required secrets: .* don't exist in this tenant"
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             CloudifyClientError,
             error_msg,
             self.deploy_application,
@@ -71,8 +71,8 @@ class SecretsTest(AgentlessTestCase):
         viewer_client = self.create_rest_client(
             username='user', password='password', tenant='default_tenant',
         )
-        self.assertRaisesRegexp(ForbiddenError,
-                                '403: User `user` is not permitted to perform'
-                                ' the action secret_export in the tenant '
-                                '`default_tenant`',
-                                viewer_client.secrets.export)
+        self.assertRaisesRegex(ForbiddenError,
+                               '403: User `user` is not permitted to perform'
+                               ' the action secret_export in the tenant '
+                               '`default_tenant`',
+                               viewer_client.secrets.export)
