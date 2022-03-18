@@ -236,6 +236,8 @@ class SnapshotRestore(object):
             if self._restore_certificates:
                 self._restore_certificate()
 
+            self._update_mgmtworker_token()
+
             shutil.rmtree(self._get_snapshot_dir())
         finally:
             self._trigger_post_restore_commands()
@@ -316,6 +318,10 @@ class SnapshotRestore(object):
         ctx.logger.info('Updating roles and permissions')
         if os.path.exists(REST_AUTHORIZATION_CONFIG_PATH):
             utils.run(['/opt/manager/scripts/load_permissions.py'])
+
+    def _update_mgmtworker_token(self):
+        ctx.logger.info('Updating mgmtworker token')
+        utils.run(['/opt/cloudify/mgmtworker/create-admin-token.py'])
 
     def _create_system_filters(self):
         ctx.logger.info('Creating system filters')
