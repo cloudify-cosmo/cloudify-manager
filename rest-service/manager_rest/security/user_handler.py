@@ -2,18 +2,12 @@ from datetime import datetime
 import string
 
 from flask import current_app
-from flask_security.utils import verify_password, verify_hash
-from itsdangerous import BadSignature, SignatureExpired
-
-from ..storage.idencoder import get_encoder
-
-from cloudify.constants import CLOUDIFY_API_AUTH_TOKEN_HEADER
+from flask_security.utils import verify_password
 
 from manager_rest.storage.models import Token, User
 from manager_rest.storage.models_base import db
 from manager_rest.manager_exceptions import (
     NoAuthProvided,
-    NotFoundError,
     UnauthorizedError,
 )
 from manager_rest.storage import user_datastore, get_storage_manager
@@ -48,27 +42,12 @@ def user_loader(request):
     token = get_token_from_request(request)
     if token:
         return get_token_status(token)
-    api_token = get_api_token_from_request(request)
-    if api_token:
-        user, user_token_key = extract_api_token(api_token)
-        return user
     if current_app.external_auth \
             and current_app.external_auth.can_extract_user_from_request():
         user = current_app.external_auth.get_user_from_request(request)
         if isinstance(user, User):
             return user
     return None
-
-
-def extract_api_token(api_token):
-    user_id = api_token[:ENCODED_ID_LENGTH]
-    user_token_key = api_token[ENCODED_ID_LENGTH:]
-    user_id = get_encoder().decode(user_id)
-    try:
-        user = get_storage_manager().get(User, user_id)
-    except NotFoundError:
-        return None, None
-    return user, user_token_key
 
 
 def get_user_from_auth(auth):
@@ -85,58 +64,33 @@ def get_token_from_request(request):
     return request.headers.get(token_auth_header)
 
 
-def get_api_token_from_request(request):
-    return request.headers.get(CLOUDIFY_API_AUTH_TOKEN_HEADER)
-
-
 def get_token_status(token):
 
     user = None
     error = None
 
-    if token.startswith('ctok-'):
-        token_parts = token.split('-')
-        if len(token_parts) == 3:
-            _, tok_id, tok_secret = token_parts
+    token_parts = token.split('-')
+    if len(token_parts) == 3:
+        _, tok_id, tok_secret = token_parts
 
-            sm = get_storage_manager()
-            token = sm.get(Token, tok_id, fail_silently=True)
+        sm = get_storage_manager()
+        token = sm.get(Token, tok_id, fail_silently=True)
 
-            error = 'Unauthorized'
-            if token:
-                if verify_password(tok_secret, token.secret_hash):
-                    user = user_datastore.find_user(id=token._user_fk)
-                    error = None
-
-                if token.expiration_date is not None:
-                    if is_expired(token.expiration_date):
-                        error = 'Token is expired'
-
-            if not error:
-                token.last_used = datetime.utcnow()
-                db.session.commit()
-        else:
-            error = 'Invalid token structure'
-    else:
-        security = current_app.extensions['security']
-        serializer = security.remember_token_serializer
-        max_age = security.token_max_age
-
-        user_id = None
-        token_secret = None
-        try:
-            user_id, token_secret = serializer.loads(token, max_age=max_age)
-        except SignatureExpired:
-            error = 'Token is expired'
-        except (BadSignature, TypeError, ValueError) as e:
-            error = f'Authentication token is invalid:\n{e}'
-
-        if user_id is not None and token_secret and not error:
-            error = 'Unauthorized'
-            user = user_datastore.find_user(id=user_id)
-            if verify_hash(compare_data=user.password,
-                           hashed_data=token_secret):
+        error = 'Unauthorized'
+        if token:
+            if verify_password(tok_secret, token.secret_hash):
+                user = user_datastore.find_user(id=token._user_fk)
                 error = None
+
+            if token.expiration_date is not None:
+                if is_expired(token.expiration_date):
+                    error = 'Token is expired'
+
+        if not error:
+            token.last_used = datetime.utcnow()
+            db.session.commit()
+    else:
+        error = 'Invalid token structure'
 
     if error:
         raise UnauthorizedError(error)

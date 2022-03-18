@@ -17,12 +17,14 @@ import json
 import logging
 import os
 import shutil
+from uuid import uuid4
 
 import argparse
 from flask_migrate import upgrade
+from flask_security.utils import hash_password
 
 from manager_rest import config
-from manager_rest.storage import db, models, idencoder
+from manager_rest.storage import db, models, get_storage_manager
 from manager_rest.amqp_manager import AMQPManager
 from manager_rest.flask_utils import setup_flask_app
 from manager_rest.constants import (
@@ -109,10 +111,22 @@ def reset_storage(app, script_config):
 
 
 def regenerate_auth_token():
-    token_key = models.User.query.get(0).api_token_key
-    enc_uid = idencoder.get_encoder().encode(0)
+    sm = get_storage_manager()
+    secret = str(uuid4())
+    token = models.Token(
+        id='abc123def4',
+        description='Inte-tests mgmtworker',
+        secret_hash=hash_password(secret),
+        expiration_date=None,
+        _user_fk=0,
+    )
+    sm.put(token)
+
+    token._secret = secret
+    value = token.to_response()['value']
+
     with open(AUTH_TOKEN_LOCATION, 'w') as f:
-        f.write(enc_uid + token_key)
+        f.write(value)
 
 
 def clean_dirs():

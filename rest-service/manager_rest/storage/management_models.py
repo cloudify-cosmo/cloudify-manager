@@ -19,7 +19,6 @@ from manager_rest.constants import (
     BOOTSTRAP_ADMIN_ID,
 )
 
-from .idencoder import get_encoder
 from .relationships import (
     foreign_key,
     many_to_many_relationship,
@@ -310,11 +309,6 @@ class User(SQLModelBase, UserMixin):
     def __init__(self, *args, **kwargs):
         super(User, self).__init__(*args, **kwargs)
         self.api_token_key = uuid4().hex
-
-    @property
-    def api_token(self):
-        encoded_id = get_encoder().encode(self.id)
-        return '{0}{1}'.format(encoded_id, self.api_token_key)
 
     def _get_identifier_dict(self):
         return OrderedDict({'username': self.username})
