@@ -56,3 +56,15 @@ workflows:
         required: False
         constraints:
           - deployment_id: deploymentA
+      a_secret_key:
+        type: secret_key
+        constraints:
+          - valid_values:
+              - secret_one
+              - secret_two
+              - secret_three
+              - secret_four
+              - secret_five
+          - name_pattern:
+              starts_with: secret
+              ends_with: e
