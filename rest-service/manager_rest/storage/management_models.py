@@ -529,7 +529,7 @@ class Token(CreatedAtMixin, SQLModelBase):
     def value(self):
         # Allow token creation to return the full token including secret
         secret = self._secret or '********'
-        return f'ctok-{self.id}-{secret}',
+        return f'ctok-{self.id}-{secret}'
 
     def to_response(self, include=None, get_data=False, **kwargs):
         return {
