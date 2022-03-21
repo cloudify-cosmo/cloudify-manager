@@ -92,13 +92,16 @@ def restart_restservice():
 def cancel_execution(execution_ids):
     sm = get_storage_manager()
     managers = sm.list(models.Manager)
+    ids_string = ','.join(execution_ids)
     message = {
         'service_task': {
             'task_name': 'cancel-workflow',
             'kwargs': {
                 'rest_host': [manager.private_ip for manager in managers],
                 'execution_ids': execution_ids,
-                'rest_token': current_user.get_auth_token(),
+                'rest_token': current_user.get_auth_token(
+                    description=f'Cancelling {ids_string} rest token.',
+                ),
                 'tenant': _get_tenant_dict(),
             }
         }
@@ -120,7 +123,9 @@ def _get_plugin_message(plugin, task='install-plugin', target_names=None):
             'kwargs': {
                 'plugin': plugin.to_dict(),
                 'rest_host': [manager.private_ip for manager in managers],
-                'rest_token': current_user.get_auth_token(),
+                'rest_token': current_user.get_auth_token(
+                    description=f'Plugins task {task} rest token.',
+                ),
                 'tenant': _get_tenant_dict(),
             }
         }

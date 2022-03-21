@@ -1,3 +1,5 @@
+import secrets
+from string import ascii_uppercase, ascii_lowercase, digits
 import tempfile
 from uuid import uuid4
 from collections import (
@@ -10,6 +12,7 @@ from dateutil import parser as date_parser
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
 from flask_security import SQLAlchemyUserDatastore, UserMixin, RoleMixin
+from flask_security.utils import hash_password
 
 from cloudify.cluster_status import STATUS_REPORTER_USERS
 
@@ -18,6 +21,8 @@ from manager_rest.constants import (
     DEFAULT_TENANT_ID,
     BOOTSTRAP_ADMIN_ID,
 )
+from manager_rest.manager_exceptions import BadParametersError
+from manager_rest.utils import is_expired
 
 from .relationships import (
     foreign_key,
@@ -474,6 +479,37 @@ class User(SQLModelBase, UserMixin):
                 return True
         return False
 
+    def create_auth_token(self, description=None, expiration_date=None):
+        def _random_string(length=10):
+            """A random string that is a bit more user friendly than uuids"""
+            charset = ascii_uppercase + ascii_lowercase + digits
+            return ''.join(secrets.choice(charset) for i in range(length))
+
+        if expiration_date and is_expired(expiration_date):
+            raise BadParametersError("Expiration date was in the past.")
+
+        secret = _random_string(40)
+
+        token = Token(
+            id=_random_string(),
+            description=description,
+            secret_hash=hash_password(secret),
+            expiration_date=expiration_date,
+            _user_fk=self.id,
+        )
+
+        db.session.add(token)
+        db.session.commit()
+
+        # Return the token with the secret or it'll never be usable
+        token._secret = secret
+        return token
+
+    def get_auth_token(self, description=None):
+        # Same behaviour as flask security tokens- 10 hour expiry
+        expiration_date = datetime.utcnow() + timedelta(hours=10)
+        return self.create_auth_token(description, expiration_date).value
+
 
 class Token(CreatedAtMixin, SQLModelBase):
     __tablename__ = 'tokens'
@@ -489,12 +525,16 @@ class Token(CreatedAtMixin, SQLModelBase):
     execution = db.relationship('Execution')
     _secret = None
 
-    def to_response(self, include=None, get_data=False, **kwargs):
+    @property
+    def value(self):
         # Allow token creation to return the full token including secret
         secret = self._secret or '********'
+        return f'ctok-{self.id}-{secret}'
+
+    def to_response(self, include=None, get_data=False, **kwargs):
         return {
             'id': self.id,
-            'value': f'ctok-{self.id}-{secret}',
+            'value': self.value,
             'username': self.user.username,
             'role': self.user.role,
             'expiration_date': self.expiration_date,

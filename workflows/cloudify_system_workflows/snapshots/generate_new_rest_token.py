@@ -28,7 +28,7 @@ def main(tempdir):
     setup_flask_app()
     sm = get_storage_manager()
     admin_user = sm.get(models.User, 0)
-    token = admin_user.get_auth_token()
+    token = admin_user.get_auth_token(description='Snapshot restore')
     _write_token_to_file(tempdir, token)
 
 

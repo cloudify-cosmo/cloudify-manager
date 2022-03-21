@@ -14,6 +14,8 @@ from manager_rest.test.token_utils import (
 from .test_base import SecurityTestBase
 from ..security_utils import ADMIN_ROLE, USER_ROLE
 
+TIME_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
+
 
 class TokenTests(SecurityTestBase):
     # The default error should just be Unauthorized so that we know we're not
@@ -50,14 +52,31 @@ class TokenTests(SecurityTestBase):
         user.failed_logins_counter = 0
         user_datastore.commit()
 
+    def test_user_model_get_auth_token(self):
+        user = user_datastore.get_user('alice')
+        tok_val = user.get_auth_token(description='Execution rnd123 token.')
+
+        tok_id = tok_val.split('-')[1]
+        with self.use_secured_client(username='alice',
+                                     password='alice_password'):
+            token = self.client.tokens.get(tok_id)
+
+        expiration = datetime.strptime(token.expiration_date, TIME_FORMAT)
+        expiration_delay = expiration - datetime.utcnow()
+        # This should expire in something close to ten hours, but let's be
+        # lenient in case we're running on a potato
+        min_expiration = 60 * 60 * 9.9
+        # It shouldn't expire in more than ten hours
+        max_expiration = 60 * 60 * 10
+        assert min_expiration < expiration_delay.seconds <= max_expiration
+
     def test_valid_token_authentication(self):
         with self.use_secured_client(username='alice',
                                      password='alice_password'):
             token = self.client.tokens.create()
         with self.use_secured_client(token=token.value):
             result = self.client.tokens.get(token.id)
-        last_used = datetime.strptime(result.last_used,
-                                      '%Y-%m-%dT%H:%M:%S.%fZ')
+        last_used = datetime.strptime(result.last_used, TIME_FORMAT)
         last_used_diff = datetime.utcnow() - last_used
         # Allow some time in case tests are running on a potato
         assert last_used_diff.seconds < 10
