@@ -50,6 +50,17 @@ class TokenTests(SecurityTestBase):
         user.failed_logins_counter = 0
         user_datastore.commit()
 
+    def test_user_model_get_auth_token_expiry(self):
+        user = user_datastore.get_user('alice')
+        token = user.get_auth_token(description='Execution rnd123 token.')
+        expiration_delay = token.expiration_date - datetime.utcnow()
+        # This should expire in something close to ten hours, but let's be
+        # lenient in case we're running on a potato
+        min_expiration = 60 * 60 * 9.9
+        # It shouldn't expire in more than ten hours
+        max_expiration = (60 * 60 * 10) + 0.1
+        assert min_expiration < expiration_delay < max_expiration
+
     def test_valid_token_authentication(self):
         with self.use_secured_client(username='alice',
                                      password='alice_password'):
