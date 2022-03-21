@@ -136,6 +136,7 @@ class ResourceManager(object):
                     status = override_status
 
         affected_parent_deployments = set()
+        execution = self.sm.get(models.Execution, execution_id)
         self._send_hook(execution, status)
         with self.sm.transaction():
             execution = self.sm.get(models.Execution, execution_id,
