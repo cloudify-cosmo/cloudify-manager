@@ -1,6 +1,7 @@
 import os
 import uuid
 import shutil
+from collections import defaultdict
 from datetime import datetime
 
 from flask import current_app
@@ -88,12 +89,14 @@ class PluginsUpdateManager(object):
         return self.sm.update(temp_blueprint)
 
     def stage_plugin_update(self, blueprint, forced,
-                            update_id=None, created_at=None):
+                            update_id=None, created_at=None,
+                            all_tenants=False):
         update_id = update_id or str(uuid.uuid4())
         plugins_update = models.PluginsUpdate(
             id=update_id,
             created_at=created_at or utils.get_formatted_timestamp(),
-            forced=forced)
+            forced=forced,
+            all_tenants=all_tenants)
         plugins_update.set_blueprint(blueprint)
         return plugins_update
 
@@ -114,7 +117,8 @@ class PluginsUpdateManager(object):
 
     def initiate_plugins_update(self, blueprint_id, filters,
                                 auto_correct_types=False,
-                                reevaluate_active_statuses=False):
+                                reevaluate_active_statuses=False,
+                                all_tenants=False):
         """Creates a temporary blueprint and executes the plugins update
         workflow.
         """
@@ -133,12 +137,16 @@ class PluginsUpdateManager(object):
         changes_required = _did_plugins_to_install_change(temp_plan,
                                                           blueprint.plan)
         plugins_update = self.stage_plugin_update(blueprint,
-                                                  filters.get('force', False))
+                                                  filters.get('force', False),
+                                                  all_tenants=all_tenants)
         self.sm.put(plugins_update)
+        # from celery.contrib import rdb; rdb.set_trace()
         if changes_required:
-            plugins_update.deployments_to_update = [
-                dep.id for dep in self._get_deployments_to_update(blueprint_id)
-            ]
+            tenants_deployments = defaultdict(list)
+            for dep in self._get_deployments_to_update(blueprint_id,
+                                                       all_tenants):
+                tenants_deployments[dep.tenant.name].append(dep.id)
+            plugins_update.deployments_per_tenant = dict(tenants_deployments)
             self.sm.update(plugins_update)
 
             temp_blueprint = self._create_temp_blueprint_from(blueprint,
@@ -173,10 +181,10 @@ class PluginsUpdateManager(object):
         self.sm.update(plugins_update)
 
         updated_deployments = self._get_deployments_to_update(
-            plugins_update.temp_blueprint_id)
+            plugins_update.temp_blueprint_id, plugins_update.all_tenants)
 
         not_updated_deployments = self._get_deployments_to_update(
-            plugins_update.blueprint_id)
+            plugins_update.blueprint_id, plugins_update.all_tenants)
 
         if not_updated_deployments:
             current_app.logger.error(
@@ -200,7 +208,7 @@ class PluginsUpdateManager(object):
         self.sm.update(plugins_update.blueprint)
 
         updated_deployments = self._get_deployments_to_update(
-            plugins_update.temp_blueprint_id)
+            plugins_update.temp_blueprint_id, plugins_update.all_tenants)
 
         for dep in updated_deployments:
             dep.blueprint = plugins_update.blueprint
@@ -274,9 +282,10 @@ class PluginsUpdateManager(object):
                          dst_blueprint.id)
         )
 
-    def _get_deployments_to_update(self, blueprint_id):
+    def _get_deployments_to_update(self, blueprint_id, all_tenants):
         return self.sm.list(models.Deployment,
                             filters={'blueprint_id': blueprint_id},
+                            all_tenants=all_tenants,
                             sort={'id': 'asc'}).items
 
     def get_plugins_update(self, plugins_update_id):
