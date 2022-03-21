@@ -14,7 +14,6 @@ from manager_rest.storage.models_base import db
 from manager_rest.rest.rest_decorators import (
     create_filters, marshal_with, paginate, sortable)
 from manager_rest.rest.rest_utils import get_json_and_verify_params
-from manager_rest.token_utils import create_token
 
 
 class Tokens(SecuredResource):
@@ -54,8 +53,8 @@ class Tokens(SecuredResource):
         if expiration_date:
             expiration_date = parse_utc_datetime(expiration_date)
 
-        return create_token(current_user.id,
-                            request_dict.get('description'), expiration_date)
+        return current_user.create_auth_token(request_dict.get('description'),
+                                              expiration_date)
 
 
 class TokensId(SecuredResource):
