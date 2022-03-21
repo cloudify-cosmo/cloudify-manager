@@ -67,8 +67,8 @@ class TokenTests(SecurityTestBase):
         # lenient in case we're running on a potato
         min_expiration = 60 * 60 * 9.9
         # It shouldn't expire in more than ten hours
-        max_expiration = (60 * 60 * 10) + 0.1
-        assert min_expiration < expiration_delay < max_expiration
+        max_expiration = 60 * 60 * 10
+        assert min_expiration < expiration_delay.seconds <= max_expiration
 
     def test_valid_token_authentication(self):
         with self.use_secured_client(username='alice',
