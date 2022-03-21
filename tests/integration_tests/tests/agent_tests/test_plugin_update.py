@@ -253,6 +253,68 @@ class TestPluginUpdate(AgentTestWithPlugins):
         self._execute_workflows()
         self._assert_host_values(self.versions[1])
 
+    @setup_for_plugins_update
+    def test_multi_tenancy_all_are_updated(self):
+        self.setup_node_id = 'node'
+        self.plugin_name = 'version_aware'
+        other_client = self._client_for_tenant('other_tenant', 'bob', 'passwd')
+
+        self.client.blueprints.upload(path=self._get_dsl_blueprint_path(''),
+                                      entity_id=self.base_blueprint_id)
+        wait_for_blueprint_upload(self.base_blueprint_id, self.client)
+        self.client.blueprints.set_visibility(self.base_blueprint_id, 'global')
+        blueprint = self.client.blueprints.get(self.base_blueprint_id)
+
+        # Create two deployments for default_tenant
+        for dep_id in ['default_tenants_deployment', 'same_name_deployment']:
+            self.client.deployments.create(blueprint.id, dep_id)
+            wait_for_deployment_creation_to_complete(
+                self.env.container_id, dep_id, self.client)
+            self.execute_workflow('install', dep_id)
+
+        # ... and another two for other_tenant
+        for dep_id in ['other_tenants_deployment', 'same_name_deployment']:
+            other_client.deployments.create(blueprint.id, dep_id)
+            wait_for_deployment_creation_to_complete(
+                self.env.container_id, dep_id, other_client)
+            self.execute_workflow('install', dep_id, client=other_client)
+
+        self._upload_v_2_plugin()
+
+        # Execute base (V 1.0) workflows for default_tenant
+        for dep_id in ['default_tenants_deployment', 'same_name_deployment']:
+            self.setup_deployment_id = dep_id
+            self._execute_workflows()
+            self._assert_host_values(self.versions[0])
+
+        # ... and the same workflows for other_tenant
+        for dep_id in ['other_tenants_deployment', 'same_name_deployment']:
+            self.setup_deployment_id = dep_id
+            self._execute_workflows(client=other_client)
+            self._assert_host_values(self.versions[0], client=other_client)
+
+        plugins_update = self._perform_plugins_update(all_tenants=True)
+        self.assertEqual(plugins_update.state, 'successful')
+
+        # Execute mod (V 2.0) workflows for default_tenant
+        for dep_id in ['default_tenants_deployment', 'same_name_deployment']:
+            self.setup_deployment_id = dep_id
+            self._execute_workflows()
+            self._assert_host_values(self.versions[1])
+
+        # ... and the same workflows for other_tenant
+        for dep_id in ['other_tenants_deployment', 'same_name_deployment']:
+            self.setup_deployment_id = dep_id
+            self._execute_workflows(client=other_client)
+            self._assert_host_values(self.versions[1], client=other_client)
+
+    def _client_for_tenant(self, tenant_name, user_name, password):
+        self.client.tenants.create(tenant_name)
+        self.client.users.create(user_name, password, 'default')
+        self.client.tenants.add_user(user_name, tenant_name, 'user')
+        return self.create_rest_client(
+            username=user_name, password=password, tenant=tenant_name)
+
     def _perform_plugins_update(self, **kwargs):
         plugins_update = self.client.plugins_update.update_plugins(
             self.base_blueprint_id, **kwargs)
@@ -342,9 +404,10 @@ class TestPluginUpdate(AgentTestWithPlugins):
         self.assertEqual(len(cda_data), 1)
         self.assertEqual(cda_data[0], version)
 
-    def _assert_host_values(self, version):
+    def _assert_host_values(self, version, client=None):
         host_data = self.get_runtime_property(self.setup_deployment_id,
-                                              'host_op')
+                                              'host_op',
+                                              client=client or self.client)
         self.assertEqual(len(host_data), 1)
         self.assertEqual(host_data[0], version)
 
@@ -386,9 +449,11 @@ class TestPluginUpdate(AgentTestWithPlugins):
         plugin_path = '{0}{1}.yaml'.format(self.blueprint_name_prefix, name)
         return os.path.join(self.dsl_resources_path, plugin_path)
 
-    def _execute_workflows(self):
+    def _execute_workflows(self, client=None):
+        if not client:
+            client = self.client
         for wf in ('test_cda_wf', 'test_cda_op', 'test_host_op'):
-            self.execute_workflow(wf, self.setup_deployment_id)
+            self.execute_workflow(wf, self.setup_deployment_id, client=client)
 
     def _clear_managed_plugins(self):
         plugins = self.client.plugins.list()
