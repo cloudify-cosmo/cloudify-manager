@@ -136,6 +136,7 @@ class ResourceManager(object):
                     status = override_status
 
         affected_parent_deployments = set()
+        self._send_hook(execution, status)
         with self.sm.transaction():
             execution = self.sm.get(models.Execution, execution_id,
                                     locking=True)
@@ -173,7 +174,6 @@ class ResourceManager(object):
 
             execution = self.sm.update(execution)
             self.update_deployment_statuses(execution)
-            self._send_hook(execution)
             # render the execution here, because immediately afterwards
             # we'll delete it, and then we won't be able to render it anymore
             res = execution.to_response()
@@ -2509,9 +2509,9 @@ class ResourceManager(object):
     def _workflow_queued(self, execution):
         execution.status = ExecutionState.QUEUED
         self.sm.update(execution)
-        self._send_hook(execution)
+        self._send_hook(execution, execution.status)
 
-    def _send_hook(self, execution):
+    def _send_hook(self, execution, new_status):
         try:
             event_type = {
                 ExecutionState.QUEUED: 'workflow_queued',
@@ -2519,10 +2519,10 @@ class ResourceManager(object):
                 ExecutionState.TERMINATED: 'workflow_succeeded',
                 ExecutionState.FAILED: 'workflow_failed',
                 ExecutionState.CANCELLED: 'workflow_cancelled',
-            }[execution.status]
+            }[new_status]
         except KeyError:
             return
-        if execution.status == ExecutionState.STARTED:
+        if new_status == ExecutionState.STARTED:
             start_resume = 'Resuming' if execution.resume else 'Starting'
             dry_run = ' (dry run)' if execution.is_dry_run else ''
             message = (
@@ -2532,7 +2532,7 @@ class ResourceManager(object):
         else:
             message = (
                 f"'{execution.workflow_id}' workflow "
-                f"execution {execution.status}"
+                f"execution {new_status}"
             )
         message_context = {
             'message_type': 'hook',
