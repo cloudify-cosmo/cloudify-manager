@@ -18,6 +18,7 @@ from manager_rest.constants import (
     DEFAULT_TENANT_ID,
     BOOTSTRAP_ADMIN_ID,
 )
+from manager_rest.token_utils import create_token
 
 from .relationships import (
     foreign_key,
@@ -474,6 +475,12 @@ class User(SQLModelBase, UserMixin):
                 return True
         return False
 
+    def get_auth_token(self, description=None, expiration_date=None):
+        if expiration_date is None:
+            # Same behaviour as flask security tokens- 10 hour expiry
+            expiration_date = datetime.utcnow() + timedelta(hours=10)
+        return create_token(self.id, description, expiration_date).value
+
 
 class Token(CreatedAtMixin, SQLModelBase):
     __tablename__ = 'tokens'
@@ -489,12 +496,16 @@ class Token(CreatedAtMixin, SQLModelBase):
     execution = db.relationship('Execution')
     _secret = None
 
-    def to_response(self, include=None, get_data=False, **kwargs):
+    @property
+    def value(self):
         # Allow token creation to return the full token including secret
         secret = self._secret or '********'
+        return f'ctok-{self.id}-{secret}',
+
+    def to_response(self, include=None, get_data=False, **kwargs):
         return {
             'id': self.id,
-            'value': f'ctok-{self.id}-{secret}',
+            'value': self.value,
             'username': self.user.username,
             'role': self.user.role,
             'expiration_date': self.expiration_date,

@@ -2542,7 +2542,9 @@ class ResourceManager(object):
             'execution_id': execution.id,
             'workflow_id': execution.workflow_id,
             'tenant_name': execution.tenant_name,
-            'rest_token': execution.creator.get_auth_token(),
+            'rest_token': execution.creator.get_auth_token(
+                description=f'Execution {execution.id} rest token.',
+            ),
             'tenant': {
                 'name': execution.tenant_name,
             }
