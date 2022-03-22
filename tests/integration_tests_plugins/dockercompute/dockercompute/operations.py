@@ -20,6 +20,7 @@ import tempfile
 
 from cloudify import ctx
 from cloudify.decorators import operation
+from cloudify.exceptions import NonRecoverableError
 
 
 @operation
@@ -68,3 +69,9 @@ def delete(**_):
 
     shutil.rmtree(os.path.expanduser('~cfyuser/{0}'.format(ctx.instance.id)))
     ctx.instance.runtime_properties.pop('ip', None)
+
+
+@operation
+def fail_on_scale(ctx, **_):
+    if ctx.workflow_id == 'scale':
+        raise NonRecoverableError("fail!")
