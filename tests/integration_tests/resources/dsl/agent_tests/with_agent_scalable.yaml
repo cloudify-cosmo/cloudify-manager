@@ -1,0 +1,24 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+    - cloudify/types/types.yaml
+    - plugin:dockercompute
+
+node_templates:
+  agent_host:
+    type: cloudify.nodes.docker.Compute
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        precreate: dockercompute.dockercompute.operations.fail_on_scale
+
+groups:
+  group1:
+    members:
+      - agent_host
+
+policies:
+  policy:
+    type: cloudify.policies.scaling
+    targets: [group1]
+    properties:
+      default_instances: 1

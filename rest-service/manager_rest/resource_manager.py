@@ -2025,18 +2025,38 @@ class ResourceManager(object):
 
         deployment_id_filter = self.create_filters_dict(
             deployment_id=modification.deployment_id)
-        node_instances = self.sm.list(
-            models.NodeInstance,
-            filters=deployment_id_filter,
-            get_all_results=True
-        )
+        node_instances = {
+            inst.id: inst for inst in
+            self.sm.list(
+                models.NodeInstance,
+                filters=deployment_id_filter,
+                get_all_results=True
+            )
+        }
         modified_instances = deepcopy(modification.node_instances)
         modified_instances['before_rollback'] = [
-            instance.to_dict() for instance in node_instances]
-        for instance in node_instances:
-            self.sm.delete(instance)
-        for instance_dict in modified_instances['before_modification']:
-            self.add_node_instance_from_dict(instance_dict)
+            instance.to_dict() for instance in node_instances.values()]
+        before_modification = {
+            inst['id']: inst
+            for inst in modified_instances['before_modification']
+        }
+
+        for instance_id, instance in node_instances.items():
+            if instance.id not in before_modification:
+                self.sm.delete(instance)
+        for instance_id, old_instance_dict in before_modification.items():
+            if instance_id not in node_instances:
+                self.add_node_instance_from_dict(old_instance_dict)
+            else:
+                instance = node_instances[instance_id]
+                for k, v in old_instance_dict.items():
+                    try:
+                        setattr(instance, k, v)
+                    except AttributeError:
+                        # not all attributes are settable. Just set the ones
+                        # we can.
+                        pass
+                self.sm.update(instance)
         nodes_num_instances = {
             node.id: node for node in self.sm.list(
                 models.Node,
