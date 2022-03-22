@@ -19,6 +19,8 @@ class GetValuesWithRest:
                     for dep_cap in self.get_capability_values(value, **kwargs)
                     for cap in dep_cap['capabilities']
                     for cap_details in cap.values()}
+        elif data_type == 'node_template':
+            return {n.id for n in self.get_nodes(value, **kwargs)}
         raise NotImplementedError("Getter function not defined for "
                                   f"data type '{data_type}'")
 
@@ -53,6 +55,12 @@ class GetValuesWithRest:
             _search=capability_value,
             _get_all_results=True,
             constraints=kwargs)
+
+    def get_nodes(self, node_id, **kwargs):
+        return self.client.nodes.list(_search=node_id,
+                                      _include=['id'],
+                                      _get_all_results=True,
+                                      constraints=kwargs)
 
 
 def get_instance_ids_by_node_ids(client, node_ids):
