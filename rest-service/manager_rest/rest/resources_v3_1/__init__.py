@@ -117,6 +117,7 @@ from .searches import (  # NOQA
     DeploymentsSearches,
     BlueprintsSearches,
     WorkflowsSearches,
+    NodesSearches,
     NodeInstancesSearches,
     SecretsSearches,
     CapabilitiesSearches,

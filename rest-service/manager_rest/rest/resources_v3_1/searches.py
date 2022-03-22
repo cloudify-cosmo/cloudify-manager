@@ -179,6 +179,22 @@ class WorkflowsSearches(ResourceSearches):
         return workflows_list_response(result)
 
 
+class NodesSearches(ResourceSearches):
+    @swagger.operation(**_swagger_searches_docs(models.Node, 'nodes'))
+    @authorize('node_list', allow_all_tenants=True)
+    @rest_decorators.marshal_with(models.Node)
+    @rest_decorators.paginate
+    @rest_decorators.sortable(models.Node)
+    @rest_decorators.all_tenants
+    @rest_decorators.search('id')
+    @rest_decorators.filter_id
+    def post(self, _include=None, pagination=None, sort=None,
+             all_tenants=None, search=None, filter_id=None, **kwargs):
+        """List Nodes using filter rules or DSL constraints"""
+        return super().post(models.Node, None, _include, {}, pagination,
+                            sort, all_tenants, search, None, **kwargs)
+
+
 class NodeInstancesSearches(ResourceSearches):
     @swagger.operation(**_swagger_searches_docs(models.NodeInstance,
                                                 'node_instances'))

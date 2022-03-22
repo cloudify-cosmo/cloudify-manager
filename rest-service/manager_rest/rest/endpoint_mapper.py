@@ -142,6 +142,7 @@ def setup_resources(api):
         'BlueprintsSearches': 'searches/blueprints',
         'Workflows': 'workflows',
         'WorkflowsSearches': 'searches/workflows',
+        'NodesSearches': 'searches/nodes',
         'NodeInstancesSearches': 'searches/node-instances',
         'SecretsSearches': 'searches/secrets',
         'CapabilitiesSearches': 'searches/capabilities',
