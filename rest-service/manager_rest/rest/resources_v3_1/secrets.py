@@ -7,18 +7,16 @@ from cloudify.cryptography_utils import (encrypt,
                                          generate_key_using_password)
 
 from manager_rest import manager_exceptions
-from manager_rest.utils import current_tenant
 from manager_rest.flask_utils import get_tenant_by_name
 from manager_rest.security.authorization import (authorize,
                                                  check_user_action_allowed)
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.resource_manager import (create_secret,
-                                           update_secret,
                                            add_to_dict_values,
                                            get_resource_manager,
                                            update_imported_secret)
 from manager_rest.security import SecuredResource
-from manager_rest.rest import rest_decorators, resources_v3, rest_utils
+from manager_rest.rest import rest_decorators, rest_utils
 
 
 class SecretsSetGlobal(SecuredResource):
@@ -48,60 +46,6 @@ class SecretsSetVisibility(SecuredResource):
         return get_resource_manager().set_visibility(models.Secret,
                                                      key,
                                                      visibility)
-
-
-class SecretsKey(resources_v3.SecretsKey):
-    @authorize('secret_create')
-    @rest_decorators.marshal_with(models.Secret)
-    def put(self, key, **kwargs):
-        """
-        Create a new secret or update an existing secret if the flag
-        update_if_exists is set to true
-        """
-        secret = self._get_secret_params(key)
-        if not secret.get('value'):
-            raise manager_exceptions.BadParametersError(
-                'Cannot create a secret with empty value: {0}'.format(key)
-            )
-        try:
-            return create_secret(key=key, secret=secret, tenant=current_tenant)
-        except manager_exceptions.ConflictError:
-            if secret['update_if_exists']:
-                existing_secret = get_storage_manager().get(models.Secret, key)
-                return update_secret(existing_secret, secret)
-            raise
-
-    @staticmethod
-    def _get_secret_params(key):
-        rest_utils.validate_inputs({'key': key})
-        request_dict = rest_utils.get_json_and_verify_params({
-            'value': {'type': text_type}
-        })
-        update_if_exists = rest_utils.verify_and_convert_bool(
-            'update_if_exists',
-            request_dict.get('update_if_exists', False),
-        )
-        is_hidden_value = rest_utils.verify_and_convert_bool(
-            'is_hidden_value',
-            request_dict.get('is_hidden_value', False),
-        )
-        visibility_param = rest_utils.get_visibility_parameter(
-            optional=True,
-            valid_values=VisibilityState.STATES,
-        )
-        visibility = get_resource_manager().get_resource_visibility(
-            models.Secret,
-            key,
-            visibility_param
-        )
-
-        secret_params = {
-            'value': request_dict['value'],
-            'update_if_exists': update_if_exists,
-            'visibility': visibility,
-            'is_hidden_value': is_hidden_value
-        }
-        return secret_params
 
 
 class SecretsExport(SecuredResource):

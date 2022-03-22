@@ -122,6 +122,11 @@ class NoTokenGeneratorError(ManagerException):
     status_code = 401
 
 
+class InvalidTokenFormatError(ManagerException):
+    error_code = 'invalid_token_format_error'
+    status_code = 400
+
+
 class UnauthorizedError(ManagerException):
     error_code = 'unauthorized_error'
     status_code = 401

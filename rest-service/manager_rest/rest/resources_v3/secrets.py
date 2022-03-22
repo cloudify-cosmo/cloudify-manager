@@ -15,6 +15,7 @@
 
 from flask import request
 from flask_security import current_user
+from cryptography.fernet import InvalidToken
 
 from cloudify._compat import text_type
 from cloudify.models_states import VisibilityState
@@ -23,14 +24,19 @@ from cloudify.cryptography_utils import encrypt, decrypt
 from ... import utils
 from .. import rest_decorators, rest_utils
 from ..responses_v3 import SecretsListResponse
+from manager_rest.utils import current_tenant
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import (authorize,
                                                  check_user_action_allowed)
 from manager_rest.storage import models, get_storage_manager
-from manager_rest.resource_manager import get_resource_manager
+from manager_rest.resource_manager import (create_secret,
+                                           update_secret,
+                                           get_resource_manager)
 from manager_rest.manager_exceptions import (ConflictError,
                                              ForbiddenError,
-                                             IllegalActionError)
+                                             IllegalActionError,
+                                             BadParametersError,
+                                             InvalidTokenFormatError)
 
 
 class SecretsKey(SecuredResource):
@@ -49,46 +55,32 @@ class SecretsKey(SecuredResource):
             secret_dict['value'] = ''
         else:
             # Returns the decrypted value
-            secret_dict['value'] = decrypt(secret.value)
+            try:
+                secret_dict['value'] = decrypt(secret.value)
+            except InvalidToken:
+                raise InvalidTokenFormatError(
+                    "The Secret value for key `{}` is malformed, "
+                    "please recreate the secret".format(key))
         return secret_dict
 
     @authorize('secret_create')
     @rest_decorators.marshal_with(models.Secret)
     def put(self, key, **kwargs):
         """
-        Create a new secret
+        Create a new secret or update an existing secret if the flag
+        update_if_exists is set to true
         """
-        request_dict = rest_utils.get_json_and_verify_params({
-            'value': {
-                'type': text_type,
-            },
-            'update_if_exists': {
-                'optional': True,
-            }
-        })
-        value = request_dict['value']
-        update_if_exists = rest_utils.verify_and_convert_bool(
-            'update_if_exists',
-            request_dict.get('update_if_exists', False),
-        )
-        rest_utils.validate_inputs({'key': key})
-
-        sm = get_storage_manager()
-        timestamp = utils.get_formatted_timestamp()
-        try:
-            new_secret = models.Secret(
-                id=key,
-                value=value,
-                created_at=timestamp,
-                updated_at=timestamp,
+        secret = self._get_secret_params(key)
+        if not secret.get('value'):
+            raise BadParametersError(
+                'Cannot create a secret with empty value: {0}'.format(key)
             )
-            return sm.put(new_secret)
+        try:
+            return create_secret(key=key, secret=secret, tenant=current_tenant)
         except ConflictError:
-            secret = sm.get(models.Secret, key)
-            if secret and update_if_exists:
-                secret.value = value
-                secret.updated_at = timestamp
-                return sm.update(secret, validate_global=True)
+            if secret['update_if_exists']:
+                existing_secret = get_storage_manager().get(models.Secret, key)
+                return update_secret(existing_secret, secret)
             raise
 
     @authorize('secret_update')
@@ -121,6 +113,38 @@ class SecretsKey(SecuredResource):
         self._validate_secret_modification_permitted(secret)
         storage_manager.delete(secret, validate_global=True)
         return None, 204
+
+    @staticmethod
+    def _get_secret_params(key):
+        rest_utils.validate_inputs({'key': key})
+        request_dict = rest_utils.get_json_and_verify_params({
+            'value': {'type': text_type}
+        })
+        update_if_exists = rest_utils.verify_and_convert_bool(
+            'update_if_exists',
+            request_dict.get('update_if_exists', False),
+        )
+        is_hidden_value = rest_utils.verify_and_convert_bool(
+            'is_hidden_value',
+            request_dict.get('is_hidden_value', False),
+        )
+        visibility_param = rest_utils.get_visibility_parameter(
+            optional=True,
+            valid_values=VisibilityState.STATES,
+        )
+        visibility = get_resource_manager().get_resource_visibility(
+            models.Secret,
+            key,
+            visibility_param
+        )
+
+        secret_params = {
+            'value': request_dict['value'],
+            'update_if_exists': update_if_exists,
+            'visibility': visibility,
+            'is_hidden_value': is_hidden_value
+        }
+        return secret_params
 
     def _validate_secret_modification_permitted(self, secret):
         if secret.is_hidden_value and \
