@@ -128,7 +128,8 @@ class AuditLogMultiTenantTest(AgentlessTestCase):
         assert len(all_audit_logs) != []
         assert len(user_0_audit_logs) < len(all_audit_logs)
         assert len(user_1_audit_logs) < len(all_audit_logs)
-        assert len(user_0_audit_logs) == len(user_1_audit_logs)
+        # add +1 because the second auditlog.list call also emits an audit log
+        assert len(user_0_audit_logs) + 1 == len(user_1_audit_logs)
         assert set((log['ref_table'], log['ref_id'])
                    for log in user_0_audit_logs)\
             .isdisjoint(set((log['ref_table'], log['ref_id'])
