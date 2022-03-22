@@ -206,10 +206,21 @@ class ResourceManager(object):
                 plugin_update.state = PluginsUpdateStates.FAILED
                 self.sm.update(plugin_update)
             if plugin_update.blueprint:
-                for dep_id in plugin_update.deployments_to_update:
-                    dep = self.sm.get(models.Deployment, dep_id)
-                    dep.blueprint = plugin_update.blueprint  # original bp
-                    self.sm.update(dep)
+                if plugin_update.deployments_to_update:
+                    for dep_id in plugin_update.deployments_to_update or []:
+                        dep = self.sm.get(models.Deployment, dep_id)
+                        dep.blueprint = plugin_update.blueprint  # original bp
+                        self.sm.update(dep)
+                if plugin_update.deployments_per_tenant:
+                    for tenant, dep_ids in plugin_update \
+                            .deployments_per_tenant.items():
+                        for dep_id in dep_ids:
+                            dep = self.sm.get(models.Deployment, None,
+                                              filters={'id': dep_id,
+                                                       'tenant.name': tenant},
+                                              all_tenants=True)
+                            dep.blueprint = plugin_update.blueprint  # orig. bp
+                            self.sm.update(dep)
             if plugin_update.temp_blueprint:
                 # Delete the temporary blueprint
                 if not plugin_update.temp_blueprint.deployments:
@@ -661,6 +672,8 @@ class ResourceManager(object):
             parameters={
                 'update_id': plugins_update.id,
                 'deployments_to_update': plugins_update.deployments_to_update,
+                'deployments_per_tenant':
+                    plugins_update.deployments_per_tenant,
                 'temp_blueprint_id': plugins_update.temp_blueprint_id,
                 'force': plugins_update.forced,
                 'auto_correct_types': auto_correct_types,
@@ -2427,7 +2440,7 @@ class ResourceManager(object):
         Those dependencies are:
             - children of this deployment: cannot delete a parent who has
               existing children - that would orphan them
-            - compoent creators: cannot delete a deployment if it is a
+            - component creators: cannot delete a deployment if it is a
               component of another deployment, UNLESS that another deployment
               is currently being uninstalled as well
 

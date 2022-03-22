@@ -5,7 +5,7 @@ Revises: 8e8314b1d848
 Create Date: 2022-03-03 13:41:24.954542
 
 """
-from manager_rest.storage.models_base import UTCDateTime
+from manager_rest.storage.models_base import JSONString, UTCDateTime
 
 from alembic import op
 import sqlalchemy as sa
@@ -19,6 +19,16 @@ depends_on = None
 
 
 def upgrade():
+    create_tokens()
+    upgrade_plugin_updates()
+
+
+def downgrade():
+    drop_tokens()
+    downgrade_plugin_updates()
+
+
+def create_tokens():
     op.create_table(
         'tokens',
         sa.Column('created_at', UTCDateTime(), nullable=False),
@@ -48,5 +58,22 @@ def upgrade():
     op.create_index(op.f('tokens_id_idx'), 'tokens', ['id'], unique=True)
 
 
-def downgrade():
+def drop_tokens():
     op.drop_table('tokens')
+
+
+def upgrade_plugin_updates():
+    op.add_column(
+        'plugins_updates',
+        sa.Column('deployments_per_tenant', JSONString())
+    )
+    op.add_column(
+        'plugins_updates',
+        sa.Column('all_tenants', sa.Boolean,
+                  nullable=False, server_default='f')
+    )
+
+
+def downgrade_plugin_updates():
+    op.drop_column('plugins_updates', 'all_tenants')
+    op.drop_column('plugins_updates', 'deployments_per_tenant')

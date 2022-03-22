@@ -91,7 +91,9 @@ class TestPluginsUpdate(unittest.TestCase):
     def _update_with_existing_blueprint_mock(deployment_id, *_, **__):
         return PropertyMock(execution_id=deployment_id)
 
-    def test_plugins_update_continues_when_one_deployment_update_fails(self):
+    @patch('cloudify_system_workflows.plugins.get_tenant_name')
+    def test_plugins_update_continues_when_one_deployment_update_fails(
+            self, get_tenant_name_fn):
         def get_execution_mock(execution_id):
             """
             :return: a mock of an execution object where its status is
@@ -105,7 +107,7 @@ class TestPluginsUpdate(unittest.TestCase):
 
         def _assert_update_func():
             update_func(MagicMock(),
-                        'my_update_id', None, dep_ids, False, False, True)
+                        'my_update_id', None, dep_ids, {}, False, False, True)
             should_call_these = [call(deployment_id=i,
                                       blueprint_id=None,
                                       skip_install=True,
@@ -117,6 +119,7 @@ class TestPluginsUpdate(unittest.TestCase):
                                  for i in dep_ids]
             self.deployment_update_mock.assert_has_calls(should_call_these)
 
+        get_tenant_name_fn.return_value = 'default_tenant'
         execution_status = {'curr_exec_status': ExecutionState.FAILED}
 
         dep_ids = list(range(5))
@@ -128,7 +131,9 @@ class TestPluginsUpdate(unittest.TestCase):
         execution_status['curr_exec_status'] = ExecutionState.CANCELLED
         _assert_update_func()
 
-    def test_doesnt_stop_updating(self):
+    @patch('cloudify_system_workflows.plugins.get_tenant_name')
+    def test_doesnt_stop_updating(self, get_tenant_name_fn):
+        get_tenant_name_fn.return_value = 'default_tenant'
         finalize_update_mock = MagicMock()
         dep_ids = list(range(5))
         self.mock_rest_client.plugins_update.finalize_plugins_update \
@@ -136,7 +141,7 @@ class TestPluginsUpdate(unittest.TestCase):
         self.mock_rest_client.executions.get \
             .return_value = PropertyMock(status=ExecutionState.TERMINATED)
         update_func(MagicMock(),
-                    '12345678', None, dep_ids, False, False, False)
+                    '12345678', None, dep_ids, {}, False, False, False)
         should_call_these = [call(deployment_id=i,
                                   blueprint_id=None,
                                   skip_install=True,

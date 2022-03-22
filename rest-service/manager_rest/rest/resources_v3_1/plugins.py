@@ -104,6 +104,7 @@ class PluginsUpdate(SecuredResource):
                 FORCE: {'type': bool, 'optional': True},
                 AUTO_CORRECT_TYPES: {'type': bool, 'optional': True},
                 REEVALUATE_ACTIVE_STATUSES: {'type': bool, 'optional': True},
+                'all_tenants': {'type': bool, 'optional': True},
                 'creator': {'type': text_type, 'optional': True},
                 'created_at': {'type': text_type, 'optional': True},
                 'update_id': {'type': text_type, 'optional': True},
@@ -151,6 +152,7 @@ class PluginsUpdate(SecuredResource):
                 forced=args.get('force', False),
                 update_id=args.get('update_id'),
                 created_at=created_at,
+                all_tenants=args.get('all_tennats', False),
             )
 
             if args.get('creator'):
@@ -175,7 +177,9 @@ class PluginsUpdate(SecuredResource):
             return update_manager.initiate_plugins_update(
                 blueprint_id=id, filters=filters,
                 auto_correct_types=auto_correct_types,
-                reevaluate_active_statuses=reevaluate_active_statuses)
+                reevaluate_active_statuses=reevaluate_active_statuses,
+                all_tenants=args.get('all_tenants', False),
+            )
         elif phase == PHASES.FINAL:
             return update_manager.finalize(plugins_update_id=id)
 
