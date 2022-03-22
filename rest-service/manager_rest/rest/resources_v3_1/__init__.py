@@ -27,13 +27,6 @@ from .manager_config import (                    # NOQA
     ManagerConfigId,
 )
 
-from .secrets import (                           # NOQA
-    SecretsExport,
-    SecretsImport,
-    SecretsSetGlobal,
-    SecretsSetVisibility,
-)
-
 from .plugins import (                           # NOQA
     Plugins,
     PluginsUpdate,

@@ -27,7 +27,11 @@ from .nodes import (            # NOQA
 
 from .secrets import (          # NOQA
     Secrets,
-    SecretsKey
+    SecretsKey,
+    SecretsExport,
+    SecretsImport,
+    SecretsSetGlobal,
+    SecretsSetVisibility,
 )
 
 from .tenants import (          # NOQA

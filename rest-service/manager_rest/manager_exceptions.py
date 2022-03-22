@@ -122,8 +122,8 @@ class NoTokenGeneratorError(ManagerException):
     status_code = 401
 
 
-class InvalidTokenFormatError(ManagerException):
-    error_code = 'invalid_token_format_error'
+class InvalidFernetTokenFormatError(ManagerException):
+    error_code = 'invalid_fernet_token_format_error'
     status_code = 400
 
 
