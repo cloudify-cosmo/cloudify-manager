@@ -16,7 +16,7 @@
 from cloudify.utils import wait_for
 from cloudify.decorators import workflow
 from cloudify.manager import get_rest_client
-from cloudify.manager.utils import get_tenant_name
+from cloudify.utils import get_tenant_name
 from cloudify.models_states import ExecutionState
 from cloudify_rest_client.exceptions import CloudifyClientError
 
