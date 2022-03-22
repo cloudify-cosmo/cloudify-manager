@@ -15,16 +15,16 @@ class GetValuesWithStorageManager:
 
     def get(self, data_type, value, **kwargs):
         if data_type == 'blueprint_id':
-            return [b.id for b in self.get_blueprints(value, **kwargs)]
+            return {b.id for b in self.get_blueprints(value, **kwargs)}
         elif data_type == 'deployment_id':
-            return [d.id for d in self.get_deployments(value, **kwargs)]
+            return {d.id for d in self.get_deployments(value, **kwargs)}
         elif data_type == 'secret_key':
-            return [s.key for s in self.get_secrets(value, **kwargs)]
+            return {s.key for s in self.get_secrets(value, **kwargs)}
         elif data_type == 'capability_value':
-            return [cap_details['value']
+            return {cap_details['value']
                     for dep_cap in self.get_capability_values(value, **kwargs)
                     for cap in dep_cap['capabilities']
-                    for cap_details in cap.values()]
+                    for cap_details in cap.values()}
         raise NotImplementedError("Getter function not defined for "
                                   f"data type '{data_type}'")
 
