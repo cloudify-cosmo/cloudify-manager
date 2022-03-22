@@ -2544,7 +2544,7 @@ class ResourceManager(object):
             'workflow_id': execution.workflow_id,
             'tenant_name': execution.tenant_name,
             'rest_token': execution.creator.get_auth_token(
-                description=f'Execution {execution.id} rest token.',
+                description=f'Hook rest token: {event_type} {execution.id}.',
             ),
             'tenant': {
                 'name': execution.tenant_name,
