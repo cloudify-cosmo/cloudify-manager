@@ -30,6 +30,14 @@ def update_managers_version(version):
 
 
 if __name__ == '__main__':
+    os.environ.setdefault(
+        'MANAGER_REST_CONFIG_PATH',
+        '/opt/manager/cloudify-rest.conf',
+    )
+    os.environ.setdefault(
+        'MANAGER_REST_SECURITY_CONFIG_PATH',
+        '/opt/manager/rest-security.conf',
+    )
     with setup_flask_app().app_context():
         config.instance.load_configuration()
     parser = argparse.ArgumentParser(
