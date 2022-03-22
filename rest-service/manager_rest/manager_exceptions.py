@@ -124,7 +124,7 @@ class NoTokenGeneratorError(ManagerException):
 
 class InvalidFernetTokenFormatError(ManagerException):
     error_code = 'invalid_fernet_token_format_error'
-    status_code = 400
+    status_code = 500
 
 
 class UnauthorizedError(ManagerException):
