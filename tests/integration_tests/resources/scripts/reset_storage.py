@@ -16,8 +16,9 @@
 import json
 import logging
 import os
+import secrets
 import shutil
-from uuid import uuid4
+from string import ascii_uppercase, ascii_lowercase, digits
 
 import argparse
 from flask_migrate import upgrade
@@ -110,9 +111,15 @@ def reset_storage(app, script_config):
     _add_defaults(app, amqp_manager, script_config)
 
 
+def _random_string(length=10):
+    """A random string that is a bit more user friendly than uuids"""
+    charset = ascii_uppercase + ascii_lowercase + digits
+    return ''.join(secrets.choice(charset) for i in range(length))
+
+
 def regenerate_auth_token():
     sm = get_storage_manager()
-    secret = str(uuid4())
+    secret = _random_string()
     token = models.Token(
         id='abc123def4',
         description='Inte-tests mgmtworker',
