@@ -126,13 +126,15 @@ class PluginsUpdateTest(PluginsUpdatesBaseTest):
         self.wait_for_deployment_creation(self.client, 'd2')
         plugins_update = self.client.plugins_update.update_plugins(
             'hello_world')
-        self.assertListEqual(['d1', 'd2'],
-                             plugins_update.deployments_to_update)
+        assert set(plugins_update.deployments_per_tenant[
+                       plugins_update.tenant_name]
+                   ) == {'d1', 'd2'}
         execution = self.client.executions.get(plugins_update.execution_id)
         self.assertDictEqual(
             execution.parameters,
             {'update_id': plugins_update.id,
-             'deployments_to_update': ['d1', 'd2'],
+             'deployments_to_update': None,
+             'deployments_per_tenant': {'default_tenant': ['d1', 'd2']},
              'temp_blueprint_id': plugins_update.temp_blueprint_id,
              'force': False,
              'auto_correct_types': False,
@@ -144,7 +146,8 @@ class PluginsUpdateTest(PluginsUpdatesBaseTest):
         self.wait_for_deployment_creation(self.client, 'dep')
         plugins_update = self.client.plugins_update.update_plugins(
             'hello_world', auto_correct_types=True)
-        self.assertEqual(['dep'], plugins_update.deployments_to_update)
+        assert plugins_update.deployments_per_tenant[
+                       plugins_update.tenant_name] == ['dep']
         execution = self.client.executions.get(plugins_update.execution_id)
         self.assertIn('auto_correct_types', execution.parameters)
         self.assertEqual(True, execution.parameters.get('auto_correct_types'))
@@ -299,7 +302,10 @@ class PluginsUpdateTest(PluginsUpdatesBaseTest):
             filters={'blueprint_id': plugins_update['temp_blueprint_id']},
         ).items)
         updated_deployment = self._sm.get(
-            models.Deployment, plugins_update.deployments_to_update[0])
+            models.Deployment,
+            plugins_update.deployments_per_tenant[
+                plugins_update.tenant_name][0]
+        )
         self.assertEqual('bp', updated_deployment.blueprint.id)
 
     def test_deployments_partially_updated(self):
@@ -330,6 +336,9 @@ class PluginsUpdateTest(PluginsUpdatesBaseTest):
                                       plugins_update.temp_blueprint.id)
         if deployment_ids is None:
             deployment_ids = plugins_update.deployments_to_update
+        if deployment_ids is None:
+            deployment_ids = plugins_update.deployments_per_tenant[
+                plugins_update.tenant_name]
         for deployment_id in deployment_ids:
             deployment = self._sm.get(models.Deployment, deployment_id)
             deployment.blueprint = temp_blueprint
