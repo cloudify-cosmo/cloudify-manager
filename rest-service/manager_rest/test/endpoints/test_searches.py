@@ -333,3 +333,76 @@ class SearchesTestCase(base_test.BaseServerTestCase):
             _search='secret3'
         )
         assert [s.key for s in search] == []
+
+    def test_nodes_search_by_id(self):
+        # Deployments have two node templates: `vm` and `http_web_server`
+        self.put_deployment(blueprint_id='b1', deployment_id='d1')
+        self.put_deployment(blueprint_id='b2', deployment_id='d2')
+
+        search_all = self.client.nodes.list()
+        search_node_vm = self.client.nodes.list(_search='vm')
+
+        assert len(search_all) == 4
+        assert {n.id for n in search_node_vm} == {'vm'}
+
+    def test_nodes_search_filter_by_id(self):
+        # Deployments have two node templates: `vm` and `http_web_server`
+        self.put_deployment(blueprint_id='b1', deployment_id='d1')
+        self.put_deployment(blueprint_id='b2', deployment_id='d2')
+
+        search_node_vm = self.client.nodes.list(filter_rules=[
+            FilterRule('id', ['vm'], 'any_of', 'attribute'),
+        ])
+        search_both_nodes = self.client.nodes.list(filter_rules=[
+            FilterRule('id', ['vm', 'http_web_server'], 'any_of', 'attribute'),
+        ])
+
+        assert len([s.id for s in search_node_vm]) == 2
+        assert {s.id for s in search_both_nodes} == {'vm', 'http_web_server'}
+
+    def test_nodes_filter_by_name_pattern_constraints(self):
+        # Deployments have two node templates: `vm` and `http_web_server`
+        self.put_deployment(blueprint_id='b1', deployment_id='d1')
+        self.put_deployment(blueprint_id='b2', deployment_id='d2')
+
+        search = self.client.nodes.list(
+            constraints={'name_pattern': {'contains': 'web'}}
+        )
+        assert {s.id for s in search} == {'http_web_server'}
+
+        search = self.client.nodes.list(
+            constraints={'name_pattern': {'ends_with': 'server'}}
+        )
+        assert {s.id for s in search} == {'http_web_server'}
+
+        search = self.client.nodes.list(
+            constraints={'name_pattern': {'starts_with': 'http'}}
+        )
+        assert {s.id for s in search} == {'http_web_server'}
+
+        search = self.client.nodes.list(
+            constraints={'name_pattern': {'equals_to': 'vm'}}
+        )
+        assert {s.id for s in search} == {'vm'}
+
+        search = self.client.nodes.list(
+            constraints={'name_pattern': {'equals_to': 'http_web_server'}},
+            _search='vm'
+        )
+        assert [s.id for s in search] == []
+
+    def test_nodes_filter_by_valid_values_constraints(self):
+        # Deployments have two node templates: `vm` and `http_web_server`
+        self.put_deployment(blueprint_id='b1', deployment_id='d1')
+        self.put_deployment(blueprint_id='b2', deployment_id='d2')
+
+        search = self.client.nodes.list(
+            constraints={'valid_values': ['vm', 'non-existent-node']}
+        )
+        assert {s.id for s in search} == {'vm'}
+
+        search = self.client.nodes.list(
+            constraints={'valid_values': ['foo', 'bar']},
+            _search='vm'
+        )
+        assert [s.id for s in search] == []

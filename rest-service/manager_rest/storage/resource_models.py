@@ -1911,6 +1911,10 @@ class Node(SQLResourceBase):
     blueprint_id = association_proxy('deployment', 'blueprint_id')
     deployment_display_name = association_proxy('deployment', 'display_name')
 
+    @classproperty
+    def allowed_filter_attrs(cls):
+        return ['id']
+
     def to_dict(self, suppress_error=False):
         # some usages of the dict want 'name' instead of 'id' (notably,
         # function evaluation in the dsl-parser)
