@@ -69,7 +69,7 @@ def get_token_status(token):
     user = None
     error = None
 
-    token_parts = token.split('-')
+    token_parts = token.split('-', 2)
     if len(token_parts) == 3:
         _, tok_id, tok_secret = token_parts
 
