@@ -272,6 +272,13 @@ def constraints_for_model(resource_model, dsl_constraints):
         elif resource_model == Node:
             dsl_constraints['id_specs'] = \
                 dsl_constraints.pop('name_pattern')
+    if 'valid_values' in dsl_constraints:
+        if resource_model == Secret:
+            dsl_constraints['valid_key_values'] = \
+                dsl_constraints.pop('valid_values')
+        elif resource_model == Node:
+            dsl_constraints['valid_id_values'] = \
+                dsl_constraints.pop('valid_values')
     return dsl_constraints
 
 
@@ -295,11 +302,18 @@ def parse_constraints(dsl_constraints):
              "operator": "any_of",
              "type": "attribute"}
         )
-    valid_values = dsl_constraints.get('valid_values')
-    if valid_values:
+    valid_id_values = dsl_constraints.get('valid_id_values')
+    if valid_id_values:
+        filter_rules.append(
+            {"key": "id",
+             "values": valid_id_values,
+             "operator": "any_of",
+             "type": "attribute"})
+    valid_key_values = dsl_constraints.get('valid_key_values')
+    if valid_key_values:
         filter_rules.append(
             {"key": "key",
-             "values": valid_values,
+             "values": valid_key_values,
              "operator": "any_of",
              "type": "attribute"})
     display_name_specs = dsl_constraints.get('display_name_specs')
