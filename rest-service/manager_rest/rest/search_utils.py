@@ -3,7 +3,7 @@ from collections import defaultdict
 from manager_rest.manager_exceptions import BadParametersError
 from manager_rest.storage.models import (Blueprint, BlueprintsFilter,
                                          Deployment, DeploymentsFilter,
-                                         Secret)
+                                         Secret, Node)
 from manager_rest.rest.filters_utils import (get_filter_rules_from_filter_id,
                                              create_filter_rules_list,
                                              FilterRule)
@@ -25,6 +25,8 @@ class GetValuesWithStorageManager:
                     for dep_cap in self.get_capability_values(value, **kwargs)
                     for cap in dep_cap['capabilities']
                     for cap_details in cap.values()}
+        elif data_type == 'node_template':
+            return {n.id for n in self.get_nodes(value, **kwargs)}
         raise NotImplementedError("Getter function not defined for "
                                   f"data type '{data_type}'")
 
@@ -162,6 +164,34 @@ class GetValuesWithStorageManager:
         return [{'deployment_id': k, 'capabilities': v}
                 for k, v in dep_capabilities.items()]
 
+    def get_nodes(self, node_id,
+                  id_specs=None,
+                  valid_values=None):
+        filter_rules = []
+        if id_specs:
+            for op, spec in id_specs.items():
+                filter_rules.append(
+                    {"key": "id",
+                     "values": [str(spec)],
+                     "operator": "any_of" if op == "equals_to" else op,
+                     "type": "attribute"})
+        if valid_values:
+            filter_rules.append(
+                {"key": "id",
+                 "values": [str(v) for v in valid_values],
+                 "operator": "any_of",
+                 "type": "attribute"})
+
+        filter_rules = get_filter_rules(Node, None, None, filter_rules, None)
+
+        return self.sm.list(
+            Node,
+            include=['id'],
+            filters={'id': str(node_id)},
+            get_all_results=True,
+            filter_rules=filter_rules
+        )
+
 
 def capability_matches(capability_key, capability, search_value,
                        valid_values=None,
@@ -238,6 +268,9 @@ def constraints_for_model(resource_model, dsl_constraints):
                 dsl_constraints.pop('name_pattern')
         elif resource_model == Secret:
             dsl_constraints['key_specs'] = \
+                dsl_constraints.pop('name_pattern')
+        elif resource_model == Node:
+            dsl_constraints['id_specs'] = \
                 dsl_constraints.pop('name_pattern')
     return dsl_constraints
 
