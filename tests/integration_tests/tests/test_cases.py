@@ -120,9 +120,10 @@ class BaseTestCase(unittest.TestCase):
             '{0} start {1}'.format(service_command, service_name)
         )
 
-    def get_runtime_property(self, deployment_id, property_name):
+    def get_runtime_property(self, deployment_id, property_name, client=None):
+        client = client or self.client
         property_list = []
-        for inst in self.client.node_instances.list(
+        for inst in client.node_instances.list(
                 deployment_id=deployment_id):
             inst_properties = inst['runtime_properties'].get(property_name)
             if inst_properties:
