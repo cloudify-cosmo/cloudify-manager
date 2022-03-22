@@ -52,13 +52,18 @@ def start(ctx, **_):
 
 @operation
 def store_envdir(ctx, **_):
-    envdir = ctx.instance.runtime_properties['cloudify_agent']['envdir']
+    try:
+        envdir = ctx.instance.runtime_properties['cloudify_agent']['envdir']
+    except KeyError:
+        envdir = None
     ctx.instance.runtime_properties['envdir'] = envdir
 
 
 @operation
 def delete(**_):
     envdir = ctx.instance.runtime_properties['envdir']
+    if not envdir:
+        return
     daemon_delete_cmd = [
         os.path.join(envdir, 'bin', 'cfy-agent'),
         'daemons', 'delete', '--name', ctx.instance.id
