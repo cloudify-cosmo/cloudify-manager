@@ -18,7 +18,6 @@ import logging
 import os
 import secrets
 import shutil
-from uuid import uuid4
 from string import ascii_uppercase, ascii_lowercase, digits
 
 import argparse
