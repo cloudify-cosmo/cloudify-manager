@@ -40,9 +40,16 @@ class LicensePremium(SecuredLicenseResource):
     @authorize('license_list')
     def get(self, license_handler, pagination=None):
         """
-        List registered Cloudfiy licenses.
+        List the registered Cloudify license.
         """
         return license_handler.list_license()
+
+    @authorize('license_remove')
+    def delete(self, license_handler, pagination=None):
+        """
+        Remove the current Cloudify license.
+        """
+        return license_handler.remove_license()
 
 
 class LicenseCommunity(SecuredResource):
@@ -70,6 +77,10 @@ class LicenseCommunity(SecuredResource):
 
     @premium_only
     def get(self):
+        raise NotImplementedError('Premium implementation only')
+
+    @premium_only
+    def delete(self):
         raise NotImplementedError('Premium implementation only')
 
 
