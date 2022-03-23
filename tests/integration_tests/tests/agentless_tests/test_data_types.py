@@ -413,3 +413,91 @@ class TestDataBasedTypeParams(DataBasedTypesTest):
             'd1', 'test_parameters',
             parameters=self.get_params(b_capability_value='capability3_value'),
         )
+
+
+class TestNodeTemplateType(DataBasedTypesTest):
+    def setUp(self):
+        self.upload_blueprint(
+            blueprint_id='bp-basic',
+            blueprint_file_name='blueprint_with_two_nodes.yaml',
+        )
+        self.client.deployments.create('bp-basic', 'dep-basic')
+        self.upload_blueprint(
+            blueprint_id='bp',
+            blueprint_file_name='blueprint_with_node_template_data_type.yaml'
+        )
+        self.setup_valid_secrets()
+
+    @staticmethod
+    def get_inputs(**kwargs):
+        inputs = {'a': 'node1',
+                  'b': 'node2',
+                  'c': 'node2'}
+        inputs.update(kwargs)
+        return inputs
+
+    @staticmethod
+    def get_params(**kwargs):
+        params = {'a': 'node1',
+                  'b': 'node2',
+                  'c': 'node2'}
+        params.update(kwargs)
+        return params
+
+    def test_successful(self):
+        self.client.deployments.create(
+            'bp', 'dep', inputs=self.get_inputs())
+        install_execution = self.client.executions.create('dep', 'install')
+        self.wait_for_execution_to_end(install_execution)
+        test_execution = self.client.executions.create(
+            'dep', 'test_parameters', parameters=self.get_params())
+        self.wait_for_execution_to_end(test_execution)
+
+    def test_input_errors(self):
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            r'^400:.+ConstraintException:.+a.+name_pattern',
+            self.client.deployments.create,
+            'bp', 'dep',
+            inputs=self.get_inputs(a='node2'),
+        )
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            r'^400:.+ConstraintException:.+b.+valid_values',
+            self.client.deployments.create,
+            'bp', 'dep',
+            inputs=self.get_inputs(b='node1'),
+        )
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            r'^400:.+ConstraintException:.+input.+c.+does not match',
+            self.client.deployments.create,
+            'bp', 'dep',
+            inputs=self.get_inputs(c='node-that-does-not-exist'),
+        )
+
+    def test_param_errors(self):
+        self.client.deployments.create(
+            'bp', 'dep', inputs=self.get_inputs())
+
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            r'^400:.+Parameter.+constraints:.+a.+name_pattern',
+            self.client.executions.create,
+            'dep', 'test_parameters',
+            parameters=self.get_params(a='node2'),
+        )
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            r'^400:.+Parameter.+constraints:.+b.+valid_values',
+            self.client.executions.create,
+            'dep', 'test_parameters',
+            parameters=self.get_params(b='node1'),
+        )
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            r'^400:.+Parameter.+constraints:.+c.+does not match',
+            self.client.executions.create,
+            'dep', 'test_parameters',
+            parameters=self.get_params(c='node-that-does-not-exist'),
+        )
