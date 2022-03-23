@@ -9,7 +9,7 @@ pytestmark = pytest.mark.group_deployments
 
 
 @pytest.mark.usefixtures('cloudmock_plugin')
-class TestMiscellaneousIdInputs(AgentlessTestCase):
+class TestDataBasedTypeInputs(AgentlessTestCase):
     def setUp(self):
         self.client.tenants.create('other_tenant')
         self.client.tenants.add_user('admin', 'other_tenant', 'manager')
@@ -27,7 +27,7 @@ class TestMiscellaneousIdInputs(AgentlessTestCase):
         self.client.blueprints.update('bp-basic',
                                       {'labels': [{'alpha': 'bravo'}]})
         self.client.blueprints.upload(
-            utils.get_resource('dsl/blueprint_with_misc_id_inputs.yaml'),
+            utils.get_resource('dsl/blueprint_with_data_based_inputs.yaml'),
             'bp')
         utils.wait_for_blueprint_upload('bp', self.client)
         self.client.deployments_filters.create(
@@ -286,7 +286,7 @@ class TestMiscellaneousIdInputs(AgentlessTestCase):
 
 
 @pytest.mark.usefixtures('cloudmock_plugin')
-class TestMiscellaneousIdParams(AgentlessTestCase):
+class TestDataBasedTypeParams(AgentlessTestCase):
     def setUp(self):
         self.client.tenants.create('other_tenant')
         self.client.tenants.add_user('admin', 'other_tenant', 'manager')
@@ -305,7 +305,7 @@ class TestMiscellaneousIdParams(AgentlessTestCase):
         self.client.blueprints.set_visibility('bp-basic', 'global')
         self.client.blueprints.upload(
             utils.get_resource(
-                'dsl/blueprint_with_misc_id_parameters.yaml'),
+                'dsl/blueprint_with_data_based_parameters.yaml'),
             'bp')
         utils.wait_for_blueprint_upload('bp', self.client)
         self.client.deployments_filters.create(
