@@ -334,10 +334,41 @@ class SearchesTestCase(base_test.BaseServerTestCase):
         )
         assert [s.key for s in search] == []
 
+    def _create_nodes(self, blueprint_id='bp', deployment_id='dep',
+                      node_ids=None):
+        node_ids = node_ids or ['node_1', 'node_2']
+        bp = models.Blueprint(
+            id=blueprint_id,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        dep = models.Deployment(
+            id=deployment_id,
+            blueprint=bp,
+            scaling_groups={},
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        nodes = {
+            node_id: models.Node(
+                id=node_id,
+                type='testtype',
+                number_of_instances=0,
+                deploy_number_of_instances=0,
+                max_number_of_instances=0,
+                min_number_of_instances=0,
+                planned_number_of_instances=0,
+                deployment=dep,
+                creator=self.user,
+                tenant=self.tenant
+            )
+            for node_id in node_ids
+        }
+        return nodes
+
     def test_nodes_search_by_id(self):
-        # Deployments have two node templates: `vm` and `http_web_server`
-        self.put_deployment(blueprint_id='b1', deployment_id='d1')
-        self.put_deployment(blueprint_id='b2', deployment_id='d2')
+        self._create_nodes('b1', 'd1', ['vm', 'http_web_server'])
+        self._create_nodes('b2', 'd2', ['vm', 'http_web_server'])
 
         search_all = self.client.nodes.list()
         search_node_vm = self.client.nodes.list(_search='vm')
@@ -346,9 +377,8 @@ class SearchesTestCase(base_test.BaseServerTestCase):
         assert {n.id for n in search_node_vm} == {'vm'}
 
     def test_nodes_search_filter_by_id(self):
-        # Deployments have two node templates: `vm` and `http_web_server`
-        self.put_deployment(blueprint_id='b1', deployment_id='d1')
-        self.put_deployment(blueprint_id='b2', deployment_id='d2')
+        self._create_nodes('b1', 'd1', ['vm', 'http_web_server'])
+        self._create_nodes('b2', 'd2', ['vm', 'http_web_server'])
 
         search_node_vm = self.client.nodes.list(filter_rules=[
             FilterRule('id', ['vm'], 'any_of', 'attribute'),
@@ -361,9 +391,8 @@ class SearchesTestCase(base_test.BaseServerTestCase):
         assert {s.id for s in search_both_nodes} == {'vm', 'http_web_server'}
 
     def test_nodes_filter_by_name_pattern_constraints(self):
-        # Deployments have two node templates: `vm` and `http_web_server`
-        self.put_deployment(blueprint_id='b1', deployment_id='d1')
-        self.put_deployment(blueprint_id='b2', deployment_id='d2')
+        self._create_nodes('b1', 'd1', ['vm', 'http_web_server'])
+        self._create_nodes('b2', 'd2', ['vm', 'http_web_server'])
 
         search = self.client.nodes.list(
             constraints={'name_pattern': {'contains': 'web'}}
@@ -392,9 +421,8 @@ class SearchesTestCase(base_test.BaseServerTestCase):
         assert [s.id for s in search] == []
 
     def test_nodes_filter_by_valid_values_constraints(self):
-        # Deployments have two node templates: `vm` and `http_web_server`
-        self.put_deployment(blueprint_id='b1', deployment_id='d1')
-        self.put_deployment(blueprint_id='b2', deployment_id='d2')
+        self._create_nodes('b1', 'd1', ['vm', 'http_web_server'])
+        self._create_nodes('b2', 'd2', ['vm', 'http_web_server'])
 
         search = self.client.nodes.list(
             constraints={'valid_values': ['vm', 'non-existent-node']}
