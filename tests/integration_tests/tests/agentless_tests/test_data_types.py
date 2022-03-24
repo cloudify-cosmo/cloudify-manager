@@ -8,7 +8,7 @@ from integration_tests.tests import utils
 pytestmark = pytest.mark.group_deployments
 
 
-class DataBasedTypesTest(AgentlessTestCase):
+class DataBasedTypes:
     def upload_blueprint(self,
                          client=None,
                          blueprint_id='bp',
@@ -61,7 +61,7 @@ class DataBasedTypesTest(AgentlessTestCase):
 
 
 @pytest.mark.usefixtures('cloudmock_plugin')
-class TestDataBasedTypeInputs(DataBasedTypesTest):
+class TestDataBasedTypeInputs(AgentlessTestCase, DataBasedTypes):
     def setUp(self):
         self.client.tenants.create('other_tenant')
         self.client.tenants.add_user('admin', 'other_tenant', 'manager')
@@ -234,7 +234,7 @@ class TestDataBasedTypeInputs(DataBasedTypesTest):
 
 
 @pytest.mark.usefixtures('cloudmock_plugin')
-class TestDataBasedTypeParams(DataBasedTypesTest):
+class TestDataBasedTypeParams(AgentlessTestCase, DataBasedTypes):
     def setUp(self):
         self.client.tenants.create('other_tenant')
         self.client.tenants.add_user('admin', 'other_tenant', 'manager')
@@ -415,7 +415,7 @@ class TestDataBasedTypeParams(DataBasedTypesTest):
         )
 
 
-class TestNodeTemplateType(DataBasedTypesTest):
+class TestNodeTemplateType(AgentlessTestCase, DataBasedTypes):
     def setUp(self):
         self.upload_blueprint(
             blueprint_id='bp-basic',
