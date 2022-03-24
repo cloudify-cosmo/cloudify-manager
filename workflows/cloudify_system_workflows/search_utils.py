@@ -57,7 +57,15 @@ class GetValuesWithRest:
             constraints=kwargs)
 
     def get_nodes(self, node_id, **kwargs):
-        return self.client.nodes.list(_search=node_id,
+        try:
+            deployment_id = kwargs.pop('deployment_id')
+        except KeyError:
+            raise NonRecoverableError(
+                "You should provide 'deployment_id' when getting node "
+                "templates.  Make sure you have `deployment_id` constraint "
+                "declared for your 'node_template' parameter.")
+        return self.client.nodes.list(node_id=node_id,
+                                      deployment_id=deployment_id,
                                       _include=['id'],
                                       _get_all_results=True,
                                       constraints=kwargs)

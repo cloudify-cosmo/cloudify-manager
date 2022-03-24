@@ -165,8 +165,14 @@ class GetValuesWithStorageManager:
                 for k, v in dep_capabilities.items()]
 
     def get_nodes(self, node_id,
+                  deployment_id=None,
                   id_specs=None,
                   valid_values=None):
+        if not deployment_id:
+            raise BadParametersError(
+                "You should provide 'deployment_id' when getting node "
+                "templates.  Make sure you have `deployment_id` constraint "
+                "declared for your 'node_template' parameter.")
         filter_rules = []
         if id_specs:
             for op, spec in id_specs.items():
