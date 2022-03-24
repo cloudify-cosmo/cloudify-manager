@@ -45,7 +45,7 @@ def _checkin_resource_consumer(client, deployment_id):
     type_labels = _get_label_values(deployment.labels, 'csys-obj-type')
     if deployment.installation_status == 'inactive':
         if 'on-demand-resource' in type_labels:
-            execute_workflow_base(client, 'install', deployment_id)
+            execute_workflow_base(client, 'install', deployment_id, queue=True)
         else:
             raise NonRecoverableError(
                 f'SharedResource\'s deployment "{deployment_id}" is in an '

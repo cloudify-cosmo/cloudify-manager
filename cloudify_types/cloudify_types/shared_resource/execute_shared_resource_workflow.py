@@ -75,7 +75,7 @@ def execute_shared_resource_workflow(workflow_id,
 
 def execute_workflow_base(client, workflow_id, deployment_id,
                           parameters=None, redirect_logs=True,
-                          instance_ctx=None):
+                          instance_ctx=None, queue=False):
     ctx.logger.info('Starting execution of "%s" workflow for "%s" '
                     'SharedResource deployment',
                     workflow_id, deployment_id)
@@ -83,7 +83,8 @@ def execute_workflow_base(client, workflow_id, deployment_id,
         deployment_id=deployment_id,
         workflow_id=workflow_id,
         parameters=parameters,
-        allow_custom_parameters=True)
+        allow_custom_parameters=True,
+        queue=queue)
     ctx.logger.debug('Execution for "%s" on "%s" deployment response is: %s',
                      workflow_id, deployment_id, execution)
 
