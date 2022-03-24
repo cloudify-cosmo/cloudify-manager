@@ -2356,13 +2356,20 @@ class ResourceManager(object):
                                          deployment_id,
                                          visibility)
             for node in nodes:
-                self.set_visibility(models.Node, node.id, visibility)
+                self.set_visibility(models.Node, node.id, visibility,
+                                    deployment_id=deployment_id)
             for ni in node_instances:
                 self.set_visibility(models.NodeInstance, ni.id, visibility)
         return result
 
-    def set_visibility(self, model_class, resource_id, visibility):
-        resource = self.sm.get(model_class, resource_id)
+    def set_visibility(self, model_class, resource_id, visibility,
+                       deployment_id=None):
+        if model_class == models.Node:
+            resource = self.sm.get(
+                model_class, None,
+                filters={'id': resource_id, 'deployment_id': deployment_id})
+        else:
+            resource = self.sm.get(model_class, resource_id)
         self.validate_visibility_value(model_class, resource, visibility)
         # Set the visibility
         resource.visibility = visibility
