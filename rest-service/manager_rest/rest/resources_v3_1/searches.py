@@ -191,7 +191,9 @@ class NodesSearches(ResourceSearches):
     def post(self, _include=None, pagination=None, sort=None,
              all_tenants=None, search=None, filter_id=None, **kwargs):
         """List Nodes using filter rules or DSL constraints"""
-        return super().post(models.Node, None, _include, {}, pagination,
+        deployment_id = retrieve_deployment_id()
+        return super().post(models.Node, None, _include,
+                            {'deployment_id': deployment_id}, pagination,
                             sort, all_tenants, search, None, **kwargs)
 
 
@@ -280,16 +282,11 @@ class CapabilitiesSearches(ResourceSearches):
     def post(self, search=None, _include=None,
              pagination=None, all_tenants=None, **kwargs):
         """List capabilities using DSL constraints"""
+        deployment_id = retrieve_deployment_id()
         args = rest_utils.get_args_and_verify_arguments([
-            Argument('_deployment_id', required=True),
             Argument('_search', required=False),
         ])
-        deployment_id = args._deployment_id
         search = args._search
-        if not deployment_id:
-            raise manager_exceptions.BadParametersError(
-                "You should provide a valid '_deployment_id' when searching "
-                " for capabilities.")
 
         request_schema = {'constraints': {'optional': False, 'type': dict}}
         request_dict = rest_utils.get_json_and_verify_params(request_schema)
@@ -326,6 +323,26 @@ class CapabilitiesSearches(ResourceSearches):
                    for k, v in dep_capabilities.items()],
             metadata=metadata
         )
+
+
+def retrieve_deployment_id():
+    args = rest_utils.get_args_and_verify_arguments([
+        Argument('deployment_id', required=False),
+    ])
+    request_dict = rest_utils.get_json_and_verify_params(
+        {'constraints': {'optional': True, 'type': dict}})
+    constraints = request_dict.get('constraints', {})
+    if args.get('deployment_id') and 'deployment_id' in constraints:
+        raise manager_exceptions.BadParametersError(
+            "You should provide either a valid '_deployment_id' parameter "
+            "or have a 'deployment_id' key in the constraints, not both.")
+    deployment_id = args.get('deployment_id') \
+        or constraints.get('deployment_id')
+    if not deployment_id:
+        raise manager_exceptions.BadParametersError(
+            "Please provide a valid '_deployment_id' parameter or have "
+            "a 'deployment_id' key in the constraints.")
+    return deployment_id
 
 
 def capability_matches(capability_key, capability, constraints, search_value):

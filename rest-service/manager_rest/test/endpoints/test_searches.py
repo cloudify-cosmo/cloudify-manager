@@ -1,4 +1,5 @@
 from cloudify.models_states import DeploymentState
+from cloudify_rest_client.exceptions import CloudifyClientError
 
 from manager_rest.test import base_test
 from manager_rest.storage import models
@@ -380,14 +381,17 @@ class SearchesTestCase(base_test.BaseServerTestCase):
         self._create_nodes('b1', 'd1', ['vm', 'http_web_server'])
         self._create_nodes('b2', 'd2', ['vm', 'http_web_server'])
 
-        search_node_vm = self.client.nodes.list(filter_rules=[
-            FilterRule('id', ['vm'], 'any_of', 'attribute'),
-        ])
-        search_both_nodes = self.client.nodes.list(filter_rules=[
-            FilterRule('id', ['vm', 'http_web_server'], 'any_of', 'attribute'),
-        ])
+        search_node_vm = self.client.nodes.list(
+            deployment_id='d2',
+            filter_rules=[FilterRule('id', ['vm'], 'any_of', 'attribute')]
+        )
+        search_both_nodes = self.client.nodes.list(
+            deployment_id='d1',
+            filter_rules=[FilterRule('id', ['vm', 'http_web_server'],
+                                     'any_of', 'attribute')]
+        )
 
-        assert len([s.id for s in search_node_vm]) == 2
+        assert len([s.id for s in search_node_vm]) == 1
         assert {s.id for s in search_both_nodes} == {'vm', 'http_web_server'}
 
     def test_nodes_filter_by_name_pattern_constraints(self):
@@ -395,42 +399,94 @@ class SearchesTestCase(base_test.BaseServerTestCase):
         self._create_nodes('b2', 'd2', ['vm', 'http_web_server'])
 
         search = self.client.nodes.list(
-            constraints={'name_pattern': {'contains': 'web'}}
+            constraints={
+                'deployment_id': 'd1',
+                'name_pattern': {'contains': 'web'}
+            }
         )
         assert {s.id for s in search} == {'http_web_server'}
 
         search = self.client.nodes.list(
-            constraints={'name_pattern': {'ends_with': 'server'}}
+            constraints={
+                'deployment_id': 'd1',
+                'name_pattern': {'ends_with': 'server'}
+            }
         )
         assert {s.id for s in search} == {'http_web_server'}
 
         search = self.client.nodes.list(
-            constraints={'name_pattern': {'starts_with': 'http'}}
+            constraints={
+                'deployment_id': 'd1',
+                'name_pattern': {'starts_with': 'http'}
+            }
         )
         assert {s.id for s in search} == {'http_web_server'}
 
         search = self.client.nodes.list(
-            constraints={'name_pattern': {'equals_to': 'vm'}}
+            constraints={
+                'deployment_id': 'd1',
+                'name_pattern': {'equals_to': 'vm'}
+            }
         )
         assert {s.id for s in search} == {'vm'}
 
         search = self.client.nodes.list(
-            constraints={'name_pattern': {'equals_to': 'http_web_server'}},
+            constraints={
+                'deployment_id': 'd2',
+                'name_pattern': {'equals_to': 'vm'}
+            }
+        )
+        assert {s.id for s in search} == {'vm'}
+
+        search = self.client.nodes.list(
+            constraints={
+                'deployment_id': 'd1',
+                'name_pattern': {'equals_to': 'http_web_server'}
+            },
             _search='vm'
         )
         assert [s.id for s in search] == []
 
+        with self.assertRaises(CloudifyClientError):
+            self.client.nodes.list(
+                constraints={
+                    'name_pattern': {'equals_to': 'http_web_server'}
+                }
+            )
+
+        with self.assertRaises(CloudifyClientError):
+            self.client.nodes.list(
+                deployment_id='d1',
+                constraints={
+                    'deployment_id': 'd1',
+                }
+            )
+
     def test_nodes_filter_by_valid_values_constraints(self):
-        self._create_nodes('b1', 'd1', ['vm', 'http_web_server'])
-        self._create_nodes('b2', 'd2', ['vm', 'http_web_server'])
+        self._create_nodes('b1', 'd1', ['vm1', 'http_web_server'])
+        self._create_nodes('b2', 'd2', ['vm2', 'http_web_server'])
 
         search = self.client.nodes.list(
-            constraints={'valid_values': ['vm', 'non-existent-node']}
+            constraints={
+                'deployment_id': 'd1',
+                'valid_values': ['vm1', 'non-existent-node']
+            }
         )
-        assert {s.id for s in search} == {'vm'}
+        assert {s.id for s in search} == {'vm1'}
 
         search = self.client.nodes.list(
-            constraints={'valid_values': ['foo', 'bar']},
+            constraints={
+                'deployment_id': 'd1',
+                'valid_values': ['vm2', 'non-existent-node']
+            }
+        )
+        assert [s.id for s in search] == []
+
+        search = self.client.nodes.list(
+            constraints={
+                'deployment_id': 'd1',
+                'valid_values': ['foo', 'bar']
+            },
             _search='vm'
         )
         assert [s.id for s in search] == []
