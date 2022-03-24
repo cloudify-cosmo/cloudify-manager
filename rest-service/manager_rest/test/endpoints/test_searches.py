@@ -463,16 +463,24 @@ class SearchesTestCase(base_test.BaseServerTestCase):
             )
 
     def test_nodes_filter_by_valid_values_constraints(self):
-        self._create_nodes('b1', 'd1', ['vm', 'http_web_server'])
-        self._create_nodes('b2', 'd2', ['vm', 'http_web_server'])
+        self._create_nodes('b1', 'd1', ['vm1', 'http_web_server'])
+        self._create_nodes('b2', 'd2', ['vm2', 'http_web_server'])
 
         search = self.client.nodes.list(
             constraints={
                 'deployment_id': 'd1',
-                'valid_values': ['vm', 'non-existent-node']
+                'valid_values': ['vm1', 'non-existent-node']
             }
         )
-        assert {s.id for s in search} == {'vm'}
+        assert {s.id for s in search} == {'vm1'}
+
+        search = self.client.nodes.list(
+            constraints={
+                'deployment_id': 'd1',
+                'valid_values': ['vm2', 'non-existent-node']
+            }
+        )
+        assert [s.id for s in search] == []
 
         search = self.client.nodes.list(
             constraints={
