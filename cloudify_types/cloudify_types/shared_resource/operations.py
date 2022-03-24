@@ -44,9 +44,16 @@ def _checkin_resource_consumer(client, deployment_id):
     deployment = client.deployments.get(deployment_id)
     type_labels = _get_label_values(deployment.labels, 'csys-obj-type')
     consumers_list = _get_label_values(deployment.labels, 'csys-consumer-id')
-    if ('on-demand-resource' in type_labels and not consumers_list and
-            deployment.installation_status == 'inactive'):
-        execute_workflow_base(client, 'install', deployment_id)
+    if deployment.installation_status == 'inactive':
+        if 'on-demand-resource' in type_labels and not consumers_list:
+            execute_workflow_base(client, 'install', deployment_id)
+        elif 'on-demand-resource' not in type_labels:
+            error_msg = \
+                f'SharedResource\'s deployment "{deployment_id}" is in an '\
+                f'inactive state and isn\'t labeled as ' \
+                f'`csys-obj-type: on-demand-resource`. Please install the '\
+                f'deployment first'
+            raise NonRecoverableError(error_msg)
 
 
 def _checkout_resource_consumer(client, deployment_id):
