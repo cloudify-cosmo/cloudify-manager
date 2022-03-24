@@ -5,7 +5,7 @@ imports:
 
 inputs:
   a:
-    type: node_template
+    type: node_id
     constraints:
       - deployment_id: dep-basic
       - valid_values:
@@ -19,13 +19,13 @@ inputs:
           contains: "o"
           ends_with: "de1"
   b:
-    type: node_template
+    type: node_id
     constraints:
       - deployment_id: dep-basic
       - valid_values:
           - node2
   c:
-    type: node_template
+    type: node_id
     constraints:
       - deployment_id: dep-basic
 
@@ -34,7 +34,7 @@ workflows:
     mapping: file:///dev/null
     parameters:
       a:
-        type: node_template
+        type: node_id
         constraints:
           - deployment_id: dep-basic
           - valid_values:
@@ -48,12 +48,12 @@ workflows:
               contains: "o"
               ends_with: "de1"
       b:
-        type: node_template
+        type: node_id
         constraints:
           - deployment_id: dep-basic
           - valid_values:
               - node2
       c:
-        type: node_template
+        type: node_id
         constraints:
           - deployment_id: dep-basic
