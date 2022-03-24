@@ -1,0 +1,59 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - cloudify/types/types.yaml
+
+inputs:
+  a:
+    type: node_id
+    constraints:
+      - deployment_id: dep-basic
+      - valid_values:
+          - node1
+          - node2
+          - not-a-node1
+          - not-a-node2
+          - not-a-node3
+      - name_pattern:
+          starts_with: "n"
+          contains: "o"
+          ends_with: "de1"
+  b:
+    type: node_id
+    constraints:
+      - deployment_id: dep-basic
+      - valid_values:
+          - node2
+  c:
+    type: node_id
+    constraints:
+      - deployment_id: dep-basic
+
+workflows:
+  test_parameters:
+    mapping: file:///dev/null
+    parameters:
+      a:
+        type: node_id
+        constraints:
+          - deployment_id: dep-basic
+          - valid_values:
+              - node1
+              - node2
+              - not-a-node1
+              - not-a-node2
+              - not-a-node3
+          - name_pattern:
+              starts_with: "n"
+              contains: "o"
+              ends_with: "de1"
+      b:
+        type: node_id
+        constraints:
+          - deployment_id: dep-basic
+          - valid_values:
+              - node2
+      c:
+        type: node_id
+        constraints:
+          - deployment_id: dep-basic
