@@ -415,7 +415,7 @@ class TestDataBasedTypeParams(AgentlessTestCase, DataBasedTypes):
         )
 
 
-class TestNodeTemplateType(AgentlessTestCase, DataBasedTypes):
+class TestNodeIdType(AgentlessTestCase, DataBasedTypes):
     def setUp(self):
         self.upload_blueprint(
             blueprint_id='bp-basic',
@@ -424,7 +424,7 @@ class TestNodeTemplateType(AgentlessTestCase, DataBasedTypes):
         self.client.deployments.create('bp-basic', 'dep-basic')
         self.upload_blueprint(
             blueprint_id='bp',
-            blueprint_file_name='blueprint_with_node_template_data_type.yaml'
+            blueprint_file_name='blueprint_with_node_id_data_type.yaml'
         )
         self.setup_valid_secrets()
 

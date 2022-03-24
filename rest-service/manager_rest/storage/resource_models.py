@@ -1181,7 +1181,7 @@ class Execution(CreatedAtMixin, SQLResourceBase):
                 getter = GetValuesWithStorageManager(get_storage_manager())
                 if param.get('type') not in ['blueprint_id', 'deployment_id',
                                              'capability_value', 'secret_key',
-                                             'node_template'] \
+                                             'node_id'] \
                         and not constraints:
                     continue
                 validate_input_value(name, constraints, parameters[name],
