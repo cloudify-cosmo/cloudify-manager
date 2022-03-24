@@ -191,7 +191,9 @@ class NodesSearches(ResourceSearches):
     def post(self, _include=None, pagination=None, sort=None,
              all_tenants=None, search=None, filter_id=None, **kwargs):
         """List Nodes using filter rules or DSL constraints"""
-        return super().post(models.Node, None, _include, {}, pagination,
+        deployment_id = retrieve_deployment_id()
+        return super().post(models.Node, None, _include,
+                            {'deployment_id': deployment_id}, pagination,
                             sort, all_tenants, search, None, **kwargs)
 
 
