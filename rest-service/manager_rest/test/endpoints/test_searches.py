@@ -100,6 +100,7 @@ class SearchesTestCase(base_test.BaseServerTestCase):
         self.create_filter(self.client.deployments_filters, self.FILTER_ID,
                            self.FILTER_RULES)
         filter_rules = get_filter_rules(models.Deployment,
+                                        'display_name',
                                         models.DeploymentsFilter,
                                         self.FILTER_ID,
                                         self.FILTER_RULES,

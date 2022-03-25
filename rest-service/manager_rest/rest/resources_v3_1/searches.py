@@ -93,11 +93,16 @@ class ResourceSearches(SecuredResource):
         request_schema = {'filter_rules': {'optional': True, 'type': list},
                           'constraints': {'optional': True, 'type': dict}}
         request_dict = rest_utils.get_json_and_verify_params(request_schema)
+        constraints = kwargs.get('constraints') if 'constraints' in kwargs \
+            else request_dict.get('constraints')
+        resource_field = kwargs.get('resource_field', 'id')
 
-        filter_rules = get_filter_rules(resource_model, filters_model,
+        filter_rules = get_filter_rules(resource_model,
+                                        resource_field,
+                                        filters_model,
                                         filter_id,
                                         request_dict.get('filter_rules'),
-                                        request_dict.get('constraints'))
+                                        constraints)
 
         result = get_storage_manager().list(
             resource_model,
@@ -130,7 +135,8 @@ class DeploymentsSearches(ResourceSearches):
         filters = rest_utils.deployment_group_id_filter()
         return super().post(models.Deployment, models.DeploymentsFilter,
                             _include, filters, pagination, sort, all_tenants,
-                            search, filter_id, **kwargs)
+                            search, filter_id, resource_field='display_name',
+                            **kwargs)
 
 
 class BlueprintsSearches(ResourceSearches):
@@ -225,7 +231,8 @@ class SecretsSearches(ResourceSearches):
              search=None, **kwargs):
         """List secrets using filter rules or DSL constraints"""
         return super().post(models.Secret, None, _include, {}, pagination,
-                            sort, False, search, None, **kwargs)
+                            sort, False, search, None,
+                            resource_field='key', **kwargs)
 
 
 class CapabilitiesSearches(ResourceSearches):
