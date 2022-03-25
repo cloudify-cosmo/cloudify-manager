@@ -100,6 +100,7 @@ class SearchesTestCase(base_test.BaseServerTestCase):
         self.create_filter(self.client.deployments_filters, self.FILTER_ID,
                            self.FILTER_RULES)
         filter_rules = get_filter_rules(models.Deployment,
+                                        'display_name',
                                         models.DeploymentsFilter,
                                         self.FILTER_ID,
                                         self.FILTER_RULES,
@@ -336,8 +337,9 @@ class SearchesTestCase(base_test.BaseServerTestCase):
         assert [s.key for s in search] == []
 
     def _create_nodes(self, blueprint_id='bp', deployment_id='dep',
-                      node_ids=None):
+                      node_ids=None, node_types=None):
         node_ids = node_ids or ['node_1', 'node_2']
+        node_types = node_types or (['test_type'] * len(node_ids))
         bp = models.Blueprint(
             id=blueprint_id,
             creator=self.user,
@@ -353,7 +355,7 @@ class SearchesTestCase(base_test.BaseServerTestCase):
         nodes = {
             node_id: models.Node(
                 id=node_id,
-                type='testtype',
+                type=node_type,
                 number_of_instances=0,
                 deploy_number_of_instances=0,
                 max_number_of_instances=0,
@@ -363,7 +365,7 @@ class SearchesTestCase(base_test.BaseServerTestCase):
                 creator=self.user,
                 tenant=self.tenant
             )
-            for node_id in node_ids
+            for node_id, node_type in zip(node_ids, node_types)
         }
         return nodes
 
@@ -490,3 +492,98 @@ class SearchesTestCase(base_test.BaseServerTestCase):
             _search='vm'
         )
         assert [s.id for s in search] == []
+
+    def test_node_types_valid_request(self):
+        with self.assertRaises(CloudifyClientError):
+            self.client.nodes.types.list(node_type='type1')
+
+        with self.assertRaises(CloudifyClientError):
+            self.client.nodes.types.list(
+                deployment_id='d1',
+                constraints={'deployment_id': 'd1'}
+            )
+
+    def test_node_types_search_by_params(self):
+        self._create_nodes('b1', 'd1', node_types=['type1', 'type2'])
+        self._create_nodes('b2', 'd2', node_types=['type1', 'type2'])
+
+        search = self.client.nodes.types.list(deployment_id='d1',
+                                              node_type='type1')
+        assert [(n.deployment_id, n.type) for n in search] == [('d1', 'type1')]
+
+        search = self.client.nodes.types.list(deployment_id='d1')
+        assert {(n.deployment_id, n.type) for n in search} == \
+               {('d1', 'type1'), ('d1', 'type2')}
+
+    def test_node_types_search_by_name_pattern_constraints(self):
+        self._create_nodes('b1', 'd1', node_types=['type1', 'type2'])
+        self._create_nodes('b2', 'd2', node_types=['type1', 'type2'])
+
+        search = self.client.nodes.types.list(
+            deployment_id='d1',
+            constraints={'name_pattern': {'contains': 'type'}}
+        )
+        assert {s.type for s in search} == {'type1', 'type2'}
+
+        search = self.client.nodes.types.list(
+            constraints={
+                'deployment_id': 'd1',
+                'name_pattern': {'ends_with': 'e1'}
+            }
+        )
+        assert {s.type for s in search} == {'type1'}
+
+        search = self.client.nodes.types.list(
+            deployment_id='d1',
+            constraints={'name_pattern': {'starts_with': 'type'}}
+        )
+        assert {s.type for s in search} == {'type1', 'type2'}
+
+        search = self.client.nodes.types.list(
+            constraints={
+                'deployment_id': 'd1',
+                'name_pattern': {'equals_to': 'type2'}
+            }
+        )
+        assert {s.type for s in search} == {'type2'}
+
+        search = self.client.nodes.types.list(
+            deployment_id='d1',
+            node_type='type1',
+            constraints={'name_pattern': {'equals_to': 'type1'}}
+        )
+        assert {s.type for s in search} == {'type1'}
+
+        search = self.client.nodes.types.list(
+            node_type='type2',
+            constraints={
+                'deployment_id': 'd1',
+                'name_pattern': {'equals_to': 'type1'}
+            }
+        )
+        assert [s.type for s in search] == []
+
+    def test_node_types_search_by_valid_values_constraints(self):
+        self._create_nodes('b1', 'd1', node_types=['type1', 'type2'])
+        self._create_nodes('b2', 'd2', node_types=['type1', 'type2'])
+
+        search = self.client.nodes.types.list(
+            deployment_id='d1',
+            constraints={'valid_values': ['type1']}
+        )
+        assert {s.type for s in search} == {'type1'}
+
+        search = self.client.nodes.types.list(
+            deployment_id='d1',
+            constraints={'valid_values': ['type1', 'type2']}
+        )
+        assert {s.type for s in search} == {'type1', 'type2'}
+
+        search = self.client.nodes.types.list(
+            node_type='type2',
+            constraints={
+                'deployment_id': 'd1',
+                'valid_values': ['type1']
+            }
+        )
+        assert [s.type for s in search] == []
