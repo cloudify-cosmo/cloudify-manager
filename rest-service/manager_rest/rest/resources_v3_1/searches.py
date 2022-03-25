@@ -187,9 +187,8 @@ class NodesSearches(ResourceSearches):
     @rest_decorators.sortable(models.Node)
     @rest_decorators.all_tenants
     @rest_decorators.search('id')
-    @rest_decorators.filter_id
     def post(self, _include=None, pagination=None, sort=None,
-             all_tenants=None, search=None, filter_id=None, **kwargs):
+             all_tenants=None, search=None, **kwargs):
         """List Nodes using filter rules or DSL constraints"""
         deployment_id = retrieve_deployment_id()
         return super().post(models.Node, None, _include,
@@ -206,13 +205,12 @@ class NodeInstancesSearches(ResourceSearches):
     @rest_decorators.sortable(models.NodeInstance)
     @rest_decorators.all_tenants
     @rest_decorators.search('id')
-    @rest_decorators.filter_id
     def post(self, _include=None, pagination=None, sort=None,
-             all_tenants=None, search=None, filter_id=None, **kwargs):
+             all_tenants=None, search=None, **kwargs):
         """List NodeInstances using filter rules"""
         return super().post(models.NodeInstance, None,
                             _include, {}, pagination, sort, all_tenants,
-                            search, filter_id, **kwargs)
+                            search, None, **kwargs)
 
 
 class SecretsSearches(ResourceSearches):
