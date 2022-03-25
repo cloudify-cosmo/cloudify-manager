@@ -49,7 +49,7 @@ class GetValuesWithRest:
             raise NonRecoverableError(
                 "You should provide 'deployment_id' when getting capability "
                 "values.  Make sure you have `deployment_id` constraint "
-                "declared for your 'capability_value' parameter.")
+                "declared for your 'capability_value' input.")
         return self.client.deployments.capabilities.list(
             deployment_id,
             _search=capability_value,
@@ -61,9 +61,9 @@ class GetValuesWithRest:
             deployment_id = kwargs.pop('deployment_id')
         except KeyError:
             raise NonRecoverableError(
-                "You should provide 'deployment_id' when getting node "
-                "templates.  Make sure you have `deployment_id` constraint "
-                "declared for your 'node_id' parameter.")
+                "You should provide 'deployment_id' when getting node id-s. "
+                "Make sure you have `deployment_id` constraint declared for "
+                "your 'node_id' input.")
         return self.client.nodes.list(node_id=node_id,
                                       deployment_id=deployment_id,
                                       _include=['id'],

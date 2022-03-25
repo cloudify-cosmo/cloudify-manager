@@ -172,9 +172,9 @@ class GetValuesWithStorageManager:
                   valid_values=None):
         if not deployment_id:
             raise BadParametersError(
-                "You should provide 'deployment_id' when getting node "
-                "templates.  Make sure you have `deployment_id` constraint "
-                "declared for your 'node_id' parameter.")
+                "You should provide 'deployment_id' when getting node id-s. "
+                "Make sure you have `deployment_id` constraint declared for "
+                "your 'node_id' parameter.")
         filter_rules = []
         if id_specs:
             for op, spec in id_specs.items():
