@@ -21,6 +21,8 @@ class GetValuesWithRest:
                     for cap_details in cap.values()}
         elif data_type == 'node_id':
             return {n.id for n in self.get_nodes(value, **kwargs)}
+        elif data_type == 'node_type':
+            return {n.type for n in self.get_node_types(value, **kwargs)}
         raise NotImplementedError("Getter function not defined for "
                                   f"data type '{data_type}'")
 
@@ -69,6 +71,20 @@ class GetValuesWithRest:
                                       _include=['id'],
                                       _get_all_results=True,
                                       constraints=kwargs)
+
+    def get_node_types(self, node_type, **kwargs):
+        try:
+            deployment_id = kwargs.pop('deployment_id')
+        except KeyError:
+            raise NonRecoverableError(
+                "You should provide 'deployment_id' when getting node "
+                "templates.  Make sure you have `deployment_id` constraint "
+                "declared for your 'node_type' parameter.")
+        return self.client.nodes.types.list(deployment_id=deployment_id,
+                                            type=node_type,
+                                            _include=['type'],
+                                            _get_all_results=True,
+                                            constraints=kwargs)
 
 
 def get_instance_ids_by_node_ids(client, node_ids):

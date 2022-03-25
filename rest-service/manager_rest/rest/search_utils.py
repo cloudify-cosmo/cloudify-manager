@@ -27,6 +27,8 @@ class GetValuesWithStorageManager:
                     for cap_details in cap.values()}
         elif data_type == 'node_id':
             return {n.id for n in self.get_nodes(value, **kwargs)}
+        elif data_type == 'node_type':
+            return {n.type for n in self.get_node_types(value, **kwargs)}
         raise NotImplementedError("Getter function not defined for "
                                   f"data type '{data_type}'")
 
@@ -198,6 +200,42 @@ class GetValuesWithStorageManager:
             include=['id'],
             filters={'deployment_id': str(deployment_id),
                      'id': str(node_id)},
+            get_all_results=True,
+            filter_rules=filter_rules
+        )
+
+    def get_node_types(self, node_type,
+                       deployment_id=None,
+                       type_specs=None,
+                       valid_values=None):
+        if not deployment_id:
+            raise BadParametersError(
+                "You should provide 'deployment_id' when getting node "
+                "templates.  Make sure you have `deployment_id` constraint "
+                "declared for your 'node_id' parameter.")
+        filter_rules = []
+        if type_specs:
+            for op, spec in type_specs.items():
+                filter_rules.append(
+                    {"key": "type",
+                     "values": [str(spec)],
+                     "operator": "any_of" if op == "equals_to" else op,
+                     "type": "attribute"})
+        if valid_values:
+            filter_rules.append(
+                {"key": "type",
+                 "values": [str(v) for v in valid_values],
+                 "operator": "any_of",
+                 "type": "attribute"})
+
+        filter_rules = get_filter_rules(Node, 'type', None, None,
+                                        filter_rules, None)
+
+        return self.sm.list(
+            Node,
+            include=['type'],
+            filters={'deployment_id': str(deployment_id),
+                     'type': str(node_type)},
             get_all_results=True,
             filter_rules=filter_rules
         )
