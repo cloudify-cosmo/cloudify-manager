@@ -15,7 +15,6 @@
 
 import os
 import json
-from uuid import uuid4
 from contextlib import closing
 
 import psycopg2
@@ -105,8 +104,6 @@ class Postgres(object):
             self._append_dump(dump_file, '\n'.join(enable_trigger_queries))
             self._restore_dump(dump_file, self._db_name)
         self.run_query(self._get_execution_restore_query())
-
-        self._make_api_token_keys()
 
     def dump(self, tempdir, include_logs, include_events):
         ctx.logger.info('Dumping Postgres, include logs %s include events %s',
@@ -442,25 +439,6 @@ class Postgres(object):
                 status_message = str(e)
                 result = {'status': status_message, 'all': fetchall}
             return result
-
-    def _make_api_token_keys(self):
-        # If this is from a snapshot that precedes token keys we need to
-        # generate them
-        result = self.run_query(
-            "SELECT id, api_token_key FROM users"
-        )
-
-        for row in result['all']:
-            uid = row[0]
-            api_token_key = row[1]
-            if not api_token_key:
-                api_token_key = uuid4().hex
-                self.run_query(
-                    "UPDATE users "
-                    "SET api_token_key=%s "
-                    "WHERE id=%s",
-                    (api_token_key, uid),
-                )
 
     def get_deployment_creator_ids_and_tokens(self):
         result = self.run_query(
