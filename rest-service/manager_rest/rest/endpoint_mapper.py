@@ -143,6 +143,7 @@ def setup_resources(api):
         'Workflows': 'workflows',
         'WorkflowsSearches': 'searches/workflows',
         'NodesSearches': 'searches/nodes',
+        'NodeTypesSearches': 'searches/node-types',
         'NodeInstancesSearches': 'searches/node-instances',
         'SecretsSearches': 'searches/secrets',
         'CapabilitiesSearches': 'searches/capabilities',

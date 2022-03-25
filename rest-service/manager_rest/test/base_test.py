@@ -268,6 +268,7 @@ class BaseServerTestCase(unittest.TestCase):
                         client.blueprints_labels.api = mock_http_client
                         client.workflows.api = mock_http_client
                         client.permissions.api = mock_http_client
+                        client.nodes.types.api = mock_http_client
 
         return client
 

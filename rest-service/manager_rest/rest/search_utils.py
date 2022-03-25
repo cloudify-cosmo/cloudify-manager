@@ -313,6 +313,13 @@ def parse_constraints(dsl_constraints):
              "values": valid_key_values,
              "operator": "any_of",
              "type": "attribute"})
+    valid_type_values = dsl_constraints.get('valid_type_values')
+    if valid_type_values:
+        filter_rules.append(
+            {"key": "type",
+             "values": valid_type_values,
+             "operator": "any_of",
+             "type": "attribute"})
     display_name_specs = dsl_constraints.get('display_name_specs')
     if display_name_specs:
         for op, spec in display_name_specs.items():
@@ -334,6 +341,14 @@ def parse_constraints(dsl_constraints):
         for op, spec in key_specs.items():
             filter_rules.append(
                 {"key": "key",
+                 "values": [spec],
+                 "operator": "any_of" if op == "equals_to" else op,
+                 "type": "attribute"})
+    type_specs = dsl_constraints.get('type_specs')
+    if type_specs:
+        for op, spec in type_specs.items():
+            filter_rules.append(
+                {"key": "type",
                  "values": [spec],
                  "operator": "any_of" if op == "equals_to" else op,
                  "type": "attribute"})

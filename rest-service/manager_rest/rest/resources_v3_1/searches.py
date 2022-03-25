@@ -202,6 +202,27 @@ class NodesSearches(ResourceSearches):
                             sort, all_tenants, search, None, **kwargs)
 
 
+class NodeTypesSearches(ResourceSearches):
+    @swagger.operation(**_swagger_searches_docs(models.Node, 'nodes'))
+    @authorize('node_list', allow_all_tenants=True)
+    @rest_decorators.marshal_with(models.Node)
+    @rest_decorators.paginate
+    @rest_decorators.sortable(models.Node)
+    @rest_decorators.all_tenants
+    @rest_decorators.search('type')
+    def post(self, _include=None, pagination=None, sort=None,
+             all_tenants=None, search=None, **kwargs):
+        """List Nodes using filter rules or DSL constraints"""
+        deployment_id, constraints = retrieve_deployment_id_and_constraints()
+        if 'name_pattern' in constraints:
+            constraints['type_specs'] = constraints.pop('name_pattern')
+        return super().post(models.Node, None, _include,
+                            {'deployment_id': deployment_id}, pagination,
+                            sort, all_tenants, search, None,
+                            constraints=constraints,
+                            resource_field='type', **kwargs)
+
+
 class NodeInstancesSearches(ResourceSearches):
     @swagger.operation(**_swagger_searches_docs(models.NodeInstance,
                                                 'node_instances'))
