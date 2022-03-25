@@ -133,7 +133,6 @@ def upload(ctx, **kwargs):
                 'client': client
             })
     except dsl_parser_utils.ResolverInstantiationError as e:
-        ctx.logger.critical(str(e))
         client.blueprints.update(
             blueprint_id,
             update_dict={'state': BlueprintUploadState.FAILED_PARSING,
@@ -145,21 +144,17 @@ def upload(ctx, **kwargs):
                                file_server_root,
                                **parser_context)
     except (InvalidBlueprintImport, DSLParsingException) as e:
-        error_msg = 'Invalid blueprint - {}'.format(e)
-        ctx.logger.critical(error_msg)
         client.blueprints.update(
             blueprint_id,
             update_dict={'state': BlueprintUploadState.INVALID,
-                         'error': error_msg,
+                         'error': 'Invalid blueprint - {}'.format(e),
                          'error_traceback': traceback.format_exc()})
         raise
     except Exception as e:
-        error_msg = 'Failed parsing blueprint - {}'.format(e)
-        ctx.logger.critical(error_msg)
         client.blueprints.update(
             blueprint_id,
             update_dict={'state': BlueprintUploadState.FAILED_PARSING,
-                         'error': error_msg,
+                         'error': 'Failed parsing blueprint - {}'.format(e),
                          'error_traceback': traceback.format_exc()})
         raise
     finally:
@@ -186,11 +181,10 @@ def upload(ctx, **kwargs):
     try:
         client.blueprints.update(blueprint_id, update_dict=update_dict)
     except Exception as e:
-        error_msg = 'Failed uploading blueprint - {}'.format(e)
         client.blueprints.update(
             blueprint_id,
             update_dict={'state': BlueprintUploadState.FAILED_UPLOADING,
-                         'error': error_msg,
+                         'error': 'Failed uploading blueprint - {}'.format(e),
                          'error_traceback': traceback.format_exc()})
         raise
 
