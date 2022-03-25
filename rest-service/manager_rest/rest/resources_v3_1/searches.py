@@ -190,7 +190,7 @@ class NodesSearches(ResourceSearches):
     def post(self, _include=None, pagination=None, sort=None,
              all_tenants=None, search=None, **kwargs):
         """List Nodes using filter rules or DSL constraints"""
-        deployment_id = retrieve_deployment_id()
+        deployment_id, _ = retrieve_deployment_id_and_constraints()
         return super().post(models.Node, None, _include,
                             {'deployment_id': deployment_id}, pagination,
                             sort, all_tenants, search, None, **kwargs)
@@ -280,15 +280,12 @@ class CapabilitiesSearches(ResourceSearches):
     def post(self, search=None, _include=None,
              pagination=None, all_tenants=None, **kwargs):
         """List capabilities using DSL constraints"""
-        deployment_id = retrieve_deployment_id()
+        deployment_id, constraints = \
+            retrieve_deployment_id_and_constraints(constraints_optional=False)
         args = rest_utils.get_args_and_verify_arguments([
             Argument('_search', required=False),
         ])
         search = args._search
-
-        request_schema = {'constraints': {'optional': False, 'type': dict}}
-        request_dict = rest_utils.get_json_and_verify_params(request_schema)
-        constraints = request_dict['constraints']
 
         get_all_results = rest_utils.verify_and_convert_bool(
             '_get_all_results',
@@ -323,12 +320,12 @@ class CapabilitiesSearches(ResourceSearches):
         )
 
 
-def retrieve_deployment_id():
+def retrieve_deployment_id_and_constraints(constraints_optional=True):
     args = rest_utils.get_args_and_verify_arguments([
         Argument('deployment_id', required=False),
     ])
     request_dict = rest_utils.get_json_and_verify_params(
-        {'constraints': {'optional': True, 'type': dict}})
+        {'constraints': {'optional': constraints_optional, 'type': dict}})
     constraints = request_dict.get('constraints', {})
     if args.get('deployment_id') and 'deployment_id' in constraints:
         raise manager_exceptions.BadParametersError(
@@ -340,7 +337,7 @@ def retrieve_deployment_id():
         raise manager_exceptions.BadParametersError(
             "Please provide a valid '_deployment_id' parameter or have "
             "a 'deployment_id' key in the constraints.")
-    return deployment_id
+    return deployment_id, constraints
 
 
 def capability_matches(capability_key, capability, constraints, search_value):
