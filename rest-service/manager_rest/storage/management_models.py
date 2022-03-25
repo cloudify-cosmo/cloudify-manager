@@ -1,7 +1,6 @@
 import secrets
 from string import ascii_uppercase, ascii_lowercase, digits
 import tempfile
-from uuid import uuid4
 from collections import (
     OrderedDict,
     defaultdict,
@@ -299,7 +298,6 @@ class User(SQLModelBase, UserMixin):
     last_login_at = db.Column(UTCDateTime)
     last_name = db.Column(db.String(255))
     password = db.Column(db.String(255))
-    api_token_key = db.Column(db.String(100))
     last_failed_login_at = db.Column(UTCDateTime)
     failed_logins_counter = db.Column(db.Integer, default=0, nullable=False)
     show_getting_started = db.Column(db.Boolean, nullable=False, default=True)
@@ -313,7 +311,6 @@ class User(SQLModelBase, UserMixin):
 
     def __init__(self, *args, **kwargs):
         super(User, self).__init__(*args, **kwargs)
-        self.api_token_key = uuid4().hex
 
     def _get_identifier_dict(self):
         return OrderedDict({'username': self.username})
