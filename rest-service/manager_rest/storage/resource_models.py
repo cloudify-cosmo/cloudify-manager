@@ -229,6 +229,11 @@ class Plugin(SQLResourceBase):
         return db.relationship('_PluginState', cascade='delete',
                                passive_deletes=True)
 
+    def check_unique_query(self):
+        return self.__class__.query.filter(
+            self.__class__.package_name == self.package_name and
+            self.__class__.archive_name == self.archive_name)
+
 
 class _PluginState(SQLModelBase):
     __tablename__ = 'plugins_states'
@@ -1931,7 +1936,9 @@ class Node(SQLResourceBase):
         self.actual_planned_number_of_instances = num
 
     def check_unique_query(self):
-        return self.__class__.query.filter(self.__class__.id == self.id)
+        return self.__class__.query.filter(
+            self.__class__.id == self.id and
+            self.__class__.deployment == self.deployment)
 
 
 class NodeInstance(SQLResourceBase):
