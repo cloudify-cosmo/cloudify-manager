@@ -1523,6 +1523,29 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         for node in self.sm.list(models.Node, filters={'deployment_id': 'd'}):
             assert node.visibility == VisibilityState.GLOBAL
 
+    def test_set_visibility_same_node_ids_succeed(self):
+        self.put_deployment(
+            deployment_id='d1',
+            blueprint_id='bp1',
+            blueprint_file_name='blueprint.yaml'
+        )
+        self.put_deployment(
+            deployment_id='d2',
+            blueprint_id='bp2',
+            blueprint_file_name='blueprint.yaml'
+        )
+        dep1 = self.sm.get(models.Deployment, 'd1')
+        dep2 = self.sm.get(models.Deployment, 'd2')
+        assert dep1.visibility == VisibilityState.TENANT
+        assert dep2.visibility == VisibilityState.TENANT
+
+        self.client.blueprints.set_visibility('bp1', VisibilityState.GLOBAL)
+        self.client.blueprints.set_visibility('bp2', VisibilityState.GLOBAL)
+        self.client.deployments.set_visibility('d1', VisibilityState.GLOBAL)
+        self.client.deployments.set_visibility('d2', VisibilityState.GLOBAL)
+        assert dep1.visibility == VisibilityState.GLOBAL
+        assert dep2.visibility == VisibilityState.GLOBAL
+
 
 class DeploymentsDeleteTest(base_test.BaseServerTestCase):
     def setUp(self):
