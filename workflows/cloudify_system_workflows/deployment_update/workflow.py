@@ -317,7 +317,7 @@ def update_deployment_nodes(*, update_id):
             **new_attributes
         )
     for node_path in update_nodes.get('add', []):
-        node_name = node_path.split(':')[-1]
+        node_name = _get_node_name(node_path)
         for plan_node in plan_nodes:
             if plan_node['name'] == node_name:
                 create_nodes.append(plan_node)
@@ -328,6 +328,14 @@ def update_deployment_nodes(*, update_id):
         dep_up.deployment_id,
         create_nodes
     )
+
+
+def _get_node_name(path):
+    path = path.split(':')
+    while '' in path:  # account for node names with ":" in them
+        path[path.index('') - 1] += ':'
+        path.remove('')
+    return path[-1]
 
 
 def _format_instance_relationships(node_instance):
@@ -552,7 +560,7 @@ def delete_removed_nodes(*, update_id):
 
     update_nodes = dep_up['deployment_update_nodes'] or {}
     for node_path in update_nodes.get('remove', []):
-        node_name = node_path.split(':')[-1]
+        node_name = _get_node_name(node_path)
         workflow_ctx.delete_node(dep_up.deployment_id, node_name)
 
 
