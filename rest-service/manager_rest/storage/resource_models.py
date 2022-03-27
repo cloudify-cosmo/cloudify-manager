@@ -1930,6 +1930,9 @@ class Node(SQLResourceBase):
     def set_actual_planned_node_instances(self, num):
         self.actual_planned_number_of_instances = num
 
+    def check_unique_query(self):
+        return self.__class__.query.filter(self.__class__.id == self.id)
+
 
 class NodeInstance(SQLResourceBase):
     __tablename__ = 'node_instances'

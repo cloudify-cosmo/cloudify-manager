@@ -137,3 +137,7 @@ class SQLResourceBase(SQLModelBase):
                       created_at=label.created_at,
                       creator_id=label.creator.id)
                 for label in labels]
+
+    def check_unique_query(self):
+        if self.is_id_unique:
+            return self.__class__.query.filter(self.__class__.id == self.id)
