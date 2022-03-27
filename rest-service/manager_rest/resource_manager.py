@@ -2326,10 +2326,7 @@ class ResourceManager(object):
 
         # Validate that global visibility is permitted
         if visibility == VisibilityState.GLOBAL:
-            self.validate_global_permitted(model_class,
-                                           resource_id,
-                                           create_resource=True,
-                                           plugin_info=plugin_info)
+            self.validate_global_permitted()
 
         return visibility or VisibilityState.TENANT
 
@@ -2352,78 +2349,36 @@ class ResourceManager(object):
         node_instances = self.sm.list(models.NodeInstance, **params)
 
         with self.sm.transaction():
-            result = self.set_visibility(models.Deployment,
-                                         deployment_id,
-                                         visibility)
+            result = self.set_visibility(deployment, visibility)
             for node in nodes:
-                self.set_visibility(models.Node, node.id, visibility,
-                                    deployment_id=deployment_id)
+                self.set_visibility(node, visibility)
             for ni in node_instances:
-                self.set_visibility(models.NodeInstance, ni.id, visibility)
+                self.set_visibility(ni, visibility)
         return result
 
-    def set_visibility(self, model_class, resource_id, visibility,
-                       deployment_id=None):
-        if model_class == models.Node:
-            resource = self.sm.get(
-                model_class, None,
-                filters={'id': resource_id, 'deployment_id': deployment_id})
-        else:
-            resource = self.sm.get(model_class, resource_id)
-        self.validate_visibility_value(model_class, resource, visibility)
+    def set_visibility(self, resource, visibility):
+        self.validate_visibility_value(resource, visibility)
         # Set the visibility
         resource.visibility = visibility
         resource.updated_at = utils.get_formatted_timestamp()
         return self.sm.update(resource)
 
-    def validate_visibility_value(self, model_class, resource, new_visibility):
+    def validate_visibility_value(self, resource, new_visibility):
         current_visibility = resource.visibility
         if utils.is_visibility_wider(current_visibility, new_visibility):
             raise manager_exceptions.IllegalActionError(
                 "Can't set the visibility of `{0}` to {1} because it "
                 "already has wider visibility".format(resource.id,
-                                                      new_visibility)
-            )
-
+                                                      new_visibility))
         if new_visibility == VisibilityState.GLOBAL:
-            plugin_info = None
-            if model_class == models.Plugin:
-                plugin_info = {'package_name': resource.package_name,
-                               'archive_name': resource.archive_name}
-            self.validate_global_permitted(model_class,
-                                           resource.id,
-                                           plugin_info=plugin_info)
+            self.validate_global_permitted()
 
-    def validate_global_permitted(self,
-                                  model_class,
-                                  resource_id,
-                                  create_resource=False,
-                                  plugin_info=None):
+    def validate_global_permitted(self):
         # Only admin is allowed to set a resource to global
         if not is_create_global_permitted(self.sm.current_tenant):
             raise manager_exceptions.ForbiddenError(
                 'User `{0}` is not permitted to set or create a global '
                 'resource'.format(current_user.username))
-
-        if model_class == models.Plugin:
-            archive_name = plugin_info['archive_name']
-            unique_filter = {
-                model_class.package_name: plugin_info['package_name'],
-                model_class.archive_name: archive_name
-            }
-        else:
-            unique_filter = {model_class.id: resource_id}
-
-        # Check if the resource is unique
-        max_resource_number = 0 if create_resource else 1
-        if self.sm.count(
-            model_class, unique_filter, all_tenants=True
-        ) > max_resource_number:
-            raise manager_exceptions.IllegalActionError(
-                "Can't set or create the resource `{0}`, it's visibility "
-                "can't be global because it also exists in other tenants"
-                .format(resource_id)
-            )
 
     def _check_allow_global_execution(self, deployment):
         if (deployment.visibility == VisibilityState.GLOBAL and

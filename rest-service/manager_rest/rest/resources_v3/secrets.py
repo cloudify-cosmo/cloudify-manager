@@ -181,7 +181,6 @@ class SecretsKey(SecuredResource):
         )
         if visibility:
             get_resource_manager().validate_visibility_value(
-                models.Secret,
                 secret,
                 visibility
             )
@@ -261,9 +260,8 @@ class SecretsSetVisibility(SecuredResource):
         Set the secret's visibility
         """
         visibility = rest_utils.get_visibility_parameter()
-        return get_resource_manager().set_visibility(models.Secret,
-                                                     key,
-                                                     visibility)
+        secret = get_storage_manager().get(models.Secret, key)
+        return get_resource_manager().set_visibility(secret, visibility)
 
 
 class SecretsExport(SecuredResource):

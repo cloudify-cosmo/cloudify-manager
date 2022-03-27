@@ -43,11 +43,9 @@ class BlueprintsSetGlobal(SecuredResource):
         """
         Set the blueprint's visibility to global
         """
-        return get_resource_manager().set_visibility(
-            models.Blueprint,
-            blueprint_id,
-            VisibilityState.GLOBAL
-        )
+        blueprint = get_storage_manager().get(models.Blueprint, blueprint_id)
+        return get_resource_manager().set_visibility(blueprint,
+                                                     VisibilityState.GLOBAL)
 
 
 class BlueprintsSetVisibility(SecuredResource):
@@ -59,9 +57,8 @@ class BlueprintsSetVisibility(SecuredResource):
         Set the blueprint's visibility
         """
         visibility = rest_utils.get_visibility_parameter()
-        return get_resource_manager().set_visibility(models.Blueprint,
-                                                     blueprint_id,
-                                                     visibility)
+        blueprint = get_storage_manager().get(models.Blueprint, blueprint_id)
+        return get_resource_manager().set_visibility(blueprint, visibility)
 
 
 class BlueprintsIcon(SecuredResource):

@@ -70,9 +70,7 @@ class SitesName(SecuredResource):
         site.longitude = request_dict.get('longitude', site.longitude)
         visibility = request_dict['visibility']
         if visibility:
-            get_resource_manager().validate_visibility_value(models.Site,
-                                                             site,
-                                                             visibility)
+            get_resource_manager().validate_visibility_value(site, visibility)
             site.visibility = visibility
         return storage_manager.update(site, validate_global=True)
 

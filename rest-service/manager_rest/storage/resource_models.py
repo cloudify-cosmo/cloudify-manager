@@ -5,6 +5,7 @@ import uuid
 from os import path
 from datetime import datetime
 from collections import namedtuple
+from sqlalchemy import and_ as sql_and
 
 from flask_restful import fields as flask_fields
 
@@ -230,9 +231,10 @@ class Plugin(SQLResourceBase):
                                passive_deletes=True)
 
     def check_unique_query(self):
-        return self.__class__.query.filter(
-            self.__class__.package_name == self.package_name and
-            self.__class__.archive_name == self.archive_name)
+        return self.__class__.query.filter(sql_and(
+            self.__class__.package_name == self.package_name,
+            self.__class__.archive_name == self.archive_name
+        ))
 
 
 class _PluginState(SQLModelBase):
@@ -1936,9 +1938,10 @@ class Node(SQLResourceBase):
         self.actual_planned_number_of_instances = num
 
     def check_unique_query(self):
-        return self.__class__.query.filter(
-            self.__class__.id == self.id and
-            self.__class__.deployment == self.deployment)
+        return self.__class__.query.filter(sql_and(
+            self.__class__.id == self.id,
+            self.__class__._deployment_fk == self._deployment_fk
+        ))
 
 
 class NodeInstance(SQLResourceBase):
