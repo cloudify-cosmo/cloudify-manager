@@ -3,8 +3,14 @@ tosca_definitions_version: cloudify_dsl_1_3
 imports:
   - cloudify/types/types.yaml
 
+node_types:
+  type1:
+    derived_from: cloudify.nodes.Root
+  type2:
+    derived_from: cloudify.nodes.Root
+
 node_templates:
   node1:
-    type: cloudify.nodes.Root
+    type: type1
   node2:
-    type: cloudify.nodes.Root
+    type: type2
