@@ -479,12 +479,13 @@ class SQLStorageManager(object):
         """Assert that only a single resource exists with a given id in a
         given tenant
         """
-        # Only relevant for resources that have unique IDs and are connected
-        # to a tenant
-        if not instance.is_resource or not instance.check_unique_query():
+        # Only relevant for resources that are connected to a tenant
+        if not instance.is_resource:
             return
 
-        query = self._get_unique_resource_query(instance)
+        query = instance.check_unique_query()
+        if not query:
+            return
         results = query.all()
 
         instance_flushed = inspect(instance).persistent
@@ -497,28 +498,13 @@ class SQLStorageManager(object):
             self._safe_commit()
 
             if instance.visibility == VisibilityState.GLOBAL:
-                error_msg = "Can't set or create the resource {0}, it's " \
+                error_msg = "Can't set or create the resource {0}, its " \
                     "visibility can't be global because it also exists " \
                     "in other tenants".format(instance)
             else:
                 error_msg = '{0} already exists on {1} or with global ' \
                             'visibility'.format(instance, self.current_tenant)
             raise manager_exceptions.ConflictError(error_msg)
-
-    def _get_unique_resource_query(self, instance):
-        """
-        Query for all the resources with the same id of the given instance,
-        if it's in the given tenant, or if it's a global resource
-        """
-        model_class = instance.__class__
-        query = instance.check_unique_query()
-        if instance.visibility != VisibilityState.GLOBAL:
-            tenant_or_global_filter = sql_or(
-                model_class.tenant == instance.tenant,
-                model_class.visibility == VisibilityState.GLOBAL
-            )
-            query = query.filter(tenant_or_global_filter)
-        return query
 
     def _associate_users_and_tenants(self, instance):
         """Associate, if necessary, the instance with the current tenant/user

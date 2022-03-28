@@ -140,4 +140,12 @@ class SQLResourceBase(SQLModelBase):
 
     def check_unique_query(self):
         if self.is_id_unique:
-            return self.__class__.query.filter(self.__class__.id == self.id)
+            query = self.__class__.query.filter(self.__class__.id == self.id)
+            if self.visibility != VisibilityState.GLOBAL:
+                tenant_or_global_filter = db.or_(
+                    self.__class__.tenant == self.tenant,
+                    self.__class__.visibility == VisibilityState.GLOBAL
+                )
+                query = query.filter(tenant_or_global_filter)
+
+            return query
