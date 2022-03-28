@@ -27,6 +27,8 @@ class GetValuesWithStorageManager:
                     for cap_details in cap.values()}
         elif data_type == 'node_id':
             return {n.id for n in self.get_nodes(value, **kwargs)}
+        elif data_type == 'node_type':
+            return {n.type for n in self.get_node_types(value, **kwargs)}
         raise NotImplementedError("Getter function not defined for "
                                   f"data type '{data_type}'")
 
@@ -59,7 +61,7 @@ class GetValuesWithStorageManager:
                      "operator": "any_of" if op == "equals_to" else op,
                      "type": "attribute"})
 
-        filter_rules = get_filter_rules(Blueprint, BlueprintsFilter,
+        filter_rules = get_filter_rules(Blueprint, 'id', BlueprintsFilter,
                                         filter_id, filter_rules, None)
 
         return self.sm.list(
@@ -99,7 +101,8 @@ class GetValuesWithStorageManager:
                      "operator": "any_of" if op == "equals_to" else op,
                      "type": "attribute"})
 
-        filter_rules = get_filter_rules(Deployment, DeploymentsFilter,
+        filter_rules = get_filter_rules(Deployment, 'display_name',
+                                        DeploymentsFilter,
                                         filter_id, filter_rules, None)
 
         return self.sm.list(
@@ -128,7 +131,8 @@ class GetValuesWithStorageManager:
                  "operator": "any_of",
                  "type": "attribute"})
 
-        filter_rules = get_filter_rules(Secret, None, None, filter_rules, None)
+        filter_rules = get_filter_rules(Secret, 'key', None, None,
+                                        filter_rules, None)
 
         return self.sm.list(
             Secret,
@@ -170,9 +174,9 @@ class GetValuesWithStorageManager:
                   valid_values=None):
         if not deployment_id:
             raise BadParametersError(
-                "You should provide 'deployment_id' when getting node "
-                "templates.  Make sure you have `deployment_id` constraint "
-                "declared for your 'node_id' parameter.")
+                "You should provide 'deployment_id' when getting node id-s. "
+                "Make sure you have `deployment_id` constraint declared for "
+                "your 'node_id' parameter.")
         filter_rules = []
         if id_specs:
             for op, spec in id_specs.items():
@@ -188,12 +192,50 @@ class GetValuesWithStorageManager:
                  "operator": "any_of",
                  "type": "attribute"})
 
-        filter_rules = get_filter_rules(Node, None, None, filter_rules, None)
+        filter_rules = get_filter_rules(Node, 'id', None, None,
+                                        filter_rules, None)
 
         return self.sm.list(
             Node,
             include=['id'],
-            filters={'id': str(node_id)},
+            filters={'deployment_id': str(deployment_id),
+                     'id': str(node_id)},
+            get_all_results=True,
+            filter_rules=filter_rules
+        )
+
+    def get_node_types(self, node_type,
+                       deployment_id=None,
+                       type_specs=None,
+                       valid_values=None):
+        if not deployment_id:
+            raise BadParametersError(
+                "You should provide 'deployment_id' when getting node "
+                "templates.  Make sure you have `deployment_id` constraint "
+                "declared for your 'node_id' parameter.")
+        filter_rules = []
+        if type_specs:
+            for op, spec in type_specs.items():
+                filter_rules.append(
+                    {"key": "type",
+                     "values": [str(spec)],
+                     "operator": "any_of" if op == "equals_to" else op,
+                     "type": "attribute"})
+        if valid_values:
+            filter_rules.append(
+                {"key": "type",
+                 "values": [str(v) for v in valid_values],
+                 "operator": "any_of",
+                 "type": "attribute"})
+
+        filter_rules = get_filter_rules(Node, 'type', None, None,
+                                        filter_rules, None)
+
+        return self.sm.list(
+            Node,
+            include=['type'],
+            filters={'deployment_id': str(deployment_id),
+                     'type': str(node_type)},
             get_all_results=True,
             filter_rules=filter_rules
         )
@@ -230,6 +272,7 @@ def capability_matches(capability_key, capability, search_value,
 
 
 def get_filter_rules(resource_model,
+                     resource_field,
                      filters_model,
                      raw_filter_id,
                      raw_filter_rules,
@@ -240,7 +283,7 @@ def get_filter_rules(resource_model,
                                                 resource_model)
         filter_id = raw_filter_id
     elif not raw_filter and dsl_constraints:
-        constraints_for_model(resource_model, dsl_constraints)
+        constraints_for_model(resource_field, dsl_constraints)
         filter_id, filter_rules = parse_constraints(dsl_constraints)
     elif not raw_filter and not dsl_constraints:
         return []
@@ -264,27 +307,13 @@ def get_filter_rules(resource_model,
     return filter_rules
 
 
-def constraints_for_model(resource_model, dsl_constraints):
+def constraints_for_model(resource_field, dsl_constraints):
     if 'name_pattern' in dsl_constraints:
-        if resource_model == Blueprint:
-            dsl_constraints['id_specs'] = \
-                dsl_constraints.pop('name_pattern')
-        elif resource_model == Deployment:
-            dsl_constraints['display_name_specs'] = \
-                dsl_constraints.pop('name_pattern')
-        elif resource_model == Secret:
-            dsl_constraints['key_specs'] = \
-                dsl_constraints.pop('name_pattern')
-        elif resource_model == Node:
-            dsl_constraints['id_specs'] = \
-                dsl_constraints.pop('name_pattern')
+        dsl_constraints[f'{resource_field}_specs'] = \
+            dsl_constraints.pop('name_pattern')
     if 'valid_values' in dsl_constraints:
-        if resource_model == Secret:
-            dsl_constraints['valid_key_values'] = \
-                dsl_constraints.pop('valid_values')
-        elif resource_model == Node:
-            dsl_constraints['valid_id_values'] = \
-                dsl_constraints.pop('valid_values')
+        dsl_constraints[f'valid_{resource_field}_values'] = \
+            dsl_constraints.pop('valid_values')
     return dsl_constraints
 
 
@@ -322,6 +351,13 @@ def parse_constraints(dsl_constraints):
              "values": valid_key_values,
              "operator": "any_of",
              "type": "attribute"})
+    valid_type_values = dsl_constraints.get('valid_type_values')
+    if valid_type_values:
+        filter_rules.append(
+            {"key": "type",
+             "values": valid_type_values,
+             "operator": "any_of",
+             "type": "attribute"})
     display_name_specs = dsl_constraints.get('display_name_specs')
     if display_name_specs:
         for op, spec in display_name_specs.items():
@@ -343,6 +379,14 @@ def parse_constraints(dsl_constraints):
         for op, spec in key_specs.items():
             filter_rules.append(
                 {"key": "key",
+                 "values": [spec],
+                 "operator": "any_of" if op == "equals_to" else op,
+                 "type": "attribute"})
+    type_specs = dsl_constraints.get('type_specs')
+    if type_specs:
+        for op, spec in type_specs.items():
+            filter_rules.append(
+                {"key": "type",
                  "values": [spec],
                  "operator": "any_of" if op == "equals_to" else op,
                  "type": "attribute"})

@@ -93,11 +93,16 @@ class ResourceSearches(SecuredResource):
         request_schema = {'filter_rules': {'optional': True, 'type': list},
                           'constraints': {'optional': True, 'type': dict}}
         request_dict = rest_utils.get_json_and_verify_params(request_schema)
+        constraints = kwargs.get('constraints') if 'constraints' in kwargs \
+            else request_dict.get('constraints')
+        resource_field = kwargs.get('resource_field', 'id')
 
-        filter_rules = get_filter_rules(resource_model, filters_model,
+        filter_rules = get_filter_rules(resource_model,
+                                        resource_field,
+                                        filters_model,
                                         filter_id,
                                         request_dict.get('filter_rules'),
-                                        request_dict.get('constraints'))
+                                        constraints)
 
         result = get_storage_manager().list(
             resource_model,
@@ -130,7 +135,8 @@ class DeploymentsSearches(ResourceSearches):
         filters = rest_utils.deployment_group_id_filter()
         return super().post(models.Deployment, models.DeploymentsFilter,
                             _include, filters, pagination, sort, all_tenants,
-                            search, filter_id, **kwargs)
+                            search, filter_id, resource_field='display_name',
+                            **kwargs)
 
 
 class BlueprintsSearches(ResourceSearches):
@@ -187,14 +193,34 @@ class NodesSearches(ResourceSearches):
     @rest_decorators.sortable(models.Node)
     @rest_decorators.all_tenants
     @rest_decorators.search('id')
-    @rest_decorators.filter_id
     def post(self, _include=None, pagination=None, sort=None,
-             all_tenants=None, search=None, filter_id=None, **kwargs):
+             all_tenants=None, search=None, **kwargs):
         """List Nodes using filter rules or DSL constraints"""
-        deployment_id = retrieve_deployment_id()
+        deployment_id, _ = retrieve_deployment_id_and_constraints()
         return super().post(models.Node, None, _include,
                             {'deployment_id': deployment_id}, pagination,
                             sort, all_tenants, search, None, **kwargs)
+
+
+class NodeTypesSearches(ResourceSearches):
+    @swagger.operation(**_swagger_searches_docs(models.Node, 'nodes'))
+    @authorize('node_list', allow_all_tenants=True)
+    @rest_decorators.marshal_with(models.Node)
+    @rest_decorators.paginate
+    @rest_decorators.sortable(models.Node)
+    @rest_decorators.all_tenants
+    @rest_decorators.search('type')
+    def post(self, _include=None, pagination=None, sort=None,
+             all_tenants=None, search=None, **kwargs):
+        """List Nodes using filter rules or DSL constraints"""
+        deployment_id, constraints = retrieve_deployment_id_and_constraints()
+        if 'name_pattern' in constraints:
+            constraints['type_specs'] = constraints.pop('name_pattern')
+        return super().post(models.Node, None, _include,
+                            {'deployment_id': deployment_id}, pagination,
+                            sort, all_tenants, search, None,
+                            constraints=constraints,
+                            resource_field='type', **kwargs)
 
 
 class NodeInstancesSearches(ResourceSearches):
@@ -206,13 +232,12 @@ class NodeInstancesSearches(ResourceSearches):
     @rest_decorators.sortable(models.NodeInstance)
     @rest_decorators.all_tenants
     @rest_decorators.search('id')
-    @rest_decorators.filter_id
     def post(self, _include=None, pagination=None, sort=None,
-             all_tenants=None, search=None, filter_id=None, **kwargs):
+             all_tenants=None, search=None, **kwargs):
         """List NodeInstances using filter rules"""
         return super().post(models.NodeInstance, None,
                             _include, {}, pagination, sort, all_tenants,
-                            search, filter_id, **kwargs)
+                            search, None, **kwargs)
 
 
 class SecretsSearches(ResourceSearches):
@@ -227,7 +252,8 @@ class SecretsSearches(ResourceSearches):
              search=None, **kwargs):
         """List secrets using filter rules or DSL constraints"""
         return super().post(models.Secret, None, _include, {}, pagination,
-                            sort, False, search, None, **kwargs)
+                            sort, False, search, None,
+                            resource_field='key', **kwargs)
 
 
 class CapabilitiesSearches(ResourceSearches):
@@ -282,15 +308,12 @@ class CapabilitiesSearches(ResourceSearches):
     def post(self, search=None, _include=None,
              pagination=None, all_tenants=None, **kwargs):
         """List capabilities using DSL constraints"""
-        deployment_id = retrieve_deployment_id()
+        deployment_id, constraints = \
+            retrieve_deployment_id_and_constraints(constraints_optional=False)
         args = rest_utils.get_args_and_verify_arguments([
             Argument('_search', required=False),
         ])
         search = args._search
-
-        request_schema = {'constraints': {'optional': False, 'type': dict}}
-        request_dict = rest_utils.get_json_and_verify_params(request_schema)
-        constraints = request_dict['constraints']
 
         get_all_results = rest_utils.verify_and_convert_bool(
             '_get_all_results',
@@ -325,12 +348,12 @@ class CapabilitiesSearches(ResourceSearches):
         )
 
 
-def retrieve_deployment_id():
+def retrieve_deployment_id_and_constraints(constraints_optional=True):
     args = rest_utils.get_args_and_verify_arguments([
         Argument('deployment_id', required=False),
     ])
     request_dict = rest_utils.get_json_and_verify_params(
-        {'constraints': {'optional': True, 'type': dict}})
+        {'constraints': {'optional': constraints_optional, 'type': dict}})
     constraints = request_dict.get('constraints', {})
     if args.get('deployment_id') and 'deployment_id' in constraints:
         raise manager_exceptions.BadParametersError(
@@ -342,7 +365,7 @@ def retrieve_deployment_id():
         raise manager_exceptions.BadParametersError(
             "Please provide a valid '_deployment_id' parameter or have "
             "a 'deployment_id' key in the constraints.")
-    return deployment_id
+    return deployment_id, constraints
 
 
 def capability_matches(capability_key, capability, constraints, search_value):

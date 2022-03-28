@@ -383,8 +383,8 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
     def test_modify_idd(self):
         shared_bp_path = resource(
             'dsl/deployment_update/modify_idd/shared.yaml')
-        self.deploy(shared_bp_path, 'shared1', 'shared1')
-        self.deploy(shared_bp_path, 'shared2', 'shared2')
+        self.deploy_application(shared_bp_path, 240, 'shared1', 'shared1')
+        self.deploy_application(shared_bp_path, 240, 'shared2', 'shared2')
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('modify_idd')
         idds = self.client.inter_deployment_dependencies.list(
