@@ -15,7 +15,6 @@
 
 import copy
 import os.path
-import time
 import pytest
 import requests
 
@@ -227,48 +226,50 @@ class BlueprintValidateTest(AgentlessTestCase):
     def test_blueprint_validate(self):
         blueprint_id = 'bp-validate'
         blueprint_filename = 'empty_blueprint.yaml'
-        self._verify_blueprint_validation_with_message(
+        self._verify_blueprint_validation(
             blueprint_id,
             resource('dsl/{}'.format(blueprint_filename)),
-            'Blueprint validated.')
+        )
 
     def test_blueprint_validate_from_url(self):
         blueprint_id = 'bp-url-validate'
         archive_url = 'https://cloudify-tests-files.s3-eu-west-1.amazonaws' \
                       '.com/blueprints/the-not-blueprint-master.zip'
-        self._verify_blueprint_validation_with_message(
+        self._verify_blueprint_validation(
             blueprint_id,
             archive_url,
-            'Blueprint validated.')
+        )
 
     def test_blueprint_validate_invalid_blueprint(self):
         blueprint_id = 'bp-bad-schema'
         blueprint_filename = 'invalid_blueprint.yaml'
-        self._verify_blueprint_validation_with_message(
+        self._verify_blueprint_validation(
             blueprint_id,
             resource('dsl/{}'.format(blueprint_filename)),
-            "Invalid blueprint - 'foo' is not in schema.")
+            "'foo' is not in schema."
+        )
 
-    def _verify_blueprint_validation_with_message(
-            self, blueprint_id, blueprint_resource, message):
+    def _verify_blueprint_validation(
+            self, blueprint_id, blueprint_resource, expected_error=None):
         exc = self.client.blueprints.validate(
             blueprint_resource,
             entity_id=blueprint_id
         )
-        temp_blueprint_id = self._assert_blueprint_validation_message(
-            exc, message)
+        temp_blueprint_id = self._assert_blueprint_validation_error(
+            exc, expected_error)
         self._assert_cleanup(temp_blueprint_id)
 
-    def _assert_blueprint_validation_message(self, execution, message):
+    def _assert_blueprint_validation_error(self, execution, expected_error):
         try:
             self.wait_for_execution_to_end(execution)
         except RuntimeError as e:
             if 'Workflow execution failed' not in str(e):
                 raise e
-        time.sleep(3)
-        event_messages = [ev for ev in self.client.events.list(execution.id)
-                          if message in ev['message']]
-        self.assertNotEqual(0, len(event_messages))
+        execution = self.client.executions.get(execution.id)
+        if expected_error is None:
+            assert not execution.get('error')
+        else:
+            assert expected_error in execution['error']
         return execution['parameters']['blueprint_id']
 
     def _assert_cleanup(self, blueprint_id):
