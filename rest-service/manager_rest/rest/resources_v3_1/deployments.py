@@ -1208,13 +1208,13 @@ class DeploymentGroupsId(SecuredResource):
             site=new_dep_spec.get('site'),
         )
         group.creation_counter += 1
-        dep.is_id_unique = not is_id_unique
+        dep.guaranteed_unique = is_id_unique
         create_execution = dep.make_create_environment_execution(
             inputs=deployment_inputs,
             labels=labels,
             display_name=new_dep_spec.get('display_name'),
         )
-        create_execution.is_id_unique = False
+        create_execution.guaranteed_unique = True
         return dep
 
     def _new_deployment_id(self, group, new_dep_spec):

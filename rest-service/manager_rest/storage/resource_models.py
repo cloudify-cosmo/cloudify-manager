@@ -20,6 +20,7 @@ from cloudify.constants import MGMTWORKER_QUEUE
 from cloudify.models_states import (AgentState,
                                     SnapshotState,
                                     ExecutionState,
+                                    VisibilityState,
                                     DeploymentModificationState,
                                     DeploymentState)
 from cloudify.cryptography_utils import decrypt
@@ -230,9 +231,16 @@ class Plugin(SQLResourceBase):
                                passive_deletes=True)
 
     def check_unique_query(self):
-        return super(Plugin, self).check_unique_query() \
+        query = self.__class__.query \
             .filter(self.__class__.package_name == self.package_name) \
             .filter(self.__class__.archive_name == self.archive_name)
+        if self.visibility != VisibilityState.GLOBAL:
+            tenant_or_global_filter = db.or_(
+                self.__class__.tenant == self.tenant,
+                self.__class__.visibility == VisibilityState.GLOBAL
+            )
+            query = query.filter(tenant_or_global_filter)
+        return query
 
 
 class _PluginState(SQLModelBase):
@@ -361,6 +369,9 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         v1=['scaling_groups'],
         v2=['scaling_groups']
     )
+
+    # Can we skip check_unique because it was checked in group dep. creation
+    guaranteed_unique = False
 
     # This will be overridden when a workdir is being retrieved
     workdir_zip = None
@@ -808,6 +819,11 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             self.get_descendants(*args, **kwargs)
         )
 
+    def check_unique_query(self):
+        if self.guaranteed_unique:
+            return
+        return super(Deployment, self).check_unique_query()
+
 
 class DeploymentGroup(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'deployment_groups'
@@ -995,6 +1011,9 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             '_deployment_fk', 'is_system_workflow', 'visibility', '_tenant_id'
         ),
     )
+    # Can we skip check_unique because the exec. is part of dep. group creation
+    guaranteed_unique = False
+
     id = db.Column(db.Text, index=True, default=lambda: str(uuid.uuid4()))
     ended_at = db.Column(UTCDateTime, nullable=True, index=True)
     error = db.Column(db.Text)
@@ -1311,6 +1330,11 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             'execution_creator': self.creator.id
         }
 
+    def check_unique_query(self):
+        if self.guaranteed_unique:
+            return
+        return super(Execution, self).check_unique_query()
+
 
 class ExecutionGroup(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'execution_groups'
@@ -1450,8 +1474,6 @@ class ExecutionSchedule(CreatedAtMixin, SQLResourceBase):
             unique=True
         ),
     )
-    is_id_unique = False
-
     next_occurrence = db.Column(UTCDateTime, nullable=True, index=True)
     since = db.Column(UTCDateTime, nullable=True)
     until = db.Column(UTCDateTime, nullable=True)
@@ -1503,6 +1525,9 @@ class ExecutionSchedule(CreatedAtMixin, SQLResourceBase):
             flask_fields.List(flask_fields.String())
         return fields
 
+    def check_unique_query(self):
+        return
+
 
 class Event(SQLResourceBase):
     """Execution events."""
@@ -1517,8 +1542,6 @@ class Event(SQLResourceBase):
             name='events__one_fk_not_null'
         ),
     )
-    is_id_unique = False
-
     id = None  # this is just to override the parent class attribute
     timestamp = db.Column(
         UTCDateTime,
@@ -1561,6 +1584,9 @@ class Event(SQLResourceBase):
         self._set_parent(execution)
         self.execution = execution
 
+    def check_unique_query(self):
+        return
+
 
 class Log(SQLResourceBase):
     """Execution logs."""
@@ -1575,8 +1601,6 @@ class Log(SQLResourceBase):
             name='logs__one_fk_not_null'
         ),
     )
-    is_id_unique = False
-
     id = None  # this is just to override the parent class attribute
     timestamp = db.Column(
         UTCDateTime,
@@ -1618,6 +1642,9 @@ class Log(SQLResourceBase):
     def set_execution(self, execution):
         self._set_parent(execution)
         self.execution = execution
+
+    def check_unique_query(self):
+        return
 
 
 class PluginsUpdate(CreatedAtMixin, SQLResourceBase):
@@ -1865,7 +1892,6 @@ class DeploymentModification(CreatedAtMixin, SQLResourceBase):
 class Node(SQLResourceBase):
     __tablename__ = 'nodes'
 
-    is_id_unique = False
     skipped_fields = dict(
         SQLResourceBase.skipped_fields,
         v1=['max_number_of_instances', 'min_number_of_instances'],
@@ -2068,8 +2094,6 @@ class TasksGraph(CreatedAtMixin, SQLResourceBase):
             unique=True
         ),
     )
-    is_id_unique = False
-
     id = db.Column(db.Text, index=True, default=lambda: str(uuid.uuid4()))
     name = db.Column(db.Text, index=True)
 
@@ -2081,10 +2105,12 @@ class TasksGraph(CreatedAtMixin, SQLResourceBase):
 
     execution_id = association_proxy('execution', 'id')
 
+    def check_unique_query(self):
+        return
+
 
 class Operation(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'operations'
-    is_id_unique = False
 
     id = db.Column(db.Text, index=True, default=lambda: str(uuid.uuid4()))
     name = db.Column(db.Text)
@@ -2104,6 +2130,9 @@ class Operation(CreatedAtMixin, SQLResourceBase):
     def is_nop(self):
         return self.type == 'NOPLocalWorkflowTask'
 
+    def check_unique_query(self):
+        return
+
 
 class BaseDeploymentDependencies(CreatedAtMixin, SQLResourceBase):
     __abstract__ = True
@@ -2116,7 +2145,6 @@ class BaseDeploymentDependencies(CreatedAtMixin, SQLResourceBase):
     _source_cascade = 'all'
     _target_cascade = 'all'
 
-    is_id_unique = False
     id = db.Column(db.Text, index=True, default=lambda: str(uuid.uuid4()))
 
     @declared_attr
@@ -2245,6 +2273,9 @@ class BaseDeploymentDependencies(CreatedAtMixin, SQLResourceBase):
                 of=(Deployment if fetch_deployments else cls),
             )
         return query.all()
+
+    def check_unique_query(self):
+        return
 
 
 class InterDeploymentDependencies(BaseDeploymentDependencies):

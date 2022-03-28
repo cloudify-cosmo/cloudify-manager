@@ -125,7 +125,7 @@ class BlueprintsId(resources_v2.BlueprintsId):
                     override_failed = True
                 else:
                     raise ConflictError(
-                        "Can't set or create the resource `{0}`, it's "
+                        "Can't set or create the resource `{0}`, its "
                         "visibility can't be global because it also exists in "
                         "other tenants".format(blueprint_id))
         else:

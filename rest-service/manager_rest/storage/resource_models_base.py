@@ -38,9 +38,6 @@ class SQLResourceBase(SQLModelBase):
     # table models (users, tenants, etc.)
     is_resource = True
 
-    # Indicates whether the `id` column in this class should be unique
-    is_id_unique = True
-
     _extra_fields = {}
 
     # Lists of fields to skip when using older versions of the client
@@ -139,13 +136,11 @@ class SQLResourceBase(SQLModelBase):
                 for label in labels]
 
     def check_unique_query(self):
-        if self.is_id_unique:
-            query = self.__class__.query.filter(self.__class__.id == self.id)
-            if self.visibility != VisibilityState.GLOBAL:
-                tenant_or_global_filter = db.or_(
-                    self.__class__.tenant == self.tenant,
-                    self.__class__.visibility == VisibilityState.GLOBAL
-                )
-                query = query.filter(tenant_or_global_filter)
-
-            return query
+        query = self.__class__.query.filter(self.__class__.id == self.id)
+        if self.visibility != VisibilityState.GLOBAL:
+            tenant_or_global_filter = db.or_(
+                self.__class__.tenant == self.tenant,
+                self.__class__.visibility == VisibilityState.GLOBAL
+            )
+            query = query.filter(tenant_or_global_filter)
+        return query
