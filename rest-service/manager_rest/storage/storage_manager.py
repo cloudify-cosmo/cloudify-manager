@@ -496,12 +496,14 @@ class SQLStorageManager(object):
                 db.session.expunge(instance)
             self._safe_commit()
 
-            raise manager_exceptions.ConflictError(
-                '{0} already exists on {1} or with global visibility'.format(
-                    instance,
-                    self.current_tenant
-                )
-            )
+            if instance.visibility == VisibilityState.GLOBAL:
+                error_msg = "Can't set or create the resource {0}, it's " \
+                    "visibility can't be global because it also exists " \
+                    "in other tenants".format(instance)
+            else:
+                error_msg = '{0} already exists on {1} or with global ' \
+                            'visibility'.format(instance, self.current_tenant)
+            raise manager_exceptions.ConflictError(error_msg)
 
     def _get_unique_resource_query(self, instance):
         """
@@ -510,11 +512,12 @@ class SQLStorageManager(object):
         """
         model_class = instance.__class__
         query = instance.check_unique_query()
-        tenant_or_global_filter = sql_or(
-            model_class.tenant == instance.tenant,
-            model_class.visibility == VisibilityState.GLOBAL
-        )
-        query = query.filter(tenant_or_global_filter)
+        if instance.visibility != VisibilityState.GLOBAL:
+            tenant_or_global_filter = sql_or(
+                model_class.tenant == instance.tenant,
+                model_class.visibility == VisibilityState.GLOBAL
+            )
+            query = query.filter(tenant_or_global_filter)
         return query
 
     def _associate_users_and_tenants(self, instance):

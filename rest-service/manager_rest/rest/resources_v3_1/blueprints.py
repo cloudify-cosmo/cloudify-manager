@@ -124,7 +124,7 @@ class BlueprintsId(resources_v2.BlueprintsId):
                         BlueprintUploadState.FAILED_STATES:
                     override_failed = True
                 else:
-                    raise IllegalActionError(
+                    raise ConflictError(
                         "Can't set or create the resource `{0}`, it's "
                         "visibility can't be global because it also exists in "
                         "other tenants".format(blueprint_id))
