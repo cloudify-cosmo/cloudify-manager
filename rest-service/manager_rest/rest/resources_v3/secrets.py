@@ -408,11 +408,8 @@ class SecretsImport(SecuredResource):
 
         if visibility == VisibilityState.GLOBAL:
             try:
-                get_resource_manager().validate_global_permitted(models.Secret,
-                                                                 secret['key'],
-                                                                 visibility)
-            except (manager_exceptions.IllegalActionError,
-                    manager_exceptions.ForbiddenError) as error:
+                get_resource_manager().validate_global_permitted()
+            except manager_exceptions.ForbiddenError as error:
                 secret_errors['visibility'] = str(error)
 
     def _handle_secret_tenant(self, secret, tenant_map, existing_tenants,
