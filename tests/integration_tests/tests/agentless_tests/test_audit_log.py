@@ -131,11 +131,11 @@ class AuditLogMultiTenantTest(AgentlessTestCase):
 
         user_0_resource_logs = {
             (log['ref_table'], log['ref_id']) for log in user_0_audit_logs
-            if log['ref_table'] not in  {'usage_collector', 'users'}
+            if log['ref_table'] not in {'usage_collector', 'users'}
         }
         user_1_resource_logs = {
             (log['ref_table'], log['ref_id']) for log in user_1_audit_logs
-            if log['ref_table'] not in  {'usage_collector', 'users'}
+            if log['ref_table'] not in {'usage_collector', 'users'}
         }
         assert user_0_resource_logs.isdisjoint(user_1_resource_logs)
 
