@@ -15,6 +15,7 @@
 
 import uuid
 import pytest
+import retrying
 
 from integration_tests import AgentTestWithPlugins
 from integration_tests.tests.utils import get_resource as resource
@@ -57,41 +58,56 @@ class TestWorkflow(AgentTestWithPlugins):
             resource('dsl/agent_tests/with_agent.yaml'),
             deployment_id=deployment_id
         )
-        # installing the agent does nothing for the / vhost
-        assert self._get_queues() == main_queues
-        assert self._get_exchanges() == main_exchanges
 
-        # after installing the agent, there's 2 new queues and at least
-        # 1 new exchange
-        agent_queues = self._get_queues(vhost) - tenant_queues
-        agent_exchanges = self._get_exchanges(vhost) - tenant_exchanges
-        assert len(agent_queues) == 2, (
-            "expected 2 agent queues, but found {0}: {1}"
-            .format(len(agent_queues), agent_queues)
-        )
-        assert any(queue.endswith('_service') for queue in agent_queues)
-        assert any(queue.endswith('_operation') for queue in agent_queues)
-        assert any(exc.startswith('agent_host') for exc in agent_exchanges)
-        # we already checked that there's an agent exchange, but there
-        # might also exist a logs exchange and an events exchange, depending
-        # if any events or logs were sent or not
-        assert len(agent_exchanges) in (1, 2, 3)
+        # retrying these assertions (and the post-undeploy ones) because
+        # removing queues in our BlockingRequestResponseHandler in AMQP
+        # isn't synchronous, and we might just get more queues than we
+        # expected - this will however converge very quickly
+        # (normally sub-second)
+        @retrying.retry(wait_fixed=1000, stop_max_attempt_number=10)
+        def _post_deploy_assertions():
+            # installing the agent does nothing for the / vhost
+            assert self._get_queues() == main_queues
+            assert self._get_exchanges() == main_exchanges
+
+            # after installing the agent, there's 2 new queues and at least
+            # 1 new exchange
+            agent_queues = self._get_queues(vhost) - tenant_queues
+            agent_exchanges = self._get_exchanges(vhost) - tenant_exchanges
+            assert len(agent_queues) == 2, (
+                "expected 2 agent queues, but found {0}: {1}"
+                .format(len(agent_queues), agent_queues)
+            )
+            assert any(queue.endswith('_service') for queue in agent_queues)
+            assert any(queue.endswith('_operation') for queue in agent_queues)
+            assert any(exc.startswith('agent_host') for exc in agent_exchanges)
+            # we already checked that there's an agent exchange, but there
+            # might also exist a logs exchange and an events exchange,
+            # depending if any events or logs were sent or not
+            assert len(agent_exchanges) in (1, 2, 3)
+
+        _post_deploy_assertions()
 
         self.undeploy_application(deployment_id)
 
-        main_queues = self._get_queues()
-        main_exchanges = self._get_exchanges()
-        tenant_queues = self._get_queues(vhost)
-        agent_exchanges = self._get_exchanges(vhost) - tenant_exchanges
-        # after uninstalling the agent, there's still no new queues on
-        # the / vhost
-        assert self._get_queues() == main_queues
-        assert self._get_exchanges() == main_exchanges
-        # there's no queues left over
-        assert self._get_queues(vhost) == tenant_queues
-        # the logs and events exchanges will still exist, but the agent
-        # exchange must have been deleted
-        assert not any(exc.startswith('agent_host') for exc in agent_exchanges)
+        @retrying.retry(wait_fixed=1000, stop_max_attempt_number=10)
+        def _post_undeploy_assertions():
+            main_queues = self._get_queues()
+            main_exchanges = self._get_exchanges()
+            tenant_queues = self._get_queues(vhost)
+            agent_exchanges = self._get_exchanges(vhost) - tenant_exchanges
+            # after uninstalling the agent, there's still no new queues on
+            # the / vhost
+            assert self._get_queues() == main_queues
+            assert self._get_exchanges() == main_exchanges
+            # there's no queues left over
+            assert self._get_queues(vhost) == tenant_queues
+            # the logs and events exchanges will still exist, but the agent
+            # exchange must have been deleted
+            assert not any(exc.startswith('agent_host')
+                           for exc in agent_exchanges)
+
+        _post_undeploy_assertions()
 
     def test_deploy_with_agent_worker(self):
         # In 4.2, the default (remote) agent installation path only requires
