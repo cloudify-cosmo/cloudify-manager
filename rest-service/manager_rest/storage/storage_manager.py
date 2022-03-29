@@ -475,18 +475,17 @@ class SQLStorageManager(object):
             )
 
     @no_autoflush
-    def _validate_unique_resource_id_per_tenant(self, instance):
+    def _validate_unique_resource_per_tenant(self, instance):
         """Assert that only a single resource exists with a given id in a
         given tenant
         """
-        # Only relevant for resources that have unique IDs and are connected
-        # to a tenant
-        if not instance.is_resource or not instance.is_id_unique:
+        # Only relevant for resources that are connected to a tenant
+        if not instance.is_resource:
             return
 
-        query = self._get_unique_resource_id_query(instance.__class__,
-                                                   instance.id,
-                                                   instance.tenant)
+        query = instance.check_unique_query()
+        if not query:
+            return
         results = query.all()
 
         instance_flushed = inspect(instance).persistent
@@ -498,27 +497,14 @@ class SQLStorageManager(object):
                 db.session.expunge(instance)
             self._safe_commit()
 
-            raise manager_exceptions.ConflictError(
-                '{0} already exists on {1} or with global visibility'.format(
-                    instance,
-                    self.current_tenant
-                )
-            )
-
-    def _get_unique_resource_id_query(self, model_class, resource_id,
-                                      tenant):
-        """
-        Query for all the resources with the same id of the given instance,
-        if it's in the given tenant, or if it's a global resource
-        """
-        query = model_class.query
-        query = query.filter(model_class.id == resource_id)
-        unique_resource_filter = sql_or(
-            model_class.tenant == tenant,
-            model_class.visibility == VisibilityState.GLOBAL
-        )
-        query = query.filter(unique_resource_filter)
-        return query
+            if instance.visibility == VisibilityState.GLOBAL:
+                error_msg = "Can't set or create the resource {0}, its " \
+                    "visibility can't be global because it also exists " \
+                    "in other tenants".format(instance)
+            else:
+                error_msg = '{0} already exists on {1} or with global ' \
+                            'visibility'.format(instance, self.current_tenant)
+            raise manager_exceptions.ConflictError(error_msg)
 
     def _associate_users_and_tenants(self, instance):
         """Associate, if necessary, the instance with the current tenant/user
@@ -768,7 +754,7 @@ class SQLStorageManager(object):
         current_app.logger.debug('Put %s', instance)
         self.update(instance, log=False)
 
-        self._validate_unique_resource_id_per_tenant(instance)
+        self._validate_unique_resource_per_tenant(instance)
         return instance
 
     def delete(self, instance, validate_global=False):
@@ -802,7 +788,7 @@ class SQLStorageManager(object):
         if log:
             current_app.logger.debug('Update %s', instance)
         db.session.add(instance)
-        self._validate_unique_resource_id_per_tenant(instance)
+        self._validate_unique_resource_per_tenant(instance)
         for attr in modified_attrs:
             flag_modified(instance, attr)
         self._safe_commit()

@@ -36,11 +36,9 @@ class PluginsSetGlobal(SecuredResource):
         """
         Set the plugin's visibility to global
         """
-        return get_resource_manager().set_visibility(
-            models.Plugin,
-            plugin_id,
-            VisibilityState.GLOBAL
-        )
+        plugin = get_storage_manager().get(models.Plugin, plugin_id)
+        return get_resource_manager().set_visibility(plugin,
+                                                     VisibilityState.GLOBAL)
 
 
 class PluginsSetVisibility(SecuredResource):
@@ -52,9 +50,8 @@ class PluginsSetVisibility(SecuredResource):
         Set the plugin's visibility
         """
         visibility = rest_utils.get_visibility_parameter()
-        return get_resource_manager().set_visibility(models.Plugin,
-                                                     plugin_id,
-                                                     visibility)
+        plugin = get_storage_manager().get(models.Plugin, plugin_id)
+        return get_resource_manager().set_visibility(plugin, visibility)
 
 
 class Plugins(resources_v2.Plugins):

@@ -43,11 +43,9 @@ class BlueprintsSetGlobal(SecuredResource):
         """
         Set the blueprint's visibility to global
         """
-        return get_resource_manager().set_visibility(
-            models.Blueprint,
-            blueprint_id,
-            VisibilityState.GLOBAL
-        )
+        blueprint = get_storage_manager().get(models.Blueprint, blueprint_id)
+        return get_resource_manager().set_visibility(blueprint,
+                                                     VisibilityState.GLOBAL)
 
 
 class BlueprintsSetVisibility(SecuredResource):
@@ -59,9 +57,8 @@ class BlueprintsSetVisibility(SecuredResource):
         Set the blueprint's visibility
         """
         visibility = rest_utils.get_visibility_parameter()
-        return get_resource_manager().set_visibility(models.Blueprint,
-                                                     blueprint_id,
-                                                     visibility)
+        blueprint = get_storage_manager().get(models.Blueprint, blueprint_id)
+        return get_resource_manager().set_visibility(blueprint, visibility)
 
 
 class BlueprintsIcon(SecuredResource):
@@ -127,8 +124,8 @@ class BlueprintsId(resources_v2.BlueprintsId):
                         BlueprintUploadState.FAILED_STATES:
                     override_failed = True
                 else:
-                    raise IllegalActionError(
-                        "Can't set or create the resource `{0}`, it's "
+                    raise ConflictError(
+                        "Can't set or create the resource `{0}`, its "
                         "visibility can't be global because it also exists in "
                         "other tenants".format(blueprint_id))
         else:

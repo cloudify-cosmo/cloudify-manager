@@ -141,7 +141,7 @@ class FiltersId(SecuredResource):
         _verify_not_a_system_filter(filter_elem, 'update')
         if visibility:
             get_resource_manager().validate_visibility_value(
-                filters_model, filter_elem, visibility)
+                filter_elem, visibility)
             filter_elem.visibility = visibility
         if filter_rules:
             new_filter_rules = create_filter_rules_list(filter_rules,
