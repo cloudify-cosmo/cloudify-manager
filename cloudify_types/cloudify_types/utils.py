@@ -67,24 +67,30 @@ def get_desired_operation_input(key, args):
             ctx.node.properties.get(key))
 
 
+def _is_client_external(client, client_config):
+    tenant = client_config.get('tenant')
+    if tenant and tenant != ctx.tenant_name:
+        return True
+
+    manager_ips = set()
+    for mgr in manager.get_rest_client().manager.get_managers():
+        manager_ips |= {mgr.private_ip, mgr.public_ip}
+    internal_hosts = {'127.0.0.1', 'localhost'} | manager_ips
+    host = {client.host} if isinstance(client.host, str) else set(client.host)
+    is_internal = host & internal_hosts
+    if is_internal and (host - internal_hosts):
+        ctx.logger.warning(
+            'Only partial match between the destination client host and '
+            'the local manager: the following IPs are external: %s. '
+            'Treating as local client.', list(host - internal_hosts))
+    return not is_internal
+
+
 def get_client(kwargs):
     client_config = get_desired_operation_input('client', kwargs)
     if client_config:
         client = CloudifyClient(**client_config)
-
-        # for determining an external client:
-        manager_ips = set()
-        for mgr in manager.get_rest_client().manager.get_managers():
-            manager_ips |= {mgr.private_ip, mgr.public_ip}
-        internal_hosts = ({'127.0.0.1', 'localhost'} | manager_ips)
-        host = {client.host} if isinstance(client.host, str) \
-            else set(client.host)
-        is_external_host = not (host & internal_hosts)
-        if host - internal_hosts:
-            ctx.logger.warning(
-                'Only partial match between the destination client host and '
-                'the local manager: the following IPs are external: %s. '
-                'Treating as local client.', list(host - internal_hosts))
+        is_external_host = _is_client_external(client, client_config)
     else:
         client = manager.get_rest_client()
         is_external_host = False

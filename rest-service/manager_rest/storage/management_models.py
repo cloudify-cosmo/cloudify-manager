@@ -36,6 +36,7 @@ from .models_base import (
     SQLModelBase,
     UTCDateTime,
 )
+from .storage_manager import get_storage_manager
 
 
 class ProviderContext(SQLModelBase):
@@ -492,11 +493,9 @@ class User(SQLModelBase, UserMixin):
             description=description,
             secret_hash=hash_password(secret),
             expiration_date=expiration_date,
-            _user_fk=self.id,
+            user=self,
         )
-
-        db.session.add(token)
-        db.session.commit()
+        get_storage_manager().put(token)
 
         # Return the token with the secret or it'll never be usable
         token._secret = secret
