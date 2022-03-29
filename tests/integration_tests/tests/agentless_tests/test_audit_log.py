@@ -125,15 +125,19 @@ class AuditLogMultiTenantTest(AgentlessTestCase):
             creator_name=self.users[0].name).items
         user_1_audit_logs = self.client.auditlog.list(
             creator_name=self.users[1].name).items
-        assert len(all_audit_logs) != []
+        assert len(all_audit_logs) > 0
         assert len(user_0_audit_logs) < len(all_audit_logs)
         assert len(user_1_audit_logs) < len(all_audit_logs)
-        # add +1 because the second auditlog.list call also emits an audit log
-        assert len(user_0_audit_logs) + 1 == len(user_1_audit_logs)
-        assert set((log['ref_table'], log['ref_id'])
-                   for log in user_0_audit_logs)\
-            .isdisjoint(set((log['ref_table'], log['ref_id'])
-                            for log in user_1_audit_logs))
+
+        user_0_resource_logs = {
+            (log['ref_table'], log['ref_id']) for log in user_0_audit_logs
+            if log['ref_table'] not in  {'usage_collector', 'users'}
+        }
+        user_1_resource_logs = {
+            (log['ref_table'], log['ref_id']) for log in user_1_audit_logs
+            if log['ref_table'] not in  {'usage_collector', 'users'}
+        }
+        assert user_0_resource_logs.isdisjoint(user_1_resource_logs)
 
 
 def filter_logs(logs: List[dict], **kwargs) -> List[dict]:
