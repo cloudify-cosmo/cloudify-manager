@@ -20,7 +20,6 @@ import logging
 
 from cloudify._compat import parse_version
 from cloudify.manager import get_rest_client
-from cloudify.utils import get_admin_api_token
 from cloudify.constants import EVENTS_EXCHANGE_NAME
 
 from cloudify_agent.worker import (
@@ -111,14 +110,15 @@ class HookConsumer(CloudifyOperationConsumer):
         hook_context['event_type'] = full_task['event_type']
         hook_context['timestamp'] = full_task['timestamp']
         hook_context['arguments'] = full_task['message']['arguments']
+        token = hook_context['rest_token']
         operation_context = dict(
             type='hook',
             tenant=tenant,
             no_ctx_kwarg=True,
             task_target=self.queue,
             tenant_name=tenant_name,
-            rest_token=hook_context.get('rest_token'),
-            plugin=self._get_plugin(tenant_name, implementation),
+            rest_token=token,
+            plugin=self._get_plugin(tenant_name, implementation, token),
             execution_id=hook_context['execution_id']
         )
 
@@ -129,12 +129,10 @@ class HookConsumer(CloudifyOperationConsumer):
             operation_context['task_name'] = implementation
         return hook_context, operation_context
 
-    def _get_plugin(self, tenant_name, implementation):
+    def _get_plugin(self, tenant_name, implementation, token):
         package_name = implementation.split('.')[0]
         filter_plugin = {'package_name': package_name}
-        admin_api_token = get_admin_api_token()
-        rest_client = get_rest_client(tenant=tenant_name,
-                                      api_token=admin_api_token)
+        rest_client = get_rest_client(tenant=tenant_name, api_token=token)
         plugins = rest_client.plugins.list(**filter_plugin)
         if not plugins:
             return {}
