@@ -1269,10 +1269,7 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             'wait_after_fail': wait_after_fail,
             'bypass_maintenance': bypass_maintenance,
             'execution_token': token,
-            'rest_token': self.creator.get_auth_token(
-                description=f'Execution {self.id} ({self.workflow_id})'
-                            ' rest token.'
-            ),
+            'rest_token': token,
             'rest_host': [
                 mgr.private_ip for mgr in session.query(Manager).all()
             ],
