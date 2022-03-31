@@ -1,6 +1,3 @@
-import hashlib
-import uuid
-
 from flask_security import current_user
 
 from cloudify.amqp_client import get_client, SendHandler
@@ -23,14 +20,6 @@ def execute_workflow(messages):
     with client:
         for message in messages:
             handler.publish(message)
-
-
-def generate_execution_token(execution):
-    sm = get_storage_manager()
-    token = uuid.uuid4().hex
-    execution.token = hashlib.sha256(token.encode('ascii')).hexdigest()
-    sm.update(execution)
-    return token
 
 
 def _get_tenant_dict():
