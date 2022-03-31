@@ -34,16 +34,18 @@ def user_loader(request):
     """
     if request.authorization:
         return get_user_from_auth(request.authorization)
-    execution_token = (
-        get_execution_token_from_request(request)
-        # Support using the exec token as an auth token for workflows
-        or get_token_from_request(request)
-    )
-    if execution_token:
-        execution = get_current_execution_by_token(execution_token)
-        set_current_execution(execution)  # Sets the request current execution
-        return execution.creator if execution else None
+    execution_token = get_execution_token_from_request(request)
     token = get_token_from_request(request)
+    # Support using the exec token as an auth token for workflows
+    if execution_token or token:
+        execution = get_current_execution_by_token(execution_token or token)
+        if execution:
+            set_current_execution(execution)  # Sets request current execution
+            return execution.creator
+        elif execution_token:
+            # Maintaining old behaviour- if there's no execution associated
+            # with a provided execution token, return nothing
+            return None
     if token:
         return get_token_status(token)
     if current_app.external_auth \
