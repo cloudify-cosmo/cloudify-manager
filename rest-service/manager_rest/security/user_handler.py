@@ -34,7 +34,11 @@ def user_loader(request):
     """
     if request.authorization:
         return get_user_from_auth(request.authorization)
-    execution_token = get_execution_token_from_request(request)
+    execution_token = (
+        get_execution_token_from_request(request)
+        # Support using the exec token as an auth token for workflows
+        or get_token_from_request(request)
+    )
     if execution_token:
         execution = get_current_execution_by_token(execution_token)
         set_current_execution(execution)  # Sets the request current execution
@@ -61,7 +65,7 @@ def get_user_from_auth(auth):
 def get_token_from_request(request):
     token_auth_header = current_app.config[
         'SECURITY_TOKEN_AUTHENTICATION_HEADER']
-    return request.headers.get(token_auth_header)
+    return request.headers.get(token_auth_header, '')
 
 
 def get_token_status(token):

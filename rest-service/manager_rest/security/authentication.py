@@ -96,6 +96,14 @@ class Authentication(object):
         auth = request.authorization
         token = user_handler.get_token_from_request(request)
         execution_token = get_execution_token_from_request(request)
+        if (
+            current_execution
+            and not execution_token
+            and not token.startswith('ctok-')
+        ):
+            # Support using the exec token as an auth token for workflows
+            execution_token = token
+            token = None
         self.token_based_auth = token or execution_token
         if auth:  # Basic authentication (User + Password)
             user = user_handler.get_user_from_auth(auth)
