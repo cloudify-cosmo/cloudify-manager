@@ -81,7 +81,6 @@ def restart_restservice():
 def cancel_execution(executions):
     sm = get_storage_manager()
     managers = sm.list(models.Manager)
-    ids_string = ','.join(execution_ids)
     message = {
         'service_task': {
             'task_name': 'cancel-workflow',
