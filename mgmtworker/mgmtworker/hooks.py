@@ -21,6 +21,7 @@ import logging
 from cloudify._compat import parse_version
 from cloudify.manager import get_rest_client
 from cloudify.constants import EVENTS_EXCHANGE_NAME
+from cloudify_rest_client.exceptions import CloudifyClientError
 
 from cloudify_agent.worker import (
     CloudifyOperationConsumer,
@@ -44,7 +45,9 @@ class HookConsumer(CloudifyOperationConsumer):
     def handle_task(self, full_task):
         event_type = full_task['event_type']
         hook = self._get_hook(event_type)
+        tenant = self._get_tenant(full_task)
         if not hook:
+            self._cleanup_token(full_task, tenant)
             return
         logger.info(
             'The hook consumer received `{0}` event and the hook '
@@ -53,12 +56,13 @@ class HookConsumer(CloudifyOperationConsumer):
         )
 
         try:
-            task = self._get_task(full_task, hook)
+            task = self._get_task(full_task, tenant, hook)
             result = super(HookConsumer, self).handle_task(task)
         except Exception as e:
             result = {'ok': False, 'error': str(e)}
             logger.error('%r, while running the hook triggered by the '
                          'event: %s', e, event_type)
+        self._cleanup_token(full_task, tenant)
         return result
 
     def _get_hook(self, event_type):
@@ -85,10 +89,11 @@ class HookConsumer(CloudifyOperationConsumer):
                     "compatible hook in the configuration".format(event_type))
         return None
 
-    def _get_task(self, full_task, hook):
+    def _get_task(self, full_task, tenant, hook):
         hook_context, operation_context = self._get_contexts(
             full_task,
-            hook['implementation']
+            tenant,
+            hook['implementation'],
         )
         task = {
             'cloudify_task': {
@@ -102,11 +107,10 @@ class HookConsumer(CloudifyOperationConsumer):
         task['cloudify_task']['kwargs'].update(kwargs)
         return task
 
-    def _get_contexts(self, full_task, implementation):
+    def _get_contexts(self, full_task, tenant, implementation):
         hook_context = full_task['context']
-        tenant = hook_context.pop('tenant')
         tenant_name = tenant.get('name')
-        hook_context['tenant_name'] = tenant.get('name')
+        hook_context['tenant_name'] = tenant_name
         hook_context['event_type'] = full_task['event_type']
         hook_context['timestamp'] = full_task['timestamp']
         hook_context['arguments'] = full_task['message']['arguments']
@@ -145,3 +149,27 @@ class HookConsumer(CloudifyOperationConsumer):
             'package_version': plugins[0]['package_version'],
             'visibility': plugins[0]['visibility']
         }
+
+    def _get_tenant(self, full_task):
+        hook_context = full_task['context']
+        return hook_context.pop('tenant')
+
+    def _cleanup_token(self, full_task, tenant):
+        try:
+            token = full_task['context']['rest_token']
+        except KeyError:
+            logger.error(
+                'no token in hook %s context',
+                full_task['event_type']
+            )
+            return
+        parts = token.split('-', 2)
+        if len(parts) != 3:
+            logger.error('malformed hook token: %s', token)
+            return
+        token_id = parts[1]
+        try:
+            cl = get_rest_client(tenant=tenant.get('name'), api_token=token)
+            cl.tokens.delete(token_id)
+        except CloudifyClientError as e:
+            logger.error('error deleting token: %s', e)
