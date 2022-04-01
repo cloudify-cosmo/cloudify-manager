@@ -1248,12 +1248,17 @@ class Execution(CreatedAtMixin, SQLResourceBase):
         else:
             return param
 
+    def update_execution_token(self):
+        token = uuid.uuid4().hex
+        self.token = hashlib.sha256(token.encode('ascii')).hexdigest()
+        return token
+
     def render_message(self, wait_after_fail=600, bypass_maintenance=None):
         self.ensure_defaults()
         workflow = self.get_workflow()
         session = db.session.object_session(self)
 
-        token = uuid.uuid4().hex
+        token = self.update_execution_token()
         context = {
             'type': 'workflow',
             'task_id': self.id,
@@ -1319,7 +1324,6 @@ class Execution(CreatedAtMixin, SQLResourceBase):
         parameters = self.parameters.copy()
         parameters['__cloudify_context'] = context
 
-        self.token = hashlib.sha256(token.encode('ascii')).hexdigest()
         session.add(self)
         return {
             'cloudify_task': {'kwargs': parameters},
