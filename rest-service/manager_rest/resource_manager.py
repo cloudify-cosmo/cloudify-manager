@@ -1384,7 +1384,7 @@ class ResourceManager(object):
                 _validate_cancel_execution(execution,
                                            kill_execution, force_execution)
                 execution_storage_id_kill[execution._storage_id] = \
-                    kill_execution, execution.id
+                    kill_execution, execution.id, execution.execution_token
 
                 # Dealing with the inner Components' deployments
                 components_executions = self._find_all_components_executions(
@@ -1416,7 +1416,8 @@ class ResourceManager(object):
 
         # Kill workflow executors if kill-cancelling
         workflow_executor.cancel_execution(
-            [execution_id for storage_id, (kill_execution, execution_id)
+            [{'id': execution_id, 'token': execution_token}
+             for storage_id, (kill_execution, execution_id, execution_token)
              in execution_storage_id_kill.items() if kill_execution])
 
         return result

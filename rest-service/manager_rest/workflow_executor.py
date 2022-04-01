@@ -78,7 +78,7 @@ def restart_restservice():
     _broadcast_mgmtworker_task(message)
 
 
-def cancel_execution(execution_ids):
+def cancel_execution(executions):
     sm = get_storage_manager()
     managers = sm.list(models.Manager)
     ids_string = ','.join(execution_ids)
@@ -87,10 +87,7 @@ def cancel_execution(execution_ids):
             'task_name': 'cancel-workflow',
             'kwargs': {
                 'rest_host': [manager.private_ip for manager in managers],
-                'execution_ids': execution_ids,
-                'rest_token': current_user.get_auth_token(
-                    description=f'Cancelling {ids_string} rest token.',
-                ),
+                'executions': executions,
                 'tenant': _get_tenant_dict(),
             }
         }

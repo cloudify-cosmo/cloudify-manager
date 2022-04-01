@@ -240,23 +240,23 @@ class MgmtworkerServiceTaskConsumer(ServiceTaskConsumer):
                                tenant_name, deployment_id)
         shutil.rmtree(dep_dir, ignore_errors=True)
 
-    def cancel_workflow_task(self, execution_ids, rest_token, tenant,
-                             rest_host):
-        logger.info('Cancelling workflows {0}'.format(execution_ids))
+    def cancel_workflow_task(self, executions, tenant, rest_host):
+        logger.info('Cancelling workflows %s',
+                    [exc['id'] for exc in executions])
 
         class CancelCloudifyContext(object):
             """A CloudifyContext that has just enough data to cancel workflows
             """
-            def __init__(self):
+            def __init__(self, execution_token):
                 self.rest_host = rest_host
                 self.tenant_name = tenant['name']
-                self.rest_token = rest_token
-                self.execution_token = None
+                self.rest_token = execution_token
+                self.execution_token = execution_token
                 # always bypass - this is a kill, as forceful as we can get
                 self.bypass_maintenance = True
 
-        with current_workflow_ctx.push(CancelCloudifyContext()):
-            for execution_id in execution_ids:
+        for execution_id, exc_token in executions:
+            with current_workflow_ctx.push(CancelCloudifyContext(exc_token)):
                 self._workflow_registry.cancel(execution_id)
                 self._cancel_agent_operations(execution_id)
                 try:
