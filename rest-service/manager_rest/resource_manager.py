@@ -1384,7 +1384,7 @@ class ResourceManager(object):
                 _validate_cancel_execution(execution,
                                            kill_execution, force_execution)
                 execution_storage_id_kill[execution._storage_id] = \
-                    kill_execution, execution.id, execution.execution_token
+                    kill_execution, execution.id, execution.token
 
                 # Dealing with the inner Components' deployments
                 components_executions = self._find_all_components_executions(
