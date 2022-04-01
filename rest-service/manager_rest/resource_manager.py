@@ -1383,8 +1383,8 @@ class ResourceManager(object):
                     kill_execution, force_execution = True, True
                 _validate_cancel_execution(execution,
                                            kill_execution, force_execution)
-                execution_storage_id_kill[execution._storage_id] = \
-                    kill_execution, execution.id, execution.token
+                execution_storage_id_kill[execution._storage_id] = [
+                    kill_execution, execution.id, 'token_placeholder']
 
                 # Dealing with the inner Components' deployments
                 components_executions = self._find_all_components_executions(
@@ -1403,6 +1403,9 @@ class ResourceManager(object):
                     models.Execution, locking=True,
                     filters={'_storage_id': lambda col:
                              col.in_(execution_storage_id_kill.keys())}):
+                if execution_storage_id_kill[execution._storage_id][0]:
+                    execution_storage_id_kill[execution._storage_id][2] = \
+                        execution.update_execution_token()
                 execution.status = new_status
                 execution.error = ''
                 execution = self.sm.update(execution)
