@@ -255,7 +255,9 @@ class MgmtworkerServiceTaskConsumer(ServiceTaskConsumer):
                 # always bypass - this is a kill, as forceful as we can get
                 self.bypass_maintenance = True
 
-        for execution_id, exc_token in executions:
+        for execution in executions:
+            execution_id = execution['id']
+            exc_token = execution['token']
             with current_workflow_ctx.push(CancelCloudifyContext(exc_token)):
                 self._workflow_registry.cancel(execution_id)
                 self._cancel_agent_operations(execution_id)
