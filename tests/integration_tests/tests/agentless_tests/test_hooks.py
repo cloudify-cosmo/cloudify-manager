@@ -243,6 +243,7 @@ hooks:
     description: test hook
 """
         self._update_hooks_config(new_config)
+        tokens_before = self.client.tokens.list().metadata.pagination['total']
         self._start_a_workflow()
         event_type_msg = "workflow_started"
         workflow_id_msg = "create_deployment_environment"
@@ -251,6 +252,8 @@ hooks:
         messages = [event_type_msg, workflow_id_msg, input1_msg, input2_msg]
         self._assert_messages_in_log(messages,
                                      log_path='/tmp/mock_hook_function.txt')
+        tokens_after = self.client.tokens.list().metadata.pagination['total']
+        assert tokens_before == tokens_after
 
     def test_multiple_hooks(self):
         new_config = """
