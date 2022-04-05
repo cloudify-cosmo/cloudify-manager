@@ -18,6 +18,7 @@ import time
 import json
 import pytest
 import pickle
+import retrying
 import binascii
 
 import requests
@@ -293,11 +294,11 @@ class TestSnapshot(AgentlessTestCase):
             snapshot_id, force=True)
         self.wait_for_snapshot_restore_to_end()
         self.client.maintenance_mode.deactivate()
+        self._assert_execution_dequeued_and_started(exc.id)
 
-        # execution should be started immediately, but let's give a second for
-        # it to percolate through rabbitmq
-        time.sleep(1)
-        exc = self.client.executions.get(exc.id)
+    @retrying.retry(wait_fixed=500, stop_max_attempt_number=10)
+    def _assert_execution_dequeued_and_started(self, exec_id):
+        exc = self.client.executions.get(exec_id)
         assert exc.status not in (Execution.PENDING, Execution.QUEUED)
         self.wait_for_execution_to_end(exc)
 
