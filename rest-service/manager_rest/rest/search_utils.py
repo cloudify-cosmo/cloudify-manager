@@ -5,7 +5,7 @@ from dsl_parser.functions import is_function
 from manager_rest.manager_exceptions import BadParametersError
 from manager_rest.storage.models import (Blueprint, BlueprintsFilter,
                                          Deployment, DeploymentsFilter,
-                                         Secret, Node)
+                                         Secret, Node, NodeInstance)
 from manager_rest.rest.filters_utils import (get_filter_rules_from_filter_id,
                                              create_filter_rules_list,
                                              FilterRule)
@@ -31,6 +31,8 @@ class GetValuesWithStorageManager:
             return {n.id for n in self.get_nodes(value, **kwargs)}
         elif data_type == 'node_type':
             return {n.type for n in self.get_node_types(value, **kwargs)}
+        elif data_type == 'node_instance':
+            return {n.id for n in self.get_node_instances(value, **kwargs)}
         raise NotImplementedError("Getter function not defined for "
                                   f"data type '{data_type}'")
 
@@ -240,6 +242,42 @@ class GetValuesWithStorageManager:
             include=['type'],
             filters={'deployment_id': str(deployment_id),
                      'type': str(node_type)},
+            get_all_results=True,
+            filter_rules=filter_rules
+        )
+
+    def get_node_instances(self, node_instance,
+                           deployment_id=None,
+                           id_specs=None,
+                           valid_values=None):
+        if not deployment_id:
+            raise BadParametersError(
+                "You should provide 'deployment_id' when getting node "
+                "instances.  Make sure you have `deployment_id` constraint "
+                "declared for your 'node_instance' parameter.")
+        filter_rules = []
+        if id_specs:
+            for op, spec in id_specs.items():
+                filter_rules.append(
+                    {"key": "id",
+                     "values": [str(spec)],
+                     "operator": "any_of" if op == "equals_to" else op,
+                     "type": "attribute"})
+        if valid_values:
+            filter_rules.append(
+                {"key": "id",
+                 "values": [str(v) for v in valid_values],
+                 "operator": "any_of",
+                 "type": "attribute"})
+
+        filter_rules = get_filter_rules(Node, 'id', None, None,
+                                        filter_rules, None)
+
+        return self.sm.list(
+            NodeInstance,
+            include=['id'],
+            filters={'deployment_id': str(deployment_id),
+                     'id': str(node_instance)},
             get_all_results=True,
             filter_rules=filter_rules
         )

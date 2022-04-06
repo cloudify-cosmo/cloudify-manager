@@ -336,39 +336,6 @@ class SearchesTestCase(base_test.BaseServerTestCase):
         )
         assert [s.key for s in search] == []
 
-    def _create_nodes(self, blueprint_id='bp', deployment_id='dep',
-                      node_ids=None, node_types=None):
-        node_ids = node_ids or ['node_1', 'node_2']
-        node_types = node_types or (['test_type'] * len(node_ids))
-        bp = models.Blueprint(
-            id=blueprint_id,
-            creator=self.user,
-            tenant=self.tenant,
-        )
-        dep = models.Deployment(
-            id=deployment_id,
-            blueprint=bp,
-            scaling_groups={},
-            creator=self.user,
-            tenant=self.tenant,
-        )
-        nodes = {
-            node_id: models.Node(
-                id=node_id,
-                type=node_type,
-                number_of_instances=0,
-                deploy_number_of_instances=0,
-                max_number_of_instances=0,
-                min_number_of_instances=0,
-                planned_number_of_instances=0,
-                deployment=dep,
-                creator=self.user,
-                tenant=self.tenant
-            )
-            for node_id, node_type in zip(node_ids, node_types)
-        }
-        return nodes
-
     def test_nodes_search_by_id(self):
         self._create_nodes('b1', 'd1', ['vm', 'http_web_server'])
         self._create_nodes('b2', 'd2', ['vm', 'http_web_server'])
@@ -587,3 +554,147 @@ class SearchesTestCase(base_test.BaseServerTestCase):
             }
         )
         assert [s.type for s in search] == []
+
+    def test_node_instances_valid_request(self):
+        with self.assertRaises(CloudifyClientError):
+            self.client.node_instances.list(
+                deployment_id='d1',
+                constraints={'deployment_id': 'd1'}
+            )
+
+        self.client.node_instances.list(
+            id='node1_instance',
+            constraints={'deployment_id': 'd1'}
+        )
+
+    def test_node_instances_search_by_params(self):
+        self._create_nodes('b1', 'd1',
+                           node_ids=['node1', 'node2'],
+                           node_instance_suffixes=['foo', 'bar'])
+
+        search = self.client.node_instances.list(deployment_id='d1',
+                                                 id='node1_foo')
+        assert [(n.node_id, n.id) for n in search] == [('node1', 'node1_foo')]
+
+        search = self.client.node_instances.list(deployment_id='d1',
+                                                 id='node1_foo')
+        assert [(n.node_id, n.id) for n in search] == [('node1', 'node1_foo')]
+
+    def test_node_instances_search_by_name_pattern_constraints(self):
+        self._create_nodes('b1', 'd1',
+                           node_ids=['node1', 'node2'],
+                           node_instance_suffixes=['lorem', 'ipsum'])
+
+        search = self.client.node_instances.list(
+            deployment_id='d1',
+            constraints={'name_pattern': {'contains': 'sum'}}
+        )
+        assert {s.id for s in search} == {'node1_ipsum', 'node2_ipsum'}
+
+        search = self.client.node_instances.list(
+            constraints={
+                'deployment_id': 'd1',
+                'name_pattern': {'ends_with': 'rem'}
+            }
+        )
+        assert {s.id for s in search} == {'node1_lorem', 'node2_lorem'}
+
+        search = self.client.node_instances.list(
+            deployment_id='d1',
+            constraints={'name_pattern': {'starts_with': 'node2'}}
+        )
+        assert {s.id for s in search} == {'node2_lorem', 'node2_ipsum'}
+
+        search = self.client.node_instances.list(
+            constraints={
+                'deployment_id': 'd1',
+                'name_pattern': {'equals_to': 'node2_lorem'}
+            }
+        )
+        assert {s.id for s in search} == {'node2_lorem'}
+
+        search = self.client.node_instances.list(
+            deployment_id='d1',
+            node_id='node1',
+            constraints={'name_pattern': {'ends_with': 'ipsum'}}
+        )
+        assert {s.id for s in search} == {'node1_ipsum'}
+
+        search = self.client.nodes.types.list(
+            node_id='node2',
+            constraints={
+                'deployment_id': 'd1',
+                'name_pattern': {'contains': 'node1_'}
+            }
+        )
+        assert [s.id for s in search] == []
+
+    def test_node_instances_search_by_valid_values_constraints(self):
+        self._create_nodes('b1', 'd1',
+                           node_ids=['node1', 'node2'],
+                           node_instance_suffixes=['lorem', 'ipsum'])
+
+        search = self.client.node_instances.list(
+            deployment_id='d1',
+            constraints={'valid_values': ['node1_lorem']}
+        )
+        assert {s.id for s in search} == {'node1_lorem'}
+
+        search = self.client.node_instances.list(
+            deployment_id='d1',
+            constraints={'valid_values': ['node1_lorem', 'node2_ipsum']}
+        )
+        assert {s.id for s in search} == {'node1_lorem', 'node2_ipsum'}
+
+        search = self.client.nodes.types.list(
+            node_id='node1',
+            constraints={
+                'deployment_id': 'd1',
+                'valid_values': ['node2_lorem', 'node2_ipsum']
+            }
+        )
+        assert [s.type for s in search] == []
+
+    def _create_nodes(self, blueprint_id='bp', deployment_id='dep',
+                      node_ids=None, node_types=None,
+                      node_instance_suffixes=None):
+        node_ids = node_ids or ['node1', 'node2']
+        node_types = node_types or (['test_type'] * len(node_ids))
+        bp = models.Blueprint(
+            id=blueprint_id,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        dep = models.Deployment(
+            id=deployment_id,
+            blueprint=bp,
+            scaling_groups={},
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        nodes = {
+            node_id: models.Node(
+                id=node_id,
+                type=node_type,
+                number_of_instances=0,
+                deploy_number_of_instances=0,
+                max_number_of_instances=0,
+                min_number_of_instances=0,
+                planned_number_of_instances=0,
+                deployment=dep,
+                creator=self.user,
+                tenant=self.tenant
+            )
+            for node_id, node_type in zip(node_ids, node_types)
+        }
+        for node_instance_id in node_instance_suffixes or {}:
+            for node in nodes.values():
+                models.NodeInstance(
+                    id=f'{node.id}_{node_instance_id}',
+                    node=node,
+                    state='uninitialized',
+                    version=1,
+                    creator=self.user,
+                    tenant=self.tenant,
+                )
+        return nodes
