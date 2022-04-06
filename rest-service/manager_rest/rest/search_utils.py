@@ -1,5 +1,7 @@
 from collections import defaultdict
 
+from dsl_parser.functions import is_function
+
 from manager_rest.manager_exceptions import BadParametersError
 from manager_rest.storage.models import (Blueprint, BlueprintsFilter,
                                          Deployment, DeploymentsFilter,
@@ -162,6 +164,8 @@ class GetValuesWithStorageManager:
             if not dep.capabilities:
                 continue
             for key, capability in dep.capabilities.items():
+                if is_function(capability.get('value')):
+                    continue
                 if capability_matches(key, capability, capability_value,
                                       valid_values, capability_key_specs):
                     dep_capabilities[dep.id].append({key: capability})
