@@ -270,7 +270,7 @@ class GetValuesWithStorageManager:
                  "operator": "any_of",
                  "type": "attribute"})
 
-        filter_rules = get_filter_rules(Node, 'id', None, None,
+        filter_rules = get_filter_rules(NodeInstance, 'id', None, None,
                                         filter_rules, None)
 
         return self.sm.list(
