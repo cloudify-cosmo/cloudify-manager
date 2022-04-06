@@ -237,9 +237,20 @@ class NodeInstancesSearches(ResourceSearches):
     def post(self, _include=None, pagination=None, sort=None,
              all_tenants=None, search=None, **kwargs):
         """List NodeInstances using filter rules"""
-        return super().post(models.NodeInstance, None,
-                            _include, {}, pagination, sort, all_tenants,
-                            search, None, **kwargs)
+        deployment_id, constraints = retrieve_deployment_id_and_constraints()
+        if 'name_pattern' in constraints:
+            constraints['id_specs'] = constraints.pop('name_pattern')
+        args = rest_utils.get_args_and_verify_arguments([
+            Argument('node_id', required=False),
+        ])
+        node_id = args.get('node_id')
+        filters = {'deployment_id': deployment_id}
+        if node_id:
+            filters['node_id'] = node_id
+        return super().post(models.NodeInstance, None, _include, filters,
+                            pagination, sort, all_tenants, search, None,
+                            constraints=constraints,
+                            resource_field='id', **kwargs)
 
 
 class SecretsSearches(ResourceSearches):
