@@ -589,3 +589,93 @@ class TestNodeTypeType(AgentlessTestCase, DataBasedTypes):
             'dep', 'test_parameters',
             parameters=self.get_params(c='type-that-does-not-exist'),
         )
+
+
+class TestNodeInstanceType(AgentlessTestCase, DataBasedTypes):
+    def setUp(self):
+        self.upload_blueprint(
+            blueprint_id='bp-basic',
+            blueprint_file_name='blueprint_with_two_nodes.yaml',
+        )
+        self.client.deployments.create('bp-basic', 'dep-basic')
+        self.upload_blueprint(
+            blueprint_id='bp',
+            blueprint_file_name='blueprint_with_node_instance_data_type.yaml'
+        )
+        self.setup_valid_secrets()
+
+    @staticmethod
+    def get_inputs(**kwargs):
+        node_instance_ids = kwargs.pop('ids', {})
+        inputs = {'a': node_instance_ids.get('node1'),
+                  'b': node_instance_ids.get('node2')}
+        inputs.update(kwargs)
+        return inputs
+
+    @staticmethod
+    def get_params(**kwargs):
+        node_instance_ids = kwargs.pop('ids', {})
+        params = {'a': node_instance_ids.get('node1'),
+                  'b': node_instance_ids.get('node2')}
+        params.update(kwargs)
+        return params
+
+    def test_successful(self):
+        node_instances = self.client.node_instances.list(
+            deployment_id='dep-basic')
+        node_instance_ids = {n.node_id: n.id for n in node_instances}
+        self.client.deployments.create(
+            'bp', 'dep',
+            inputs=self.get_inputs(ids=node_instance_ids))
+        install_execution = self.client.executions.create('dep', 'install')
+        self.wait_for_execution_to_end(install_execution)
+        test_execution = self.client.executions.create(
+            'dep', 'test_parameters',
+            parameters=self.get_params(ids=node_instance_ids))
+        self.wait_for_execution_to_end(test_execution)
+
+    def test_input_errors(self):
+        node_instances = self.client.node_instances.list(
+            deployment_id='dep-basic')
+        node_instance_ids = {n.node_id: n.id for n in node_instances}
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            r'^400:.+ConstraintException:.+a.+name_pattern',
+            self.client.deployments.create,
+            'bp', 'dep',
+            inputs=self.get_inputs(ids=node_instance_ids,
+                                   a=node_instance_ids['node2']),
+        )
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            r'^400:.+ConstraintException:.+input.+b.+does not match',
+            self.client.deployments.create,
+            'bp', 'dep',
+            inputs=self.get_inputs(ids=node_instance_ids,
+                                   b='node-that-does-not-exist'),
+        )
+
+    def test_param_errors(self):
+        node_instances = self.client.node_instances.list(
+            deployment_id='dep-basic')
+        node_instance_ids = {n.node_id: n.id for n in node_instances}
+        self.client.deployments.create(
+            'bp', 'dep',
+            inputs=self.get_inputs(ids=node_instance_ids))
+
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            r'^400:.+Parameter.+constraints:.+a.+name_pattern',
+            self.client.executions.create,
+            'dep', 'test_parameters',
+            parameters=self.get_params(ids=node_instance_ids,
+                                       a=node_instance_ids['node2']),
+        )
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            r'^400:.+Parameter.+constraints:.+b.+does not match',
+            self.client.executions.create,
+            'dep', 'test_parameters',
+            parameters=self.get_params(ids=node_instance_ids,
+                                       b='node-that-does-not-exist'),
+        )

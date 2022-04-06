@@ -1,0 +1,33 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - cloudify/types/types.yaml
+
+inputs:
+  a:
+    type: node_instance
+    constraints:
+      - deployment_id: dep-basic
+      - name_pattern:
+          starts_with: "n"
+          contains: "ode1"
+  b:
+    type: node_instance
+    constraints:
+      - deployment_id: dep-basic
+
+workflows:
+  test_parameters:
+    mapping: file:///dev/null
+    parameters:
+      a:
+        type: node_instance
+        constraints:
+          - deployment_id: dep-basic
+          - name_pattern:
+              starts_with: "n"
+              contains: "ode1"
+      b:
+        type: node_instance
+        constraints:
+          - deployment_id: dep-basic
