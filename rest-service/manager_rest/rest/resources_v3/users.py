@@ -147,7 +147,6 @@ class UsersIdPremium(SecuredMultiTenancyResource):
         """
         Delete a user
         """
-        rest_utils.validate_inputs({'username': username})
         multi_tenancy.delete_user(username)
         return None, 204
 
