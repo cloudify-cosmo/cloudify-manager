@@ -380,7 +380,8 @@ def retrieve_deployment_id_and_constraints(dep_id_required=False):
             "or have a 'deployment_id' key in the constraints, not both.")
     deployment_id = args.get('deployment_id') \
         or constraints.get('deployment_id')
-    if dep_id_required and not deployment_id:
+    # A deployment ID is necessary if constraints are provided
+    if (constraints or dep_id_required) and not deployment_id:
         raise manager_exceptions.BadParametersError(
             "Please provide a valid '_deployment_id' parameter or have "
             "a 'deployment_id' key in the constraints.")
