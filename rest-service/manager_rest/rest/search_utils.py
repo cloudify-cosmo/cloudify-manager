@@ -27,6 +27,9 @@ class GetValuesWithStorageManager:
                     for dep_cap in self.get_capability_values(value, **kwargs)
                     for cap in dep_cap['capabilities']
                     for cap_details in cap.values()}
+        elif data_type == 'scaling_group':
+            return {sg['name']
+                    for sg in self.get_scaling_groups(value, **kwargs)}
         elif data_type == 'node_id':
             return {n.id for n in self.get_nodes(value, **kwargs)}
         elif data_type == 'node_type':
@@ -174,6 +177,43 @@ class GetValuesWithStorageManager:
         return [{'deployment_id': k, 'capabilities': v}
                 for k, v in dep_capabilities.items()]
 
+    def get_scaling_groups(self, scaling_group_name,
+                           deployment_id=None,
+                           valid_values=None,
+                           scaling_group_name_specs=None):
+        if not deployment_id:
+            raise BadParametersError(
+                "You should provide 'deployment_id' when getting node "
+                "instances.  Make sure you have `deployment_id` constraint "
+                "declared for your 'scaling_group' parameter.")
+
+        deployments = self.sm.list(
+            Deployment,
+            include=['id', 'scaling_group'],
+            filters={'id': str(deployment_id)},
+            get_all_results=True,
+        )
+
+        results = []
+        for dep in deployments:
+            if not dep.scaling_groups:
+                continue
+            for name, scaling_group in dep.scaling_groups.items():
+                if scaling_group_name_matches(
+                    name,
+                    scaling_group_name,
+                    valid_values=valid_values,
+                    scaling_group_name_specs=scaling_group_name_specs
+                ):
+                    results.append({
+                        'deployment_id': dep.id,
+                        'name': name,
+                        'members': scaling_group.get('members'),
+                        'properties': scaling_group.get('properties'),
+                    })
+
+        return results
+
     def get_nodes(self, node_id,
                   deployment_id=None,
                   id_specs=None,
@@ -309,6 +349,35 @@ def capability_matches(capability_key, capability, search_value,
 
     if search_value:
         return capability['value'] == search_value
+
+    return True
+
+
+def scaling_group_name_matches(scaling_group_name, search_value,
+                               valid_values=None,
+                               scaling_group_name_specs=None):
+    if scaling_group_name_specs:
+        for operator, value in scaling_group_name_specs.items():
+            if operator == 'contains':
+                if value not in scaling_group_name:
+                    return False
+            elif operator == 'starts_with':
+                if not scaling_group_name.startswith(str(value)):
+                    return False
+            elif operator == 'ends_with':
+                if not scaling_group_name.endswith(str(value)):
+                    return False
+            elif operator == 'equals_to':
+                if scaling_group_name != str(value):
+                    return False
+            else:
+                raise NotImplementedError('Unknown scaling group name '
+                                          f'pattern operator: {operator}')
+    if valid_values:
+        if scaling_group_name not in valid_values:
+            return False
+    if search_value:
+        return scaling_group_name == search_value
 
     return True
 

@@ -538,7 +538,7 @@ def scaling_group_name_matches(scaling_group_name, constraints, search_value):
                     if scaling_group_name != str(value):
                         return False
                 else:
-                    raise NotImplementedError('Unknown capabilities name '
+                    raise NotImplementedError('Unknown scaling group name '
                                               f'pattern operator: {operator}')
         elif constraint == 'valid_values':
             if scaling_group_name not in specification:
