@@ -198,9 +198,10 @@ class NodesSearches(ResourceSearches):
     def post(self, _include=None, pagination=None, sort=None,
              all_tenants=None, search=None, **kwargs):
         """List Nodes using filter rules or DSL constraints"""
-        deployment_id, _ = retrieve_deployment_id_and_constraints()
-        return super().post(models.Node, None, _include,
-                            {'deployment_id': deployment_id}, pagination,
+        deployment_id, _ = retrieve_deployment_id_and_constraints(
+            dep_id_required=True)
+        filters = {'deployment_id': deployment_id}
+        return super().post(models.Node, None, _include, filters, pagination,
                             sort, all_tenants, search, None, **kwargs)
 
 
@@ -215,11 +216,12 @@ class NodeTypesSearches(ResourceSearches):
     def post(self, _include=None, pagination=None, sort=None,
              all_tenants=None, search=None, **kwargs):
         """List Nodes using filter rules or DSL constraints"""
-        deployment_id, constraints = retrieve_deployment_id_and_constraints()
+        deployment_id, constraints = retrieve_deployment_id_and_constraints(
+            dep_id_required=True)
         if 'name_pattern' in constraints:
             constraints['type_specs'] = constraints.pop('name_pattern')
-        return super().post(models.Node, None, _include,
-                            {'deployment_id': deployment_id}, pagination,
+        filters = {'deployment_id': deployment_id}
+        return super().post(models.Node, None, _include, filters, pagination,
                             sort, all_tenants, search, None,
                             constraints=constraints,
                             resource_field='type', **kwargs)
@@ -244,7 +246,9 @@ class NodeInstancesSearches(ResourceSearches):
             Argument('node_id', required=False),
         ])
         node_id = args.get('node_id')
-        filters = {'deployment_id': deployment_id}
+        filters = {}
+        if deployment_id:
+            filters['deployment_id'] = deployment_id
         if node_id:
             filters['node_id'] = node_id
         return super().post(models.NodeInstance, None, _include, filters,
@@ -322,7 +326,7 @@ class CapabilitiesSearches(ResourceSearches):
              pagination=None, all_tenants=None, **kwargs):
         """List capabilities using DSL constraints"""
         deployment_id, constraints = \
-            retrieve_deployment_id_and_constraints(constraints_optional=False)
+            retrieve_deployment_id_and_constraints(dep_id_required=True)
         args = rest_utils.get_args_and_verify_arguments([
             Argument('_search', required=False),
         ])
@@ -363,12 +367,12 @@ class CapabilitiesSearches(ResourceSearches):
         )
 
 
-def retrieve_deployment_id_and_constraints(constraints_optional=True):
+def retrieve_deployment_id_and_constraints(dep_id_required=False):
     args = rest_utils.get_args_and_verify_arguments([
         Argument('deployment_id', required=False),
     ])
     request_dict = rest_utils.get_json_and_verify_params(
-        {'constraints': {'optional': constraints_optional, 'type': dict}})
+        {'constraints': {'optional': True, 'type': dict}})
     constraints = request_dict.get('constraints', {})
     if args.get('deployment_id') and 'deployment_id' in constraints:
         raise manager_exceptions.BadParametersError(
@@ -376,7 +380,8 @@ def retrieve_deployment_id_and_constraints(constraints_optional=True):
             "or have a 'deployment_id' key in the constraints, not both.")
     deployment_id = args.get('deployment_id') \
         or constraints.get('deployment_id')
-    if not deployment_id:
+    # A deployment ID is necessary if constraints are provided
+    if (constraints or dep_id_required) and not deployment_id:
         raise manager_exceptions.BadParametersError(
             "Please provide a valid '_deployment_id' parameter or have "
             "a 'deployment_id' key in the constraints.")
