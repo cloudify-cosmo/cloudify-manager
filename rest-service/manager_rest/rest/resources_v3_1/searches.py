@@ -367,6 +367,110 @@ class CapabilitiesSearches(ResourceSearches):
         )
 
 
+class ScalingGroupsSearches(ResourceSearches):
+    @swagger.operation(
+        responseClass=f'List[{responses_v3.ScalingGroupResponse.__name__}]',
+        nickname="list",
+        notes="Returns a filtered list of existing scaling groups "
+              "of a specific deployment.",
+        parameters=[
+            {
+                'in': 'query',
+                'name': '_deployment_id',
+                'type': 'string',
+                'required': 'true'
+            },
+            {
+                'in': 'query',
+                'name': '_search',
+                'type': 'string',
+                'required': 'false'
+            },
+            {
+                'in': 'query',
+                'name': '_include',
+                'type': 'string',
+                'required': 'false'
+            },
+            {
+                'in': 'query',
+                'name': '_size',
+                'type': 'integer',
+                'required': 'false'
+            },
+            {
+                'in': 'query',
+                'name': '_offset',
+                'type': 'integer',
+                'required': 'false'
+            },
+            {
+                'in': 'query',
+                'name': '_all_tenants',
+                'type': 'boolean',
+                'required': 'false'
+            },
+            {
+                'in': 'query',
+                'name': '_get_all_results',
+                'type': 'boolean',
+                'required': 'false'
+            },
+        ]
+    )
+    @authorize('deployment_get', allow_all_tenants=True)
+    @rest_decorators.marshal_with(responses_v3.ScalingGroupResponse)
+    @rest_decorators.paginate
+    @rest_decorators.all_tenants
+    def post(self, _include=None, pagination=None, all_tenants=None, **kwargs):
+        """List scaling groups using DSL constraints"""
+        deployment_id, constraints = \
+            retrieve_deployment_id_and_constraints(dep_id_required=True)
+        if 'name_pattern' in constraints:
+            constraints['scaling_group_name_specs'] = \
+                constraints.pop('name_pattern')
+        args = rest_utils.get_args_and_verify_arguments([
+            Argument('_search', required=False),
+        ])
+        get_all_results = rest_utils.verify_and_convert_bool(
+            '_get_all_results',
+            request.args.get('_get_all_results', False)
+        )
+
+        deployments = get_storage_manager().list(
+            models.Deployment,
+            include=_include,
+            substr_filters={'id': deployment_id},
+            pagination=pagination,
+            all_tenants=all_tenants,
+            get_all_results=get_all_results,
+        )
+        metadata = deployments.metadata
+
+        results, filtered_out = [], 0
+        for dep in deployments:
+            if not dep.scaling_groups:
+                continue
+            for name, scaling_group in dep.scaling_groups.items():
+                if scaling_group_name_matches(
+                        name, constraints, args.get('_search')):
+                    results.append({
+                        'deployment_id': dep.id,
+                        'name': name,
+                        'members': scaling_group.get('members'),
+                        'properties': scaling_group.get('properties'),
+                    })
+                else:
+                    filtered_out += 1
+
+        metadata['filtered'] = filtered_out
+        metadata['pagination']['total'] = len(results) + filtered_out
+        return ListResponse(
+            items=results,
+            metadata=metadata
+        )
+
+
 def retrieve_deployment_id_and_constraints(dep_id_required=False):
     args = rest_utils.get_args_and_verify_arguments([
         Argument('deployment_id', required=False),
@@ -413,5 +517,34 @@ def capability_matches(capability_key, capability, constraints, search_value):
 
     if search_value:
         return capability['value'] == search_value
+
+    return True
+
+
+def scaling_group_name_matches(scaling_group_name, constraints, search_value):
+    for constraint, specification in constraints.items():
+        if constraint == 'scaling_group_name_specs':
+            for operator, value in specification.items():
+                if operator == 'contains':
+                    if value not in scaling_group_name:
+                        return False
+                elif operator == 'starts_with':
+                    if not scaling_group_name.startswith(str(value)):
+                        return False
+                elif operator == 'ends_with':
+                    if not scaling_group_name.endswith(str(value)):
+                        return False
+                elif operator == 'equals_to':
+                    if scaling_group_name != str(value):
+                        return False
+                else:
+                    raise NotImplementedError('Unknown capabilities name '
+                                              f'pattern operator: {operator}')
+        elif constraint == 'valid_values':
+            if scaling_group_name not in specification:
+                return False
+
+    if search_value:
+        return scaling_group_name == search_value
 
     return True

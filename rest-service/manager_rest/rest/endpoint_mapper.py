@@ -147,6 +147,7 @@ def setup_resources(api):
         'NodeInstancesSearches': 'searches/node-instances',
         'SecretsSearches': 'searches/secrets',
         'CapabilitiesSearches': 'searches/capabilities',
+        'ScalingGroupsSearches': 'searches/scaling-groups',
         'CommunityContacts': 'contacts',
     }
 

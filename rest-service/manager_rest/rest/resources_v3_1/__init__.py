@@ -122,6 +122,7 @@ from .searches import (  # NOQA
     NodeInstancesSearches,
     SecretsSearches,
     CapabilitiesSearches,
+    ScalingGroupsSearches,
 )
 
 from .workflows import (  # NOQA
