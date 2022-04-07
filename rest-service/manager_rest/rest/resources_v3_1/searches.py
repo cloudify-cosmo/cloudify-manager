@@ -198,10 +198,9 @@ class NodesSearches(ResourceSearches):
     def post(self, _include=None, pagination=None, sort=None,
              all_tenants=None, search=None, **kwargs):
         """List Nodes using filter rules or DSL constraints"""
-        deployment_id, _ = retrieve_deployment_id_and_constraints()
-        filters = {}
-        if deployment_id:
-            filters['deployment_id'] = deployment_id
+        deployment_id, _ = retrieve_deployment_id_and_constraints(
+            dep_id_required=True)
+        filters = {'deployment_id': deployment_id}
         return super().post(models.Node, None, _include, filters, pagination,
                             sort, all_tenants, search, None, **kwargs)
 
@@ -217,12 +216,11 @@ class NodeTypesSearches(ResourceSearches):
     def post(self, _include=None, pagination=None, sort=None,
              all_tenants=None, search=None, **kwargs):
         """List Nodes using filter rules or DSL constraints"""
-        deployment_id, constraints = retrieve_deployment_id_and_constraints()
+        deployment_id, constraints = retrieve_deployment_id_and_constraints(
+            dep_id_required=True)
         if 'name_pattern' in constraints:
             constraints['type_specs'] = constraints.pop('name_pattern')
-        filters = {}
-        if deployment_id:
-            filters['deployment_id'] = deployment_id
+        filters = {'deployment_id': deployment_id}
         return super().post(models.Node, None, _include, filters, pagination,
                             sort, all_tenants, search, None,
                             constraints=constraints,
