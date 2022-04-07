@@ -327,6 +327,9 @@ class CapabilitiesSearches(ResourceSearches):
         """List capabilities using DSL constraints"""
         deployment_id, constraints = \
             retrieve_deployment_id_and_constraints(dep_id_required=True)
+        if 'name_pattern' in constraints:
+            constraints['capability_key_specs'] = \
+                constraints.pop('name_pattern')
         args = rest_utils.get_args_and_verify_arguments([
             Argument('_search', required=False),
         ])
@@ -480,14 +483,14 @@ def retrieve_deployment_id_and_constraints(dep_id_required=False):
     constraints = request_dict.get('constraints', {})
     if args.get('deployment_id') and 'deployment_id' in constraints:
         raise manager_exceptions.BadParametersError(
-            "You should provide either a valid '_deployment_id' parameter "
+            "You should provide either a valid 'deployment_id' parameter "
             "or have a 'deployment_id' key in the constraints, not both.")
     deployment_id = args.get('deployment_id') \
         or constraints.get('deployment_id')
     # A deployment ID is necessary if constraints are provided
     if (constraints or dep_id_required) and not deployment_id:
         raise manager_exceptions.BadParametersError(
-            "Please provide a valid '_deployment_id' parameter or have "
+            "Please provide a valid 'deployment_id' parameter or have "
             "a 'deployment_id' key in the constraints.")
     return deployment_id, constraints
 
