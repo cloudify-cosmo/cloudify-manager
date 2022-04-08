@@ -143,3 +143,15 @@ class PermissionResponse(BaseResponse):
         'role': fields.String,
         'permission': fields.String
     }
+
+
+@swagger.model
+class ScalingGroupResponse(BaseResponse):
+
+    resource_fields = {
+        'deployment_id': fields.String,
+        'name': fields.String,
+        'members': fields.List(fields.String),
+        'properties': fields.Raw,
+
+    }

@@ -269,6 +269,8 @@ class BaseServerTestCase(unittest.TestCase):
                         client.workflows.api = mock_http_client
                         client.permissions.api = mock_http_client
                         client.nodes.types.api = mock_http_client
+                        client.deployments.scaling_groups.api = \
+                            mock_http_client
 
         return client
 

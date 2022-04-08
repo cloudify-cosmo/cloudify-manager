@@ -19,6 +19,8 @@ class GetValuesWithRest:
                     for dep_cap in self.get_capability_values(value, **kwargs)
                     for cap in dep_cap['capabilities']
                     for cap_details in cap.values()}
+        elif data_type == 'scaling_group':
+            return {g.name for g in self.get_scaling_groups(value, **kwargs)}
         elif data_type == 'node_id':
             return {n.id for n in self.get_nodes(value, **kwargs)}
         elif data_type == 'node_type':
@@ -57,6 +59,21 @@ class GetValuesWithRest:
         return self.client.deployments.capabilities.list(
             deployment_id,
             _search=capability_value,
+            _get_all_results=True,
+            constraints=kwargs)
+
+    def get_scaling_groups(self, scaling_group, **kwargs):
+        try:
+            deployment_id = kwargs.pop('deployment_id')
+        except KeyError:
+            raise NonRecoverableError(
+                "You should provide 'deployment_id' when getting node "
+                "templates.  Make sure you have `deployment_id` constraint "
+                "declared for your 'scaling_group' parameter.")
+        return self.client.deployments.scaling_groups.list(
+            deployment_id=deployment_id,
+            _search=scaling_group,
+            _include=['name'],
             _get_all_results=True,
             constraints=kwargs)
 
