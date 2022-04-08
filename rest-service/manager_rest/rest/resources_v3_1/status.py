@@ -67,6 +67,7 @@ class UnixSocketTransport(xmlrpclib.Transport, object):
         self._path = path
 
     def make_connection(self, host):
+        _, self._extra_headers, _ = self.get_host_info(host)
         return UnixSocketHTTPConnection(self._path)
 
 
@@ -210,7 +211,7 @@ def _lookup_supervisor_service_status(service_name):
     service_status = None
     is_optional = True if service_name in OPTIONAL_SERVICES else False
     server = xmlrpclib.Server(
-        'http://',
+        'http://stopspurious:logmessages@localhost',
         transport=UnixSocketTransport("/var/run/supervisord.sock"))
     try:
         status_response = server.supervisor.getProcessInfo(service_name)
