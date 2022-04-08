@@ -565,10 +565,12 @@ def extend_node_type_valid_values(deployment_id, valid_values):
         filters={'deployment_id': deployment_id},
         include='id,type,type_hierarchy',
         get_all_results=True)
-    results = []
-    for value in valid_values:
-        for node in nodes:
-            if value in node.type_hierarchy:
-                th = node.type_hierarchy
-                results.extend(th[th.index(value):])
-    return list(set(valid_values + results))
+    valid_values = set(valid_values)
+    results = valid_values.copy()
+    for node in nodes:
+        for value in valid_values:
+            if value not in node.type_hierarchy:
+                continue
+            th = node.type_hierarchy
+            results.update(th[th.index(value):])
+    return list(results)
