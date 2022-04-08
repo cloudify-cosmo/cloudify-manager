@@ -532,7 +532,12 @@ class SearchesTestCase(base_test.BaseServerTestCase):
 
     def test_node_types_search_by_valid_values_constraints(self):
         self._create_nodes('b1', 'd1', node_types=['type1', 'type2'])
-        self._create_nodes('b2', 'd2', node_types=['type1', 'type2'])
+        self._create_nodes('b2', 'd2',
+                           node_types=['type1', 'type2'],
+                           node_type_hierarchies=[
+                               ['root', 'intermediate', 'type1'],
+                               ['root', 'type2'],
+                           ])
 
         search = self.client.nodes.types.list(
             deployment_id='d1',
@@ -554,6 +559,18 @@ class SearchesTestCase(base_test.BaseServerTestCase):
             }
         )
         assert [s.type for s in search] == []
+
+        search = self.client.nodes.types.list(
+            deployment_id='d2',
+            constraints={'valid_values': ['intermediate']}
+        )
+        assert {s.type for s in search} == {'type1'}
+
+        search = self.client.nodes.types.list(
+            deployment_id='d2',
+            constraints={'valid_values': ['root']}
+        )
+        assert {s.type for s in search} == {'type1', 'type2'}
 
     def test_node_instances_valid_request(self):
         with self.assertRaises(CloudifyClientError):
@@ -780,9 +797,12 @@ class SearchesTestCase(base_test.BaseServerTestCase):
 
     def _create_nodes(self, blueprint_id='bp', deployment_id='dep',
                       node_ids=None, node_types=None,
+                      node_type_hierarchies=None,
                       node_instance_suffixes=None):
         node_ids = node_ids or ['node1', 'node2']
         node_types = node_types or (['test_type'] * len(node_ids))
+        node_type_hierarchies = \
+            node_type_hierarchies or ([['test_type']] * len(node_ids))
         bp = models.Blueprint(
             id=blueprint_id,
             creator=self.user,
@@ -799,6 +819,7 @@ class SearchesTestCase(base_test.BaseServerTestCase):
             node_id: models.Node(
                 id=node_id,
                 type=node_type,
+                type_hierarchy=node_type_hierarchy,
                 number_of_instances=0,
                 deploy_number_of_instances=0,
                 max_number_of_instances=0,
@@ -808,7 +829,8 @@ class SearchesTestCase(base_test.BaseServerTestCase):
                 creator=self.user,
                 tenant=self.tenant
             )
-            for node_id, node_type in zip(node_ids, node_types)
+            for node_id, node_type, node_type_hierarchy in
+            zip(node_ids, node_types, node_type_hierarchies)
         }
         for node_instance_id in node_instance_suffixes or {}:
             for node in nodes.values():

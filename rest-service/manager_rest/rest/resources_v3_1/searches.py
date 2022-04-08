@@ -220,6 +220,9 @@ class NodeTypesSearches(ResourceSearches):
             dep_id_required=True)
         if 'name_pattern' in constraints:
             constraints['type_specs'] = constraints.pop('name_pattern')
+        if 'valid_values' in constraints:
+            constraints['valid_values'] = extend_node_type_valid_values(
+                deployment_id, constraints['valid_values'])
         filters = {'deployment_id': deployment_id}
         return super().post(models.Node, None, _include, filters, pagination,
                             sort, all_tenants, search, None,
@@ -551,3 +554,23 @@ def scaling_group_name_matches(scaling_group_name, constraints, search_value):
         return scaling_group_name == search_value
 
     return True
+
+
+def extend_node_type_valid_values(deployment_id, valid_values):
+    """Extend the list of valid node types based on the type hierarchy.
+    Include also ancestors of the types listed as valid_values."""
+    sm = get_storage_manager()
+    nodes = sm.list(
+        models.Node,
+        filters={'deployment_id': deployment_id},
+        include='id,type,type_hierarchy',
+        get_all_results=True)
+    valid_values = set(valid_values)
+    results = valid_values.copy()
+    for node in nodes:
+        for value in valid_values:
+            if value not in node.type_hierarchy:
+                continue
+            th = node.type_hierarchy
+            results.update(th[th.index(value):])
+    return list(results)
