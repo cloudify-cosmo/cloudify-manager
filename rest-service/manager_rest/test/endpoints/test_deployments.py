@@ -1337,7 +1337,8 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             'policy_types': ['type1'],
             'policy_triggers': {'trigger1': {}},
             'groups': {'group1': {}},
-            'scaling_groups': {'scaling_group1': {}},
+            'scaling_groups':
+                {'scaling_group1': {'members': [], 'properties': {}}},
             'outputs': {'output1': {}},
             'capabilities': {'cap1': {}}
         }
