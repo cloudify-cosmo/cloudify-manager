@@ -63,6 +63,7 @@ class DataBasedTypes:
 @pytest.mark.usefixtures('cloudmock_plugin')
 class TestDataBasedTypeInputs(AgentlessTestCase, DataBasedTypes):
     def setUp(self):
+        super().setUp()
         self.client.tenants.create('other_tenant')
         self.client.tenants.add_user('admin', 'other_tenant', 'manager')
         self.other_client = self.create_rest_client(
@@ -236,6 +237,7 @@ class TestDataBasedTypeInputs(AgentlessTestCase, DataBasedTypes):
 @pytest.mark.usefixtures('cloudmock_plugin')
 class TestDataBasedTypeParams(AgentlessTestCase, DataBasedTypes):
     def setUp(self):
+        super().setUp()
         self.client.tenants.create('other_tenant')
         self.client.tenants.add_user('admin', 'other_tenant', 'manager')
         self.other_client = self.create_rest_client(
@@ -417,6 +419,7 @@ class TestDataBasedTypeParams(AgentlessTestCase, DataBasedTypes):
 
 class TestNodeIdType(AgentlessTestCase, DataBasedTypes):
     def setUp(self):
+        super().setUp()
         self.upload_blueprint(
             blueprint_id='bp-basic',
             blueprint_file_name='blueprint_with_two_nodes.yaml',
@@ -505,6 +508,7 @@ class TestNodeIdType(AgentlessTestCase, DataBasedTypes):
 
 class TestNodeTypeType(AgentlessTestCase, DataBasedTypes):
     def setUp(self):
+        super().setUp()
         self.upload_blueprint(
             blueprint_id='bp-basic',
             blueprint_file_name='blueprint_with_two_nodes.yaml',
@@ -593,6 +597,7 @@ class TestNodeTypeType(AgentlessTestCase, DataBasedTypes):
 
 class TestNodeInstanceType(AgentlessTestCase, DataBasedTypes):
     def setUp(self):
+        super().setUp()
         self.upload_blueprint(
             blueprint_id='bp-basic',
             blueprint_file_name='blueprint_with_two_nodes.yaml',
@@ -683,6 +688,7 @@ class TestNodeInstanceType(AgentlessTestCase, DataBasedTypes):
 
 class TestScalingGroupType(AgentlessTestCase, DataBasedTypes):
     def setUp(self):
+        super().setUp()
         self.upload_blueprint(
             blueprint_id='bp-basic',
             blueprint_file_name='blueprint_with_two_scaling_groups.yaml',
