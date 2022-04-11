@@ -1,0 +1,43 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - cloudify/types/types.yaml
+
+inputs:
+  a:
+    type: scaling_group
+    constraints:
+      - deployment_id: dep-basic
+      - name_pattern:
+          contains: node
+      - valid_values:
+          - any_node
+          - some_nodes
+          - all_nodes
+          - first_node
+          - other_nodes
+  b:
+    type: scaling_group
+    constraints:
+      - deployment_id: dep-basic
+
+workflows:
+  test_parameters:
+    mapping: file:///dev/null
+    parameters:
+      a:
+        type: scaling_group
+        constraints:
+          - deployment_id: dep-basic
+          - name_pattern:
+              contains: node
+          - valid_values:
+              - any_node
+              - some_nodes
+              - all_nodes
+              - first_node
+              - other_nodes
+      b:
+        type: scaling_group
+        constraints:
+          - deployment_id: dep-basic
