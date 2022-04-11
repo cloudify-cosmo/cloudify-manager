@@ -63,6 +63,7 @@ class DataBasedTypes:
 @pytest.mark.usefixtures('cloudmock_plugin')
 class TestDataBasedTypeInputs(AgentlessTestCase, DataBasedTypes):
     def setUp(self):
+        super().setUp()
         self.client.tenants.create('other_tenant')
         self.client.tenants.add_user('admin', 'other_tenant', 'manager')
         self.other_client = self.create_rest_client(
@@ -236,6 +237,7 @@ class TestDataBasedTypeInputs(AgentlessTestCase, DataBasedTypes):
 @pytest.mark.usefixtures('cloudmock_plugin')
 class TestDataBasedTypeParams(AgentlessTestCase, DataBasedTypes):
     def setUp(self):
+        super().setUp()
         self.client.tenants.create('other_tenant')
         self.client.tenants.add_user('admin', 'other_tenant', 'manager')
         self.other_client = self.create_rest_client(
@@ -417,6 +419,7 @@ class TestDataBasedTypeParams(AgentlessTestCase, DataBasedTypes):
 
 class TestNodeIdType(AgentlessTestCase, DataBasedTypes):
     def setUp(self):
+        super().setUp()
         self.upload_blueprint(
             blueprint_id='bp-basic',
             blueprint_file_name='blueprint_with_two_nodes.yaml',
@@ -505,6 +508,7 @@ class TestNodeIdType(AgentlessTestCase, DataBasedTypes):
 
 class TestNodeTypeType(AgentlessTestCase, DataBasedTypes):
     def setUp(self):
+        super().setUp()
         self.upload_blueprint(
             blueprint_id='bp-basic',
             blueprint_file_name='blueprint_with_two_nodes.yaml',
@@ -593,6 +597,7 @@ class TestNodeTypeType(AgentlessTestCase, DataBasedTypes):
 
 class TestNodeInstanceType(AgentlessTestCase, DataBasedTypes):
     def setUp(self):
+        super().setUp()
         self.upload_blueprint(
             blueprint_id='bp-basic',
             blueprint_file_name='blueprint_with_two_nodes.yaml',
@@ -678,4 +683,77 @@ class TestNodeInstanceType(AgentlessTestCase, DataBasedTypes):
             'dep', 'test_parameters',
             parameters=self.get_params(ids=node_instance_ids,
                                        b='node-that-does-not-exist'),
+        )
+
+
+class TestScalingGroupType(AgentlessTestCase, DataBasedTypes):
+    def setUp(self):
+        super().setUp()
+        self.upload_blueprint(
+            blueprint_id='bp-basic',
+            blueprint_file_name='blueprint_with_two_scaling_groups.yaml',
+        )
+        self.client.deployments.create('bp-basic', 'dep-basic')
+        self.upload_blueprint(
+            blueprint_id='bp',
+            blueprint_file_name='blueprint_with_scaling_group_data_type.yaml'
+        )
+        self.setup_valid_secrets()
+
+    @staticmethod
+    def get_inputs(**kwargs):
+        inputs = {'a': 'first_node',
+                  'b': 'other_nodes'}
+        inputs.update(kwargs)
+        return inputs
+
+    @staticmethod
+    def get_params(**kwargs):
+        params = {'a': 'first_node',
+                  'b': 'other_nodes'}
+        params.update(kwargs)
+        return params
+
+    def test_successful(self):
+        self.client.deployments.create(
+            'bp', 'dep', inputs=self.get_inputs())
+        install_execution = self.client.executions.create('dep', 'install')
+        self.wait_for_execution_to_end(install_execution)
+        test_execution = self.client.executions.create(
+            'dep', 'test_parameters', parameters=self.get_params())
+        self.wait_for_execution_to_end(test_execution)
+
+    def test_input_errors(self):
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            r'^400:.+ConstraintException:.+a.+name_pattern',
+            self.client.deployments.create,
+            'bp', 'dep',
+            inputs=self.get_inputs(a='second_node'),
+        )
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            r'^400:.+ConstraintException:.+b.+does not match',
+            self.client.deployments.create,
+            'bp', 'dep',
+            inputs=self.get_inputs(b='nonexistent_nodes'),
+        )
+
+    def test_param_errors(self):
+        self.client.deployments.create(
+            'bp', 'dep', inputs=self.get_inputs())
+
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            r'^400:.+Parameter.+constraints:.+a.+name_pattern',
+            self.client.executions.create,
+            'dep', 'test_parameters',
+            parameters=self.get_params(a='second_noe'),
+        )
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            r'^400:.+Parameter.+constraints:.+c.+does not match',
+            self.client.executions.create,
+            'dep', 'test_parameters',
+            parameters=self.get_params(b='scaling-group-that-does-not-exist'),
         )

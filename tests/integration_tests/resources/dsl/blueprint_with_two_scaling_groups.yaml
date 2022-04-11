@@ -1,0 +1,36 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - cloudify/types/types.yaml
+
+node_templates:
+  node1:
+    type: cloudify.nodes.Root
+  node2:
+    type: cloudify.nodes.Root
+  node3:
+    type: cloudify.nodes.Root
+  node4:
+    type: cloudify.nodes.Root
+  node5:
+    type: cloudify.nodes.Root
+
+groups:
+  first_node:
+    members: [node1]
+  second_node:
+    members: [node2]
+  other_nodes:
+    members: [node3, node4, node5]
+
+policies:
+  scale_policy_one_two:
+    type: cloudify.policies.scaling
+    properties:
+      default_instances: 1
+    targets: [first_node, second_node]
+  scale_policy_all:
+    type: cloudify.policies.scaling
+    properties:
+      default_instances: 1
+    targets: [other_nodes]
