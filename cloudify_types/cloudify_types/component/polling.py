@@ -188,10 +188,17 @@ def is_deployment_execution_at_state(client,
         raise NonRecoverableError(f'Execution {execution} {execution_status}.')
     elif execution_status == ExecutionState.CANCELLED:
         main_execution = ctx.get_execution()
-        if main_execution.status == ExecutionState.CANCELLED:
+        if main_execution.status in [
+            ExecutionState.CANCELLED,
+            # maybe we weren't cancelled _yet_ but are still cancelling?
+            ExecutionState.CANCELLING,
+            ExecutionState.FORCE_CANCELLING,
+            ExecutionState.KILL_CANCELLING,
+        ]:
             ctx.logger.debug(
                 'Both the main execution "%s" and the component execution "%s"'
-                ' are %s', main_execution.id, execution_id, execution_status)
+                ' are cancelled (main execution status: %s)',
+                main_execution.id, execution_id, main_execution.status)
             return True
         raise NonRecoverableError(f'Execution {execution} {execution_status}.')
 
