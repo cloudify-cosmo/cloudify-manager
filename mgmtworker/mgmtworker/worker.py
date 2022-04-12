@@ -283,7 +283,7 @@ class MgmtworkerServiceTaskConsumer(ServiceTaskConsumer):
                 'kwargs': {'execution_id': execution_id}
             }
         }
-        if target == MGMTWORKER_QUEUE:
+        if target == self.exchange:
             client = get_client()
         else:
             tenant = get_tenant()
@@ -304,7 +304,7 @@ class MgmtworkerServiceTaskConsumer(ServiceTaskConsumer):
         Note that mgmtworker is related to all executions, since every
         execution might have a central_deployment_agent operation.
         """
-        yield MGMTWORKER_QUEUE
+        yield self.exchange
         execution = rest_client.executions.get(execution_id)
         node_instances = rest_client.node_instances.list(
             deployment_id=execution.deployment_id,
