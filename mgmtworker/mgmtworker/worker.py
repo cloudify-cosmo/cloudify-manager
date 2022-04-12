@@ -11,7 +11,6 @@ from contextlib import contextmanager
 from cloudify import broker_config
 from cloudify.logs import setup_agent_logger
 from cloudify.utils import get_admin_api_token, get_tenant
-from cloudify.constants import MGMTWORKER_QUEUE
 from cloudify.models_states import ExecutionState
 from cloudify.state import current_workflow_ctx
 from cloudify.manager import get_rest_client, update_execution_status
