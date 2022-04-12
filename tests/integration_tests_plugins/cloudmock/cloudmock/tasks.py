@@ -13,6 +13,7 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import os
 import time
 from cloudify.decorators import operation, workflow
 from cloudify.exceptions import NonRecoverableError
@@ -192,3 +193,14 @@ def workflow1(ctx):
 def wait(ctx, delay=5, **kwargs):
     time.sleep(delay)
     ctx.logger.info('wait done; slept %s', delay)
+
+
+@operation
+def store_pid(ctx, delay=180, **kwargs):
+    """Store our PID and sleep.
+
+    Useful for tests that involve kill-cancel.
+    """
+    ctx.instance.runtime_properties['pid'] = os.getpid()
+    ctx.instance.update()
+    time.sleep(delay)
