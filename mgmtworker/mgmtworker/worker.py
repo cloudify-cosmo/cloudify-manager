@@ -11,7 +11,6 @@ from contextlib import contextmanager
 from cloudify import broker_config
 from cloudify.logs import setup_agent_logger
 from cloudify.utils import get_admin_api_token, get_tenant
-from cloudify.constants import MGMTWORKER_QUEUE
 from cloudify.models_states import ExecutionState
 from cloudify.state import current_workflow_ctx
 from cloudify.manager import get_rest_client, update_execution_status
@@ -283,8 +282,9 @@ class MgmtworkerServiceTaskConsumer(ServiceTaskConsumer):
                 'kwargs': {'execution_id': execution_id}
             }
         }
-        if target == MGMTWORKER_QUEUE:
+        if target == self.exchange:
             client = get_client()
+            exchange_type = 'fanout'
         else:
             tenant = get_tenant()
             client = get_client(
@@ -292,8 +292,13 @@ class MgmtworkerServiceTaskConsumer(ServiceTaskConsumer):
                 amqp_pass=tenant['rabbitmq_password'],
                 amqp_vhost=tenant['rabbitmq_vhost']
             )
+            exchange_type = 'direct'
 
-        handler = SendHandler(exchange=target, routing_key='service')
+        handler = SendHandler(
+            exchange=target,
+            routing_key='service',
+            exchange_type=exchange_type,
+        )
         client.add_handler(handler)
         with client:
             handler.publish(message)
@@ -304,7 +309,7 @@ class MgmtworkerServiceTaskConsumer(ServiceTaskConsumer):
         Note that mgmtworker is related to all executions, since every
         execution might have a central_deployment_agent operation.
         """
-        yield MGMTWORKER_QUEUE
+        yield self.exchange
         execution = rest_client.executions.get(execution_id)
         node_instances = rest_client.node_instances.list(
             deployment_id=execution.deployment_id,
