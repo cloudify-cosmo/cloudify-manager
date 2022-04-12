@@ -285,6 +285,7 @@ class MgmtworkerServiceTaskConsumer(ServiceTaskConsumer):
         }
         if target == self.exchange:
             client = get_client()
+            exchange_type = 'fanout'
         else:
             tenant = get_tenant()
             client = get_client(
@@ -292,8 +293,13 @@ class MgmtworkerServiceTaskConsumer(ServiceTaskConsumer):
                 amqp_pass=tenant['rabbitmq_password'],
                 amqp_vhost=tenant['rabbitmq_vhost']
             )
+            exchange_type = 'direct'
 
-        handler = SendHandler(exchange=target, routing_key='service')
+        handler = SendHandler(
+            exchange=target,
+            routing_key='service',
+            exchange_type=exchange_type,
+        )
         client.add_handler(handler)
         with client:
             handler.publish(message)
