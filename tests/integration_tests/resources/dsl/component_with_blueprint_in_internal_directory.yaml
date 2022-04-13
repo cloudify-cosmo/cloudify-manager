@@ -1,0 +1,17 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - cloudify/types/types.yaml
+
+node_templates:
+
+  component_node:
+    type: cloudify.nodes.Component
+    properties:
+      resource_config:
+        blueprint:
+          id: basic
+          blueprint_archive: componentBlueprintDir/
+          main_file_name: blueprint.yaml
+        deployment:
+          id: component
