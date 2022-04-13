@@ -133,7 +133,7 @@ def restore_inter_deployment_dependencies(deployment_id,
             blueprint, app_dir, app_blueprint)
         deployment_plan = rest_utils.get_deployment_plan(
             parsed_deployment, deployment.inputs,
-            values_getter=GetValuesWithStorageManager(sm))
+            values_getter=GetValuesWithStorageManager(sm, deployment_id))
         logger.info('{0}: Parsed plan'.format(deployment.id))
 
         rest_utils.update_deployment_dependencies_from_plan(

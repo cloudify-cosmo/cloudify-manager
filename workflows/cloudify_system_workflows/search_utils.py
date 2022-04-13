@@ -7,6 +7,10 @@ class GetValuesWithRest:
     def __init__(self, client):
         self.client = client
 
+    @staticmethod
+    def has_deployment_id():
+        return False
+
     def get(self, data_type, value, **kwargs):
         if data_type == 'blueprint_id':
             return {b.id for b in self.get_blueprints(value, **kwargs)}
