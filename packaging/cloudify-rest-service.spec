@@ -110,7 +110,9 @@ if [ -f "%{_localstatedir}/lib/rpm-state/cloudify-upgraded" ]; then
         supervisorctl stop cloudify-execution-scheduler
         supervisorctl stop cloudify-amqp-postgres
     else
-        systemctl stop haproxy && systemctl disable haproxy || true
+        if systemctl is-enabled haproxy 2>/dev/null; then
+            systemctl stop haproxy && systemctl disable haproxy
+        fi
         systemctl stop cloudify-restservice
         systemctl stop cloudify-api
         systemctl stop cloudify-execution-scheduler
