@@ -7,6 +7,10 @@ class GetValuesWithRest:
     def __init__(self, client):
         self.client = client
 
+    @staticmethod
+    def has_deployment_id():
+        return False
+
     def get(self, data_type, value, **kwargs):
         if data_type == 'blueprint_id':
             return {b.id for b in self.get_blueprints(value, **kwargs)}
@@ -67,8 +71,8 @@ class GetValuesWithRest:
             deployment_id = kwargs.pop('deployment_id')
         except KeyError:
             raise NonRecoverableError(
-                "You should provide 'deployment_id' when getting node "
-                "templates.  Make sure you have `deployment_id` constraint "
+                "You should provide 'deployment_id' when getting scaling "
+                "groups.  Make sure you have `deployment_id` constraint "
                 "declared for your 'scaling_group' parameter.")
         return self.client.deployments.scaling_groups.list(
             deployment_id=deployment_id,
@@ -97,7 +101,7 @@ class GetValuesWithRest:
         except KeyError:
             raise NonRecoverableError(
                 "You should provide 'deployment_id' when getting node "
-                "templates.  Make sure you have `deployment_id` constraint "
+                "types.  Make sure you have `deployment_id` constraint "
                 "declared for your 'node_type' parameter.")
         return self.client.nodes.types.list(deployment_id=deployment_id,
                                             type=node_type,
@@ -111,7 +115,7 @@ class GetValuesWithRest:
         except KeyError:
             raise NonRecoverableError(
                 "You should provide 'deployment_id' when getting node "
-                "templates.  Make sure you have `deployment_id` constraint "
+                "instances.  Make sure you have `deployment_id` constraint "
                 "declared for your 'node_instance' parameter.")
         return self.client.node_instances.list(deployment_id=deployment_id,
                                                id=node_instance,
