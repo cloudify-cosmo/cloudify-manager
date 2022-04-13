@@ -190,8 +190,8 @@ class GetValuesWithStorageManager:
                            scaling_group_name_specs=None):
         if not deployment_id:
             raise BadParametersError(
-                "You should provide 'deployment_id' when getting node "
-                "instances.  Make sure you have `deployment_id` constraint "
+                "You should provide 'deployment_id' when getting scaling "
+                "groups.  Make sure you have `deployment_id` constraint "
                 "declared for your 'scaling_group' parameter.")
 
         deployments = self.sm.list(
@@ -227,7 +227,7 @@ class GetValuesWithStorageManager:
                   valid_values=None):
         if not deployment_id:
             raise BadParametersError(
-                "You should provide 'deployment_id' when getting node id-s. "
+                "You should provide 'deployment_id' when getting node IDs. "
                 "Make sure you have `deployment_id` constraint declared for "
                 "your 'node_id' parameter.")
         filter_rules = []
@@ -264,8 +264,8 @@ class GetValuesWithStorageManager:
         if not deployment_id:
             raise BadParametersError(
                 "You should provide 'deployment_id' when getting node "
-                "templates.  Make sure you have `deployment_id` constraint "
-                "declared for your 'node_id' parameter.")
+                "types.  Make sure you have `deployment_id` constraint "
+                "declared for your 'node_types' parameter.")
         filter_rules = []
         if type_specs:
             for op, spec in type_specs.items():
