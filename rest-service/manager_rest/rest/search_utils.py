@@ -333,7 +333,7 @@ class GetValuesWithStorageManager:
         if data_type not in TYPES_WHICH_REQUIRE_DEPLOYMENT_ID_CONSTRAINT:
             return kwargs
         params = copy(kwargs)
-        if 'deployment_id' not in kwargs.keys():
+        if 'deployment_id' not in kwargs:
             params['deployment_id'] = self.current_deployment_id
         return params
 
