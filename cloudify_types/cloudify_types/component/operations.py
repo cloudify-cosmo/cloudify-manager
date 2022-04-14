@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import os
+import json
 import time
 from cloudify import manager, ctx
 from cloudify.decorators import operation
@@ -48,7 +49,7 @@ from .utils import (
 )
 
 
-def _is_valid_url(candidate):
+def _is_internal_path(candidate):
     parse_url = urlparse(candidate)
     return not (parse_url.netloc and parse_url.scheme)
 
@@ -102,18 +103,33 @@ def upload_blueprint(**kwargs):
             "This value was provided: %s." % labels
         )
 
-    # Check if the ``blueprint_archive`` is not a URL then we need to
-    # download it and pass the binaries to the client_args
-    if _is_valid_url(blueprint_archive):
-        blueprint_archive = ctx.download_resource(blueprint_archive)
+    # If the ``blueprint_archive`` is not a URL then we need to download
+    # it from within the main blueprint in the file-server and pass the
+    # binaries to the client_args
+    is_directory = False
+    if _is_internal_path(blueprint_archive):
+        try:
+            res = ctx.get_resource(blueprint_archive)
+            assert 'files' in json.loads(res)
+            is_directory = True
+            blueprint_archive = ctx.download_directory(blueprint_archive)
+        except (ValueError, AssertionError):
+            # blueprint_archive path is not a directory -> proceed normally
+            blueprint_archive = ctx.download_resource(blueprint_archive)
 
     try:
-        client.blueprints._upload(
-            blueprint_id=blueprint_id,
-            archive_location=blueprint_archive,
-            application_file_name=blueprint_file_name,
-            labels=labels
-        )
+        if is_directory:
+            client.blueprints.upload(
+                entity_id=blueprint_id,
+                path=os.path.join(blueprint_archive, blueprint_file_name),
+                labels=labels,
+                skip_size_limit=True)
+        else:
+            client.blueprints._upload(
+                blueprint_id=blueprint_id,
+                archive_location=blueprint_archive,
+                application_file_name=blueprint_file_name,
+                labels=labels)
         wait_for_blueprint_to_upload(blueprint_id, client)
     except CloudifyClientError as ex:
         if 'already exists' not in str(ex):
