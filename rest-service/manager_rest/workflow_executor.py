@@ -45,6 +45,12 @@ def execute_workflow(messages):
         handler.publish(message)
 
 
+def send_hook(event):
+    logs.populate_base_item(event, 'cloudify_event')
+    handler = get_amqp_handler('hook')
+    handler.publish(event)
+
+
 def _get_tenant_dict():
     return {'name': utils.current_tenant.name}
 
@@ -66,6 +72,11 @@ def get_amqp_client(tenant=None):
 
 def workflow_sendhandler() -> SendHandler:
     return SendHandler(MGMTWORKER_QUEUE, 'direct', routing_key='workflow')
+
+
+def hooks_sendhandler() -> SendHandler:
+    return SendHandler(EVENTS_EXCHANGE_NAME, exchange_type='topic',
+                       routing_key='events.hooks')
 
 
 def _send_mgmtworker_task(message, exchange=MGMTWORKER_QUEUE,
