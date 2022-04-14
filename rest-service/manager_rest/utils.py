@@ -18,10 +18,9 @@ from flask_security import current_user
 
 from dsl_parser.constants import HOST_AGENT_PLUGINS_TO_INSTALL
 
-from cloudify import logs
 from cloudify.constants import BROKER_PORT_SSL
 from cloudify.models_states import VisibilityState
-from cloudify.amqp_client import create_events_publisher, get_client
+from cloudify.amqp_client import get_client
 
 from manager_rest import constants, config, manager_exceptions
 
