@@ -191,7 +191,7 @@ def task_state():
     return Execution.TERMINATED
 
 
-def mock_send_mgmtworker_task(messages, **_):
+def mock_execute_workflow(messages, **_):
     for message in messages:
         execution_id = message['id']
         sm = get_storage_manager()

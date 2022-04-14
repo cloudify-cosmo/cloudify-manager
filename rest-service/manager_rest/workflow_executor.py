@@ -79,17 +79,6 @@ def hooks_sendhandler() -> SendHandler:
                        routing_key='events.hooks')
 
 
-def _send_mgmtworker_task(message, exchange=MGMTWORKER_QUEUE,
-                          exchange_type='direct', routing_key='workflow'):
-    """Send a message to the mgmtworker exchange"""
-    client = get_amqp_client()
-    send_handler = SendHandler(exchange, exchange_type,
-                               routing_key=routing_key)
-    client.add_handler(send_handler)
-    with client:
-        send_handler.publish(message)
-
-
 def _broadcast_mgmtworker_task(message, exchange='cloudify-mgmtworker-service',
                                exchange_type='fanout', routing_key='service'):
     """Broadcast a message to all mgmtworkers in a cluster."""
