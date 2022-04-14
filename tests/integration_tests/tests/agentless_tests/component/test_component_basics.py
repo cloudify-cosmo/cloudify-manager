@@ -89,7 +89,7 @@ capabilities:
     def test_component_creation_with_blueprint_in_internal_directory(self):
         deployment_id = 'd{0}'.format(uuid.uuid4())
         dsl_path = \
-            resource('dsl/component_with_blueprint_in_interla_directory.yaml')
+            resource('dsl/component_with_blueprint_in_internal_directory.yaml')
         self.deploy_application(dsl_path,
                                 deployment_id=deployment_id)
         self.assertTrue(self.client.deployments.get(self.component_name))

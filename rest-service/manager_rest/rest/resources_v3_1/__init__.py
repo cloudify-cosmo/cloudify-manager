@@ -20,6 +20,7 @@ from .manager import (                           # NOQA
     RabbitMQBrokers,
     RabbitMQBrokersId,
     DBNodes,
+    FileServerIndex,
 )
 
 from .manager_config import (                    # NOQA

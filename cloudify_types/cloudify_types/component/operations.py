@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import os
+import json
 import time
 from cloudify import manager, ctx
 from cloudify.decorators import operation
@@ -107,10 +108,13 @@ def upload_blueprint(**kwargs):
     # binaries to the client_args
     is_directory = False
     if _is_internal_path(blueprint_archive):
-        if blueprint_archive.endswith('/'):
-            blueprint_archive = ctx.download_directory(blueprint_archive)
+        try:
+            res = ctx.get_resource(blueprint_archive)
+            assert 'files' in json.loads(res)
             is_directory = True
-        else:
+            blueprint_archive = ctx.download_directory(blueprint_archive)
+        except (ValueError, AssertionError):
+            # blueprint_archive path is not a directory -> proceed normally
             blueprint_archive = ctx.download_resource(blueprint_archive)
 
     try:

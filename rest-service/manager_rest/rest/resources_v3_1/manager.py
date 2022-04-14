@@ -13,9 +13,13 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import os
+
+from flask import request
 from flask_restful.reqparse import Argument
 
 from cloudify._compat import text_type
+from cloudify.constants import MANAGER_RESOURCES_PATH
 from manager_rest.security import SecuredResource, premium_only
 from manager_rest.rest import rest_utils
 from manager_rest.storage import get_storage_manager, models
@@ -153,3 +157,24 @@ class DBNodes(dbnodes_base):
     def get(self, pagination=None):
         """List DB nodes from database"""
         return get_storage_manager().list(models.DBNodes)
+
+
+class FileServerIndex(SecuredResource):
+    def get(self, **_):
+        """
+        Index a directory tree on the Cloudify file server
+        """
+        uri = request.headers['X-Original-Uri'].strip('/')
+        if not uri.startswith('resources/'):
+            return {}, 404
+
+        dir_path = os.path.join(MANAGER_RESOURCES_PATH,
+                                uri.replace('resources/', '', 1))
+        files_list = []
+        for path, dir, files in os.walk(dir_path):
+            for name in files:
+                if not name.startswith('.'):
+                    files_list.append(
+                        os.path.join(path, name).replace(dir_path+'/', ""))
+
+        return {'files': files_list}, 200
