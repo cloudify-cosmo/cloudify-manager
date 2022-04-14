@@ -1,25 +1,48 @@
+from flask import current_app
 from flask_security import current_user
 
+from cloudify import logs
 from cloudify.amqp_client import get_client, SendHandler
 from cloudify.models_states import PluginInstallationState
 from cloudify.constants import (
     MGMTWORKER_QUEUE,
-    BROKER_PORT_SSL
+    BROKER_PORT_SSL,
+    EVENTS_EXCHANGE_NAME,
 )
 
 from manager_rest import config, utils
 from manager_rest.storage import get_storage_manager, models
 
 
+def get_amqp_handler(kind):
+    """Get a stored amqp SendHandler
+
+    Returns a ready-to-use SendHandler, tied to a long-lived AMQP
+    connection stored on the app.
+    """
+    if 'amqp_client' not in current_app.extensions:
+        workflow_handler = workflow_sendhandler()
+        hook_handler = hooks_sendhandler()
+        client = get_amqp_client()
+        client.add_handler(workflow_handler)
+        client.add_handler(hook_handler)
+        client.consume_in_thread()
+        current_app.extensions['amqp_client'] = {
+            'client': client,
+            'handlers': {
+                'workflow': workflow_handler,
+                'hook': hook_handler,
+            },
+        }
+    return current_app.extensions['amqp_client']['handlers'][kind]
+
+
 def execute_workflow(messages):
     if not messages:
         return
-    client = get_amqp_client()
-    handler = workflow_sendhandler()
-    client.add_handler(handler)
-    with client:
-        for message in messages:
-            handler.publish(message)
+    handler = get_amqp_handler('workflow')
+    for message in messages:
+        handler.publish(message)
 
 
 def _get_tenant_dict():
