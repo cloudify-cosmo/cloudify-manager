@@ -23,15 +23,19 @@ def get_amqp_handler(kind):
     if 'amqp_client' not in current_app.extensions:
         workflow_handler = workflow_sendhandler()
         hook_handler = hooks_sendhandler()
+        service_handler = service_sendhandler()
         client = get_amqp_client()
         client.add_handler(workflow_handler)
         client.add_handler(hook_handler)
+        client.add_handler(service_handler)
+
         client.consume_in_thread()
         current_app.extensions['amqp_client'] = {
             'client': client,
             'handlers': {
                 'workflow': workflow_handler,
                 'hook': hook_handler,
+                'service': service_handler,
             },
         }
     return current_app.extensions['amqp_client']['handlers'][kind]
@@ -79,15 +83,15 @@ def hooks_sendhandler() -> SendHandler:
                        routing_key='events.hooks')
 
 
-def _broadcast_mgmtworker_task(message, exchange='cloudify-mgmtworker-service',
-                               exchange_type='fanout', routing_key='service'):
+def service_sendhandler() -> SendHandler:
+    return SendHandler('cloudify-mgmtworker-service', exchange_type='fanout',
+                       routing_key='service')
+
+
+def _broadcast_mgmtworker_task(message):
     """Broadcast a message to all mgmtworkers in a cluster."""
-    client = get_amqp_client()
-    send_handler = SendHandler(exchange, exchange_type,
-                               routing_key=routing_key)
-    client.add_handler(send_handler)
-    with client:
-        send_handler.publish(message)
+    send_handler = get_amqp_handler('service')
+    send_handler.publish(message)
 
 
 def restart_restservice():
