@@ -1202,7 +1202,8 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             if name not in parameters:
                 continue
             try:
-                getter = GetValuesWithStorageManager(get_storage_manager())
+                getter = GetValuesWithStorageManager(get_storage_manager(),
+                                                     self.deployment_id)
                 if param.get('type') not in ['blueprint_id', 'deployment_id',
                                              'capability_value', 'secret_key',
                                              'node_id'] \

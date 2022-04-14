@@ -120,7 +120,7 @@ class DeploymentUpdateManager(object):
             parsed_deployment, new_inputs,
             runtime_only_evaluation,
             auto_correct_types,
-            values_getter=GetValuesWithStorageManager(self.sm),
+            values_getter=GetValuesWithStorageManager(self.sm, deployment_id),
         )
 
         deployment_update_id = '{0}-{1}'.format(deployment.id, uuid.uuid4())

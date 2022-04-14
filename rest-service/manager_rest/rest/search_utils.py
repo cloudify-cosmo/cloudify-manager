@@ -1,5 +1,7 @@
 from collections import defaultdict
+from copy import copy
 
+from dsl_parser.constants import TYPES_WHICH_REQUIRE_DEPLOYMENT_ID_CONSTRAINT
 from dsl_parser.functions import is_function
 
 from manager_rest.manager_exceptions import BadParametersError
@@ -12,30 +14,35 @@ from manager_rest.rest.filters_utils import (get_filter_rules_from_filter_id,
 
 
 class GetValuesWithStorageManager:
-    def __init__(self, sm):
+    def __init__(self, sm, current_deployment_id):
         self.sm = sm
+        self.current_deployment_id = current_deployment_id
+
+    def has_deployment_id(self):
+        return bool(self.current_deployment_id)
 
     def get(self, data_type, value, **kwargs):
+        params = self.update_deployment_id_constraint(data_type, **kwargs)
         if data_type == 'blueprint_id':
-            return {b.id for b in self.get_blueprints(value, **kwargs)}
+            return {b.id for b in self.get_blueprints(value, **params)}
         elif data_type == 'deployment_id':
-            return {d.id for d in self.get_deployments(value, **kwargs)}
+            return {d.id for d in self.get_deployments(value, **params)}
         elif data_type == 'secret_key':
-            return {s.key for s in self.get_secrets(value, **kwargs)}
+            return {s.key for s in self.get_secrets(value, **params)}
         elif data_type == 'capability_value':
             return {cap_details['value']
-                    for dep_cap in self.get_capability_values(value, **kwargs)
+                    for dep_cap in self.get_capability_values(value, **params)
                     for cap in dep_cap['capabilities']
                     for cap_details in cap.values()}
         elif data_type == 'scaling_group':
             return {sg['name']
-                    for sg in self.get_scaling_groups(value, **kwargs)}
+                    for sg in self.get_scaling_groups(value, **params)}
         elif data_type == 'node_id':
-            return {n.id for n in self.get_nodes(value, **kwargs)}
+            return {n.id for n in self.get_nodes(value, **params)}
         elif data_type == 'node_type':
-            return {n.type for n in self.get_node_types(value, **kwargs)}
+            return {n.type for n in self.get_node_types(value, **params)}
         elif data_type == 'node_instance':
-            return {n.id for n in self.get_node_instances(value, **kwargs)}
+            return {n.id for n in self.get_node_instances(value, **params)}
         raise NotImplementedError("Getter function not defined for "
                                   f"data type '{data_type}'")
 
@@ -183,8 +190,8 @@ class GetValuesWithStorageManager:
                            scaling_group_name_specs=None):
         if not deployment_id:
             raise BadParametersError(
-                "You should provide 'deployment_id' when getting node "
-                "instances.  Make sure you have `deployment_id` constraint "
+                "You should provide 'deployment_id' when getting scaling "
+                "groups.  Make sure you have `deployment_id` constraint "
                 "declared for your 'scaling_group' parameter.")
 
         deployments = self.sm.list(
@@ -220,7 +227,7 @@ class GetValuesWithStorageManager:
                   valid_values=None):
         if not deployment_id:
             raise BadParametersError(
-                "You should provide 'deployment_id' when getting node id-s. "
+                "You should provide 'deployment_id' when getting node IDs. "
                 "Make sure you have `deployment_id` constraint declared for "
                 "your 'node_id' parameter.")
         filter_rules = []
@@ -257,8 +264,8 @@ class GetValuesWithStorageManager:
         if not deployment_id:
             raise BadParametersError(
                 "You should provide 'deployment_id' when getting node "
-                "templates.  Make sure you have `deployment_id` constraint "
-                "declared for your 'node_id' parameter.")
+                "types.  Make sure you have `deployment_id` constraint "
+                "declared for your 'node_types' parameter.")
         filter_rules = []
         if type_specs:
             for op, spec in type_specs.items():
@@ -321,6 +328,14 @@ class GetValuesWithStorageManager:
             get_all_results=True,
             filter_rules=filter_rules
         )
+
+    def update_deployment_id_constraint(self, data_type, **kwargs):
+        if data_type not in TYPES_WHICH_REQUIRE_DEPLOYMENT_ID_CONSTRAINT:
+            return kwargs
+        params = copy(kwargs)
+        if 'deployment_id' not in kwargs:
+            params['deployment_id'] = self.current_deployment_id
+        return params
 
 
 def capability_matches(capability_key, capability, search_value,
