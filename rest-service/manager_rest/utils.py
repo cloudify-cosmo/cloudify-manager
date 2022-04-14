@@ -18,10 +18,9 @@ from flask_security import current_user
 
 from dsl_parser.constants import HOST_AGENT_PLUGINS_TO_INSTALL
 
-from cloudify import logs
 from cloudify.constants import BROKER_PORT_SSL
 from cloudify.models_states import VisibilityState
-from cloudify.amqp_client import create_events_publisher, get_client
+from cloudify.amqp_client import get_client
 
 from manager_rest import constants, config, manager_exceptions
 
@@ -262,22 +261,6 @@ def remove(path):
             os.remove(path)
         else:
             shutil.rmtree(path)
-
-
-def send_event(event, message_type):
-    logs.populate_base_item(event, 'cloudify_event')
-    events_publisher = create_events_publisher(
-        amqp_host=config.instance.amqp_host,
-        amqp_user=config.instance.amqp_username,
-        amqp_pass=config.instance.amqp_password,
-        amqp_port=BROKER_PORT_SSL,
-        amqp_vhost='/',
-        ssl_enabled=True,
-        ssl_cert_data=config.instance.amqp_ca,
-    )
-
-    events_publisher.publish_message(event, message_type)
-    events_publisher.close()
 
 
 def is_visibility_wider(first, second):

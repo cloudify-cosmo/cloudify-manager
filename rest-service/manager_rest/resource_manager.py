@@ -37,8 +37,7 @@ from manager_rest.constants import (DEFAULT_TENANT_NAME,
                                     FILE_SERVER_BLUEPRINTS_FOLDER,
                                     FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
                                     FILE_SERVER_DEPLOYMENTS_FOLDER)
-from manager_rest.utils import (send_event,
-                                get_formatted_timestamp,
+from manager_rest.utils import (get_formatted_timestamp,
                                 is_create_global_permitted,
                                 validate_global_modification,
                                 validate_deployment_and_site_visibility,
@@ -2563,7 +2562,7 @@ class ResourceManager(object):
             }
         }
 
-        send_event(event, 'hook')
+        workflow_executor.send_hook(event)
 
     def update_resource_labels(self,
                                labels_resource_model,

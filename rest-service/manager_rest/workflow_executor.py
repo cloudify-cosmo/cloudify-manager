@@ -1,25 +1,58 @@
+from flask import current_app
 from flask_security import current_user
 
+from cloudify import logs
 from cloudify.amqp_client import get_client, SendHandler
 from cloudify.models_states import PluginInstallationState
 from cloudify.constants import (
     MGMTWORKER_QUEUE,
-    BROKER_PORT_SSL
+    BROKER_PORT_SSL,
+    EVENTS_EXCHANGE_NAME,
 )
 
 from manager_rest import config, utils
 from manager_rest.storage import get_storage_manager, models
 
 
+def get_amqp_handler(kind):
+    """Get a stored amqp SendHandler
+
+    Returns a ready-to-use SendHandler, tied to a long-lived AMQP
+    connection stored on the app.
+    """
+    if 'amqp_client' not in current_app.extensions:
+        workflow_handler = workflow_sendhandler()
+        hook_handler = hooks_sendhandler()
+        service_handler = service_sendhandler()
+        client = get_amqp_client()
+        client.add_handler(workflow_handler)
+        client.add_handler(hook_handler)
+        client.add_handler(service_handler)
+
+        client.consume_in_thread()
+        current_app.extensions['amqp_client'] = {
+            'client': client,
+            'handlers': {
+                'workflow': workflow_handler,
+                'hook': hook_handler,
+                'service': service_handler,
+            },
+        }
+    return current_app.extensions['amqp_client']['handlers'][kind]
+
+
 def execute_workflow(messages):
     if not messages:
         return
-    client = get_amqp_client()
-    handler = workflow_sendhandler()
-    client.add_handler(handler)
-    with client:
-        for message in messages:
-            handler.publish(message)
+    handler = get_amqp_handler('workflow')
+    for message in messages:
+        handler.publish(message)
+
+
+def send_hook(event):
+    logs.populate_base_item(event, 'cloudify_event')
+    handler = get_amqp_handler('hook')
+    handler.publish(event)
 
 
 def _get_tenant_dict():
@@ -36,6 +69,7 @@ def get_amqp_client(tenant=None):
         amqp_vhost=vhost,
         ssl_enabled=True,
         ssl_cert_data=config.instance.amqp_ca,
+        connect_timeout=None,
     )
     return client
 
@@ -44,26 +78,20 @@ def workflow_sendhandler() -> SendHandler:
     return SendHandler(MGMTWORKER_QUEUE, 'direct', routing_key='workflow')
 
 
-def _send_mgmtworker_task(message, exchange=MGMTWORKER_QUEUE,
-                          exchange_type='direct', routing_key='workflow'):
-    """Send a message to the mgmtworker exchange"""
-    client = get_amqp_client()
-    send_handler = SendHandler(exchange, exchange_type,
-                               routing_key=routing_key)
-    client.add_handler(send_handler)
-    with client:
-        send_handler.publish(message)
+def hooks_sendhandler() -> SendHandler:
+    return SendHandler(EVENTS_EXCHANGE_NAME, exchange_type='topic',
+                       routing_key='events.hooks')
 
 
-def _broadcast_mgmtworker_task(message, exchange='cloudify-mgmtworker-service',
-                               exchange_type='fanout', routing_key='service'):
+def service_sendhandler() -> SendHandler:
+    return SendHandler('cloudify-mgmtworker-service', exchange_type='fanout',
+                       routing_key='service')
+
+
+def _broadcast_mgmtworker_task(message):
     """Broadcast a message to all mgmtworkers in a cluster."""
-    client = get_amqp_client()
-    send_handler = SendHandler(exchange, exchange_type,
-                               routing_key=routing_key)
-    client.add_handler(send_handler)
-    with client:
-        send_handler.publish(message)
+    send_handler = get_amqp_handler('service')
+    send_handler.publish(message)
 
 
 def restart_restservice():
