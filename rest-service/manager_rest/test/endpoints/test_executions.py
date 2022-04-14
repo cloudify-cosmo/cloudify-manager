@@ -1031,7 +1031,7 @@ class ExecutionQueueingTests(BaseServerTestCase):
         # execution won't run because it is in a full group now
         assert self._get_queued() == []
 
-    @mock.patch('manager_rest.resource_manager.send_event', mock.Mock())
+    @mock.patch('manager_rest.workflow_executor.send_hook', mock.Mock())
     def test_already_running_queues(self):
         self._make_execution(status=ExecutionState.STARTED)
         exc2 = self._make_execution(status=ExecutionState.PENDING)
@@ -1042,7 +1042,7 @@ class ExecutionQueueingTests(BaseServerTestCase):
         self.rm.prepare_executions([exc2], queue=True)
         assert exc2.status == ExecutionState.QUEUED
 
-    @mock.patch('manager_rest.resource_manager.send_event', mock.Mock())
+    @mock.patch('manager_rest.workflow_executor.send_hook', mock.Mock())
     def test_system_wf_already_running_queues(self):
         exc1 = models.Execution(
             status=ExecutionState.STARTED,
@@ -1058,7 +1058,7 @@ class ExecutionQueueingTests(BaseServerTestCase):
         self.rm.prepare_executions([exc2], queue=True)
         assert exc2.status == ExecutionState.QUEUED
 
-    @mock.patch('manager_rest.resource_manager.send_event', mock.Mock())
+    @mock.patch('manager_rest.workflow_executor.send_hook', mock.Mock())
     def test_queue_before_create_finishes(self):
         """Execs queued before create-dep-env finished, have default params.
 
@@ -1105,7 +1105,7 @@ class ExecutionQueueingTests(BaseServerTestCase):
             'param2': 'default2',
         }
 
-    @mock.patch('manager_rest.resource_manager.send_event', mock.Mock())
+    @mock.patch('manager_rest.workflow_executor.send_hook', mock.Mock())
     def test_queue_nonexistent_workflow(self):
         """Dequeueing an execution of a nonexistent workflow, fails."""
         dep = models.Deployment(
