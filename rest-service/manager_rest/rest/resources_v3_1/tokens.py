@@ -51,7 +51,8 @@ class Tokens(SecuredResource):
 
         expiration_date = request_dict.get('expiration_date')
         if expiration_date:
-            expiration_date = parse_utc_datetime(expiration_date)
+            expiration_date = parse_utc_datetime(
+                expiration_date, timezone="UTC")
 
         return current_user.create_auth_token(request_dict.get('description'),
                                               expiration_date)
