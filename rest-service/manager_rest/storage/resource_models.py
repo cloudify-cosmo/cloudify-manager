@@ -24,7 +24,8 @@ from cloudify.models_states import (AgentState,
                                     DeploymentModificationState,
                                     DeploymentState)
 from cloudify.cryptography_utils import decrypt
-from dsl_parser.constants import WORKFLOW_PLUGINS_TO_INSTALL
+from dsl_parser.constants import (WORKFLOW_PLUGINS_TO_INSTALL,
+                                  TYPES_BASED_ON_DB_ENTITIES)
 from dsl_parser.constraints import extract_constraints, validate_input_value
 from dsl_parser import exceptions as dsl_exceptions
 
@@ -1201,16 +1202,15 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             constraints = extract_constraints(param)
             if name not in parameters:
                 continue
+            param_type = param.get('type')
+            if param_type not in TYPES_BASED_ON_DB_ENTITIES \
+                    and not constraints:
+                continue
             try:
                 getter = GetValuesWithStorageManager(get_storage_manager(),
                                                      self.deployment_id)
-                if param.get('type') not in ['blueprint_id', 'deployment_id',
-                                             'capability_value', 'secret_key',
-                                             'node_id'] \
-                        and not constraints:
-                    continue
                 validate_input_value(name, constraints, parameters[name],
-                                     param.get('type'), getter)
+                                     param_type, getter)
             except (dsl_exceptions.DSLParsingException,
                     dsl_exceptions.ConstraintException) as ex:
                 constraint_violations[name] = ex
