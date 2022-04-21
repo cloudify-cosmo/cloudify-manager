@@ -1203,6 +1203,7 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             if name not in parameters:
                 continue
             param_type = param.get('type')
+            param_item_type = param.get('item_type')
             if param_type not in TYPES_BASED_ON_DB_ENTITIES \
                     and not constraints:
                 continue
@@ -1210,7 +1211,7 @@ class Execution(CreatedAtMixin, SQLResourceBase):
                 getter = GetValuesWithStorageManager(get_storage_manager(),
                                                      self.deployment_id)
                 validate_input_value(name, constraints, parameters[name],
-                                     param_type, getter)
+                                     param_type, param_item_type, getter)
             except (dsl_exceptions.DSLParsingException,
                     dsl_exceptions.ConstraintException) as ex:
                 constraint_violations[name] = ex
