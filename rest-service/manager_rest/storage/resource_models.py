@@ -1182,11 +1182,13 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             declared_type = param.get('type')
             if declared_type is None or name not in parameters:
                 continue
+            declared_item_type = param.get('item_type')
             try:
                 parameters[name] = self._convert_param_type(
-                        parameters[name], declared_type)
+                        parameters[name], declared_type, declared_item_type)
             except ValueError:
-                wrong_types[name] = declared_type
+                wrong_types[name] = declared_type if not declared_item_type \
+                    else f'{declared_type} of {declared_item_type}s'
         if wrong_types:
             raise manager_exceptions.IllegalExecutionParametersError('\n'.join(
                 f'Parameter "{n}" must be of type {t}'
@@ -1228,8 +1230,11 @@ class Execution(CreatedAtMixin, SQLResourceBase):
                 f' parameters to execute: { ",".join(missing_parameters) }'
             ) from None
 
-    def _convert_param_type(self, param, target_type):
-        if target_type == 'integer':
+    def _convert_param_type(self, param, target_type, item_type):
+        if target_type == 'list':
+            return [self._convert_param_type(item, item_type, None)
+                    for item in param]
+        elif target_type == 'integer':
             return int(param)
         elif target_type == 'boolean':
             if isinstance(param, bool):
