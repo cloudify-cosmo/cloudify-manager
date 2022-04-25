@@ -757,3 +757,224 @@ class TestScalingGroupType(AgentlessTestCase, DataBasedTypes):
             'dep', 'test_parameters',
             parameters=self.get_params(b='scaling-group-that-does-not-exist'),
         )
+
+
+class TestListTypes(AgentlessTestCase, DataBasedTypes):
+    def test_inputs(self):
+        # Preparations
+        self.upload_blueprint(
+            blueprint_id='b1',
+            blueprint_file_name='blueprint_with_list_types.yaml',
+        )
+
+        # Tests
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            r"^400:.+False.+truths_list violates constraint valid_values",
+            self.client.deployments.create,
+            'b1', 'd1',
+            inputs={
+                'truths_list': [True, False, True, False],
+                'floats_list': [3.1416],
+                'ints_list': [0, 1, 2, 3],
+            }
+        )
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            r"^400:.+type validation failed in 'floats_list'",
+            self.client.deployments.create,
+            'b1', 'd1',
+            inputs={
+                'truths_list': [True, True],
+                'floats_list': [3.1416, True],
+                'ints_list': [0, 1, 2, 3],
+            }
+        )
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            r"^400:.+type validation failed in 'ints_list'",
+            self.client.deployments.create,
+            'b1', 'd1',
+            inputs={
+                'truths_list': [True, True],
+                'floats_list': [3.1416, 1.4142],
+                'ints_list': [0, 'foo'],
+            }
+        )
+
+        # Preparations cont.
+        self.client.deployments.create(
+            'b1', 'd1',
+            inputs={
+                'truths_list': [True, True],
+                'floats_list': [3.1416, 1.4142],
+                'ints_list': [-9, 23],
+            }
+        )
+        self.upload_blueprint(
+            blueprint_id='b2',
+            blueprint_file_name='blueprint_with_list_types.yaml',
+        )
+        self.client.deployments.create(
+            'b2', 'd2',
+            inputs={
+                'truths_list': [True],
+                'floats_list': [3.1416],
+                'ints_list': [],
+            }
+        )
+
+        # Tests
+        self.upload_blueprint(
+            blueprint_id='bp',
+            blueprint_file_name='blueprint_with_list_data_based_types.yaml',
+        )
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            r"^400:.+'blueprint-which-does-not-exist'.+is not a valid value",
+            self.client.deployments.create,
+            'bp', 'dep1',
+            inputs={
+                'blueprints_list': ['b1', 'blueprint-which-does-not-exist'],
+                'deployments_list': [],
+                'nodes_list': [],
+                'node_instances_list': [],
+            }
+        )
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            r"^400:.+d2.+deployments_list violates constraint valid_values",
+            self.client.deployments.create,
+            'bp', 'dep1',
+            inputs={
+                'blueprints_list': ['b1'],
+                'deployments_list': ['d1', 'd2'],
+                'nodes_list': [],
+                'node_instances_list': [],
+            }
+        )
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            r"^400:.+Input 'nodes_list'.+lacks 'deployment_id'",
+            self.client.deployments.create,
+            'bp', 'dep1',
+            inputs={
+                'blueprints_list': ['b1'],
+                'deployments_list': ['d1'],
+                'nodes_list': ['non-existent-node'],
+                'node_instances_list': [],
+            }
+        )
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            r"^400:.+'3.1416'.+violates at least one of the constraints",
+            self.client.deployments.create,
+            'bp', 'dep1',
+            inputs={
+                'blueprints_list': ['b1'],
+                'deployments_list': ['d1'],
+                'nodes_list': [],
+                'node_instances_list': [3.1416],
+            }
+        )
+
+    def test_params(self):
+        # Preparations
+        self.upload_blueprint(
+            blueprint_id='b1',
+            blueprint_file_name='blueprint_with_list_types.yaml',
+        )
+        self.client.deployments.create(
+            'b1', 'd1',
+            inputs={
+                'truths_list': [True, True],
+                'floats_list': [3.1416, 1.4142],
+                'ints_list': [-9, 23],
+            }
+        )
+        self.upload_blueprint(
+            blueprint_id='b2',
+            blueprint_file_name='blueprint_with_list_types.yaml',
+        )
+        self.client.deployments.create(
+            'b2', 'd2',
+            inputs={
+                'truths_list': [True],
+                'floats_list': [3.1416],
+                'ints_list': [],
+            }
+        )
+        self.upload_blueprint(
+            blueprint_id='bp',
+            blueprint_file_name='blueprint_with_list_data_based_types.yaml',
+        )
+        self.client.deployments.create(
+            'bp', 'dep1',
+            inputs={
+                'blueprints_list': ['b1'],
+                'deployments_list': ['d1'],
+                'nodes_list': [],
+                'node_instances_list': [],
+            }
+        )
+
+        # Tests
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            r"^400:.+Value b2.+violates constraint valid_values",
+            self.client.executions.create,
+            'dep1', 'test_parameters',
+            parameters={
+                'blueprints_list': ['b1', 'b2'],
+                'deployments_list': ['d1'],
+                'nodes_list': [],
+                'node_instances_list': [],
+            },
+        )
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            r"^400:.+Value 'False'.+not a valid value",
+            self.client.executions.create,
+            'dep1', 'test_parameters',
+            parameters={
+                'blueprints_list': ['b1'],
+                'deployments_list': ['d1', False],
+                'nodes_list': [],
+                'node_instances_list': [],
+            },
+        )
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            r"^400:.+Value 'node1' of 'nodes_list' is not a valid value",
+            self.client.executions.create,
+            'dep1', 'test_parameters',
+            parameters={
+                'blueprints_list': ['b1'],
+                'deployments_list': ['d1'],
+                'nodes_list': ['node1', 'node2'],
+                'node_instances_list': [],
+            },
+        )
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            r"^400:.+Value 'root_node'.+does not match",
+            self.client.executions.create,
+            'dep1', 'test_parameters',
+            parameters={
+                'blueprints_list': ['b1'],
+                'deployments_list': ['d1'],
+                'nodes_list': ['root_node'],
+                'node_instances_list': ['root_node'],
+            },
+        )
+        d2_node_instances = self.client.node_instances.list(deployment_id='d2')
+        test_execution = self.client.executions.create(
+            'dep1', 'test_parameters',
+            parameters={
+                'blueprints_list': ['b1'],
+                'deployments_list': ['d1'],
+                'nodes_list': ['root_node'],
+                'node_instances_list': [ni.id for ni in d2_node_instances],
+            },
+        )
+        self.wait_for_execution_to_end(test_execution)

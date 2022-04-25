@@ -1,0 +1,31 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - cloudify/types/types.yaml
+
+inputs:
+  truths_list:
+    type: list
+    item_type: boolean
+    description: Some booleans
+    constraints:
+      - valid_values:
+          - true
+  floats_list:
+    type: list
+    item_type: float
+    description: Some floats
+    constraints:
+      - valid_values:
+          - 3.1416
+          - 1.4142
+  ints_list:
+    type: list
+    item_type: integer
+    description: Some integers
+
+node_templates:
+  node1:
+    type: cloudify.nodes.Root
+  node2:
+    type: cloudify.nodes.Root

@@ -1,0 +1,81 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - cloudify/types/types.yaml
+
+inputs:
+  blueprints_list:
+    type: list
+    item_type: blueprint_id
+    description: Which blueprints to use
+    constraints:
+      - name_pattern:
+          starts_with: b
+      - valid_values:
+          - b1
+          - b3
+  deployments_list:
+    type: list
+    item_type: deployment_id
+    description: Which deployments to use
+    constraints:
+      - name_pattern:
+          starts_with: d
+      - valid_values:
+          - d1
+          - d3
+  nodes_list:
+    type: list
+    item_type: node_id
+    description: Which nodes (node_id-s) to use
+    constraints:
+      - name_pattern:
+          starts_with: node
+  node_instances_list:
+    type: list
+    item_type: node_instance
+    description: Which node instances to use
+    constraints:
+      - deployment_id: d2
+
+node_templates:
+  root_node:
+    type: cloudify.nodes.Root
+
+workflows:
+  test_parameters:
+    mapping: file:///dev/null
+    parameters:
+      blueprints_list:
+        type: list
+        item_type: blueprint_id
+        description: Which blueprints to use
+        constraints:
+          - name_pattern:
+              starts_with: b
+          - valid_values:
+              - b1
+              - b3
+      deployments_list:
+        type: list
+        item_type: deployment_id
+        description: Which deployments to use
+        constraints:
+          - name_pattern:
+              starts_with: d
+          - valid_values:
+              - d1
+              - d3
+      nodes_list:
+        type: list
+        item_type: node_id
+        description: Which nodes (node_id-s) to use
+        constraints:
+          - name_pattern:
+              contains: node
+      node_instances_list:
+        type: list
+        item_type: node_instance
+        description: Which node instances to use
+        constraints:
+          - deployment_id: d2
