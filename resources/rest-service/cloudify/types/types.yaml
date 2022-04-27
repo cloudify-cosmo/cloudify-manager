@@ -19,15 +19,29 @@ node_types:
   cloudify.nodes.Root:
     interfaces:
       cloudify.interfaces.lifecycle:
+        # install
         precreate: {}
         create: {}
         configure: {}
         start: {}
         poststart: {}
+        # uninstall
         prestop: {}
         stop: {}
         delete: {}
         postdelete: {}
+        # update
+        preupdate: {}
+        update: {}
+        postupdate: {}
+        update_config: {}
+        update_apply: {}
+        update_postapply: {}
+        # heal
+        preheal: {}
+        heal: {}
+        postheal: {}
+        # misc
         pull: {}
         check_drift: {}
       cloudify.interfaces.validation:
@@ -460,17 +474,31 @@ relationships:
   cloudify.relationships.depends_on:
     source_interfaces:
       cloudify.interfaces.relationship_lifecycle:
+        # install
         preconfigure: {}
         postconfigure: {}
         establish: {}
+        # uninstall
         unlink: {}
+        # update
+        update_preconfigure: {}
+        update_postconfigure: {}
+        update_establish: {}
+        # misc
         check_drift: {}
     target_interfaces:
       cloudify.interfaces.relationship_lifecycle:
+        # install
         preconfigure: {}
         postconfigure: {}
         establish: {}
+        # uninstall
         unlink: {}
+        # update
+        update_preconfigure: {}
+        update_postconfigure: {}
+        update_establish: {}
+        # misc
         check_drift: {}
     properties:
       connection_type:
