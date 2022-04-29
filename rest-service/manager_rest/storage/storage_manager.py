@@ -149,11 +149,7 @@ class SQLStorageManager(object):
             query = query.distinct(*distinct)
 
         if joins:
-            query = query.options(db.joinedload(join) for join in joins
-                                  if join.can_joinedload)
-            outer_joins = [join for join in joins if not join.can_joinedload]
-            if outer_joins:
-                query = query.outerjoin(*outer_joins)
+            query = query.outerjoin(*joins)
         return query
 
     @staticmethod
