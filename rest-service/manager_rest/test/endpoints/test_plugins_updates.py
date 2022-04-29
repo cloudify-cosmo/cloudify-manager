@@ -1,18 +1,3 @@
-#########
-# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 from copy import deepcopy
 
 import unittest
@@ -75,6 +60,21 @@ class PluginsUpdatesTest(PluginsUpdatesBaseTest):
 
     def test_returns_empty_list_with_no_plugins_updates(self):
         self.assertEqual(0, len(self.client.plugins_update.list().items))
+
+    def test_no_break_on_include_blueprint_columns(self):
+        """Including two columns from the same table has made the storage
+        manager unhappy in the past. Let's not do that again."""
+
+        # Make sure we have a plugins update in case we skip listing when the
+        # table is empty at any point in the future
+        self.put_blueprint(blueprint_id='hello_world')
+        self.client.deployments.create('hello_world', 'd123')
+        self.wait_for_deployment_creation(self.client, 'd123')
+        plugins_update1 = self.client.plugins_update.update_plugins(
+            'hello_world')
+
+        self.client.plugins_update.list(
+            _include=['blueprint_id', 'temp_blueprint_id'])
 
 
 class PluginsUpdateIdTest(PluginsUpdatesBaseTest):
