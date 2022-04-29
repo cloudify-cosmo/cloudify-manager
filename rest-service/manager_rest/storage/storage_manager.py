@@ -153,7 +153,7 @@ class SQLStorageManager(object):
                                   if join.can_joinedload)
             outer_joins = [join for join in joins if not join.can_joinedload]
             if outer_joins:
-                query.outerjoin(*outer_joins)
+                query = query.outerjoin(*outer_joins)
         return query
 
     @staticmethod
