@@ -49,6 +49,8 @@ def get_joins(model_class, columns):
             # because some SQLA elements have their own comparators
             join_attr_name = str(join_attr)
             if join_attr_name not in joins:
+                # Include a bool to determine whether joinedload will work
+                join_attr.can_joinedload = model_class == column.owning_class
                 joins[join_attr_name] = join_attr
             column = column.remote_attr
     return joins.values()
