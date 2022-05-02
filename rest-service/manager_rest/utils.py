@@ -162,10 +162,12 @@ def create_auth_header(username=None, password=None, token=None, tenant=None):
     return headers
 
 
-def all_tenants_authorization():
+def all_tenants_authorization(user=None):
+    if user is None:
+        user = current_user
     return (
-        current_user.id == constants.BOOTSTRAP_ADMIN_ID or
-        any(r in current_user.system_roles
+        user.id == constants.BOOTSTRAP_ADMIN_ID or
+        any(r in user.system_roles
             for r in config.instance.authorization_permissions['all_tenants'])
     )
 
@@ -187,12 +189,14 @@ def tenant_specific_authorization(tenant, resource_name, action='list'):
     return current_user.has_role_in(tenant, permission_roles)
 
 
-def is_administrator(tenant):
+def is_administrator(tenant, user=None):
+    if user is None:
+        user = current_user
     administrators_roles = \
         config.instance.authorization_permissions['administrators']
     return (
-        current_user.id == constants.BOOTSTRAP_ADMIN_ID or
-        current_user.has_role_in(tenant, administrators_roles)
+        user.id == constants.BOOTSTRAP_ADMIN_ID or
+        user.has_role_in(tenant, administrators_roles)
     )
 
 
