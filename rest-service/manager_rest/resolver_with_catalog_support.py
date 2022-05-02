@@ -55,10 +55,12 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
 
     def __init__(self, rules=None, fallback=True,
                  plugin_version_constraints=None,
-                 plugin_mappings=None):
+                 plugin_mappings=None,
+                 storage_manager=None):
         super(ResolverWithCatalogSupport, self).__init__(rules, fallback)
         self.version_constraints = plugin_version_constraints or {}
         self.mappings = plugin_mappings or {}
+        self._sm = storage_manager or get_storage_manager()
 
     @staticmethod
     def _is_plugin_url(import_url):
@@ -134,8 +136,7 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
                                     plugin.package_version)
         return self._make_plugin_yaml_url(plugin)
 
-    @staticmethod
-    def _find_plugin(name, filters):
+    def _find_plugin(self, name, filters):
         def _get_specifier_set(package_versions):
             # Flat out the versions, in case one of them contains a few
             # operators/specific versions
@@ -169,8 +170,7 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
                                          'Please refer to the documentation '
                                          'for valid forms of '
                                          'versions'.format(versions, name))
-        sm = get_storage_manager()
-        plugins = sm.list(Plugin, filters=filters)
+        plugins = self._sm.list(Plugin, filters=filters)
         if not plugins:
             if version_specified:
                 filters['package_version'] = versions
@@ -236,9 +236,8 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
             resolver=self)
         return merged_blueprint
 
-    @staticmethod
-    def _get_blueprint(name):
-        return get_storage_manager().get(Blueprint, name)
+    def _get_blueprint(self, name):
+        return self._sm.get(Blueprint, name)
 
     @staticmethod
     def _make_blueprint_url(blueprint):
