@@ -500,7 +500,7 @@ def _add_new_consumer_labels(sm, source_id, consumer_labels_to_add):
             key='csys-consumer-id',
             value=source_id,
             created_at=datetime.utcnow(),
-            creator=current_user,
+            creator=sm.current_user,
             deployment=target,
         ))
 

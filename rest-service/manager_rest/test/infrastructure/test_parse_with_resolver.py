@@ -30,7 +30,7 @@ TEST_PACKAGE_YAML_FILE = 'mock_blueprint/plugin-cloudify-diamond-plugin.yaml'
 class TestParseWithResolver(BaseServerTestCase):
     def setUp(self):
         super(TestParseWithResolver, self).setUp()
-        self.resolver = ResolverWithCatalogSupport()
+        self.resolver = ResolverWithCatalogSupport(storage_manager=self.sm)
 
     def test_successful_plugin_import_resolver(self):
         self.upload_plugin(TEST_PACKAGE_NAME,

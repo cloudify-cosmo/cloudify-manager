@@ -33,7 +33,7 @@ PLUGIN_IMPORT_FORMAT = PLUGIN_PREFIX + "{0}?version={1}"
 class TestPluginParseWithResolver(BaseServerTestCase):
     def setUp(self):
         super(TestPluginParseWithResolver, self).setUp()
-        self.resolver = ResolverWithCatalogSupport()
+        self.resolver = ResolverWithCatalogSupport(storage_manager=self.sm)
 
     def test_successful_plugin_import_resolver(self):
         self.upload_plugin(TEST_PACKAGE_NAME, TEST_PLUGIN_VERSION1)
@@ -118,7 +118,7 @@ class TestPluginParseWithResolver(BaseServerTestCase):
 class TestBlueprintParseWithResolver(BaseServerTestCase):
     def setUp(self):
         super(TestBlueprintParseWithResolver, self).setUp()
-        self.resolver = ResolverWithCatalogSupport()
+        self.resolver = ResolverWithCatalogSupport(storage_manager=self.sm)
         self.blueprint_id = 'test_blueprint'
         self.import_url = BLUEPRINT_PREFIX + self.blueprint_id
 

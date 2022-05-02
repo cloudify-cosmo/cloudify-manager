@@ -13,7 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from flask_login import current_user
 from manager_rest import manager_exceptions
 from manager_rest.test import base_test
 from manager_rest.storage import models
@@ -26,7 +25,7 @@ class ManagerConfigTestCase(base_test.BaseServerTestCase):
         config = {
             'name': 'x',
             'value': 5,
-            '_updater_id': current_user.id,
+            '_updater_id': self.user.id,
             'scope': 'rest'
         }
         config.update(kwargs)
@@ -39,7 +38,7 @@ class ManagerConfigTestCase(base_test.BaseServerTestCase):
         expected = {
             'name': 'x',
             'value': 5,
-            'updater_name': current_user.username,
+            'updater_name': self.user.username,
             'is_editable': True,
             'scope': 'rest'
         }
@@ -72,7 +71,7 @@ class ManagerConfigTestCase(base_test.BaseServerTestCase):
         expected = {
             'name': 'x',
             'value': 6,
-            'updater_name': current_user.username,
+            'updater_name': self.user.username,
             'is_editable': True
         }
         actual = {k: result[k] for k in expected}
