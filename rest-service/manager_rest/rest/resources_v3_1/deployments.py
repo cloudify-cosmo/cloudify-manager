@@ -1091,7 +1091,7 @@ class DeploymentGroupsId(SecuredResource):
             deployments_to_add |= set(sm.list(
                 models.Deployment,
                 filter_rules=get_filter_rules_from_filter_id(
-                    filter_id, models.DeploymentsFilter)
+                    sm, filter_id, models.DeploymentsFilter)
             ).items)
 
         filter_rules = request_dict.get('filter_rules')
@@ -1292,7 +1292,7 @@ class DeploymentGroupsId(SecuredResource):
             deployments = sm.list(
                 models.Deployment,
                 filter_rules=get_filter_rules_from_filter_id(
-                    filter_id, models.DeploymentsFilter)
+                    sm, filter_id, models.DeploymentsFilter)
             )
             for dep in deployments:
                 if dep in group.deployments:

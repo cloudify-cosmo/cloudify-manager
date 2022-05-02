@@ -33,9 +33,10 @@ class Workflows(SecuredResource):
         _include = ['id', 'workflows']
         filters = filters or {}
         filters.update(rest_utils.deployment_group_id_filter())
+        sm = get_storage_manager()
         filter_rules = filters_utils.get_filter_rules_from_filter_id(
-            filter_id, models.DeploymentsFilter)
-        result = get_storage_manager().list(
+            sm, filter_id, models.DeploymentsFilter)
+        result = sm.list(
             models.Deployment,
             include=_include,
             filters=filters,

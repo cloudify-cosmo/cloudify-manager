@@ -57,9 +57,10 @@ class Blueprints(resources_v1.Blueprints):
         )
         filters = filters or {}
         filters.setdefault('is_hidden', False)
-        filter_rules = get_filter_rules_from_filter_id(filter_id,
-                                                       models.BlueprintsFilter)
-        return get_storage_manager().list(
+        sm = get_storage_manager()
+        filter_rules = get_filter_rules_from_filter_id(
+            sm, filter_id, models.BlueprintsFilter)
+        return sm.list(
             models.Blueprint,
             include=_include,
             filters=filters,

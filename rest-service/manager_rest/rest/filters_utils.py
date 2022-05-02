@@ -2,7 +2,7 @@ from typing import List, Union, NewType
 
 from cloudify._compat import text_type
 
-from manager_rest.storage import get_storage_manager, models
+from manager_rest.storage import models
 from manager_rest.rest.rest_utils import validate_inputs, parse_label
 from manager_rest.manager_exceptions import BadFilterRule, BadParametersError
 from manager_rest.constants import (ATTRS_OPERATORS,
@@ -33,12 +33,12 @@ FilteredModels = NewType('FilteredModels',
                          Union[models.Deployment, models.Blueprint])
 
 
-def get_filter_rules_from_filter_id(filter_id, filters_model):
+def get_filter_rules_from_filter_id(sm, filter_id, filters_model):
     if not filter_id or not filters_model:
         return None
 
     validate_inputs({'filter_id': filter_id})
-    filter_elem = get_storage_manager().get(filters_model, filter_id)
+    filter_elem = sm.get(filters_model, filter_id)
     return filter_elem.value
 
 
