@@ -62,7 +62,8 @@ from manager_rest.test.security_utils import (
     get_status_reporters,
 )
 from manager_rest import utils, config, constants, archiving
-from manager_rest.storage import get_storage_manager, models
+from manager_rest.storage import models
+from manager_rest.storage.storage_manager import SQLStorageManager
 from manager_rest.storage.storage_utils import (
     create_default_user_tenant_and_roles,
     create_status_reporter_user_and_assign_role
@@ -293,13 +294,21 @@ class BaseServerTestCase(unittest.TestCase):
         cls._reset_app()
         cls._handle_flask_app_and_db()
         cls.client = cls.create_client()
-        cls.sm = get_storage_manager()
-        cls.rm = get_resource_manager()
 
     def setUp(self):
         self._handle_default_db_config()
+        default_tenant = models.Tenant.query.get(0)
+        self.sm = SQLStorageManager(
+            tenant=default_tenant,
+            user=models.User.query.get(0),
+        )
+        self.rm = get_resource_manager(self.sm)
+        if premium_enabled:
+            # License is required only when working with Cloudify Premium
+            upload_mock_cloudify_license(self.sm)
+
+        utils.set_current_tenant(default_tenant)
         self.initialize_provider_context()
-        self._setup_current_user()
         self.addCleanup(self._drop_db, keep_tables=['config'])
         self.addCleanup(self._clean_tmpdir)
         self.user = db.session.query(models.User).first()
@@ -434,8 +443,7 @@ class BaseServerTestCase(unittest.TestCase):
                     name=perm))
         sess.commit()
 
-    @staticmethod
-    def _handle_default_db_config():
+    def _handle_default_db_config(self):
         Migrate(app=server.app, db=server.db)
         try:
             upgrade(directory=MIGRATION_DIR)
@@ -491,11 +499,6 @@ class BaseServerTestCase(unittest.TestCase):
                 reporter['role'],
                 reporter['id']
             )
-        if premium_enabled:
-            # License is required only when working with Cloudify Premium
-            upload_mock_cloudify_license(get_storage_manager())
-
-        utils.set_current_tenant(default_tenant)
 
     @staticmethod
     def _get_app(flask_app, user=None):
@@ -510,15 +513,6 @@ class BaseServerTestCase(unittest.TestCase):
         flask_app.test_client_class = TestClient
         return flask_app.test_client(user=user)
 
-    @staticmethod
-    def _setup_current_user():
-        """Change the anonymous user to be admin, in order to have arbitrary
-        access to the storage manager (which otherwise requires a valid user)
-        """
-        admin_user = set_admin_current_user(server.app)
-        login_manager = server.app.extensions['security'].login_manager
-        login_manager.anonymous_user = Mock(return_value=admin_user)
-
     @classmethod
     def tearDownClass(cls):
         cls.quiet_delete(cls.rest_service_log)
@@ -529,14 +523,13 @@ class BaseServerTestCase(unittest.TestCase):
         for patcher in cls._patchers:
             patcher.stop()
 
-    @classmethod
-    def initialize_provider_context(cls):
+    def initialize_provider_context(self):
         provider_context = models.ProviderContext(
             id=constants.PROVIDER_CONTEXT_ID,
-            name=cls.__name__,
+            name=self.__class__.__name__,
             context={'cloudify': {}}
         )
-        cls.sm.put(provider_context)
+        self.sm.put(provider_context)
 
     @classmethod
     def _db_exists(cls, test_config, dbname):
