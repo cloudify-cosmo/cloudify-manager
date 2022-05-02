@@ -25,6 +25,7 @@ from manager_rest.security import audit
 from manager_rest.utils import (
     is_expired,
     is_sanity_mode,
+    check_unauthenticated_endpoint
 )
 
 
@@ -39,6 +40,10 @@ def user_loader(request: Request) -> typing.Optional[User]:
     and return one, or None. The functions can also throw, or return an error
     response immediately.
     """
+    if check_unauthenticated_endpoint():
+        # the selected endpoint doesn't require auth, let's not even bother
+        # loading the user
+        return
     for getter, method_label in [
         (_get_user_from_execution_token, 'execution_token'),
         (_get_user_from_auth, 'http_basic'),

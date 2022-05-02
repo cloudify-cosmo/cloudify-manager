@@ -73,6 +73,7 @@ MODELS_TO_PERMISSIONS = {
     'NodeInstance': 'node_instance',
     'TasksGraph': 'operations'
 }
+UNAUTHENTICATED_ENDPOINTS = ['ok']
 FORBIDDEN_METHODS = ['POST', 'PATCH', 'PUT']
 SANITY_MODE_FILE_PATH = '/opt/manager/sanity_mode'
 
