@@ -52,7 +52,9 @@ def no_autoflush(f):
 
 
 class SQLStorageManager(object):
-    def __init__(self):
+    def __init__(self, user=None, tenant=None):
+        self._user = user
+        self._tenant = tenant
         self._in_transaction = False
 
     @staticmethod
@@ -293,11 +295,11 @@ class SQLStorageManager(object):
         if all_tenants:
             # If a user that is allowed to get all the tenants in the system
             # no need to filter
-            if all_tenants_authorization():
+            if all_tenants_authorization(self.current_user):
                 return query
             # Filter by all the tenants the user is allowed to list in
             tenants = [
-                tenant for tenant in current_user.all_tenants
+                tenant for tenant in self.current_user.all_tenants
                 if utils.tenant_specific_authorization(tenant,
                                                        model_class.__name__)
             ]
@@ -320,7 +322,7 @@ class SQLStorageManager(object):
             return query
 
         # For users that are allowed to see all resources, regardless of tenant
-        is_admin = is_administrator(self.current_tenant)
+        is_admin = is_administrator(self.current_tenant, self.current_user)
         if is_admin:
             return query
 
@@ -328,7 +330,7 @@ class SQLStorageManager(object):
         # for NOT, in SQLA), *or* those where the current user is the creator
         user_filter = sql_or(
             model_class.visibility != VisibilityState.PRIVATE,
-            model_class.creator == current_user
+            model_class.creator == self.current_user
         )
         return query.filter(user_filter)
 
@@ -513,7 +515,7 @@ class SQLStorageManager(object):
             if not instance.tenant:
                 instance.tenant = self.current_tenant
             if not instance.creator:
-                instance.creator = current_user
+                instance.creator = self.current_user
 
     @staticmethod
     def _load_relationships(instance):
@@ -525,9 +527,16 @@ class SQLStorageManager(object):
                 getattr(instance, rel.key)
 
     @property
+    def current_user(self):
+        if self._user is not None:
+            return self._user
+        return current_user._get_current_object()
+
+    @property
     def current_tenant(self):
-        """Return the tenant with which the user accessed the app
-        """
+        """Return the tenant with which the user accessed the app"""
+        if self._tenant is not None:
+            return self._tenant
         try:
             return utils.current_tenant._get_current_object()
         except manager_exceptions.TenantNotProvided:
