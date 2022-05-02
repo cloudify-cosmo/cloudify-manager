@@ -25,7 +25,7 @@ from manager_rest.manager_exceptions import MissingPremiumPackage
 from manager_rest.rest.rest_decorators import (
     prevent_running_in_snapshot_restore)
 
-from .authentication import authenticator
+from .authentication import authenticate as auth_user
 
 
 def authenticate(func):
@@ -51,7 +51,7 @@ def authenticate(func):
 
     @wraps(func)
     def wrapper(*args, **kwargs):
-        auth_response = authenticator.authenticate(request)
+        auth_response = auth_user(request)
         auth_headers = getattr(auth_response, 'response_headers', {})
         if isinstance(auth_response, Response):
             return auth_response
