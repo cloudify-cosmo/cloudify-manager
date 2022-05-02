@@ -55,7 +55,6 @@ from manager_rest import server
 from manager_rest.storage.models_base import db
 from manager_rest.rest.filters_utils import FilterRule
 from manager_rest.resource_manager import get_resource_manager
-from manager_rest.flask_utils import set_admin_current_user
 from manager_rest.storage.filters import add_filter_rules_to_query
 from manager_rest.test.security_utils import (
     get_admin_user,
