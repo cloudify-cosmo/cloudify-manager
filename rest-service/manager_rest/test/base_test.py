@@ -210,14 +210,21 @@ class BaseServerTestCase(unittest.TestCase):
             'password': password
         })
         headers = {CLOUDIFY_TENANT_HEADER: tenant}
-        return cls.create_client(headers=headers, app=app)
+        client = cls.create_client(headers=headers, app=app)
+        client.username = username
+        client.tenant_name = tenant
+        return client
 
     @classmethod
     def create_client(cls, headers=None, app=None):
         if app is None:
             app = cls.app
-        client = CloudifyClient(host='localhost',
-                                headers=headers)
+        client = CloudifyClient(host='localhost', headers=headers)
+        client.username = 'admin'
+        client.tenant_name = 'default_tenant'
+        if headers and CLOUDIFY_TENANT_HEADER in headers:
+            client.tenant_name = headers[CLOUDIFY_TENANT_HEADER]
+
         mock_http_client = MockHTTPClient(
             app, headers=headers, root_path=cls.tmpdir)
         client._client = mock_http_client
@@ -822,14 +829,15 @@ class BaseServerTestCase(unittest.TestCase):
     def create_deployment_environment(self, deployment, client=None):
         from cloudify_system_workflows.deployment_environment import create
         client = client or self.client
+        sm = self._get_sm(client)
         m = Mock()
-        deployment = self.sm.get(models.Deployment, deployment.id)
+        deployment = sm.get(models.Deployment, deployment.id)
         blueprint = client.blueprints.get(deployment.blueprint_id)
         m.deployment = client.deployments.get(deployment.id)
         m.blueprint = blueprint
         m.tenant_name = deployment.tenant_name
         deployment.create_execution.status = ExecutionState.STARTED
-        self.sm.update(deployment.create_execution)
+        sm.update(deployment.create_execution)
         get_rest_client_target = \
             'cloudify_system_workflows.deployment_environment.get_rest_client'
         with patch(get_rest_client_target, return_value=client), \
@@ -996,12 +1004,23 @@ class BaseServerTestCase(unittest.TestCase):
                 break
             time.sleep(3)
 
+    def _get_sm(self, client):
+        """Get a StorageManager with the same user&tenant as the client"""
+        if not client:
+            return self.sm
+        username = client.username
+        tenant_name = client.tenant_name
+        user = models.User.query.filter_by(username=username).one()
+        tenant = models.Tenant.query.filter_by(name=tenant_name).one()
+        return SQLStorageManager(user, tenant)
+
     def execute_upload_blueprint_workflow(self, blueprint_id, client=None):
         from cloudify_system_workflows.blueprint import upload
         client = client or self.client
-        blueprint = self.sm.get(models.Blueprint, blueprint_id)
-        executions = self.sm.list(models.Execution,
-                                  filters={'workflow_id': 'upload_blueprint'})
+        sm = self._get_sm(client)
+        blueprint = sm.get(models.Blueprint, blueprint_id)
+        executions = sm.list(models.Execution,
+                             filters={'workflow_id': 'upload_blueprint'})
         for exec in executions:
             uploaded_blueprint_id = exec.parameters.get('blueprint_id')
             if uploaded_blueprint_id and uploaded_blueprint_id == blueprint_id:
@@ -1020,7 +1039,7 @@ class BaseServerTestCase(unittest.TestCase):
                 blueprint.state = BlueprintUploadState.FAILED_UPLOADING
                 blueprint.error = str(e)
                 blueprint.error_traceback = traceback.format_exc()
-                self.sm.update(blueprint)
+                sm.update(blueprint)
                 raise
 
     def _add_blueprint(self, blueprint_id=None):
