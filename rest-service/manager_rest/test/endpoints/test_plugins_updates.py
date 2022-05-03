@@ -70,8 +70,7 @@ class PluginsUpdatesTest(PluginsUpdatesBaseTest):
         self.put_blueprint(blueprint_id='hello_world')
         self.client.deployments.create('hello_world', 'd123')
         self.wait_for_deployment_creation(self.client, 'd123')
-        plugins_update1 = self.client.plugins_update.update_plugins(
-            'hello_world')
+        self.client.plugins_update.update_plugins('hello_world')
 
         self.client.plugins_update.list(
             _include=['blueprint_id', 'temp_blueprint_id'])
