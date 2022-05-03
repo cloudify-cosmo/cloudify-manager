@@ -33,7 +33,6 @@ def get_joins(model_class, columns):
     """
     # Using an ordered dict because the order of the joins is important
     joins = OrderedDict()
-    joined_already = set()
     for column_name in columns:
         column = getattr(model_class, column_name, None)
         if column is None:
@@ -44,12 +43,6 @@ def get_joins(model_class, columns):
                 # This is a property or similar, not a real column
                 break
             join_attr = column.local_attr
-
-            # We will be using this for outer joins, and trying to join twice
-            # to the same table will cause problems
-            if column.target_class in joined_already:
-                break
-            joined_already.add(column.target_class)
 
             # This is a hack, to deal with the fact that SQLA doesn't
             # fully support doing something like: `if join_attr in joins`,
