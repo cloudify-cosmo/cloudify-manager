@@ -351,7 +351,7 @@ class SQLStorageManager(object):
         sort = sort or OrderedDict()
         distinct = distinct or []
 
-        all_columns = set(include) | set(filters.keys()) | set(sort.keys())
+        all_columns = set(filters.keys()) | set(sort.keys())
         joins = get_joins(model_class, all_columns)
 
         include, filters, substr_filters, sort, distinct = \
