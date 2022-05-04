@@ -6,7 +6,7 @@ from collections import OrderedDict
 from dateutil.parser import parse as parse_datetime
 from flask_restful import fields, marshal
 from flask_restful.utils import unpack
-from flask import request
+from flask import request, current_app
 from voluptuous import (
     All,
     Any,
@@ -21,7 +21,6 @@ from voluptuous import (
 )
 from cloudify._compat import text_type
 from cloudify.models_states import ExecutionState
-from ..security.authentication import authenticator
 from manager_rest import config, manager_exceptions
 from manager_rest.utils import current_tenant
 from manager_rest.security.authorization import is_user_action_allowed
@@ -518,7 +517,10 @@ def no_external_authenticator(action):
     def no_external_authenticator_dec(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            if authenticator.external_auth:
+            if (
+                current_app.external_auth
+                and current_app.external_auth.configured()
+            ):
                 raise manager_exceptions.IllegalActionError(
                     'Action `{0}` is not available when '
                     'using external authentication'.format(action)

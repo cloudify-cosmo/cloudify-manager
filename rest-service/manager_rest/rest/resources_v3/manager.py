@@ -25,7 +25,7 @@ from manager_rest.constants import (
 )
 
 from .. import rest_decorators, rest_utils
-from ...security.authentication import authenticator
+from ...security.authentication import authenticate
 from ..responses_v3 import BaseResponse, ResourceID
 
 
@@ -54,7 +54,7 @@ class FileServerAuth(SecuredResource):
                 # Example of uri: 'blueprints/default_tenant/blueprint_1/
                 # scripts/configure.sh'
                 _, uri_tenant = uri.split('/', 2)[:2]
-                authenticator.authenticate(request)
+                authenticate(request)
 
                 # if it's global blueprint - no need or tenant verification
                 # first load requested tenant to config then check if global

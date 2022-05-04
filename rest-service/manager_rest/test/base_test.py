@@ -55,14 +55,14 @@ from manager_rest import server
 from manager_rest.storage.models_base import db
 from manager_rest.rest.filters_utils import FilterRule
 from manager_rest.resource_manager import get_resource_manager
-from manager_rest.flask_utils import set_admin_current_user
 from manager_rest.storage.filters import add_filter_rules_to_query
 from manager_rest.test.security_utils import (
     get_admin_user,
     get_status_reporters,
 )
 from manager_rest import utils, config, constants, archiving
-from manager_rest.storage import get_storage_manager, models
+from manager_rest.storage import models
+from manager_rest.storage.storage_manager import SQLStorageManager
 from manager_rest.storage.storage_utils import (
     create_default_user_tenant_and_roles,
     create_status_reporter_user_and_assign_role
@@ -209,14 +209,21 @@ class BaseServerTestCase(unittest.TestCase):
             'password': password
         })
         headers = {CLOUDIFY_TENANT_HEADER: tenant}
-        return cls.create_client(headers=headers, app=app)
+        client = cls.create_client(headers=headers, app=app)
+        client.username = username
+        client.tenant_name = tenant
+        return client
 
     @classmethod
     def create_client(cls, headers=None, app=None):
         if app is None:
             app = cls.app
-        client = CloudifyClient(host='localhost',
-                                headers=headers)
+        client = CloudifyClient(host='localhost', headers=headers)
+        client.username = 'admin'
+        client.tenant_name = 'default_tenant'
+        if headers and CLOUDIFY_TENANT_HEADER in headers:
+            client.tenant_name = headers[CLOUDIFY_TENANT_HEADER]
+
         mock_http_client = MockHTTPClient(
             app, headers=headers, root_path=cls.tmpdir)
         client._client = mock_http_client
@@ -293,13 +300,21 @@ class BaseServerTestCase(unittest.TestCase):
         cls._reset_app()
         cls._handle_flask_app_and_db()
         cls.client = cls.create_client()
-        cls.sm = get_storage_manager()
-        cls.rm = get_resource_manager()
 
     def setUp(self):
         self._handle_default_db_config()
+        default_tenant = models.Tenant.query.get(0)
+        self.sm = SQLStorageManager(
+            tenant=default_tenant,
+            user=models.User.query.get(0),
+        )
+        self.rm = get_resource_manager(self.sm)
+        if premium_enabled:
+            # License is required only when working with Cloudify Premium
+            upload_mock_cloudify_license(self.sm)
+
+        utils.set_current_tenant(default_tenant)
         self.initialize_provider_context()
-        self._setup_current_user()
         self.addCleanup(self._drop_db, keep_tables=['config'])
         self.addCleanup(self._clean_tmpdir)
         self.user = db.session.query(models.User).first()
@@ -434,8 +449,7 @@ class BaseServerTestCase(unittest.TestCase):
                     name=perm))
         sess.commit()
 
-    @staticmethod
-    def _handle_default_db_config():
+    def _handle_default_db_config(self):
         Migrate(app=server.app, db=server.db)
         try:
             upgrade(directory=MIGRATION_DIR)
@@ -491,11 +505,6 @@ class BaseServerTestCase(unittest.TestCase):
                 reporter['role'],
                 reporter['id']
             )
-        if premium_enabled:
-            # License is required only when working with Cloudify Premium
-            upload_mock_cloudify_license(get_storage_manager())
-
-        utils.set_current_tenant(default_tenant)
 
     @staticmethod
     def _get_app(flask_app, user=None):
@@ -510,15 +519,6 @@ class BaseServerTestCase(unittest.TestCase):
         flask_app.test_client_class = TestClient
         return flask_app.test_client(user=user)
 
-    @staticmethod
-    def _setup_current_user():
-        """Change the anonymous user to be admin, in order to have arbitrary
-        access to the storage manager (which otherwise requires a valid user)
-        """
-        admin_user = set_admin_current_user(server.app)
-        login_manager = server.app.extensions['security'].login_manager
-        login_manager.anonymous_user = Mock(return_value=admin_user)
-
     @classmethod
     def tearDownClass(cls):
         cls.quiet_delete(cls.rest_service_log)
@@ -529,14 +529,13 @@ class BaseServerTestCase(unittest.TestCase):
         for patcher in cls._patchers:
             patcher.stop()
 
-    @classmethod
-    def initialize_provider_context(cls):
+    def initialize_provider_context(self):
         provider_context = models.ProviderContext(
             id=constants.PROVIDER_CONTEXT_ID,
-            name=cls.__name__,
+            name=self.__class__.__name__,
             context={'cloudify': {}}
         )
-        cls.sm.put(provider_context)
+        self.sm.put(provider_context)
 
     @classmethod
     def _db_exists(cls, test_config, dbname):
@@ -829,14 +828,15 @@ class BaseServerTestCase(unittest.TestCase):
     def create_deployment_environment(self, deployment, client=None):
         from cloudify_system_workflows.deployment_environment import create
         client = client or self.client
+        sm = self._get_sm(client)
         m = Mock()
-        deployment = self.sm.get(models.Deployment, deployment.id)
+        deployment = sm.get(models.Deployment, deployment.id)
         blueprint = client.blueprints.get(deployment.blueprint_id)
         m.deployment = client.deployments.get(deployment.id)
         m.blueprint = blueprint
         m.tenant_name = deployment.tenant_name
         deployment.create_execution.status = ExecutionState.STARTED
-        self.sm.update(deployment.create_execution)
+        sm.update(deployment.create_execution)
         get_rest_client_target = \
             'cloudify_system_workflows.deployment_environment.get_rest_client'
         with patch(get_rest_client_target, return_value=client), \
@@ -1003,12 +1003,23 @@ class BaseServerTestCase(unittest.TestCase):
                 break
             time.sleep(3)
 
+    def _get_sm(self, client):
+        """Get a StorageManager with the same user&tenant as the client"""
+        if not client:
+            return self.sm
+        username = client.username
+        tenant_name = client.tenant_name
+        user = models.User.query.filter_by(username=username).one()
+        tenant = models.Tenant.query.filter_by(name=tenant_name).one()
+        return SQLStorageManager(user, tenant)
+
     def execute_upload_blueprint_workflow(self, blueprint_id, client=None):
         from cloudify_system_workflows.blueprint import upload
         client = client or self.client
-        blueprint = self.sm.get(models.Blueprint, blueprint_id)
-        executions = self.sm.list(models.Execution,
-                                  filters={'workflow_id': 'upload_blueprint'})
+        sm = self._get_sm(client)
+        blueprint = sm.get(models.Blueprint, blueprint_id)
+        executions = sm.list(models.Execution,
+                             filters={'workflow_id': 'upload_blueprint'})
         for exec in executions:
             uploaded_blueprint_id = exec.parameters.get('blueprint_id')
             if uploaded_blueprint_id and uploaded_blueprint_id == blueprint_id:
@@ -1027,7 +1038,7 @@ class BaseServerTestCase(unittest.TestCase):
                 blueprint.state = BlueprintUploadState.FAILED_UPLOADING
                 blueprint.error = str(e)
                 blueprint.error_traceback = traceback.format_exc()
-                self.sm.update(blueprint)
+                sm.update(blueprint)
                 raise
 
     def _add_blueprint(self, blueprint_id=None):

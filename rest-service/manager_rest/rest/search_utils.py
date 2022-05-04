@@ -75,8 +75,9 @@ class GetValuesWithStorageManager:
                      "operator": "any_of" if op == "equals_to" else op,
                      "type": "attribute"})
 
-        filter_rules = get_filter_rules(Blueprint, 'id', BlueprintsFilter,
-                                        filter_id, filter_rules, None)
+        filter_rules = get_filter_rules(
+            self.sm, Blueprint, 'id', BlueprintsFilter, filter_id,
+            filter_rules, None)
 
         return self.sm.list(
             Blueprint,
@@ -115,9 +116,9 @@ class GetValuesWithStorageManager:
                      "operator": "any_of" if op == "equals_to" else op,
                      "type": "attribute"})
 
-        filter_rules = get_filter_rules(Deployment, 'display_name',
-                                        DeploymentsFilter,
-                                        filter_id, filter_rules, None)
+        filter_rules = get_filter_rules(
+            self.sm, Deployment, 'display_name', DeploymentsFilter, filter_id,
+            filter_rules, None)
 
         return self.sm.list(
             Deployment,
@@ -145,8 +146,8 @@ class GetValuesWithStorageManager:
                  "operator": "any_of",
                  "type": "attribute"})
 
-        filter_rules = get_filter_rules(Secret, 'key', None, None,
-                                        filter_rules, None)
+        filter_rules = get_filter_rules(
+            self.sm, Secret, 'key', None, None, filter_rules, None)
 
         return self.sm.list(
             Secret,
@@ -245,8 +246,8 @@ class GetValuesWithStorageManager:
                  "operator": "any_of",
                  "type": "attribute"})
 
-        filter_rules = get_filter_rules(Node, 'id', None, None,
-                                        filter_rules, None)
+        filter_rules = get_filter_rules(
+            self.sm, Node, 'id', None, None, filter_rules, None)
 
         return self.sm.list(
             Node,
@@ -281,8 +282,8 @@ class GetValuesWithStorageManager:
                  "operator": "any_of",
                  "type": "attribute"})
 
-        filter_rules = get_filter_rules(Node, 'type', None, None,
-                                        filter_rules, None)
+        filter_rules = get_filter_rules(
+            self.sm, Node, 'type', None, None, filter_rules, None)
 
         return self.sm.list(
             Node,
@@ -317,8 +318,8 @@ class GetValuesWithStorageManager:
                  "operator": "any_of",
                  "type": "attribute"})
 
-        filter_rules = get_filter_rules(NodeInstance, 'id', None, None,
-                                        filter_rules, None)
+        filter_rules = get_filter_rules(
+            self.sm, NodeInstance, 'id', None, None, filter_rules, None)
 
         return self.sm.list(
             NodeInstance,
@@ -397,7 +398,8 @@ def scaling_group_name_matches(scaling_group_name, search_value,
     return True
 
 
-def get_filter_rules(resource_model,
+def get_filter_rules(sm,
+                     resource_model,
                      resource_field,
                      filters_model,
                      raw_filter_id,
@@ -420,7 +422,7 @@ def get_filter_rules(resource_model,
 
     if filter_id:
         existing_filter_rules = get_filter_rules_from_filter_id(
-            filter_id, filters_model)
+            sm, filter_id, filters_model)
         for existing_filter_rule in existing_filter_rules:
             filter_rule_elem = FilterRule(existing_filter_rule['key'],
                                           existing_filter_rule['values'],

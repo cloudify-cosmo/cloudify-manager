@@ -99,7 +99,8 @@ class SearchesTestCase(base_test.BaseServerTestCase):
     def test_searches_get_filter_rules(self):
         self.create_filter(self.client.deployments_filters, self.FILTER_ID,
                            self.FILTER_RULES)
-        filter_rules = get_filter_rules(models.Deployment,
+        filter_rules = get_filter_rules(self.sm,
+                                        models.Deployment,
                                         'display_name',
                                         models.DeploymentsFilter,
                                         self.FILTER_ID,

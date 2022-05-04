@@ -4,7 +4,7 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 from manager_rest.test import base_test
 from manager_rest.utils import get_formatted_timestamp
 from manager_rest.manager_exceptions import BadFilterRule
-from manager_rest.storage import models, get_storage_manager
+from manager_rest.storage import models
 from manager_rest.constants import AttrsOperator, LabelsOperator
 from manager_rest.rest.filters_utils import (FilterRule,
                                              create_filter_rules_list)
@@ -466,7 +466,6 @@ class FiltersBaseCase(base_test.BaseServerTestCase):
     def _put_system_filter(self):
         # We need to use the storage manager because system filters
         # cannot (and should not) be created using the rest-service.
-        sm = get_storage_manager()
         now = get_formatted_timestamp()
         new_filter = self.filters_model(
             id='csys-test-filter',
@@ -476,7 +475,7 @@ class FiltersBaseCase(base_test.BaseServerTestCase):
             visibility=VisibilityState.TENANT,
             is_system_filter=True
         )
-        sm.put(new_filter)
+        self.sm.put(new_filter)
 
 
 class BlueprintsFiltersCase(FiltersBaseCase):

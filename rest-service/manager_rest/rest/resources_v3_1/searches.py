@@ -98,15 +98,16 @@ class ResourceSearches(SecuredResource):
         constraints = kwargs.get('constraints') if 'constraints' in kwargs \
             else request_dict.get('constraints')
         resource_field = kwargs.get('resource_field', 'id')
-
-        filter_rules = get_filter_rules(resource_model,
+        sm = get_storage_manager()
+        filter_rules = get_filter_rules(sm,
+                                        resource_model,
                                         resource_field,
                                         filters_model,
                                         filter_id,
                                         request_dict.get('filter_rules'),
                                         constraints)
 
-        result = get_storage_manager().list(
+        result = sm.list(
             resource_model,
             include=_include,
             filters=filters,

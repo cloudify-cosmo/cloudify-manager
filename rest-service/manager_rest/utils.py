@@ -25,15 +25,21 @@ from cloudify.amqp_client import get_client
 from manager_rest import constants, config, manager_exceptions
 
 
+def check_unauthenticated_endpoint():
+    """Is the accessed request unauthenticated?"""
+    if request.endpoint is None:
+        return False
+    request_endpoint = _endpoint_strip_version(request.endpoint)
+    return request_endpoint in constants.UNAUTHENTICATED_ENDPOINTS
+
+
 def check_allowed_endpoint(allowed_endpoints):
     # Getting the resource from the endpoint, for example 'status' or 'sites'
     # from 'v3.1/status' and 'v3.1/sites/<string:name>'. GET /version url
     # is the only one that excludes the api version
     if request.endpoint is None:
         return False
-    endpoint_parts = request.endpoint.split('/')
-    request_endpoint = endpoint_parts[1] if len(endpoint_parts) > 1 else \
-        endpoint_parts[0]
+    request_endpoint = _endpoint_strip_version(request.endpoint)
     request_method = request.method.lower()
     for allowed_endpoint in allowed_endpoints:
         if isinstance(allowed_endpoint, tuple):
@@ -42,8 +48,13 @@ def check_allowed_endpoint(allowed_endpoints):
         else:
             if request_endpoint == allowed_endpoint:
                 return True
-
     return False
+
+
+def _endpoint_strip_version(endpoint: str) -> str:
+    """Strip the leading /v3.1 from the endpoint"""
+    endpoint_parts = request.endpoint.split('/')
+    return endpoint_parts[1] if len(endpoint_parts) > 1 else endpoint_parts[0]
 
 
 def is_sanity_mode():
@@ -162,10 +173,12 @@ def create_auth_header(username=None, password=None, token=None, tenant=None):
     return headers
 
 
-def all_tenants_authorization():
+def all_tenants_authorization(user=None):
+    if user is None:
+        user = current_user
     return (
-        current_user.id == constants.BOOTSTRAP_ADMIN_ID or
-        any(r in current_user.system_roles
+        user.id == constants.BOOTSTRAP_ADMIN_ID or
+        any(r in user.system_roles
             for r in config.instance.authorization_permissions['all_tenants'])
     )
 
@@ -187,12 +200,14 @@ def tenant_specific_authorization(tenant, resource_name, action='list'):
     return current_user.has_role_in(tenant, permission_roles)
 
 
-def is_administrator(tenant):
+def is_administrator(tenant, user=None):
+    if user is None:
+        user = current_user
     administrators_roles = \
         config.instance.authorization_permissions['administrators']
     return (
-        current_user.id == constants.BOOTSTRAP_ADMIN_ID or
-        current_user.has_role_in(tenant, administrators_roles)
+        user.id == constants.BOOTSTRAP_ADMIN_ID or
+        user.has_role_in(tenant, administrators_roles)
     )
 
 
