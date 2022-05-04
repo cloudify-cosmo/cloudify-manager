@@ -154,12 +154,20 @@ class TestPluginsSystemState(AgentlessTestCase):
             last_log_lines = str(data[-20:])
             message = 'Failed installing managed plugin: {0}'.format(plugin.id)
             assert message in last_log_lines
-            assert all(s.get('state') == 'error'
-                       for s in plugin_retrieved['installation_state'])
-            self.client.plugins.delete(plugin.id)
+
+            expected_state = 'error'
         else:
-            assert all(s.get('state') == 'installed'
-                       for s in plugin_retrieved['installation_state'])
+            expected_state = 'installed'
+
+        for s in plugin_retrieved['installation_state']:
+            assert s['state'] == expected_state, (
+                f'expected all state entries to be `{expected_state}`; '
+                f'plugin was: {plugin_retrieved}'
+            )
+
+        if corrupt_plugin:
+            self.client.plugins.delete(plugin.id)
+
         plugins = self.client.plugins.list()
         assert len(plugins) == plugins_count
         return plugin
