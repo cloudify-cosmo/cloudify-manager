@@ -80,7 +80,7 @@ def update(ctx, update_id, temp_blueprint_id, deployments_to_update,
                     'force={0}, auto_correct_types={1}'.
                     format(force, auto_correct_types))
 
-    ctx.send_event(f'MATEUSZ Plugins update workflow, update_id={update_id}, '
+    ctx.send_event(f'Plugins update workflow, update_id={update_id}, '
                    f'deployments_to_update={deployments_to_update}, '
                    f'deployments_per_tenant={deployments_per_tenant}')
 
