@@ -14,6 +14,12 @@ class OperationsTestBase(object):
     def setUp(self):
         super(OperationsTestBase, self).setUp()
         self.execution = self._execution()
+        self.bp1 = models.Blueprint(
+            id='bp1',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        self.dep1 = self._deployment('d1')
 
     def _execution(self, **kwargs):
         return models.Execution(
@@ -41,6 +47,45 @@ class OperationsTestBase(object):
             tenant=self.tenant,
             **kwargs
         )
+
+    def _deployment(self, deployment_id, **kwargs):
+        deployment_params = {
+            'id': deployment_id,
+            'blueprint': self.bp1,
+            'scaling_groups': {},
+            'creator': self.user,
+            'tenant': self.tenant,
+        }
+        deployment_params.update(kwargs)
+        return models.Deployment(**deployment_params)
+
+    def _node(self, node_id, **kwargs):
+        node_params = {
+            'id': node_id,
+            'type': 'type1',
+            'number_of_instances': 0,
+            'deploy_number_of_instances': 0,
+            'max_number_of_instances': 0,
+            'min_number_of_instances': 0,
+            'planned_number_of_instances': 0,
+            'deployment': self.dep1,
+            'creator': self.user,
+            'tenant': self.tenant,
+        }
+        node_params.update(kwargs)
+        return models.Node(**node_params)
+
+    def _instance(self, instance_id, **kwargs):
+        instance_params = {
+            'id': instance_id,
+            'state': '',
+            'creator': self.user,
+            'tenant': self.tenant,
+        }
+        instance_params.update(kwargs)
+        if 'node' not in instance_params:
+            instance_params['node'] = self._node('node1')
+        return models.NodeInstance(**instance_params)
 
 
 class OperationsTestCase(OperationsTestBase, base_test.BaseServerTestCase):
