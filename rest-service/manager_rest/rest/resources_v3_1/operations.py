@@ -263,7 +263,7 @@ class OperationsId(SecuredResource):
                     'task': None,
                     'timestamp': datetime.utcnow().isoformat(),
                 })
-        if state == 'started':
+        elif state == 'started':
             node_instance.system_properties.setdefault(
                 'previous_status', None)
             node_instance.system_properties.setdefault(
