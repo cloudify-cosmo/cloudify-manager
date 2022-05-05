@@ -251,7 +251,8 @@ class OperationsId(SecuredResource):
             state = kwargs['state']
         except KeyError:
             return
-        node_instance = sm.get(models.NodeInstance, node_instance_id)
+        node_instance = sm.get(
+            models.NodeInstance, node_instance_id, locking=True)
         node_instance.state = state
         sm.update(node_instance)
 
