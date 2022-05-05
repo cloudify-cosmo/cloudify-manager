@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime
 
+import mock
 import pytest
 
 from cloudify import constants
@@ -8,6 +9,8 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 
 from manager_rest.test import base_test
 from manager_rest.storage import models
+
+OPERATIONS_MODULE = 'manager_rest.rest.resources_v3_1.operations'
 
 
 class OperationsTestBase(object):
@@ -219,6 +222,60 @@ class OperationsTestCase(OperationsTestBase, base_test.BaseServerTestCase):
         assert cm.value.status_code == 404
         op = self.client.operations.get('op1')
         assert op.id == 'op1'
+
+    def test_update_SendNodeEventTask(self):
+        """When setting a SendNodeEventTask finished, an event is emitted"""
+        message = 'abcd hello world!'
+        tg1 = self._graph(id='g1', name='workflow1')
+        self._operation(
+            id='op1', tasks_graph=tg1, state='pending',
+            type='SendNodeEventTask', parameters={
+                'task_kwargs': {
+                    'event': message,
+                    'node_instance_id': 'inst1',
+                }
+            }
+        )
+        exc = models.Execution(
+            id='exc1',
+            workflow_id='install',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        with mock.patch(f'{OPERATIONS_MODULE}.current_execution', exc):
+            self.client.operations.update(
+                'op1', state=constants.TASK_SUCCEEDED)
+        evts = models.Event.query.all()
+        assert len(evts) == 1
+        assert evts[0].message == message
+
+    @mock.patch(f'{OPERATIONS_MODULE}.check_user_action_allowed')
+    def test_update_SetNodeInstanceStateTask_ni_state(self, *_):
+        """When setting a SetNodeInstanceStateTask finished, the NI state
+        is changed.
+        """
+        new_ni_state = 'started'
+        tg1 = self._graph(id='g1', name='workflow1')
+        self._operation(
+            id='op1', tasks_graph=tg1, state='pending',
+            type='SetNodeInstanceStateTask', parameters={
+                'task_kwargs': {
+                    'node_instance_id': 'inst1',
+                    'state': new_ni_state,
+                }
+            }
+        )
+        exc = models.Execution(
+            id='exc1',
+            workflow_id='install',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        ni = self._instance('inst1')
+        with mock.patch(f'{OPERATIONS_MODULE}.current_execution', exc):
+            self.client.operations.update(
+                'op1', state=constants.TASK_SUCCEEDED)
+        assert ni.state == new_ni_state
 
 
 class TasksGraphsTestCase(OperationsTestBase, base_test.BaseServerTestCase):
