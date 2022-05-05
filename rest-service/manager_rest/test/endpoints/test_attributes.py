@@ -77,7 +77,7 @@ class AttributesTestCase(base_test.BaseServerTestCase):
             'node1': {'get_attribute': ['SELF', 'key1']},
         }
         with self.assertRaisesRegex(
-                FunctionsEvaluationError, 'SELF is missing'):
+                FunctionsEvaluationError, 'SELF has no instances'):
             self.client.evaluate.functions(self.id_, {}, payload)
 
     def test_missing_source(self):

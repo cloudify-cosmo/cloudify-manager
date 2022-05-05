@@ -6,7 +6,7 @@
 #
 # The goal is to verify if the timestamp in the logs change after the timezone
 # in the container is updated
-tosca_definitions_version: cloudify_dsl_1_3
+tosca_definitions_version: cloudify_dsl_1_4
 
 imports:
     - cloudify/types/types.yaml

@@ -19,7 +19,7 @@ from collections import OrderedDict
 from contextlib import contextmanager
 from flask_security import current_user
 from sqlalchemy import or_ as sql_or, inspect, func
-from sqlalchemy.orm import RelationshipProperty
+from sqlalchemy.orm import RelationshipProperty, aliased
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from flask import current_app, has_request_context
@@ -150,8 +150,14 @@ class SQLStorageManager(object):
         if distinct:
             query = query.distinct(*distinct)
 
-        if joins:
-            query = query.outerjoin(*joins)
+        seen_models = set()
+        for join in joins:
+            model = join.prop.mapper.entity
+            if model not in seen_models:
+                seen_models.add(model)
+                query = query.outerjoin(join)
+            else:
+                query = query.outerjoin(aliased(model), join.prop.key)
         return query
 
     @staticmethod
@@ -351,7 +357,7 @@ class SQLStorageManager(object):
         sort = sort or OrderedDict()
         distinct = distinct or []
 
-        all_columns = set(filters.keys()) | set(sort.keys())
+        all_columns = set(include) | set(filters.keys()) | set(sort.keys())
         joins = get_joins(model_class, all_columns)
 
         include, filters, substr_filters, sort, distinct = \
