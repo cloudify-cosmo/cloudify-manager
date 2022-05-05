@@ -1,10 +1,10 @@
 #######
 # Cloudify Blueprint which describes a virtual machine with a simple Python
 # HTTP server running on it.
-# 
+#
 
 # The following import contains nodes implementation details
-tosca_definitions_version: cloudify_dsl_1_3
+tosca_definitions_version: cloudify_dsl_1_4
 
 description: this is my blueprint's description
 
