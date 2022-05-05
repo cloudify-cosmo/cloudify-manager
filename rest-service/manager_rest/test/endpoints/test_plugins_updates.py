@@ -69,10 +69,19 @@ class PluginsUpdatesTest(PluginsUpdatesBaseTest):
         self.put_blueprint(blueprint_id='hello_world')
         self.client.deployments.create('hello_world', 'd123')
         self.wait_for_deployment_creation(self.client, 'd123')
-        self.client.plugins_update.update_plugins('hello_world')
+        result = self.client.plugins_update.update_plugins('hello_world')
 
-        self.client.plugins_update.list(
-            _include=['blueprint_id', 'temp_blueprint_id'])
+        include_list = ['blueprint_id', 'temp_blueprint_id']
+        expected_updates = [
+            {
+                k: v for k, v in result.items()
+                if k in include_list
+            }
+        ]
+
+        updates_list = self.client.plugins_update.list(_include=include_list)
+
+        assert updates_list.items == expected_updates
 
 
 class PluginsUpdateIdTest(PluginsUpdatesBaseTest):
