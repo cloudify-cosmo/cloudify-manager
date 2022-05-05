@@ -150,14 +150,14 @@ class SQLStorageManager(object):
         if distinct:
             query = query.distinct(*distinct)
 
-        seen_tables = set()
+        seen_models = set()
         for join in joins:
-            table = join.prop.target
-            if table not in seen_tables:
-                seen_tables.add(table)
+            model = join.prop.mapper.entity
+            if model not in seen_models:
+                seen_models.add(model)
                 query = query.outerjoin(join)
             else:
-                query = query.outerjoin(aliased(table), join.prop.key)
+                query = query.outerjoin(aliased(model), join.prop.key)
         return query
 
     @staticmethod
