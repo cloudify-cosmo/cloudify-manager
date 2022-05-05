@@ -259,7 +259,7 @@ class OperationsId(SecuredResource):
         try:
             kwargs = operation.parameters['task_kwargs']
         except KeyError:
-            pass
+            return
         db.session.execute(models.Event.__table__.insert().values(
             timestamp=datetime.utcnow(),
             reported_timestamp=datetime.utcnow(),
