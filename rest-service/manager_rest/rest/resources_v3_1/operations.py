@@ -251,15 +251,36 @@ class OperationsId(SecuredResource):
             state = kwargs['state']
         except KeyError:
             return
-        node_instance = sm.get(models.NodeInstance, node_instance_id)
+        node_instance = sm.get(
+            models.NodeInstance, node_instance_id, locking=True)
+        if node_instance.system_properties is None:
+            node_instance.system_properties = {}
+        if state == 'configured':
+            node_instance.system_properties.setdefault(
+                'configuration_drift', {
+                    'ok': True,
+                    'result': None,
+                    'task': None,
+                    'timestamp': datetime.utcnow().isoformat(),
+                })
+        elif state == 'started':
+            node_instance.system_properties.setdefault(
+                'previous_status', None)
+            node_instance.system_properties.setdefault(
+                'status', {
+                    'ok': True,
+                    'result': None,
+                    'task': None,
+                    'timestamp': datetime.utcnow().isoformat(),
+                })
         node_instance.state = state
-        sm.update(node_instance)
+        sm.update(node_instance, modified_attrs=('state', 'system_properties'))
 
     def _on_success_SendNodeEventTask(self, sm, operation):
         try:
             kwargs = operation.parameters['task_kwargs']
         except KeyError:
-            pass
+            return
         db.session.execute(models.Event.__table__.insert().values(
             timestamp=datetime.utcnow(),
             reported_timestamp=datetime.utcnow(),
