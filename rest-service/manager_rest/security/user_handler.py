@@ -127,6 +127,8 @@ def _get_user_from_auth(request):
     if auth.username[0] not in string.ascii_letters:
         return None
     user = user_datastore.get_user(auth.username)
+    if not user:
+        return None
 
     ext_auth = current_app.external_auth
     if ext_auth and ext_auth.configured() and not user.is_bootstrap_admin:
@@ -134,8 +136,6 @@ def _get_user_from_auth(request):
         # admin is allowed to bypass it.
         return None
 
-    if not user:
-        return None
     if not verify_password(auth.password, user.password):
         _increment_failed_logins_counter(user)
         raise UnauthorizedError(
