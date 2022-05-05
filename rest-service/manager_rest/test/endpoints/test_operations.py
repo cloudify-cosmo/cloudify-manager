@@ -277,6 +277,45 @@ class OperationsTestCase(OperationsTestBase, base_test.BaseServerTestCase):
                 'op1', state=constants.TASK_SUCCEEDED)
         assert ni.state == new_ni_state
 
+    @mock.patch(f'{OPERATIONS_MODULE}.check_user_action_allowed')
+    def test_update_SetNodeInstanceStateTask_ni_system_props(self, *_):
+        """When setting a SetNodeInstanceStateTask finished, the NI state
+        is changed.
+        """
+        tg1 = self._graph(id='g1', name='workflow1')
+        for op_id, op_state in [
+            ('configure_op', 'configured'),
+            ('start_op', 'started'),
+        ]:
+            self._operation(
+                id=op_id, tasks_graph=tg1, state='pending',
+                type='SetNodeInstanceStateTask', parameters={
+                    'task_kwargs': {
+                        'node_instance_id': 'inst1',
+                        'state': op_state,
+                    }
+                }
+            )
+        exc = self._execution()
+        ni = self._instance('inst1')
+
+        assert ni.system_properties is None
+
+        with mock.patch(f'{OPERATIONS_MODULE}.current_execution', exc):
+            self.client.operations.update(
+                'configure_op', state=constants.TASK_SUCCEEDED)
+        assert ni.system_properties is not None
+        assert 'configuration_drift' in ni.system_properties
+        assert ni.system_properties['configuration_drift']['ok']
+        assert 'status' not in ni.system_properties
+
+        with mock.patch(f'{OPERATIONS_MODULE}.current_execution', exc):
+            self.client.operations.update(
+                'start_op', state=constants.TASK_SUCCEEDED)
+        assert 'configuration_drift' in ni.system_properties
+        assert 'status' in ni.system_properties
+        assert ni.system_properties['status']['ok']
+
 
 class TasksGraphsTestCase(OperationsTestBase, base_test.BaseServerTestCase):
     def test_list_invalid(self):

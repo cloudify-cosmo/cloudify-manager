@@ -253,8 +253,28 @@ class OperationsId(SecuredResource):
             return
         node_instance = sm.get(
             models.NodeInstance, node_instance_id, locking=True)
+        if node_instance.system_properties is None:
+            node_instance.system_properties = {}
+        if state == 'configured':
+            node_instance.system_properties.setdefault(
+                'configuration_drift', {
+                    'ok': True,
+                    'result': None,
+                    'task': None,
+                    'timestamp': datetime.utcnow().isoformat(),
+                })
+        if state == 'started':
+            node_instance.system_properties.setdefault(
+                'previous_status', None)
+            node_instance.system_properties.setdefault(
+                'status', {
+                    'ok': True,
+                    'result': None,
+                    'task': None,
+                    'timestamp': datetime.utcnow().isoformat(),
+                })
         node_instance.state = state
-        sm.update(node_instance)
+        sm.update(node_instance, modified_attrs=('state', 'system_properties'))
 
     def _on_success_SendNodeEventTask(self, sm, operation):
         try:
