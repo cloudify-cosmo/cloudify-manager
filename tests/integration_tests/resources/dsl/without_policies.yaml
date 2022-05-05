@@ -1,7 +1,7 @@
 # this blueprint is like with_policies1, but without the policies
 # - so that we have two simple blueprints that only differ by the policies
 
-tosca_definitions_version: cloudify_dsl_1_3
+tosca_definitions_version: cloudify_dsl_1_4
 
 imports:
     - cloudify/types/types.yaml
