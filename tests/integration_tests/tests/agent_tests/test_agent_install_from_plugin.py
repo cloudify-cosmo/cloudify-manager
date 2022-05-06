@@ -39,3 +39,26 @@ node_templates:
 """)
         deployment, _ = self.deploy_application(dsl_path)
         self.undeploy_application(deployment.id)
+
+    def test_install_exec_temp_path(self):
+        # like test_agent_install_from_plugin, but check that we can still
+        # install/uninstall the agent when executable_temp_path is set
+        dsl_path = self.make_yaml_file("""
+tosca_definitions_version: cloudify_dsl_1_4
+
+imports:
+    - cloudify/types/types.yaml
+    - plugin:dockercompute
+
+node_templates:
+  setup_host:
+    type: cloudify.nodes.docker.Compute
+    properties:
+        agent_config:
+            install_method: plugin
+            process_management:
+                name: detach
+            executable_temp_path: /tmp/somethingelse
+""")
+        deployment, _ = self.deploy_application(dsl_path)
+        self.undeploy_application(deployment.id)
