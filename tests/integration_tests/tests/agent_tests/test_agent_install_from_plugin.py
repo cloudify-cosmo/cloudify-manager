@@ -13,12 +13,9 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-import uuid
-
 import pytest
 
 from integration_tests import AgentTestWithPlugins
-from integration_tests.tests.utils import get_resource as resource
 
 pytestmark = pytest.mark.group_agents
 
