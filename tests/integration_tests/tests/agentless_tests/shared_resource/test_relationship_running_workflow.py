@@ -27,7 +27,7 @@ pytestmark = pytest.mark.group_service_composition
 @wait_for_executions
 class TestRelationshipRunningRemoteWorkflow(AgentlessTestCase):
     shared_resource_blueprint = """
-tosca_definitions_version: cloudify_dsl_1_3
+tosca_definitions_version: cloudify_dsl_1_4
 
 imports:
     - cloudify/types/types.yaml
@@ -55,7 +55,7 @@ capabilities:
     @staticmethod
     def _generate_app_blueprint(relationship_type, wf_id='test_wf'):
         return """
-tosca_definitions_version: cloudify_dsl_1_3
+tosca_definitions_version: cloudify_dsl_1_4
 
 imports:
   - cloudify/types/types.yaml

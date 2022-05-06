@@ -42,7 +42,7 @@ class ComponentScaleCreation(AgentlessTestCase):
         wait_for_blueprint_upload(self.basic_blueprint_id, self.client, True)
         deployment_id = 'd{0}'.format(uuid.uuid4())
         main_blueprint = """
-tosca_definitions_version: cloudify_dsl_1_3
+tosca_definitions_version: cloudify_dsl_1_4
 
 imports:
   - cloudify/types/types.yaml
@@ -85,7 +85,7 @@ node_templates:
 
         deployment_id = 'd{0}'.format(uuid.uuid4())
         main_blueprint = """
-tosca_definitions_version: cloudify_dsl_1_3
+tosca_definitions_version: cloudify_dsl_1_4
 
 imports:
   - cloudify/types/types.yaml
@@ -122,7 +122,7 @@ node_templates:
         wait_for_blueprint_upload(self.basic_blueprint_id, self.client, True)
         deployment_id = 'd{0}'.format(uuid.uuid4())
         main_blueprint = """
-tosca_definitions_version: cloudify_dsl_1_3
+tosca_definitions_version: cloudify_dsl_1_4
 
 imports:
   - cloudify/types/types.yaml
