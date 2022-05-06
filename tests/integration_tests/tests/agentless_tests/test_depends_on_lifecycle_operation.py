@@ -28,7 +28,7 @@ class DependsOnLifecycleOperationTest(AgentlessTestCase):
     @staticmethod
     def generate_blueprint(depended_on_operation):
         return """
-tosca_definitions_version: cloudify_dsl_1_3
+tosca_definitions_version: cloudify_dsl_1_4
 
 imports:
     - cloudify/types/types.yaml

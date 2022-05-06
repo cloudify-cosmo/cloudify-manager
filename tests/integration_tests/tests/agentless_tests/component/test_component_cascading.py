@@ -177,7 +177,7 @@ class ComponentCascadingCancelAndResume(AgentlessTestCase):
         wait_for_blueprint_upload('sleep', self.client)
 
         layer_1 = """
-tosca_definitions_version: cloudify_dsl_1_3
+tosca_definitions_version: cloudify_dsl_1_4
 
 imports:
   - cloudify/types/types.yaml
@@ -199,7 +199,7 @@ node_templates:
         wait_for_blueprint_upload('layer_1', self.client)
 
         layer_2 = """
-tosca_definitions_version: cloudify_dsl_1_3
+tosca_definitions_version: cloudify_dsl_1_4
 
 imports:
   - cloudify/types/types.yaml
@@ -245,7 +245,7 @@ node_templates:
         wait_for_blueprint_upload('sleep', self.client)
 
         layer_1 = """
-tosca_definitions_version: cloudify_dsl_1_3
+tosca_definitions_version: cloudify_dsl_1_4
 
 imports:
   - cloudify/types/types.yaml
@@ -267,7 +267,7 @@ node_templates:
         wait_for_blueprint_upload('layer_1', self.client)
 
         layer_2 = """
-tosca_definitions_version: cloudify_dsl_1_3
+tosca_definitions_version: cloudify_dsl_1_4
 
 imports:
   - cloudify/types/types.yaml
@@ -304,7 +304,7 @@ node_templates:
 @wait_for_executions
 class ComponentCascadingWorkflows(AgentlessTestCase):
     component_blueprint_with_nothing_workflow = """
-tosca_definitions_version: cloudify_dsl_1_3
+tosca_definitions_version: cloudify_dsl_1_4
 
 imports:
     - cloudify/types/types.yaml
@@ -328,7 +328,7 @@ workflows:
     def generate_root_blueprint_with_component(blueprint_id='workflow',
                                                deployment_id='component'):
         return """
-tosca_definitions_version: cloudify_dsl_1_3
+tosca_definitions_version: cloudify_dsl_1_4
 
 imports:
     - cloudify/types/types.yaml
@@ -360,7 +360,7 @@ workflows:
 
         deployment_id = 'd{0}'.format(uuid.uuid4())
         main_blueprint = """
-tosca_definitions_version: cloudify_dsl_1_3
+tosca_definitions_version: cloudify_dsl_1_4
 
 imports:
     - cloudify/types/types.yaml
@@ -442,7 +442,7 @@ workflows:
 
         deployment_id = 'd{0}'.format(uuid.uuid4())
         main_blueprint = """
-tosca_definitions_version: cloudify_dsl_1_3
+tosca_definitions_version: cloudify_dsl_1_4
 
 imports:
     - cloudify/types/types.yaml
@@ -485,7 +485,7 @@ workflows:
         wait_for_blueprint_upload('layer_3', self.client)
 
         layer_2 = """
-tosca_definitions_version: cloudify_dsl_1_3
+tosca_definitions_version: cloudify_dsl_1_4
 
 imports:
     - cloudify/types/types.yaml
@@ -535,7 +535,7 @@ workflows:
 
     def test_not_defined_cascading_workflow(self):
         basic_blueprint = """
-tosca_definitions_version: cloudify_dsl_1_3
+tosca_definitions_version: cloudify_dsl_1_4
 
 imports:
     - cloudify/types/types.yaml
@@ -558,7 +558,7 @@ imports:
 
     def test_failing_cascading_workflow(self):
         component_1 = """
-tosca_definitions_version: cloudify_dsl_1_3
+tosca_definitions_version: cloudify_dsl_1_4
 
 imports:
     - cloudify/types/types.yaml
@@ -583,7 +583,7 @@ workflows:
 
         deployment_id = 'd{0}'.format(uuid.uuid4())
         main_blueprint = """
-tosca_definitions_version: cloudify_dsl_1_3
+tosca_definitions_version: cloudify_dsl_1_4
 
 imports:
     - cloudify/types/types.yaml
@@ -696,7 +696,7 @@ workflows:
 
     def test_cascading_queued_workflow_execution(self):
         basic_blueprint = """
-tosca_definitions_version: cloudify_dsl_1_3
+tosca_definitions_version: cloudify_dsl_1_4
 
 imports:
     - cloudify/types/types.yaml

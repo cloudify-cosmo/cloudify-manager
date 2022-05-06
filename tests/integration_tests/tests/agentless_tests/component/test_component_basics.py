@@ -38,7 +38,7 @@ class ComponentTypeTest(AgentlessTestCase):
 
     def test_component_creation_with_blueprint_id(self):
         component_blueprint = """
-tosca_definitions_version: cloudify_dsl_1_3
+tosca_definitions_version: cloudify_dsl_1_4
 
 imports:
   - cloudify/types/types.yaml
@@ -176,7 +176,7 @@ capabilities:
 
     def test_component_labeling(self):
         component_blueprint = """
-tosca_definitions_version: cloudify_dsl_1_3
+tosca_definitions_version: cloudify_dsl_1_4
 
 imports:
   - cloudify/types/types.yaml
@@ -213,7 +213,7 @@ class ComponentPluginsTest(AgentlessTestCase):
     TEST_PACKAGE_VERSION = '1.2'
     basic_blueprint_id = 'basic'
     test_blueprint = """
-tosca_definitions_version: cloudify_dsl_1_3
+tosca_definitions_version: cloudify_dsl_1_4
 
 imports:
   - cloudify/types/types.yaml
@@ -343,7 +343,7 @@ class ComponentSecretsTypesTest(AgentlessTestCase):
         wait_for_blueprint_upload(self.basic_blueprint_id, self.client, True)
         deployment_id = 'd{0}'.format(uuid.uuid4())
         main_blueprint = """
-tosca_definitions_version: cloudify_dsl_1_3
+tosca_definitions_version: cloudify_dsl_1_4
 
 imports:
   - cloudify/types/types.yaml
@@ -385,7 +385,7 @@ class ComponentInputsTypesTest(AgentlessTestCase):
 
     def test_basic_types(self):
         component_blueprint = """
-tosca_definitions_version: cloudify_dsl_1_3
+tosca_definitions_version: cloudify_dsl_1_4
 
 imports:
   - cloudify/types/types.yaml
@@ -412,7 +412,7 @@ inputs:
         wait_for_blueprint_upload(self.basic_blueprint_id, self.client, True)
         deployment_id = 'd{0}'.format(uuid.uuid4())
         main_blueprint = """
-tosca_definitions_version: cloudify_dsl_1_3
+tosca_definitions_version: cloudify_dsl_1_4
 
 imports:
   - cloudify/types/types.yaml
@@ -462,7 +462,7 @@ inputs:
         wait_for_blueprint_upload(self.basic_blueprint_id, self.client)
         deployment_id = 'd{0}'.format(uuid.uuid4())
         main_blueprint = """
-tosca_definitions_version: cloudify_dsl_1_3
+tosca_definitions_version: cloudify_dsl_1_4
 
 imports:
   - cloudify/types/types.yaml

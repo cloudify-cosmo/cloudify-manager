@@ -19,7 +19,7 @@ class TestAgentCancel(AgentTestCase):
         it's all async).
         """
         blueprint_path = self.make_yaml_file("""
-tosca_definitions_version: cloudify_dsl_1_3
+tosca_definitions_version: cloudify_dsl_1_4
 
 imports:
     - cloudify/types/types.yaml
@@ -64,7 +64,7 @@ node_templates:
             node_instances = self.client.node_instances.list()
             for ni in node_instances:
                 # this will keyerror out (and be retried) if the operation
-                # didnt run yet
+                # didn't run yet
                 pids[ni.node_id] = ni.runtime_properties['pid']
 
         wait_for_exec_to_start()

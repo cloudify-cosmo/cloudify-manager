@@ -24,7 +24,7 @@ class TestSharedResourceType(AgentlessTestCase):
     def setUp(self):
         super(TestSharedResourceType, self).setUp()
         test_blueprint = """
-tosca_definitions_version: cloudify_dsl_1_3
+tosca_definitions_version: cloudify_dsl_1_4
 
 imports:
   - cloudify/types/types.yaml
@@ -43,7 +43,7 @@ node_templates:
 
     def _create_shared_resource_deployment(self):
         blueprint = """
-tosca_definitions_version: cloudify_dsl_1_3
+tosca_definitions_version: cloudify_dsl_1_4
 
 imports:
   - cloudify/types/types.yaml

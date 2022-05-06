@@ -10,12 +10,12 @@ class TestMultiTenantSharedResource(AgentlessTestCase):
         tenant_name = 't2'
         shared_resource_bp_id = 'shared-resource-bp'
         shared_resource_path = self.make_yaml_file("""
-tosca_definitions_version: cloudify_dsl_1_3
+tosca_definitions_version: cloudify_dsl_1_4
 imports:
   - cloudify/types/types.yaml
 """)
         client_blueprint_path = self.make_yaml_file(f"""
-tosca_definitions_version: cloudify_dsl_1_3
+tosca_definitions_version: cloudify_dsl_1_4
 imports:
   - cloudify/types/types.yaml
 node_templates:
