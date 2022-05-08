@@ -466,6 +466,43 @@ node_types:
         refresh:
           implementation: cfy_extensions.cloudify_types.shared_resource.refresh
 
+  cloudify.nodes.Blueprint:
+    derived_from: cloudify.nodes.Root
+    properties:
+      resource_config:
+        type: cloudify.datatypes.Blueprint
+        default: {}
+      client:
+        description: >
+          Client configuration, if empty Cloudify manager client will be used.
+        type: cloudify.datatypes.RemoteCloudifyManagerClient
+        default: {}
+      plugins:
+        description: >
+          Dictionary of plugins to upload,
+          which each plugin is in format of:
+            plugin-name:
+              wagon_path: Url for plugin wagon file,
+              plugin_yaml_path: Url for plugin yaml file
+        type: dict
+        default: {}
+      secrets:
+        description: >
+          Dictionary of secrets to set before deploying Components,
+          which each secret is in format of:
+            secret-name: value
+        type: dict
+        default: {}
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          implementation: cfy_extensions.cloudify_types.blueprint.upload
+        delete:
+          implementation: cfy_extensions.cloudify_types.blueprint.delete
+        refresh:
+          implementation: cfy_extensions.cloudify_types.shared_resource.refresh
+
+
 ##################################################################################
 # Base relationship definitions
 ##################################################################################
