@@ -499,8 +499,6 @@ node_types:
           implementation: cfy_extensions.cloudify_types.blueprint.upload
         delete:
           implementation: cfy_extensions.cloudify_types.blueprint.delete
-        refresh:
-          implementation: cfy_extensions.cloudify_types.shared_resource.refresh
 
 
 ##################################################################################
