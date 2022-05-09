@@ -102,13 +102,17 @@ if [ -f "%{_localstatedir}/lib/rpm-state/cloudify-upgraded" ]; then
     chmod 440 /etc/cloudify/ssl/*composer_db.key || true
 
     if [ -e "/var/run/supervisord.sock" ]; then
-        supervisorctl stop haproxy && supervisorctl remove haproxy || true
+        if [ -e "/etc/supervisord.d/haproxy.conf" ]; then
+            supervisorctl stop haproxy && supervisorctl remove haproxy
+        fi
         supervisorctl stop cloudify-restservice
         supervisorctl stop cloudify-api
         supervisorctl stop cloudify-execution-scheduler
         supervisorctl stop cloudify-amqp-postgres
     else
-        systemctl stop haproxy && systemctl disable haproxy || true
+        if systemctl is-enabled haproxy 2>/dev/null; then
+            systemctl stop haproxy && systemctl disable haproxy
+        fi
         systemctl stop cloudify-restservice
         systemctl stop cloudify-api
         systemctl stop cloudify-execution-scheduler
