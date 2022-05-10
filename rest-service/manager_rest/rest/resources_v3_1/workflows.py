@@ -64,7 +64,7 @@ def _extract_workflows(
         deployments: 'List[models.Deployment]') -> 'List[Workflow]':
     workflows = set()
     for dep in deployments:
-        workflows |= set(models.Deployment._list_workflows(dep.workflows))
+        workflows |= set(dep._list_workflows())
     return list(workflows)
 
 
