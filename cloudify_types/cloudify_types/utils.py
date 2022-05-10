@@ -181,8 +181,6 @@ def delete_plugins_secrets_and_runtime(client, secrets, property_list):
 
 
 def upload_secrets_and_plugins(client, kwargs):
-    print("hej!!2")
-
     secrets = get_desired_operation_input('secrets', kwargs)
     _set_secrets(client, secrets)
     plugins = get_desired_operation_input('plugins', kwargs)
