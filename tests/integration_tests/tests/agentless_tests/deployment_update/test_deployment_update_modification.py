@@ -17,6 +17,8 @@ import pytest
 
 from collections import Counter
 
+from cloudify_rest_client.exceptions import CloudifyClientError
+
 from . import DeploymentUpdateBase, BLUEPRINT_ID
 from integration_tests.tests.utils import wait_for_blueprint_upload
 from integration_tests.tests.utils import get_resource as resource
@@ -511,3 +513,30 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
                         event_messages.index(u'Deleted node instance'))
         self.assertLess(event_messages.index(u'Deleted node instance'),
                         event_messages.index(u'Node instance started'))
+
+    def test_enable_workflow(self):
+        bp_template = """
+tosca_definitions_version: cloudify_dsl_1_4
+
+imports:
+    - cloudify/types/types.yaml
+
+workflows:
+    wf1:
+        mapping: file:///dev/null
+        availability_rules:
+            available: {available}
+"""
+        base_bp_path = \
+            self.make_yaml_file(bp_template.format(available=False))
+        modified_bp_path = \
+            self.make_yaml_file(bp_template.format(available=True))
+        deployment, _ = self.deploy_application(base_bp_path)
+
+        self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
+        with self.assertRaises(CloudifyClientError) as cm:
+            self.execute_workflow('wf1', deployment.id)
+        assert cm.exception.error_code == 'unavailable_workflow_error'
+        self._do_update(deployment.id, BLUEPRINT_ID)
+        self.execute_workflow('wf1', deployment.id)  # doesn't throw
