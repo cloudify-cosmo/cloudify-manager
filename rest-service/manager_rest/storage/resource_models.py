@@ -562,8 +562,18 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                          plugin=wf.get('plugin', ''),
                          operation=wf.get('operation', ''),
                          parameters=wf.get('parameters', dict()),
-                         is_cascading=wf.get('is_cascading', False))
+                         is_cascading=wf.get('is_cascading', False),
+                         is_available=self._is_workflow_available(wf))
                 for wf_name, wf in self.workflows.items()]
+
+    def _is_workflow_available(self, workflow):
+        rules = workflow.get('availability_rules')
+        if not rules:
+            return True
+        if not rules.get('available', True):
+            return False
+        # TODO add other availability rules checking here
+        return True
 
     @classmethod
     def compare_statuses(
