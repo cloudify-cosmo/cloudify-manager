@@ -17,7 +17,8 @@ import tempfile
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 
-from cloudify_types.component import utils
+from cloudify_types import utils
+from cloudify_types.component.utils import deployment_id_exists
 from .base_test_suite import ComponentTestBase
 
 
@@ -59,13 +60,12 @@ class TestUtils(ComponentTestBase):
         self.assertTrue(output)
 
     def test_deployment_id_exists_no_deployment(self):
-        output = utils.deployment_id_exists(self.cfy_mock_client, 'dep_name')
+        output = deployment_id_exists(self.cfy_mock_client, 'dep_name')
         self.assertFalse(output)
 
     def test_deployment_id_exists_with_existing_deployment(self):
         self.cfy_mock_client.deployments.set_existing_objects([1])
-        self.assertTrue(utils.deployment_id_exists(self.cfy_mock_client,
-                                                   'test'))
+        self.assertTrue(deployment_id_exists(self.cfy_mock_client, 'test'))
 
     def test_find_blueprint_handle_client_error(self):
 
@@ -85,4 +85,4 @@ class TestUtils(ComponentTestBase):
         self.cfy_mock_client.deployments.list = mock_return
         with self.assertRaisesRegex(
                 CloudifyClientError, 'Mistake'):
-            utils.deployment_id_exists(self.cfy_mock_client, 'dep_name')
+            deployment_id_exists(self.cfy_mock_client, 'dep_name')

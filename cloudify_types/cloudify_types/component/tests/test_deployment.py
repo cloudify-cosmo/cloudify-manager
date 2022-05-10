@@ -18,7 +18,8 @@ from collections import namedtuple
 from cloudify.exceptions import NonRecoverableError
 from cloudify_rest_client.exceptions import CloudifyClientError
 
-from ..operations import create, delete, _upload_plugins
+from ..operations import create, delete
+from cloudify_types.utils import _upload_plugins
 from .base_test_suite import (ComponentTestBase,
                               REST_CLIENT_EXCEPTION,
                               MOCK_TIMEOUT)
@@ -206,7 +207,7 @@ class TestDeployment(TestDeploymentBase):
 
 class TestComponentPlugins(TestDeploymentBase):
 
-    @mock.patch('cloudify_types.component.operations.should_upload_plugin',
+    @mock.patch('cloudify_types.utils.should_upload_plugin',
                 return_value=True)
     def test_upload_plugins(self, _):
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
@@ -217,15 +218,15 @@ class TestComponentPlugins(TestDeploymentBase):
 
             mock_client.return_value = self.cfy_mock_client
             with mock.patch(
-                'cloudify_types.component.operations.get_local_path',
+                'cloudify_types.utils.get_local_path',
                 return_value='some_path'
             ) as get_local_path:
                 with mock.patch(
-                    'cloudify_types.component.operations.zip_files',
+                    'cloudify_types.utils.zip_files',
                     return_value="_zip"
                 )as zip_files:
                     with mock.patch(
-                            'cloudify_types.component.operations.os')\
+                            'cloudify_types.utils.os')\
                             as os_mock:
                         _upload_plugins(
                             self.cfy_mock_client,
@@ -251,7 +252,7 @@ class TestComponentPlugins(TestDeploymentBase):
         with mock.patch('cloudify.manager.get_rest_client'):
             zip_files = mock.Mock(return_value="_zip")
             with mock.patch(
-                'cloudify_types.component.operations.zip_files',
+                'cloudify_types.utils.zip_files',
                 zip_files
             ):
                 _upload_plugins(
@@ -261,21 +262,21 @@ class TestComponentPlugins(TestDeploymentBase):
                 zip_files.assert_not_called()
                 get_local_path.assert_not_called()
 
-    @mock.patch('cloudify_types.component.operations.should_upload_plugin',
+    @mock.patch('cloudify_types.utils.should_upload_plugin',
                 return_value=True)
     @mock.patch('cloudify.manager.get_rest_client')
     def test_upload_plugins_with_icon(self, *_mocks):
         plugin = mock.Mock()
         plugin.id = "CustomPlugin"
         get_local_path = mock.patch(
-            'cloudify_types.component.operations.get_local_path',
+            'cloudify_types.utils.get_local_path',
             side_effect=lambda filename, create_temp=True: filename
         )
         zip_files = mock.patch(
-            'cloudify_types.component.operations.zip_files',
+            'cloudify_types.utils.zip_files',
             return_value='_zip'
         )
-        component_os = mock.patch('cloudify_types.component.operations.os')
+        component_os = mock.patch('cloudify_types.utils.os')
         with get_local_path as local_path_mock, \
                 zip_files as zip_mock, \
                 component_os as os_mock:
