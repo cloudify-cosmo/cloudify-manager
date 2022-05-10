@@ -127,3 +127,20 @@ class WorkflowsTestCase(base_test.BaseServerTestCase):
         assert workflows_for_f1
         assert (set(w.name for w in workflows_for_f2) -
                 set(w.name for w in workflows_for_f1)) == {'mock_workflow'}
+
+    def test_workflow_availability_rules_available(self):
+        self._deployment(
+            'd1',
+            workflows={
+                'empty': {},
+                'no_rule': {'availability_rules': {}},
+                'enabled': {'availability_rules': {'available': True}},
+                'disabled': {'availability_rules': {'available': False}},
+            },
+        )
+        workflows = self.client.workflows.list(id='d1')
+        is_available = {wf.name: wf.is_available for wf in workflows}
+        assert is_available['empty']
+        assert is_available['no_rule']
+        assert is_available['enabled']
+        assert not is_available['disabled']
