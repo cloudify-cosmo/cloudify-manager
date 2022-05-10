@@ -23,7 +23,8 @@ class Workflow(object):
         'plugin': fields.String,
         'operation': fields.String,
         'parameters': fields.Raw,
-        'is_cascading': fields.Boolean
+        'is_cascading': fields.Boolean,
+        'is_available': fields.Boolean,
     }
 
     def __init__(self, **kwargs):
@@ -32,6 +33,7 @@ class Workflow(object):
         self.plugin = kwargs.get('plugin')
         self.operation = kwargs.get('operation')
         self.is_cascading = kwargs.get('is_cascading', False)
+        self.is_available = kwargs.get('is_available', True)
 
     def as_dict(self):
         return {
@@ -40,6 +42,7 @@ class Workflow(object):
             'plugin': self.plugin,
             'operation': self.operation,
             'is_cascading': self.is_cascading,
+            'is_available': self.is_available,
         }
 
     def __hash__(self):
