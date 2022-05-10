@@ -1,0 +1,2 @@
+EXTERNAL_RESOURCE = 'external_resource'
+POLLING_INTERVAL = 1

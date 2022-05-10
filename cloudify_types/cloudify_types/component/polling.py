@@ -12,37 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import time
 import logging
 
 from cloudify import ctx
 from cloudify.exceptions import NonRecoverableError
-from cloudify.models_states import ExecutionState, BlueprintUploadState
+from cloudify.models_states import ExecutionState
+from cloudify_types.polling import poll_with_timeout
 
 from .constants import POLLING_INTERVAL, PAGINATION_SIZE, EXECUTIONS_TIMEOUT
-
-
-def poll_with_timeout(pollster,
-                      timeout,
-                      interval=POLLING_INTERVAL,
-                      expected_result=True):
-    # Check if timeout value is -1 that allows infinite timeout
-    # If timeout value is not -1 then it is a finite timeout
-    timeout = float('infinity') if timeout == -1 else timeout
-    current_time = time.time()
-
-    ctx.logger.debug('Polling with timeout of %s seconds', timeout)
-
-    while time.time() <= current_time + timeout:
-        if pollster() != expected_result:
-            ctx.logger.debug('Polling...')
-            time.sleep(interval)
-        else:
-            ctx.logger.debug('Polling succeeded!')
-            return True
-
-    ctx.logger.error('Polling timed out!')
-    return False
 
 
 def _fetch_events(client, execution_id, last_event):
@@ -233,21 +210,4 @@ def verify_execution_state(client,
     if not result:
         raise NonRecoverableError(
             f'Execution timed out after: {timeout} seconds.')
-    return True
-
-
-def verify_blueprint_uploaded(blueprint_id, client):
-    blueprint = client.blueprints.get(blueprint_id)
-    return blueprint['state'] == BlueprintUploadState.UPLOADED
-
-
-def wait_for_blueprint_to_upload(
-        blueprint_id, client, timeout_seconds=30):
-    result = poll_with_timeout(
-        lambda: verify_blueprint_uploaded(blueprint_id, client),
-        timeout=timeout_seconds,
-        interval=POLLING_INTERVAL)
-    if not result:
-        raise NonRecoverableError(
-            f'Blueprint upload timed out after: {timeout_seconds} seconds.')
     return True
