@@ -526,7 +526,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         dep_dict = super(Deployment, self).to_response(
             include=include, **kwargs)
         if 'workflows' in include:
-            dep_dict['workflows'] = self._list_workflows(self.workflows)
+            dep_dict['workflows'] = self._list_workflows()
         if 'labels' in include:
             dep_dict['labels'] = self.list_labels(self.labels)
         if 'deployment_groups' in include:
@@ -553,9 +553,8 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                 self.latest_execution.id if self.latest_execution else None
         return dep_dict
 
-    @staticmethod
-    def _list_workflows(deployment_workflows):
-        if deployment_workflows is None:
+    def _list_workflows(self):
+        if self.workflows is None:
             return None
 
         return [Workflow(name=wf_name,
@@ -564,7 +563,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                          operation=wf.get('operation', ''),
                          parameters=wf.get('parameters', dict()),
                          is_cascading=wf.get('is_cascading', False))
-                for wf_name, wf in deployment_workflows.items()]
+                for wf_name, wf in self.workflows.items()]
 
     @classmethod
     def compare_statuses(
