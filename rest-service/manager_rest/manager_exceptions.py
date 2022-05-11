@@ -112,6 +112,11 @@ class NonexistentWorkflowError(ManagerException):
     status_code = 400
 
 
+class UnavailableWorkflowError(ManagerException):
+    error_code = 'unavailable_workflow_error'
+    status_code = 400
+
+
 class AppNotSecuredError(ManagerException):
     error_code = 'application_not_secured_error'
     status_code = 401

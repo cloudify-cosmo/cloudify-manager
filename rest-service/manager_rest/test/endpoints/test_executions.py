@@ -934,6 +934,19 @@ class TestExecutionModelValidationTests(unittest.TestCase):
         assert exc.visibility == d.visibility
         assert exc.tenant == d.tenant
 
+    def test_unavailable_workflow(self):
+        d = models.Deployment(workflows={
+            'wf': {'availability_rules': {'available': False}},
+        })
+        with self.assertRaisesRegex(
+            manager_exceptions.UnavailableWorkflowError, 'wf'
+        ):
+            models.Execution(
+                parameters={},
+                deployment=d,
+                workflow_id='wf',
+            )
+
 
 @mock.patch(
     'manager_rest.resource_manager.workflow_executor.workflow_sendhandler',

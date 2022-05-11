@@ -1177,6 +1177,10 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             import GetValuesWithStorageManager
 
         workflow = self.get_workflow(deployment, workflow_id)
+        if not deployment._is_workflow_available(workflow):
+            raise manager_exceptions.UnavailableWorkflowError(
+                f'Workflow not available: {workflow_id}')
+
         workflow_parameters = workflow.get('parameters', {})
         custom_parameters = parameters.keys() - workflow_parameters.keys()
         if not self.allow_custom_parameters and custom_parameters:
