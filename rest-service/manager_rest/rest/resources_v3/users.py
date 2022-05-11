@@ -159,25 +159,46 @@ class UsersIdPremium(SecuredMultiTenancyResource):
 
 
 class UsersIdCommunity(SecuredResource):
+    @authorize('user_get')
+    @rest_decorators.marshal_with(UserResponse)
+    def get(self, username):
+        """
+        Get details for a single user
+        """
+        rest_utils.validate_inputs({'username': username})
+        if username != current_user.username:
+            raise BadParametersError('Cannot get details of a different user')
+        return user_datastore.get_user(current_user.username)
+
     @rest_decorators.marshal_with(UserResponse)
     def post(self, username):
         """
-        Change user's password
+        Change user's password or getting started flag
         """
         request_dict = rest_utils.get_json_and_verify_params()
         password = request_dict.get('password')
+        show_getting_started = request_dict.get('show_getting_started')
 
         if username != current_user.username:
-            raise BadParametersError('Cannot change password for '
+            raise BadParametersError('Cannot change settings for '
                                      'a different user')
-        if not password:
-            raise BadParametersError('No valid password provided.')
 
-        new_password = rest_utils.validate_and_decode_password(password)
         user = user_datastore.get_user(current_user.username)
-        user.password = hash_password(new_password)
-        user_datastore.commit()
-        return user
+        if password:
+            new_password = rest_utils.validate_and_decode_password(password)
+            user.password = hash_password(new_password)
+            user_datastore.commit()
+            return user
+        if show_getting_started is not None:
+            set_show_getting_started = \
+                rest_utils.verify_and_convert_bool('show_getting_started',
+                                                   show_getting_started)
+            user.show_getting_started = set_show_getting_started
+            user_datastore.commit()
+            return user
+        raise BadParametersError(
+            'No valid user settings provided. Available settings: '
+            'password, show_getting_started')
 
 
 UsersId = UsersIdPremium if _PREMIUM else UsersIdCommunity
