@@ -87,6 +87,7 @@ done
 groupadd -fr cfyuser
 getent passwd cfyuser >/dev/null || useradd -r -g cfyuser -d /etc/cloudify -s /sbin/nologin cfyuser
 usermod -aG cfyuser nginx
+groupadd -fr cfylogs
 
 %post
 if [ $1 -gt 1 ]; then
@@ -176,7 +177,7 @@ exit 0
 /opt/manager/scripts/load_permissions.py
 /opt/manager/scripts/create_system_filters.py
 /opt/manager/snapshot_status
-%attr(750,cfyuser,adm) /var/log/cloudify/rest
-%attr(750,cfyuser,adm) /var/log/cloudify/amqp-postgres
-%attr(750,cfyuser,adm) /var/log/cloudify/execution-scheduler
+%attr(750,cfyuser,cfylogs) /var/log/cloudify/rest
+%attr(750,cfyuser,cfylogs) /var/log/cloudify/amqp-postgres
+%attr(750,cfyuser,cfylogs) /var/log/cloudify/execution-scheduler
 %attr(550,root,cfyuser) /opt/cloudify/encryption/update-encryption-key
