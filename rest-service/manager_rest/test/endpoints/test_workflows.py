@@ -144,3 +144,6 @@ class WorkflowsTestCase(base_test.BaseServerTestCase):
         assert is_available['no_rule']
         assert is_available['enabled']
         assert not is_available['disabled']
+        for wf in workflows:
+            if wf.name in ('enabled', 'disabled'):
+                assert 'available' in wf.availability_rules

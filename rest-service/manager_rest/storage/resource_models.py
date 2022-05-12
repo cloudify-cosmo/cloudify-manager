@@ -563,6 +563,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                          operation=wf.get('operation', ''),
                          parameters=wf.get('parameters', dict()),
                          is_cascading=wf.get('is_cascading', False),
+                         availability_rules=wf.get('availability_rules'),
                          is_available=self._is_workflow_available(wf))
                 for wf_name, wf in self.workflows.items()]
 

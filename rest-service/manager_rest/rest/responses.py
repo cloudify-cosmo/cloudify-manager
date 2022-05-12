@@ -25,6 +25,7 @@ class Workflow(object):
         'parameters': fields.Raw,
         'is_cascading': fields.Boolean,
         'is_available': fields.Boolean,
+        'availability_rules': fields.Raw,
     }
 
     def __init__(self, **kwargs):
@@ -34,6 +35,7 @@ class Workflow(object):
         self.operation = kwargs.get('operation')
         self.is_cascading = kwargs.get('is_cascading', False)
         self.is_available = kwargs.get('is_available', True)
+        self.availability_rules = kwargs.get('availability_rules')
 
     def as_dict(self):
         return {
@@ -43,6 +45,7 @@ class Workflow(object):
             'operation': self.operation,
             'is_cascading': self.is_cascading,
             'is_available': self.is_available,
+            'availability_rules': self.availability_rules,
         }
 
     def __hash__(self):
