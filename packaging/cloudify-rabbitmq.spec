@@ -33,6 +33,10 @@ mkdir -p %{buildroot}/var/log/cloudify/rabbitmq
 cp -R ${RPM_SOURCE_DIR}/packaging/rabbitmq/files/* %{buildroot}
 
 
+%pre
+groupadd -fr cfylogs
+
+
 %files
 
 %config /etc/logrotate.d/cloudify-rabbitmq
@@ -42,4 +46,4 @@ cp -R ${RPM_SOURCE_DIR}/packaging/rabbitmq/files/* %{buildroot}
 %config /etc/security/limits.d/rabbitmq.conf
 /opt/rabbitmq_NOTICE.txt
 /usr/lib/systemd/system/cloudify-rabbitmq.service
-%attr(750,%_user,adm) /var/log/cloudify/%_user
+%attr(750,%_user,cfylogs) /var/log/cloudify/%_user

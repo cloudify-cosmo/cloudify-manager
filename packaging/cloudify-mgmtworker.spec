@@ -48,6 +48,7 @@ cp -R ${RPM_SOURCE_DIR}/packaging/mgmtworker/files/* %{buildroot}
 %pre
 groupadd -fr cfyuser
 getent passwd cfyuser >/dev/null || useradd -r -g cfyuser -d /etc/cloudify -s /sbin/nologin cfyuser
+groupadd -fr cfylogs
 
 
 %files
@@ -60,4 +61,4 @@ getent passwd cfyuser >/dev/null || useradd -r -g cfyuser -d /etc/cloudify -s /s
 %attr(750,cfyuser,cfyuser) /opt/mgmtworker/env/plugins
 %attr(750,cfyuser,cfyuser) /opt/mgmtworker/env/source_plugins
 /opt/mgmtworker
-%attr(750,cfyuser,adm) /var/log/cloudify/mgmtworker
+%attr(750,cfyuser,cfylogs) /var/log/cloudify/mgmtworker
