@@ -19,7 +19,7 @@ from flask_restful.reqparse import Argument, RequestParser
 
 from dsl_parser import tasks
 from dsl_parser import exceptions as parser_exceptions
-from dsl_parser.functions import is_function
+from dsl_parser.utils import get_function
 from dsl_parser.constants import INTER_DEPLOYMENT_FUNCTIONS
 
 from cloudify._compat import urlquote, text_type
@@ -506,7 +506,7 @@ def _add_new_consumer_labels(sm, source_id, consumer_labels_to_add):
 
 
 def _evaluate_target_func(target_dep_func, source_dep_id):
-    if is_function(target_dep_func):
+    if get_function(target_dep_func):
         evaluated_func = evaluate_intrinsic_functions(
             {'target_deployment': target_dep_func}, source_dep_id)
         return evaluated_func.get('target_deployment')
