@@ -14,6 +14,7 @@
 #  * limitations under the License.
 
 import mock
+import pytest
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 
@@ -98,6 +99,8 @@ class NodesTest(_NodeSetupMixin, base_test.BaseServerTestCase):
         assert response.status_code == 200
         assert response.json['id'] == '1234'
         assert response.json['runtime_properties'] == {'key': 'value'}
+        assert response.json['is_status_check_ok']
+        assert not response.json['has_configuration_drift']
 
     def test_sort_nodes_list(self):
         dep2 = models.Deployment(
@@ -615,3 +618,75 @@ class NodeInstancesDeleteTest(_NodeSetupMixin, base_test.BaseServerTestCase):
         with self.assertRaises(CloudifyClientError) as cm:
             self.client.node_instances.delete('nonexistent')
         assert cm.exception.status_code == 404
+
+
+
+@pytest.mark.parametrize('system_properties,expected_status', [
+    ({'status': {'ok': True}}, True),
+    ({'status': {'ok': False}}, False),
+    ({'status': {'ok': None}}, False),
+    ({'status': {}}, True),
+    ({}, True),
+    (None, True),
+])
+def test_status_check_ok(system_properties, expected_status):
+    ni = models.NodeInstance(system_properties=system_properties)
+    assert ni.is_status_check_ok == expected_status
+
+
+@pytest.mark.parametrize('system_properties,expected_drift', [
+    ({'configuration_drift': {'ok': False}}, True),
+    ({'configuration_drift': {'ok': True, 'result': 'x'}}, True),
+    ({'configuration_drift': {'ok': False, 'result': None}}, True),
+    ({'configuration_drift': {'ok': True, 'result': None}}, False),
+    ({'configuration_drift': {}}, False),
+    ({}, False),
+    (None, False),
+    ({
+        'target_relationships_configuration_drift': {
+            'instance1': {'ok': True},
+        },
+    }, False),
+    ({
+        'target_relationships_configuration_drift': {
+            'instance1': {'ok': False},
+        },
+    }, True),
+    ({
+        'target_relationships_configuration_drift': {
+            'instance1': {'ok': True},
+            'instance2': {'ok': False},
+        },
+    }, True),
+    ({
+        'target_relationships_configuration_drift': {
+            'instance1': {'ok': True},
+            'instance2': {'ok': True, 'result': 'x'},
+        },
+    }, True),
+    ({
+        'source_relationships_configuration_drift': {
+            'instance1': {'ok': True},
+        },
+    }, False),
+    ({
+        'source_relationships_configuration_drift': {
+            'instance1': {'ok': False},
+        },
+    }, True),
+    ({
+        'source_relationships_configuration_drift': {
+            'instance1': {'ok': True},
+            'instance2': {'ok': False},
+        },
+    }, True),
+    ({
+        'source_relationships_configuration_drift': {
+            'instance1': {'ok': True},
+            'instance2': {'ok': True, 'result': 'x'},
+        },
+    }, True),
+])
+def test_has_drift(system_properties, expected_drift):
+    ni = models.NodeInstance(system_properties=system_properties)
+    assert ni.has_configuration_drift == expected_drift
