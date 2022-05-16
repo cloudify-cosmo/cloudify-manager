@@ -221,8 +221,8 @@ class DeploymentsLabelsTestCase(LabelsBaseTestCase):
         node = self.client.nodes.get(deployment.id, 'node1',
                                      evaluate_functions=True)
 
-        self.assertEqual(node.properties, {'prop1': ['key2_val1', 'key2_val2'],
-                                           'prop2': 'key1_val1'})
+        assert node.properties['prop1'] == ['key2_val1', 'key2_val2']
+        assert node.properties['prop2'] == 'key1_val1'
         self.assertEqual(capabilities,
                          {'cap1': 'key1_val2', 'cap2': ['input_value']})
         self.assertEqual(outputs, {'output1': 'default_value',

@@ -17,6 +17,19 @@ node_types:
 
   # base type for provided cloudify types
   cloudify.nodes.Root:
+    properties:
+      use_external_resource:
+        description: |
+          Indicate whether the resource exists or if Cloudify should create the
+          resource, true if you are bringing an existing resource, false if you
+          want cloudify to create it.
+        type: boolean
+        default: False
+      resource_id:
+        description: |
+          Property which identifies the external resource.  It's used if the
+          `use_external_resource` is true.
+        required: False
     interfaces:
       cloudify.interfaces.lifecycle:
         # install
