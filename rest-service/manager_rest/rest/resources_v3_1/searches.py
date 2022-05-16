@@ -4,7 +4,7 @@ from flask import request
 from flask_restful.reqparse import Argument
 from flask_restful_swagger import swagger
 
-from dsl_parser.functions import is_function
+from dsl_parser.utils import get_function
 
 from manager_rest import manager_exceptions
 from manager_rest.security import SecuredResource
@@ -359,7 +359,7 @@ class CapabilitiesSearches(ResourceSearches):
             if not dep.capabilities:
                 continue
             for key, capability in dep.capabilities.items():
-                if is_function(capability.get('value')):
+                if get_function(capability.get('value')):
                     continue
                 if capability_matches(key, capability, constraints, search):
                     dep_capabilities[dep.id].append({key: capability})

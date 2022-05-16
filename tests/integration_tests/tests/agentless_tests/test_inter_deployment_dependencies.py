@@ -18,7 +18,7 @@ import pytest
 from cloudify.models_states import VisibilityState
 from cloudify.constants import COMPONENT, SHARED_RESOURCE
 
-from dsl_parser.functions import is_function
+from dsl_parser.utils import get_function
 from dsl_parser.constants import NODES, OUTPUTS, PROPERTIES
 
 from integration_tests import AgentlessTestCase
@@ -93,7 +93,7 @@ class TestInterDeploymentDependenciesInfrastructure(AgentlessTestCase):
         self._test_dependencies_are_updated(skip_uninstall=True)
 
     def test_cyclic_dependency_after_execution(self):
-        """Creating a cyclic dependency in a workflow, fails taht execution.
+        """Creating a cyclic dependency in a workflow, fails that execution.
 
         We'll prepare two deployments that will eventually depend on each
         other; having dep1 depend on dep2 is OK, but then making dep2
@@ -252,7 +252,7 @@ class TestInterDeploymentDependenciesInfrastructure(AgentlessTestCase):
                 self.assertEqual(dependency.target_deployment_id,
                                  SR_DEPLOYMENT)
                 secret_func = {'get_secret': 'shared_resource_deployment_key'}
-                assert is_function(dependency['target_deployment_func'])
+                assert get_function(dependency['target_deployment_func'])
                 self.assertEqual(dependency['target_deployment_func'],
                                  secret_func)
             else:
