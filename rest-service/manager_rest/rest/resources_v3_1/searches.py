@@ -13,6 +13,7 @@ from manager_rest.storage import models, get_storage_manager
 from manager_rest.constants import (ATTRS_OPERATORS,
                                     FILTER_RULE_TYPES,
                                     LABELS_OPERATORS)
+from manager_rest.dsl_functions import evaluate_intrinsic_functions
 
 from ..responses_v2 import ListResponse
 from ..search_utils import get_filter_rules
@@ -358,9 +359,12 @@ class CapabilitiesSearches(ResourceSearches):
         for dep in deployments:
             if not dep.capabilities:
                 continue
-            for key, capability in dep.capabilities.items():
-                if get_function(capability.get('value')):
-                    continue
+            for key, raw_capability in dep.capabilities.items():
+                if get_function(raw_capability.get('value')):
+                    capability = evaluate_intrinsic_functions(
+                        raw_capability, dep.id)
+                else:
+                    capability = raw_capability
                 if capability_matches(key, capability, constraints, search):
                     dep_capabilities[dep.id].append({key: capability})
 
