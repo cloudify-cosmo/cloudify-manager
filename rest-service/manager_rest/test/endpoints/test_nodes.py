@@ -121,6 +121,33 @@ class NodesTest(_NodeSetupMixin, base_test.BaseServerTestCase):
                                        is_descending=True)
         assert [n.id for n in nodes] == ['node2', 'node1']
 
+    def test_list_nodes_with_counts(self):
+        node = self._node('node1')
+        self._instance(
+            'ni1',
+            node=node,
+            system_properties={}
+        )
+        self._instance(
+            'ni2',
+            node=node,
+            system_properties={'status': {'ok': False}}
+        )
+        self._instance(
+            'ni3',
+            node=node,
+            system_properties={'configuration_drift': {'result': 'drift'}}
+        )
+        with self.assertRaises(CloudifyClientError) as cm:
+            self.client.nodes.list(_instance_counts=True)
+        assert cm.exception.status_code == 409
+
+        nodes = self.client.nodes.list(
+            deployment_id='d1', _instance_counts=True)
+        assert len(nodes) == 1
+        assert nodes[0].unavailable_instances == 1
+        assert nodes[0].drifted_instances == 1
+
     def test_bad_patch_node(self):
         """Malformed node instance update requests return an error."""
         response = self.patch('/node-instances/1234', 'not a dictionary')
@@ -618,7 +645,6 @@ class NodeInstancesDeleteTest(_NodeSetupMixin, base_test.BaseServerTestCase):
         with self.assertRaises(CloudifyClientError) as cm:
             self.client.node_instances.delete('nonexistent')
         assert cm.exception.status_code == 404
-
 
 
 @pytest.mark.parametrize('system_properties,expected_status', [

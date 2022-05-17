@@ -1944,8 +1944,12 @@ class Node(SQLResourceBase):
     _extra_fields = {
         'actual_number_of_instances': flask_fields.Integer,
         'actual_planned_number_of_instances': flask_fields.Integer,
+        'drifted_instances': flask_fields.Integer,
+        'unavailable_instances': flask_fields.Integer,
     }
     actual_planned_number_of_instances = 0
+    drifted_instances = None
+    unavailable_instances = None
 
     @hybrid_property
     def actual_number_of_instances(self):
@@ -1976,6 +1980,10 @@ class Node(SQLResourceBase):
         d = super(Node, self).to_dict(suppress_error)
         d['name'] = d['id']
         return d
+
+    def set_instance_counts(self, drifted, unavailable):
+        self.drifted_instances = drifted
+        self.unavailable_instances = unavailable
 
     def set_deployment(self, deployment):
         self._set_parent(deployment)
