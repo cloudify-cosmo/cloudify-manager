@@ -2029,8 +2029,8 @@ class NodeInstance(SQLResourceBase):
     _node_fk = foreign_key(Node._storage_id)
 
     @classproperty
-    def response_fields(cls):
-        fields = super(NodeInstance, cls).response_fields
+    def resource_fields(cls):
+        fields = super(NodeInstance, cls).resource_fields
         fields['is_status_check_ok'] = flask_fields.Boolean
         fields['has_configuration_drift'] = flask_fields.Boolean
         return fields
