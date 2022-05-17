@@ -18,7 +18,6 @@ import pytest
 from cloudify.models_states import VisibilityState
 from cloudify.constants import COMPONENT, SHARED_RESOURCE
 
-from dsl_parser.utils import get_function
 from dsl_parser.constants import NODES, OUTPUTS, PROPERTIES
 
 from integration_tests import AgentlessTestCase
@@ -252,7 +251,6 @@ class TestInterDeploymentDependenciesInfrastructure(AgentlessTestCase):
                 self.assertEqual(dependency.target_deployment_id,
                                  SR_DEPLOYMENT)
                 secret_func = {'get_secret': 'shared_resource_deployment_key'}
-                assert get_function(dependency['target_deployment_func'])
                 self.assertEqual(dependency['target_deployment_func'],
                                  secret_func)
             else:

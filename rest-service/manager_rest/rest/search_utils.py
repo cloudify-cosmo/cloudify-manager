@@ -11,6 +11,7 @@ from manager_rest.storage.models import (Blueprint, BlueprintsFilter,
 from manager_rest.rest.filters_utils import (get_filter_rules_from_filter_id,
                                              create_filter_rules_list,
                                              FilterRule)
+from manager_rest.dsl_functions import evaluate_intrinsic_functions
 
 
 class GetValuesWithStorageManager:
@@ -176,9 +177,12 @@ class GetValuesWithStorageManager:
         for dep in deployments:
             if not dep.capabilities:
                 continue
-            for key, capability in dep.capabilities.items():
-                if get_function(capability.get('value')):
-                    continue
+            for key, raw_capability in dep.capabilities.items():
+                if get_function(raw_capability.get('value')):
+                    capability = evaluate_intrinsic_functions(
+                        raw_capability, dep.id)
+                else:
+                    capability = raw_capability
                 if capability_matches(key, capability, capability_value,
                                       valid_values, capability_key_specs):
                     dep_capabilities[dep.id].append({key: capability})

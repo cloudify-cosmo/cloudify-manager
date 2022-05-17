@@ -127,7 +127,7 @@ node_templates:
         self.assertEqual(len(executions), 2)
         for execution in executions:
             self.assertEqual(execution.deployment_id, 'test')
-            self.assertEqual(execution.parameters, {'t': 1})
+            self.assertEqual(execution.parameters, {'t': 1, 'type': 'dict'})
         unlink_execution = executions[0]
         # Getting the uninstall execution
         executions = self.client.executions.list(

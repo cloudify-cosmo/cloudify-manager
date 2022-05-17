@@ -3,8 +3,26 @@ tosca_definitions_version: cloudify_dsl_1_4
 imports:
   - cloudify/types/types.yaml
 
+inputs:
+  s:
+    type: string
+    default: "value"
+
+node_types:
+  type1:
+    derived_from: cloudify.nodes.Root
+    properties:
+      s:
+        type: string
+
+node_templates:
+  node1:
+    type: type1
+    properties:
+      s: { get_input: s }
+
 capabilities:
   capability1:
     value: capability1_value
   capability2:
-    value: capability2_value
+    value: { concat: [ "capability2_", { get_attribute: [ "node1", "s"] } ] }
