@@ -1,4 +1,5 @@
 import hashlib
+import itertools
 import typing
 import uuid
 
@@ -1943,8 +1944,12 @@ class Node(SQLResourceBase):
     _extra_fields = {
         'actual_number_of_instances': flask_fields.Integer,
         'actual_planned_number_of_instances': flask_fields.Integer,
+        'drifted_instances': flask_fields.Integer,
+        'unavailable_instances': flask_fields.Integer,
     }
     actual_planned_number_of_instances = 0
+    drifted_instances = None
+    unavailable_instances = None
 
     @hybrid_property
     def actual_number_of_instances(self):
@@ -1975,6 +1980,10 @@ class Node(SQLResourceBase):
         d = super(Node, self).to_dict(suppress_error)
         d['name'] = d['id']
         return d
+
+    def set_instance_counts(self, drifted, unavailable):
+        self.drifted_instances = drifted
+        self.unavailable_instances = unavailable
 
     def set_deployment(self, deployment):
         self._set_parent(deployment)
@@ -2019,6 +2028,13 @@ class NodeInstance(SQLResourceBase):
 
     _node_fk = foreign_key(Node._storage_id)
 
+    @classproperty
+    def resource_fields(cls):
+        fields = super(NodeInstance, cls).resource_fields
+        fields['is_status_check_ok'] = flask_fields.Boolean
+        fields['has_configuration_drift'] = flask_fields.Boolean
+        return fields
+
     @declared_attr
     def node(cls):
         return one_to_many_relationship(
@@ -2037,6 +2053,43 @@ class NodeInstance(SQLResourceBase):
     @classproperty
     def allowed_filter_attrs(cls):
         return ['id']
+
+    @property
+    def is_status_check_ok(self):
+        """Has the last status check for this NI succeeded?
+
+        This examines the result of the most recent check_status call
+        on this node instance, and returns whether the call succeeded.
+
+        If the result is missing, the result is succeeded.
+        """
+        props = self.system_properties or {}
+        status = props.get('status') or {}
+        return bool(status.get('ok', True))
+
+    @property
+    def has_configuration_drift(self):
+        """Has this NI's configuration drifted?
+
+        This examines the result of the most recent check_drift call
+        on this node instance, and returns whether there was any configuration
+        drift reported.
+
+        The instance is drifted if either the instance itself, or any of its
+        relationships have drifted.
+        """
+        props = self.system_properties or {}
+        instance_drift = props.get('configuration_drift') or {}
+        sources_drift = \
+            props.get('source_relationships_configuration_drift') or {}
+        targets_drift = \
+            props.get('target_relationships_configuration_drift') or {}
+        for drift in itertools.chain(
+            [instance_drift], sources_drift.values(), targets_drift.values()
+        ):
+            if not drift.get('ok', True) or drift.get('result') is not None:
+                return True
+        return False
 
 
 class Agent(CreatedAtMixin, SQLResourceBase):
