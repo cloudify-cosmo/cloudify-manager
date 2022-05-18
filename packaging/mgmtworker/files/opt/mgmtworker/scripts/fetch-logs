@@ -54,6 +54,13 @@ def get_logs_dir(server, path, data_dir, log_handle, session):
 
 
 def get_logs(servers, ca_cert, credentials):
+    username = credentials['username']
+    password = credentials['password']
+
+    session = requests.Session()
+    session.auth = (username, password)
+    session.verify = ca_cert
+
     temp_path = mkdtemp()
     try:
         zip_file = NamedTemporaryFile(prefix='cfylogs', suffix='.zip',
@@ -61,14 +68,7 @@ def get_logs(servers, ca_cert, credentials):
         zip_file.close()
         zip_path = zip_file.name
 
-        username = credentials['username']
-        password = credentials['password']
-
         for server in servers:
-            session = requests.Session()
-            session.auth = (username, password)
-            session.verify = ca_cert
-
             with open(os.path.join(temp_path, server + '.log'),
                       'w') as log_handle:
                 get_logs_dir(server, '', temp_path, log_handle, session)
