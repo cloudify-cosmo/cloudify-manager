@@ -37,6 +37,8 @@ class Events(v2_Events):
             'events': {'optional': True},
             'logs': {'optional': True},
             'execution_id': {'optional': True},
+            'manager_name': {'optional': True},
+            'agent_name': {'optional': True},
         })
 
         raw_events = request_dict.get('events') or []
@@ -61,6 +63,8 @@ class Events(v2_Events):
             '_tenant_id': exc._tenant_id,
             '_creator_id': exc._creator_id,
             'visibility': exc.visibility,
+            'manager_name': request_dict.get('manager_name'),
+            'agent_name': request_dict.get('agent_name'),
         }
         if not raw_events and not raw_logs:
             return None, 204

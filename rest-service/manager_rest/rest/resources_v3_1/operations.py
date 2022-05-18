@@ -214,11 +214,15 @@ class OperationsId(SecuredResource):
             'result': {'optional': True},
             'exception': {'optional': True},
             'exception_causes': {'optional': True},
+            'manager_name': {'optional': True},
+            'agent_name': {'optional': True},
         })
         sm = get_storage_manager()
         with sm.transaction():
             instance = sm.get(models.Operation, operation_id, locking=True)
             old_state = instance.state
+            instance.manager_name = request_dict.get('manager_name')
+            instance.agent_name = request_dict.get('agent_name')
             instance.state = request_dict.get('state', instance.state)
             if instance.state == common_constants.TASK_SUCCEEDED:
                 self._on_task_success(sm, instance)
@@ -232,7 +236,10 @@ class OperationsId(SecuredResource):
                     old_state not in common_constants.TERMINATED_STATES and \
                     instance.state in common_constants.TERMINATED_STATES:
                 self._modify_execution_operations_counts(instance, 1)
-            sm.update(instance, modified_attrs=('state',))
+            sm.update(
+                instance,
+                modified_attrs=('state', 'manager_name', 'agent_name')
+            )
         return {}, 200
 
     def _on_task_success(self, sm, operation):
@@ -289,6 +296,8 @@ class OperationsId(SecuredResource):
             message_code=None,
             operation=None,
             node_id=kwargs['node_instance_id'],
+            manager_name=operation.manager_name,
+            agent_name=operation.agent_name,
             _execution_fk=current_execution._storage_id,
             _tenant_id=current_execution._tenant_id,
             _creator_id=current_execution._creator_id,
@@ -336,6 +345,8 @@ class OperationsId(SecuredResource):
             source_id=context.get('source_id'),
             target_id=context.get('target_id'),
             error_causes=exception_causes,
+            manager_name=operation.manager_name,
+            agent_name=operation.agent_name,
             _execution_fk=current_execution._storage_id,
             _tenant_id=current_execution._tenant_id,
             _creator_id=current_execution._creator_id,

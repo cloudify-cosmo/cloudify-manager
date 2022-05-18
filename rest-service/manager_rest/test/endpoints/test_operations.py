@@ -244,10 +244,16 @@ class OperationsTestCase(OperationsTestBase, base_test.BaseServerTestCase):
         )
         with mock.patch(f'{OPERATIONS_MODULE}.current_execution', exc):
             self.client.operations.update(
-                'op1', state=constants.TASK_SUCCEEDED)
+                'op1',
+                state=constants.TASK_SUCCEEDED,
+                manager_name='manager',
+                agent_name='agent',
+            )
         evts = models.Event.query.all()
         assert len(evts) == 1
         assert evts[0].message == message
+        assert evts[0].manager_name == 'manager'
+        assert evts[0].agent_name == 'agent'
 
     @mock.patch(f'{OPERATIONS_MODULE}.check_user_action_allowed')
     def test_update_SetNodeInstanceStateTask_ni_state(self, *_):
