@@ -1,0 +1,117 @@
+#! /opt/mgmtworker/env/bin/python3
+import argparse
+import os
+import sys
+from tempfile import mkdtemp, NamedTemporaryFile
+
+import requests
+import shutil
+
+from cloudify.zip_utils import make_zip64_archive
+
+BASE_URL = 'https://{server}:8009/cfylogs/'
+
+
+def get_logs_dir(server, path, data_dir, log_handle, session):
+    save_path = os.path.join(data_dir, server, path)
+    url = BASE_URL.format(server=server) + path
+
+    contents = session.get(url)
+
+    os.makedirs(save_path, exist_ok=True)
+
+    if contents.status_code != 200:
+        log_handle.write(
+            f'Failed to retrieve dir {path}: '
+            f'{contents.status_code}- {contents.reason}\n'
+        )
+        return
+
+    files = [entry['name'] for entry in contents.json()
+             if entry['type'] == 'file']
+
+    dirs = [entry['name'] for entry in contents.json()
+            if entry['type'] == 'directory']
+
+    for file_name in sorted(files):
+        downloaded_file = session.get(url + file_name)
+        file_path = path + file_name
+
+        if downloaded_file.status_code == 200:
+            log_handle.write(f'Retrieved file {file_path}\n')
+            with open(os.path.join(save_path, file_name), 'w',
+                      encoding='utf8') as file_handle:
+                file_handle.write(downloaded_file.text)
+        else:
+            log_handle.write(
+                f'Failed to retrieve file {file_path}: '
+                f'{downloaded_file.status_code}- {downloaded_file.reason}\n'
+            )
+
+    for dir_name in sorted(dirs):
+        get_logs_dir(server, path + dir_name + '/',
+                     data_dir, log_handle, session)
+
+
+def get_logs(servers, ca_cert, credentials):
+    try:
+        temp_path = mkdtemp()
+        zip_file = NamedTemporaryFile(prefix='cfylogs', suffix='.zip',
+                                      delete=False)
+        zip_file.close()
+        zip_path = zip_file.name
+
+        username = credentials['username']
+        password = credentials['password']
+
+        for server in servers:
+            session = requests.Session()
+            session.auth = (username, password)
+            session.verify = ca_cert
+
+            with open(os.path.join(temp_path, server + '.log'),
+                      'w') as log_handle:
+                get_logs_dir(server, '', temp_path, log_handle, session)
+
+        make_zip64_archive(zip_path, temp_path)
+        return zip_path
+    finally:
+        shutil.rmtree(temp_path)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description='Download logs from cloudify nodes',
+    )
+
+    parser.add_argument(
+        '-a', '--addresses',
+        help='Comma separated list of node addresses to collect logs from.',
+        required=True,
+    )
+
+    parser.add_argument(
+        '-c', '--ca-cert',
+        help='Path of the monitoring CA cert.',
+        default='/etc/cloudify/ssl/monitoring_ca_cert.pem',
+    )
+
+    args = parser.parse_args()
+
+    # Credentials provided by env var to avoid password in ps output
+    creds = {'username': '', 'password': ''}
+    for cred in sorted(creds):
+        env_var = f'MONITORING_{cred.upper()}'
+        cred_value = os.environ.get(env_var)
+        if not cred_value:
+            sys.stderr.write(
+                f'Expected {cred} to be provided in env var {env_var}.\n'
+            )
+        creds[cred] = cred_value
+
+    if not all(val for val in creds.values()):
+        sys.stderr.write('Credentials not provided correctly.\n')
+        sys.exit(1)
+
+    zip_file = get_logs(args.addresses.split(','), args.ca_cert, creds)
+    print(zip_file)
