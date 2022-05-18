@@ -2,7 +2,7 @@
 import argparse
 import os
 import sys
-from tempfile import mkdtemp, NamedTemporaryFile
+from tempfile import TemporaryDirectory, NamedTemporaryFile
 
 import requests
 import shutil
@@ -28,11 +28,13 @@ def get_logs_dir(server, data_dir, log_handle, session):
                 f'Failed to retrieve dir {dir_path}: '
                 f'{contents.status_code}- {contents.reason}\n'
             )
-        files.extend(sorted([dir_path + entry['name'] for entry in contents.json()
-                             if entry['type'] == 'file']))
+        files.extend(sorted(
+            [dir_path + entry['name'] for entry in contents.json()
+             if entry['type'] == 'file']))
 
-        dirs.extend(sorted([dir_path + entry['name'] + '/' for entry in contents.json()
-                            if entry['type'] == 'directory']))
+        dirs.extend(sorted(
+            [dir_path + entry['name'] + '/' for entry in contents.json()
+             if entry['type'] == 'directory']))
 
         while files:
             file_path = files.pop()
@@ -46,7 +48,8 @@ def get_logs_dir(server, data_dir, log_handle, session):
             else:
                 log_handle.write(
                     f'Failed to retrieve file {file_path}: '
-                    f'{downloaded_file.status_code}- {downloaded_file.reason}\n'
+                    f'{downloaded_file.status_code}- '
+                    f'{downloaded_file.reason}\n'
                 )
 
 
@@ -58,8 +61,7 @@ def get_logs(servers, ca_cert, credentials):
     session.auth = (username, password)
     session.verify = ca_cert
 
-    temp_path = mkdtemp()
-    try:
+    with TemporaryDirectory(prefix='cfylogs') as temp_path:
         zip_file = NamedTemporaryFile(prefix='cfylogs', suffix='.zip',
                                       delete=False)
         zip_file.close()
@@ -72,8 +74,6 @@ def get_logs(servers, ca_cert, credentials):
 
         make_zip64_archive(zip_path, temp_path)
         return zip_path
-    finally:
-        shutil.rmtree(temp_path)
 
 
 if __name__ == '__main__':
