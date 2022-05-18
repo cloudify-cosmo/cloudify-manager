@@ -18,14 +18,14 @@ def get_logs_dir(server, path, data_dir, log_handle, session):
 
     contents = session.get(url)
 
-    os.makedirs(save_path, exist_ok=True)
-
     if contents.status_code != 200:
         log_handle.write(
             f'Failed to retrieve dir {path}: '
             f'{contents.status_code}- {contents.reason}\n'
         )
         return
+
+    os.makedirs(save_path, exist_ok=True)
 
     files = [entry['name'] for entry in contents.json()
              if entry['type'] == 'file']
