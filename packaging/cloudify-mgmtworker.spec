@@ -56,6 +56,7 @@ groupadd -fr cfylogs
 /etc/cloudify/logging.conf
 /etc/logrotate.d/cloudify-mgmtworker
 /usr/lib/systemd/system/cloudify-mgmtworker.service
+%attr(750,cfyuser,cfyuser) /opt/mgmtworker/scripts/fetch-logs
 %attr(750,cfyuser,cfyuser) /opt/mgmtworker/config
 %attr(750,cfyuser,cfyuser) /opt/mgmtworker/work
 %attr(750,cfyuser,cfyuser) /opt/mgmtworker/env/plugins
