@@ -21,11 +21,13 @@ depends_on = None
 def upgrade():
     create_tokens()
     upgrade_plugin_updates()
+    drop_usagecollector_audit()
 
 
 def downgrade():
     drop_tokens()
     downgrade_plugin_updates()
+    recreate_usagecollector_audit()
 
 
 def create_tokens():
@@ -77,3 +79,17 @@ def upgrade_plugin_updates():
 def downgrade_plugin_updates():
     op.drop_column('plugins_updates', 'all_tenants')
     op.drop_column('plugins_updates', 'deployments_per_tenant')
+
+
+def drop_usagecollector_audit():
+    op.execute("""
+        DROP TRIGGER IF EXISTS audit_usage_collector ON usage_collector;
+    """)
+
+
+def recreate_usagecollector_audit():
+    op.execute("""
+        CREATE TRIGGER audit_usage_collector
+        AFTER INSERT OR UPDATE OR DELETE ON usage_collector FOR EACH ROW
+        EXECUTE PROCEDURE write_audit_log_id('usage_collector');
+    """)
