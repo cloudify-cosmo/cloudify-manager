@@ -98,9 +98,12 @@ def recreate_usagecollector_audit():
 
 
 def add_manager_agent_name_columns():
-    op.add_column('operations', sa.Column('manager_name', sa.Text(), nullable=True))
-    op.add_column('operations', sa.Column('agent_name', sa.Text(), nullable=True))
-    op.add_column('events', sa.Column('manager_name', sa.Text(), nullable=True))
+    op.add_column(
+        'operations', sa.Column('manager_name', sa.Text(), nullable=True))
+    op.add_column(
+        'operations', sa.Column('agent_name', sa.Text(), nullable=True))
+    op.add_column(
+        'events', sa.Column('manager_name', sa.Text(), nullable=True))
     op.add_column('events', sa.Column('agent_name', sa.Text(), nullable=True))
     op.add_column('logs', sa.Column('manager_name', sa.Text(), nullable=True))
     op.add_column('logs', sa.Column('agent_name', sa.Text(), nullable=True))
