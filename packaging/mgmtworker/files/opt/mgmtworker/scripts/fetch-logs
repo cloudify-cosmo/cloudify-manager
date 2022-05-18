@@ -39,9 +39,9 @@ def get_logs_dir(server, data_dir, log_handle, session):
 
             if downloaded_file.status_code == 200:
                 log_handle.write(f'Retrieved file {file_path}\n')
-                with open(os.path.join(save_path, file_path), 'w',
-                          encoding='utf8') as file_handle:
-                    file_handle.write(downloaded_file.text)
+                with open(os.path.join(save_path, file_path),
+                          'wb') as file_handle:
+                    file_handle.write(downloaded_file.content)
             else:
                 log_handle.write(
                     f'Failed to retrieve file {file_path}: '
