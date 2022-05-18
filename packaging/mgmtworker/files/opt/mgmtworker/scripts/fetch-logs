@@ -54,8 +54,8 @@ def get_logs_dir(server, path, data_dir, log_handle, session):
 
 
 def get_logs(servers, ca_cert, credentials):
+    temp_path = mkdtemp()
     try:
-        temp_path = mkdtemp()
         zip_file = NamedTemporaryFile(prefix='cfylogs', suffix='.zip',
                                       delete=False)
         zip_file.close()
