@@ -12,45 +12,42 @@ from cloudify.zip_utils import make_zip64_archive
 BASE_URL = 'https://{server}:8009/cfylogs/'
 
 
-def get_logs_dir(server, path, data_dir, log_handle, session):
-    save_path = os.path.join(data_dir, server, path)
-    url = BASE_URL.format(server=server) + path
+def get_logs_dir(server, data_dir, log_handle, session):
+    save_path = os.path.join(data_dir, server)
+    url = BASE_URL.format(server=server)
 
-    contents = session.get(url)
+    files = []
+    dirs = ['']
 
-    if contents.status_code != 200:
-        log_handle.write(
-            f'Failed to retrieve dir {path}: '
-            f'{contents.status_code}- {contents.reason}\n'
-        )
-        return
-
-    os.makedirs(save_path, exist_ok=True)
-
-    files = [entry['name'] for entry in contents.json()
-             if entry['type'] == 'file']
-
-    dirs = [entry['name'] for entry in contents.json()
-            if entry['type'] == 'directory']
-
-    for file_name in sorted(files):
-        downloaded_file = session.get(url + file_name)
-        file_path = path + file_name
-
-        if downloaded_file.status_code == 200:
-            log_handle.write(f'Retrieved file {file_path}\n')
-            with open(os.path.join(save_path, file_name), 'w',
-                      encoding='utf8') as file_handle:
-                file_handle.write(downloaded_file.text)
-        else:
+    while dirs or files:
+        dir_path = dirs.pop()
+        os.makedirs(os.path.join(save_path, dir_path))
+        contents = session.get(url + dir_path)
+        if contents.status_code != 200:
             log_handle.write(
-                f'Failed to retrieve file {file_path}: '
-                f'{downloaded_file.status_code}- {downloaded_file.reason}\n'
+                f'Failed to retrieve dir {dir_path}: '
+                f'{contents.status_code}- {contents.reason}\n'
             )
+        files.extend(sorted([dir_path + entry['name'] for entry in contents.json()
+                             if entry['type'] == 'file']))
 
-    for dir_name in sorted(dirs):
-        get_logs_dir(server, path + dir_name + '/',
-                     data_dir, log_handle, session)
+        dirs.extend(sorted([dir_path + entry['name'] + '/' for entry in contents.json()
+                            if entry['type'] == 'directory']))
+
+        while files:
+            file_path = files.pop()
+            downloaded_file = session.get(url + file_path)
+
+            if downloaded_file.status_code == 200:
+                log_handle.write(f'Retrieved file {file_path}\n')
+                with open(os.path.join(save_path, file_path), 'w',
+                          encoding='utf8') as file_handle:
+                    file_handle.write(downloaded_file.text)
+            else:
+                log_handle.write(
+                    f'Failed to retrieve file {file_path}: '
+                    f'{downloaded_file.status_code}- {downloaded_file.reason}\n'
+                )
 
 
 def get_logs(servers, ca_cert, credentials):
@@ -71,7 +68,7 @@ def get_logs(servers, ca_cert, credentials):
         for server in servers:
             with open(os.path.join(temp_path, server + '.log'),
                       'w') as log_handle:
-                get_logs_dir(server, '', temp_path, log_handle, session)
+                get_logs_dir(server, temp_path, log_handle, session)
 
         make_zip64_archive(zip_path, temp_path)
         return zip_path
