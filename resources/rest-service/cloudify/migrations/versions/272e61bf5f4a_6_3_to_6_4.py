@@ -22,12 +22,14 @@ def upgrade():
     create_tokens()
     upgrade_plugin_updates()
     drop_usagecollector_audit()
+    add_manager_agent_name_columns()
 
 
 def downgrade():
     drop_tokens()
     downgrade_plugin_updates()
     recreate_usagecollector_audit()
+    drop_manager_agent_name_columns()
 
 
 def create_tokens():
@@ -93,3 +95,24 @@ def recreate_usagecollector_audit():
         AFTER INSERT OR UPDATE OR DELETE ON usage_collector FOR EACH ROW
         EXECUTE PROCEDURE write_audit_log_id('usage_collector');
     """)
+
+
+def add_manager_agent_name_columns():
+    op.add_column(
+        'operations', sa.Column('manager_name', sa.Text(), nullable=True))
+    op.add_column(
+        'operations', sa.Column('agent_name', sa.Text(), nullable=True))
+    op.add_column(
+        'events', sa.Column('manager_name', sa.Text(), nullable=True))
+    op.add_column('events', sa.Column('agent_name', sa.Text(), nullable=True))
+    op.add_column('logs', sa.Column('manager_name', sa.Text(), nullable=True))
+    op.add_column('logs', sa.Column('agent_name', sa.Text(), nullable=True))
+
+
+def drop_manager_agent_name_columns():
+    op.drop_column('operations', 'agent_name')
+    op.drop_column('operations', 'manager_name')
+    op.drop_column('events', 'agent_name')
+    op.drop_column('events', 'manager_name')
+    op.drop_column('logs', 'agent_name')
+    op.drop_column('logs', 'manager_name')

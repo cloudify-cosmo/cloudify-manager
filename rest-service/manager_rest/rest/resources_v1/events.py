@@ -344,6 +344,8 @@ class Events(SecuredResource):
                 select_column('node_id'),
                 select_column('source_id'),
                 select_column('target_id'),
+                select_column('manager_name'),
+                select_column('agent_name'),
                 NodeInstance.id.label('node_instance_id'),
                 Node.id.label('node_name'),
                 select_column('logger'),
