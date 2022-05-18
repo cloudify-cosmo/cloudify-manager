@@ -5,7 +5,6 @@ import sys
 from tempfile import TemporaryDirectory, NamedTemporaryFile
 
 import requests
-import shutil
 
 from cloudify.zip_utils import make_zip64_archive
 
@@ -16,10 +15,9 @@ def get_logs_dir(server, data_dir, log_handle, session):
     save_path = os.path.join(data_dir, server)
     url = BASE_URL.format(server=server)
 
-    files = []
     dirs = ['']
 
-    while dirs or files:
+    while dirs:
         dir_path = dirs.pop()
         os.makedirs(os.path.join(save_path, dir_path))
         contents = session.get(url + dir_path)
@@ -28,16 +26,15 @@ def get_logs_dir(server, data_dir, log_handle, session):
                 f'Failed to retrieve dir {dir_path}: '
                 f'{contents.status_code}- {contents.reason}\n'
             )
-        files.extend(sorted(
+        files = sorted(
             [dir_path + entry['name'] for entry in contents.json()
-             if entry['type'] == 'file']))
+             if entry['type'] == 'file'])
 
         dirs.extend(sorted(
             [dir_path + entry['name'] + '/' for entry in contents.json()
              if entry['type'] == 'directory']))
 
-        while files:
-            file_path = files.pop()
+        for file_path in files:
             downloaded_file = session.get(url + file_path)
 
             if downloaded_file.status_code == 200:
