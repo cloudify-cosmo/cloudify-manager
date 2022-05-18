@@ -317,8 +317,16 @@ class BaseServerTestCase(unittest.TestCase):
         self.initialize_provider_context()
         self.addCleanup(self._drop_db, keep_tables=['config'])
         self.addCleanup(self._clean_tmpdir)
-        self.user = db.session.query(models.User).first()
-        self.tenant = db.session.query(models.Tenant).first()
+        self.user = (
+            db.session.query(models.User)
+            .filter_by(username='admin')
+            .one()
+        )
+        self.tenant = (
+            db.session.query(models.Tenant)
+            .filter_by(name='default_tenant')
+            .one()
+        )
 
     @staticmethod
     def _drop_db(keep_tables=None):
