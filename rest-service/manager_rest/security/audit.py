@@ -14,6 +14,13 @@ def set_username(username: str):
                        params={'name': username})
 
 
+def reset():
+    """Clean all session variables"""
+    set_audit_method(None)
+    db.session.execute("RESET audit.username")
+    db.session.execute("RESET audit.execution_id")
+
+
 def set_tenant(tenant: str):
     flask.g.audit_tenant = tenant
 

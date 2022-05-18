@@ -150,6 +150,7 @@ class CloudifyFlaskApp(Flask):
         self.before_request(query_service_settings)
         self.before_request(maintenance_mode_handler)
         self.after_request(log_response)
+        self.before_request(audit.reset)
         self.after_request(audit.extend_headers)
         self._set_flask_security()
 

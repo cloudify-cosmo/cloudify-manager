@@ -69,7 +69,7 @@ def _get_user_from_execution_token(request):
 
     # Support using the exec token as an auth token for workflows
     execution = get_current_execution_by_token(execution_token or token)
-    set_current_execution(execution)  # Sets request current execution
+    set_current_execution(execution)
     if not execution:
         if execution_token:
             # execution not found, but we were explicitly given an exec-token
