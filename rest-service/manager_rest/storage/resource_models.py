@@ -1581,6 +1581,8 @@ class Event(SQLResourceBase):
     source_id = db.Column(db.Text)
     target_id = db.Column(db.Text)
     error_causes = db.Column(JSONString)
+    manager_name = db.Column(db.Text)
+    agent_name = db.Column(db.Text)
 
     _execution_fk = foreign_key(Execution._storage_id, nullable=True)
     _execution_group_fk = foreign_key(ExecutionGroup._storage_id,
@@ -1640,6 +1642,8 @@ class Log(SQLResourceBase):
     node_id = db.Column(db.Text, index=True)
     source_id = db.Column(db.Text)
     target_id = db.Column(db.Text)
+    manager_name = db.Column(db.Text)
+    agent_name = db.Column(db.Text)
 
     _execution_fk = foreign_key(Execution._storage_id, nullable=True)
     _execution_group_fk = foreign_key(ExecutionGroup._storage_id,
@@ -2194,6 +2198,9 @@ class Operation(CreatedAtMixin, SQLResourceBase):
     dependencies = db.Column(db.ARRAY(db.Text))
     type = db.Column(db.Text)
     parameters = db.Column(JSONString)
+
+    manager_name = db.Column(db.Text)
+    agent_name = db.Column(db.Text)
 
     _tasks_graph_fk = foreign_key(TasksGraph._storage_id)
 
