@@ -21,6 +21,7 @@ from cloudify.cryptography_utils import encrypt
 from cloudify.workflows import tasks as cloudify_tasks
 from cloudify.utils import parse_utc_datetime_relative
 from cloudify.models_states import (SnapshotState,
+                                    LogBundleState,
                                     ExecutionState,
                                     VisibilityState,
                                     BlueprintUploadState,
@@ -596,6 +597,40 @@ class ResourceManager(object):
         except manager_exceptions.ExistingRunningExecutionError:
             snapshot = self.sm.get(models.Snapshot, snapshot_id)
             self.sm.delete(snapshot)
+            self.sm.delete(execution)
+            raise
+
+    def create_log_bundle_model(self,
+                                log_bundle_id,
+                                status=LogBundleState.CREATING):
+        now = utils.get_formatted_timestamp()
+        visibility = VisibilityState.PRIVATE
+        new_log_bundle = models.LogBundle(id=log_bundle_id,
+                                          created_at=now,
+                                          status=status,
+                                          visibility=visibility,
+                                          error='')
+        return self.sm.put(new_log_bundle)
+
+    def create_log_bundle(self,
+                          log_bundle_id,
+                          queue):
+        self.create_log_bundle_model(log_bundle_id)
+        try:
+            execution = models.Execution(
+                workflow_id='create_log_bundle',
+                parameters={'log_bundle_id': log_bundle_id},
+                is_system_workflow=True,
+                status=ExecutionState.PENDING,
+            )
+            self.sm.put(execution)
+            return execution, self.prepare_executions(
+                [execution],
+                queue=queue,
+                bypass_maintenance=True)
+        except manager_exceptions.ExistingRunningExecutionError:
+            log_bundle = self.sm.get(models.LogBundle, log_bundle_id)
+            self.sm.delete(log_bundle)
             self.sm.delete(execution)
             raise
 

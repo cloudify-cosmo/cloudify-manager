@@ -120,6 +120,8 @@ def setup_resources(api):
         'RabbitMQBrokersId': 'brokers/<string:name>',
         'License': 'license',
         'LicenseCheck': 'license-check',
+        'LogBundles': 'log-bundles',
+        'LogBundlesId': 'log-bundles/<string:log_bundle_id>',
         'Sites': 'sites',
         'SitesName': 'sites/<string:name>',
         'ClusterStatus': 'cluster-status',

@@ -314,6 +314,11 @@ class SnapshotActionError(ManagerException):
     status_code = 400
 
 
+class LogBundleActionError(ManagerException):
+    error_code = 'log_bundle_action_error'
+    status_code = 400
+
+
 class PluginInUseError(ManagerException):
     error_code = 'plugin_in_use'
     status_code = 405
