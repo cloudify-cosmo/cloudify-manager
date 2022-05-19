@@ -20,7 +20,15 @@ def get_logs_dir(server, data_dir, log_handle, session):
     while dirs:
         dir_path = dirs.pop()
         os.makedirs(os.path.join(save_path, dir_path))
-        contents = session.get(url + dir_path)
+
+        try:
+            contents = session.get(url + dir_path)
+        except requests.exceptions.ConnectionError as err:
+            log_handle.write(
+                f'Failed to retrieve dir {dir_path}: {err}\n'
+            )
+            continue
+
         if contents.status_code != 200:
             log_handle.write(
                 f'Failed to retrieve dir {dir_path}: '
