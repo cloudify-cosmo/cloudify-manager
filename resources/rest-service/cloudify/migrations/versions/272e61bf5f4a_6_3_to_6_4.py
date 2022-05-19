@@ -59,11 +59,13 @@ def create_tokens():
                     'tokens', ['_user_fk'], unique=False)
     op.create_index(op.f('tokens_created_at_idx'),
                     'tokens', ['created_at'], unique=False)
-    op.create_index(op.f('tokens_id_idx'), 'tokens', ['id'], unique=True)
+    op.drop_column('users', 'api_token_key')
 
 
 def drop_tokens():
     op.drop_table('tokens')
+    op.add_column('users', sa.Column('api_token_key', sa.VARCHAR(length=100),
+                  autoincrement=False, nullable=True))
 
 
 def upgrade_plugin_updates():
