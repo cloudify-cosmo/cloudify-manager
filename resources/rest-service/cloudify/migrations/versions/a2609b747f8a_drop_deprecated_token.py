@@ -22,5 +22,6 @@ def upgrade():
 
 
 def downgrade():
-    op.add_column('users', sa.Column('api_token_key', sa.VARCHAR(length=100), autoincrement=False, nullable=True))
+    op.add_column('users', sa.Column('api_token_key', sa.VARCHAR(length=100),
+                  autoincrement=False, nullable=True))
     op.create_index('tokens_id_idx', 'tokens', ['id'], unique=False)
