@@ -1681,7 +1681,7 @@ class PluginsUpdate(CreatedAtMixin, SQLResourceBase):
     deployments_to_update = db.Column(db.PickleType(protocol=2))
     deployments_per_tenant = db.Column(JSONString)
     forced = db.Column(db.Boolean, default=False)
-    all_tenants = db.Column(db.Boolean, default=False)
+    all_tenants = db.Column(db.Boolean, default=False, nullable=False)
 
     _original_blueprint_fk = foreign_key(Blueprint._storage_id)
     _temp_blueprint_fk = foreign_key(Blueprint._storage_id,
