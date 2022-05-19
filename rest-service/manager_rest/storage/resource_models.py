@@ -1864,7 +1864,7 @@ class DeploymentUpdateStep(SQLResourceBase):
     __tablename__ = 'deployment_update_steps'
 
     action = db.Column(db.Enum(*ACTION_TYPES, name='action_type'))
-    entity_id = db.Column(db.Text, nullable=False)
+    entity_id = db.Column(db.ARRAY(db.Text), nullable=False)
     entity_type = db.Column(db.Enum(*ENTITY_TYPES, name='entity_type'))
     topology_order = db.Column(db.Integer, nullable=False)
 
