@@ -100,6 +100,11 @@ sources_static = [
         'cloudify-manager/resources/rest-service/cloudify/types/types.yaml',
         ['/opt/manager/resources/cloudify/types/types.yaml']
     ),
+    (
+        'cloudify-manager/resources/rest-service/cloudify/types/'
+        'types_1_3.yaml',
+        ['/opt/manager/resources/cloudify/types/types_1_3.yaml']
+    ),
 ]
 
 
