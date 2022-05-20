@@ -25,6 +25,16 @@ VISIBILITY_ENUM = postgresql.ENUM(VisibilityState.PRIVATE,
                                   name='visibility_states',
                                   create_type=False)
 
+config_table = sa.table(
+    'config',
+    sa.Column('name', sa.Text),
+    sa.Column('value', JSONString()),
+    sa.Column('schema', JSONString()),
+    sa.Column('is_editable', sa.Boolean),
+    sa.Column('updated_at', UTCDateTime()),
+    sa.Column('scope', sa.Text),
+)
+
 
 def upgrade():
     create_tokens()
@@ -33,6 +43,7 @@ def upgrade():
     add_manager_agent_name_columns()
     create_log_bundles()
     drop_old_monitoring_cred_fields()
+    add_config_log_fetch_credentials()
 
 
 def downgrade():
@@ -42,6 +53,42 @@ def downgrade():
     drop_manager_agent_name_columns()
     drop_log_bundles()
     create_old_monitoring_cred_fields()
+    drop_config_log_fetch_credentials()
+
+
+def add_config_log_fetch_credentials():
+    op.bulk_insert(
+        config_table,
+        [
+            {
+                'name': 'log_fetch_username',
+                'value': None,
+                'scope': 'rest',
+                'schema': None,
+                'is_editable': True,
+            },
+            {
+                'name': 'log_fetch_password',
+                'value': None,
+                'scope': 'rest',
+                'schema': None,
+                'is_editable': True,
+            },
+        ]
+    )
+
+
+def drop_config_log_fetch_credentials():
+    for key in ['log_fetch_username', 'log_fetch_password']:
+        op.execute(
+            config_table
+            .delete()
+            .where(
+                (config_table.c.name == op.inline_literal(
+                    key)) &  # NOQA
+                (config_table.c.scope == op.inline_literal('rest'))
+            )
+        )
 
 
 def drop_old_monitoring_cred_fields():
