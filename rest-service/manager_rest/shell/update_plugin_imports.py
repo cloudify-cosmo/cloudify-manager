@@ -19,7 +19,7 @@ import sys
 import typing
 from functools import lru_cache
 from os import chmod
-from os.path import basename, join
+from os.path import basename, exists, join
 from shutil import move
 
 import click
@@ -254,6 +254,24 @@ def spec_from_import(plugin_line: str) -> tuple:
     return name, None
 
 
+def spec_from_source(import_line):
+    if import_line.startswith('file://'):
+        import_line = import_line.replace('file://', '', 1)
+    if not exists(import_line):
+        return None, None
+    try:
+        with open(import_line, 'tr') as fh:
+            plugin = yaml.safe_load(fh)
+        plugins_dict = plugin.get('plugins')
+        if len(plugins_dict) != 1:
+            raise Exception('There should be exactly one `plugins` entry')
+        plugin_id, plugin_spec = plugins_dict.popitem()
+        return plugin_spec.get('package_name'), \
+            plugin_spec.get('package_version')
+    except Exception:
+        return None, None
+
+
 def plugin_spec(resolver: ResolverWithCatalogSupport,
                 import_line: str) -> tuple:
     if import_line.startswith('http://') or \
@@ -271,7 +289,13 @@ def plugin_spec(resolver: ResolverWithCatalogSupport,
             return IS_NOT_PINNED, IS_NOT_UNKNOWN, IMPORT_FROM_MANAGED, \
                    name, version
         return IS_PINNED, IS_NOT_UNKNOWN, IMPORT_FROM_MANAGED, name, version
-    return IS_NOT_PINNED, IS_UNKNOWN, IMPORT_FROM_SOURCE, None, None
+    # Try if the `import_line` points to a local file
+    name, version = spec_from_source(import_line)
+    if not name:
+        return IS_NOT_PINNED, IS_UNKNOWN, IMPORT_FROM_SOURCE, None, None
+    if not version:
+        return IS_NOT_PINNED, IS_NOT_UNKNOWN, IMPORT_FROM_SOURCE, name, None
+    return IS_PINNED, IS_NOT_UNKNOWN, IMPORT_FROM_SOURCE, name, version
 
 
 def plugins_in_a_plan(plan: Plan) -> collections.Iterable:
