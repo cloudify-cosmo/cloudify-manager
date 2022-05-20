@@ -23,6 +23,7 @@ def upgrade():
     upgrade_plugin_updates()
     drop_usagecollector_audit()
     add_manager_agent_name_columns()
+    create_log_bundles()
 
 
 def downgrade():
@@ -30,6 +31,50 @@ def downgrade():
     downgrade_plugin_updates()
     recreate_usagecollector_audit()
     drop_manager_agent_name_columns()
+    drop_log_bundles()
+
+
+def create_log_bundles():
+    op.create_table('log_bundles',
+        sa.Column('created_at', UTCDateTime(), nullable=False),
+        sa.Column('_storage_id', sa.Integer(), autoincrement=True,
+                  nullable=False),
+        sa.Column('id', sa.Text(), nullable=True),
+        sa.Column('visibility',
+                  sa.Enum('private', 'tenant', 'global',
+                          name='visibility_states'),
+                  nullable=True),
+        sa.Column('status',
+                  sa.Enum('created', 'failed', 'creating', 'uploaded',
+                          name='log_bundle_status'),
+                  nullable=True),
+        sa.Column('error', sa.Text(), nullable=True),
+        sa.Column('_tenant_id', sa.Integer(), nullable=False),
+        sa.Column('_creator_id', sa.Integer(), nullable=False),
+        sa.ForeignKeyConstraint(['_creator_id'], ['users.id'],
+                                name=op.f('log_bundles__creator_id_fkey'),
+                                ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(['_tenant_id'], ['tenants.id'],
+                                name=op.f('log_bundles__tenant_id_fkey'),
+                                ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint('_storage_id', name=op.f('log_bundles_pkey'))
+    )
+    op.create_index(op.f('log_bundles__creator_id_idx'), 'log_bundles',
+                    ['_creator_id'], unique=False)
+    op.create_index(op.f('log_bundles__tenant_id_idx'), 'log_bundles',
+                    ['_tenant_id'], unique=False)
+    op.create_index(op.f('log_bundles_created_at_idx'), 'log_bundles',
+                    ['created_at'], unique=False)
+    op.create_index('log_bundles_id__tenant_id_idx', 'log_bundles',
+                    ['id', '_tenant_id'], unique=True)
+    op.create_index(op.f('log_bundles_id_idx'), 'log_bundles',
+                    ['id'], unique=False)
+    op.create_index(op.f('log_bundles_visibility_idx'), 'log_bundles',
+                    ['visibility'], unique=False)
+
+
+def drop_log_bundles():
+    op.drop_table('log_bundles')
 
 
 def create_tokens():
