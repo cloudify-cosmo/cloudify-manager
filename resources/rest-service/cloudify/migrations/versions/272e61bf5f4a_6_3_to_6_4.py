@@ -35,7 +35,8 @@ def downgrade():
 
 
 def create_log_bundles():
-    op.create_table('log_bundles',
+    op.create_table(
+        'log_bundles',
         sa.Column('created_at', UTCDateTime(), nullable=False),
         sa.Column('_storage_id', sa.Integer(), autoincrement=True,
                   nullable=False),
