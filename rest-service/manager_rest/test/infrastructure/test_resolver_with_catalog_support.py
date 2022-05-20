@@ -13,6 +13,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import os
+
 from manager_rest.test.base_test import BaseServerTestCase
 from manager_rest.resolver_with_catalog_support import (
     ResolverWithCatalogSupport,
@@ -113,6 +115,76 @@ class TestPluginParseWithResolver(BaseServerTestCase):
             '')
         plugin_str = self.resolver.fetch_import(import_url)
         self.assertTrue('this_is_plugin_2' in plugin_str)
+
+    def test_single_plugin_yaml_compatibility(self):
+        self.upload_plugin_multiple_yamls(
+            TEST_PACKAGE_NAME,
+            TEST_PLUGIN_VERSION1,
+            package_yamls=['mock_blueprint/plugin.yaml'])
+        import_url = PLUGIN_IMPORT_FORMAT.format(TEST_PACKAGE_NAME, '')
+        plugin_str = self.resolver.fetch_import(import_url, '')
+        assert plugin_str
+        plugin_str = self.resolver.fetch_import(import_url, '1_3')
+        assert plugin_str
+        plugin_str = self.resolver.fetch_import(import_url, '1_4')
+        assert plugin_str
+
+    def test_fetches_proper_plugin_yaml(self):
+        self.upload_plugin_multiple_yamls(
+            TEST_PACKAGE_NAME,
+            TEST_PLUGIN_VERSION1,
+            package_yamls=['mock_blueprint/plugin.yaml',
+                           'mock_blueprint/plugin_1_3.yaml'])
+        import_url = PLUGIN_IMPORT_FORMAT.format(TEST_PACKAGE_NAME, '')
+        plugin_str = self.resolver.fetch_import(import_url, '1_3')
+        assert plugin_str
+        with self.assertRaisesRegex(InvalidPluginError, r'but found 2$'):
+            self.resolver.fetch_import(import_url)
+        with self.assertRaisesRegex(InvalidPluginError, r'but found 0$'):
+            self.resolver.fetch_import(import_url, '1_4')
+
+    def test_fetch_plugin_yaml_matching_dsl_version(self):
+        self.upload_plugin_multiple_yamls(
+            TEST_PACKAGE_NAME,
+            TEST_PLUGIN_VERSION1,
+            package_yamls=['mock_blueprint/plugin_1_3.yaml',
+                           'mock_blueprint/plugin_1_4.yaml'])
+        import_url = PLUGIN_IMPORT_FORMAT.format(TEST_PACKAGE_NAME, '')
+        with self.assertRaisesRegex(InvalidPluginError, r'but found 2$'):
+            self.resolver.fetch_import(import_url)
+        plugin_str = self.resolver.fetch_import(import_url, '1_3')
+        assert plugin_str.startswith('# this_is_plugin_1, DSL version 1_3')
+        plugin_str = self.resolver.fetch_import(import_url, '1_4')
+        assert plugin_str.startswith('# this_is_plugin_1, DSL version 1_4')
+
+    @classmethod
+    def upload_plugin_multiple_yamls(
+            cls,
+            package_name,
+            package_version,
+            package_yamls=None):
+        if package_yamls is None:
+            package_yamls = ['mock_blueprint/plugin.yaml']
+        wgn_path, yaml_paths = cls._create_wagon_and_yamls(
+            package_name,
+            package_version,
+            package_yamls
+        )
+        zip_path = cls.zip_files([wgn_path] + yaml_paths)
+        response = cls.post_file('/plugins', zip_path)
+        os.remove(wgn_path)
+        return response
+
+    @staticmethod
+    def _create_wagon_and_yamls(
+            package_name,
+            package_version,
+            package_yaml_files=['mock_blueprint/plugin.yaml']):
+        temp_file_path = BaseServerTestCase.create_wheel(package_name,
+                                                         package_version)
+        yaml_paths = [BaseServerTestCase.get_full_path(package_yaml_file)
+                      for package_yaml_file in package_yaml_files]
+        return temp_file_path, yaml_paths
 
 
 class TestBlueprintParseWithResolver(BaseServerTestCase):

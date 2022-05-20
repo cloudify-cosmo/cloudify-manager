@@ -14,7 +14,6 @@
 #  * limitations under the License.
 
 import os
-import glob
 from flask import current_app
 from packaging.specifiers import SpecifierSet, InvalidSpecifier
 from packaging.version import parse as parse_version
@@ -70,13 +69,13 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
     def _is_blueprint_url(import_url):
         return import_url.startswith(BLUEPRINT_PREFIX)
 
-    def fetch_import(self, import_url):
+    def fetch_import(self, import_url, dsl_version=None, **kwargs):
         if self.mappings:
             import_url = self._rewrite_from_mappings(import_url)
         if self._is_blueprint_url(import_url):
             return self._fetch_blueprint_import(import_url)
         elif self._is_plugin_url(import_url):
-            return self._fetch_plugin_import(import_url)
+            return self._fetch_plugin_import(import_url, dsl_version)
         return super(ResolverWithCatalogSupport, self).fetch_import(import_url)
 
     def _rewrite_from_mappings(self, import_url):
@@ -88,8 +87,8 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
                 )
         return import_url
 
-    def _fetch_plugin_import(self, import_url):
-        import_url = self._resolve_plugin_yaml_url(import_url)
+    def _fetch_plugin_import(self, import_url, dsl_version):
+        import_url = self._resolve_plugin_yaml_url(import_url, dsl_version)
         return super(ResolverWithCatalogSupport, self).fetch_import(import_url)
 
     @staticmethod
@@ -125,7 +124,7 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
                 version_constraints.get(name)
         return name, filters
 
-    def _resolve_plugin_yaml_url(self, import_url):
+    def _resolve_plugin_yaml_url(self, import_url, dsl_version):
         plugin_spec = import_url.replace(PLUGIN_PREFIX, '', 1).strip()
         name, plugin_filters = self._make_plugin_filters(
             plugin_spec, self.version_constraints, self.mappings)
@@ -134,7 +133,7 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
             current_app.logger.info('Plugin update: will use %s==%s',
                                     plugin.package_name,
                                     plugin.package_version)
-        return self._make_plugin_yaml_url(plugin)
+        return self._make_plugin_yaml_url(plugin, dsl_version)
 
     def _find_plugin(self, name, filters):
         def _get_specifier_set(package_versions):
@@ -194,13 +193,13 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
         max_item = max(matching_versions, key=lambda i_v: i_v[1])
         return plugins[max_item[0]]
 
-    @staticmethod
-    def _make_plugin_yaml_url(plugin):
+    def _make_plugin_yaml_url(self, plugin, dsl_version):
         plugin_path = os.path.join(
             config.instance.file_server_root,
             FILE_SERVER_PLUGINS_FOLDER,
             plugin.id)
-        yaml_files = glob.glob(os.path.join(plugin_path, '*.yaml'))
+        yaml_files = self._plugin_yamls_for_dsl_version(plugin_path,
+                                                        dsl_version)
         if len(yaml_files) != 1:
             raise InvalidPluginError(
                 'Plugin {0}: expected one yaml file, but found {1}'

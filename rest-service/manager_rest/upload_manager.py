@@ -754,10 +754,10 @@ class UploadedPluginsManager(UploadedDataManager):
     def _verify_archive(archive_path):
         wagons = files_in_folder(archive_path, '*.wgn')
         yamls = files_in_folder(archive_path, '*.yaml')
-        if len(wagons) != 1 or len(yamls) != 1:
+        if len(wagons) != 1 or len(yamls) < 1:
             raise RuntimeError("Archive must include one wgn file "
-                               "and one yaml file")
-        return wagons[0], yamls[0]
+                               "and at least one yaml file")
+        return wagons[0], yamls
 
     def _create_plugin_from_archive(self,
                                     plugin_id,
