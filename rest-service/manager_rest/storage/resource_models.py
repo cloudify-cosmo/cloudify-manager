@@ -1165,6 +1165,8 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             'update':
                 'cloudify_system_workflows.deployment_update.workflow.'
                 'update_deployment',
+            'create_log_bundle':
+                'cloudify_system_workflows.log_bundle.create',
         }.get(wf_id)
 
     def get_workflow(self, deployment=None, workflow_id=None):
