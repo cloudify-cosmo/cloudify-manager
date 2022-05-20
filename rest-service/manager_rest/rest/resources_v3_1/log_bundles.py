@@ -61,7 +61,7 @@ class LogBundlesId(SecuredResource):
         return get_storage_manager().get(
             models.LogBundle,
             log_bundle_id,
-            include=_include
+            include=_include,
         )
 
     @swagger.operation(
@@ -76,6 +76,7 @@ class LogBundlesId(SecuredResource):
     @rest_decorators.marshal_with(models.Execution)
     def put(self, log_bundle_id):
         rest_utils.validate_inputs({'log_bundle_id': log_bundle_id})
+        request_dict = rest_utils.get_json_and_verify_params()
         queue = rest_utils.verify_and_convert_bool(
             'queue',
             request_dict.get('queue', False)
