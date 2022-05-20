@@ -6,6 +6,7 @@ Create Date: 2022-03-03 13:41:24.954542
 
 """
 from manager_rest.storage.models_base import JSONString, UTCDateTime
+from cloudify.models_states import VisibilityState
 
 from alembic import op
 import sqlalchemy as sa
@@ -16,6 +17,12 @@ revision = '272e61bf5f4a'
 down_revision = '8e8314b1d848'
 branch_labels = None
 depends_on = None
+
+VISIBILITY_ENUM = postgresql.ENUM(VisibilityState.PRIVATE,
+                                  VisibilityState.TENANT,
+                                  VisibilityState.GLOBAL,
+                                  name='visibility_states',
+                                  create_type=False)
 
 
 def upgrade():
@@ -41,10 +48,7 @@ def create_log_bundles():
         sa.Column('_storage_id', sa.Integer(), autoincrement=True,
                   nullable=False),
         sa.Column('id', sa.Text(), nullable=True),
-        sa.Column('visibility',
-                  sa.Enum('private', 'tenant', 'global',
-                          name='visibility_states'),
-                  nullable=True),
+        sa.Column('visibility', VISIBILITY_ENUM, nullable=True),
         sa.Column('status',
                   sa.Enum('created', 'failed', 'creating', 'uploaded',
                           name='log_bundle_status'),
