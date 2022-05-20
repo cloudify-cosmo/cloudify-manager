@@ -19,7 +19,7 @@ import sys
 import typing
 from functools import lru_cache
 from os import chmod
-from os.path import basename, join
+from os.path import basename, exists, join
 from shutil import move
 
 import click
@@ -89,57 +89,58 @@ CLOUDIFY_PLUGINS: typing.Dict[
         str, typing.Union[typing.List[str], str, None]
     ]] = {
     'cloudify-aws-plugin': {
-        VERSIONS: sorted(['2.10.0', '2.9.2', '2.8.0', '2.6.0', '2.5.14',
+        VERSIONS: sorted(['3.0.5', '2.14.0', '2.13.0', '2.12.14', '2.11.1',
+                          '2.10.0', '2.9.2', '2.8.0', '2.6.0', '2.5.14',
                           '2.4.4', '2.3.5', '2.2.1', '2.1.0', '2.0.2',
                           '1.5.1.2'],
                          key=parse_version, reverse=True),
         EXACT_VERSION: None,
     },
     'cloudify-azure-plugin': {
-        VERSIONS: sorted(['3.4.1', '3.3.1', '3.2.1', '3.1.0', '3.0.11',
-                          '2.1.10', '2.0.0', '1.8.0', '1.7.3', '1.6.2',
-                          '1.5.1.1', '1.4.3'],
+        VERSIONS: sorted(['3.7.1', '3.6.1', '3.5.6', '3.4.1', '3.3.1', '3.2.1',
+                          '3.1.0', '3.0.11', '2.1.10', '2.0.0', '1.8.0',
+                          '1.7.3', '1.6.2', '1.5.1.1', '1.4.3'],
                          key=parse_version, reverse=True),
     },
     'cloudify-gcp-plugin': {
-        VERSIONS: sorted(['1.7.0', '1.6.9', '1.5.1', '1.4.5', '1.3.0.1',
-                          '1.2.0', '1.1.0', '1.0.1'],
+        VERSIONS: sorted(['1.8.1', '1.7.0', '1.6.9', '1.5.1', '1.4.5',
+                          '1.3.0.1', '1.2.0', '1.1.0', '1.0.1'],
                          key=parse_version, reverse=True),
     },
     'cloudify-openstack-plugin': {
-        VERSIONS: sorted(['3.3.1', '2.14.23', '3.2.21', '3.1.1', '3.0.0',
+        VERSIONS: sorted(['3.3.3', '2.14.24', '3.2.21', '3.1.1', '3.0.0',
                           '2.13.1', '2.12.0', '2.11.1', '2.10.0', '2.9.8',
                           '2.8.2', '2.7.6', '2.6.0', '2.5.3', '2.4.1.1',
                           '2.3.0', '2.2.0'],
                          key=parse_version, reverse=True),
     },
     'cloudify-vsphere-plugin': {
-        VERSIONS: sorted(['2.19.4', '2.18.13', '2.17.0', '2.16.2', '2.15.1',
+        VERSIONS: sorted(['2.19.10', '2.18.13', '2.17.0', '2.16.2', '2.15.1',
                           '2.14.0', '2.13.1', '2.12.0', '2.11.0', '2.10.0',
                           '2.9.3', '2.8.0', '2.7.0', '2.6.1', '2.5.0', '2.4.1',
                           '2.3.0', '2.2.2'],
                          key=parse_version, reverse=True),
     },
     'cloudify-terraform-plugin': {
-        VERSIONS: sorted(['0.16.1', '0.15.5', '0.14.4', '0.13.4', '0.12.0',
-                          '0.11.0', '0.10', '0.9', '0.7'],
+        VERSIONS: sorted(['0.18.17', '0.17.7', '0.16.5', '0.15.5', '0.14.4',
+                          '0.13.4', '0.12.0', '0.11.0', '0.10', '0.9', '0.7'],
                          key=parse_version, reverse=True),
     },
     'cloudify-ansible-plugin': {
-        VERSIONS: sorted(['2.12.0', '2.11.1', '2.10.1', '2.9.4', '2.8.2',
-                          '2.7.1', '2.6.0', '2.5.0', '2.4.0', '2.3.0', '2.2.0',
-                          '2.1.1', '2.0.4'],
+        VERSIONS: sorted(['2.13.7', '2.12.1', '2.11.1', '2.10.1', '2.9.4',
+                          '2.8.2', '2.7.1', '2.6.0', '2.5.0', '2.4.0', '2.3.0',
+                          '2.2.0', '2.1.1', '2.0.4'],
                          key=parse_version, reverse=True),
     },
     'cloudify-kubernetes-plugin': {
-        VERSIONS: sorted(['2.12.1', '2.11.2', '2.10.0', '2.9.4', '2.8.3',
-                          '2.7.2', '2.6.5', '2.5.0', '2.4.1', '2.3.2', '2.2.2',
-                          '2.1.0', '2.0.0.1', '1.4.0', '1.3.1.1', '1.2.2',
-                          '1.1.0', '1.0.0'],
+        VERSIONS: sorted(['2.13.9', '2.12.1', '2.11.2', '2.10.0', '2.9.4',
+                          '2.8.3', '2.7.2', '2.6.5', '2.5.0', '2.4.1', '2.3.2',
+                          '2.2.2', '2.1.0', '2.0.0.1', '1.4.0', '1.3.1.1',
+                          '1.2.2', '1.1.0', '1.0.0'],
                          key=parse_version, reverse=True),
     },
     'cloudify-docker-plugin': {
-        VERSIONS: sorted(['2.0.3', '1.3.2', '1.2', '1.1'],
+        VERSIONS: sorted(['2.0.5', '1.3.2', '1.2', '1.1'],
                          key=parse_version, reverse=True),
     },
     'cloudify-netconf-plugin': {
@@ -147,7 +148,7 @@ CLOUDIFY_PLUGINS: typing.Dict[
                          key=parse_version, reverse=True),
     },
     'cloudify-fabric-plugin': {
-        VERSIONS: sorted(['2.0.8', '1.7.0', '1.6.0', '1.5.3', '1.4.3',
+        VERSIONS: sorted(['2.0.13', '1.7.0', '1.6.0', '1.5.3', '1.4.3',
                           '1.3.1', '1.2.1', '1.1'],
                          key=parse_version, reverse=True),
         AT_LEAST: '2.0.6',
@@ -158,15 +159,16 @@ CLOUDIFY_PLUGINS: typing.Dict[
                          key=parse_version, reverse=True),
     },
     'cloudify-utilities-plugin': {
-        VERSIONS: sorted(['1.24.4', '1.23.12', '1.22.1', '1.21.0', '1.20.0',
-                          '1.19.0', '1.18.0', '1.17.0', '1.16.1', '1.15.3',
-                          '1.14.0', '1.13.0', '1.12.5', '1.11.2', '1.10.2',
-                          '1.9.8', '1.8.3', '1.7.3', '1.6.1', '1.5.4', '1.4.5',
-                          '1.3.1', '1.2.5', '1.1.1', '1.0.0'],
+        VERSIONS: sorted(['1.25.7', '1.24.4', '1.23.12', '1.22.1', '1.21.0',
+                          '1.20.0', '1.19.0', '1.18.0', '1.17.0', '1.16.1',
+                          '1.15.3', '1.14.0', '1.13.0', '1.12.5', '1.11.2',
+                          '1.10.2', '1.9.8', '1.8.3', '1.7.3', '1.6.1',
+                          '1.5.4', '1.4.5', '1.3.1', '1.2.5', '1.1.1',
+                          '1.0.0'],
                          key=parse_version, reverse=True),
     },
     'cloudify-host-pool-plugin': {
-        VERSIONS: sorted(['1.5.2', '1.4', '1.2', ],
+        VERSIONS: sorted(['1.5.3', '1.4', '1.2', ],
                          key=parse_version, reverse=True),
     },
     'cloudify-diamond-plugin': {
@@ -182,7 +184,7 @@ CLOUDIFY_PLUGINS: typing.Dict[
                          key=parse_version, reverse=True),
     },
     'cloudify-helm-plugin': {
-        VERSIONS: sorted(['0.2.0', '0.1.1', '0.0.8'],
+        VERSIONS: sorted(['0.2.7', '0.1.1', '0.0.8'],
                          key=parse_version, reverse=True),
     },
 }
@@ -252,6 +254,24 @@ def spec_from_import(plugin_line: str) -> tuple:
     return name, None
 
 
+def spec_from_source(import_line):
+    if import_line.startswith('file://'):
+        import_line = import_line.replace('file://', '', 1)
+    if not exists(import_line):
+        return None, None
+    try:
+        with open(import_line, 'tr') as fh:
+            plugin = yaml.safe_load(fh)
+        plugins_dict = plugin.get('plugins')
+        if len(plugins_dict) != 1:
+            raise Exception('There should be exactly one `plugins` entry')
+        plugin_id, plugin_spec = plugins_dict.popitem()
+        return plugin_spec.get('package_name'), \
+            plugin_spec.get('package_version')
+    except Exception:
+        return None, None
+
+
 def plugin_spec(resolver: ResolverWithCatalogSupport,
                 import_line: str) -> tuple:
     if import_line.startswith('http://') or \
@@ -269,7 +289,13 @@ def plugin_spec(resolver: ResolverWithCatalogSupport,
             return IS_NOT_PINNED, IS_NOT_UNKNOWN, IMPORT_FROM_MANAGED, \
                    name, version
         return IS_PINNED, IS_NOT_UNKNOWN, IMPORT_FROM_MANAGED, name, version
-    return IS_NOT_PINNED, IS_UNKNOWN, IMPORT_FROM_SOURCE, None, None
+    # Try if the `import_line` points to a local file
+    name, version = spec_from_source(import_line)
+    if not name:
+        return IS_NOT_PINNED, IS_UNKNOWN, IMPORT_FROM_SOURCE, None, None
+    if not version:
+        return IS_NOT_PINNED, IS_NOT_UNKNOWN, IMPORT_FROM_SOURCE, name, None
+    return IS_PINNED, IS_NOT_UNKNOWN, IMPORT_FROM_SOURCE, name, version
 
 
 def plugins_in_a_plan(plan: Plan) -> collections.Iterable:
