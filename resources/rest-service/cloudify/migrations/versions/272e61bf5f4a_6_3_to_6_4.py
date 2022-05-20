@@ -6,6 +6,8 @@ Create Date: 2022-03-03 13:41:24.954542
 
 """
 from manager_rest.storage.models_base import JSONString, UTCDateTime
+from cloudify.models_states import VisibilityState
+from sqlalchemy.dialects import postgresql
 
 from alembic import op
 import sqlalchemy as sa
@@ -17,12 +19,31 @@ down_revision = '8e8314b1d848'
 branch_labels = None
 depends_on = None
 
+VISIBILITY_ENUM = postgresql.ENUM(VisibilityState.PRIVATE,
+                                  VisibilityState.TENANT,
+                                  VisibilityState.GLOBAL,
+                                  name='visibility_states',
+                                  create_type=False)
+
+config_table = sa.table(
+    'config',
+    sa.Column('name', sa.Text),
+    sa.Column('value', JSONString()),
+    sa.Column('schema', JSONString()),
+    sa.Column('is_editable', sa.Boolean),
+    sa.Column('updated_at', UTCDateTime()),
+    sa.Column('scope', sa.Text),
+)
+
 
 def upgrade():
     create_tokens()
     upgrade_plugin_updates()
     drop_usagecollector_audit()
     add_manager_agent_name_columns()
+    create_log_bundles()
+    drop_old_monitoring_cred_fields()
+    add_config_log_fetch_credentials()
 
 
 def downgrade():
@@ -30,6 +51,115 @@ def downgrade():
     downgrade_plugin_updates()
     recreate_usagecollector_audit()
     drop_manager_agent_name_columns()
+    drop_log_bundles()
+    create_old_monitoring_cred_fields()
+    drop_config_log_fetch_credentials()
+
+
+def add_config_log_fetch_credentials():
+    op.bulk_insert(
+        config_table,
+        [
+            {
+                'name': 'log_fetch_username',
+                'value': None,
+                'scope': 'rest',
+                'schema': None,
+                'is_editable': True,
+            },
+            {
+                'name': 'log_fetch_password',
+                'value': None,
+                'scope': 'rest',
+                'schema': None,
+                'is_editable': True,
+            },
+        ]
+    )
+
+
+def drop_config_log_fetch_credentials():
+    for key in ['log_fetch_username', 'log_fetch_password']:
+        op.execute(
+            config_table
+            .delete()
+            .where(
+                (config_table.c.name == op.inline_literal(
+                    key)) &  # NOQA
+                (config_table.c.scope == op.inline_literal('rest'))
+            )
+        )
+
+
+def drop_old_monitoring_cred_fields():
+    op.drop_column('db_nodes', 'monitoring_username')
+    op.drop_column('db_nodes', 'monitoring_password')
+    op.drop_column('managers', 'monitoring_password')
+    op.drop_column('managers', 'monitoring_username')
+    op.drop_column('rabbitmq_brokers', 'monitoring_password')
+    op.drop_column('rabbitmq_brokers', 'monitoring_username')
+
+
+def create_old_monitoring_cred_fields():
+    op.add_column('rabbitmq_brokers',
+                  sa.Column('monitoring_username', sa.TEXT(),
+                            autoincrement=False, nullable=True))
+    op.add_column('rabbitmq_brokers',
+                  sa.Column('monitoring_password', sa.TEXT(),
+                            autoincrement=False, nullable=True))
+    op.add_column('managers',
+                  sa.Column('monitoring_username', sa.TEXT(),
+                            autoincrement=False, nullable=True))
+    op.add_column('managers',
+                  sa.Column('monitoring_password', sa.TEXT(),
+                            autoincrement=False, nullable=True))
+    op.add_column('db_nodes',
+                  sa.Column('monitoring_password', sa.TEXT(),
+                            autoincrement=False, nullable=True))
+    op.add_column('db_nodes',
+                  sa.Column('monitoring_username', sa.TEXT(),
+                            autoincrement=False, nullable=True))
+
+
+def create_log_bundles():
+    op.create_table(
+        'log_bundles',
+        sa.Column('created_at', UTCDateTime(), nullable=False),
+        sa.Column('_storage_id', sa.Integer(), autoincrement=True,
+                  nullable=False),
+        sa.Column('id', sa.Text(), nullable=True),
+        sa.Column('visibility', VISIBILITY_ENUM, nullable=True),
+        sa.Column('status',
+                  sa.Enum('created', 'failed', 'creating', 'uploaded',
+                          name='log_bundle_status'),
+                  nullable=True),
+        sa.Column('error', sa.Text(), nullable=True),
+        sa.Column('_tenant_id', sa.Integer(), nullable=False),
+        sa.Column('_creator_id', sa.Integer(), nullable=False),
+        sa.ForeignKeyConstraint(['_creator_id'], ['users.id'],
+                                name=op.f('log_bundles__creator_id_fkey'),
+                                ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(['_tenant_id'], ['tenants.id'],
+                                name=op.f('log_bundles__tenant_id_fkey'),
+                                ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint('_storage_id', name=op.f('log_bundles_pkey'))
+    )
+    op.create_index(op.f('log_bundles__creator_id_idx'), 'log_bundles',
+                    ['_creator_id'], unique=False)
+    op.create_index(op.f('log_bundles__tenant_id_idx'), 'log_bundles',
+                    ['_tenant_id'], unique=False)
+    op.create_index(op.f('log_bundles_created_at_idx'), 'log_bundles',
+                    ['created_at'], unique=False)
+    op.create_index('log_bundles_id__tenant_id_idx', 'log_bundles',
+                    ['id', '_tenant_id'], unique=True)
+    op.create_index(op.f('log_bundles_id_idx'), 'log_bundles',
+                    ['id'], unique=False)
+    op.create_index(op.f('log_bundles_visibility_idx'), 'log_bundles',
+                    ['visibility'], unique=False)
+
+
+def drop_log_bundles():
+    op.drop_table('log_bundles')
 
 
 def create_tokens():

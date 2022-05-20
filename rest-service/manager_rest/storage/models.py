@@ -46,6 +46,7 @@ from .resource_models import (
     Execution,
     Event,
     Log,
+    LogBundle,
     DeploymentModification,
     DeploymentUpdate,
     DeploymentModificationState,

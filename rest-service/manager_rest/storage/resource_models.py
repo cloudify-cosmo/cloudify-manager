@@ -19,6 +19,7 @@ from sqlalchemy.sql.schema import CheckConstraint
 
 from cloudify.constants import MGMTWORKER_QUEUE
 from cloudify.models_states import (AgentState,
+                                    LogBundleState,
                                     SnapshotState,
                                     ExecutionState,
                                     VisibilityState,
@@ -144,6 +145,21 @@ class Snapshot(CreatedAtMixin, SQLResourceBase):
     )
 
     status = db.Column(db.Enum(*SnapshotState.STATES, name='snapshot_status'))
+    error = db.Column(db.Text)
+
+
+class LogBundle(CreatedAtMixin, SQLResourceBase):
+    __tablename__ = 'log_bundles'
+    __table_args__ = (
+        db.Index(
+            'log_bundles_id__tenant_id_idx',
+            'id', '_tenant_id',
+            unique=True
+        ),
+    )
+
+    status = db.Column(db.Enum(*LogBundleState.STATES,
+                               name='log_bundle_status'))
     error = db.Column(db.Text)
 
 
@@ -1149,6 +1165,8 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             'update':
                 'cloudify_system_workflows.deployment_update.workflow.'
                 'update_deployment',
+            'create_log_bundle':
+                'cloudify_system_workflows.log_bundle.create',
         }.get(wf_id)
 
     def get_workflow(self, deployment=None, workflow_id=None):

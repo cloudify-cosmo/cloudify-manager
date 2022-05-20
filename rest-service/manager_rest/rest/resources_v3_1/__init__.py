@@ -14,6 +14,11 @@ from .execution_schedules import (               # NOQA
     ExecutionSchedulesId,
 )
 
+from .log_bundles import (                       # NOQA
+    LogBundles,
+    LogBundlesId,
+)
+
 from .manager import (                           # NOQA
     Managers,
     ManagersId,
