@@ -7,6 +7,7 @@ Create Date: 2022-03-03 13:41:24.954542
 """
 from manager_rest.storage.models_base import JSONString, UTCDateTime
 from cloudify.models_states import VisibilityState
+from sqlalchemy.dialects import postgresql
 
 from alembic import op
 import sqlalchemy as sa
