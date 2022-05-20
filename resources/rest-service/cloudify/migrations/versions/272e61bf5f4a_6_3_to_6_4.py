@@ -101,12 +101,24 @@ def drop_old_monitoring_cred_fields():
 
 
 def create_old_monitoring_cred_fields():
-    op.add_column('rabbitmq_brokers', sa.Column('monitoring_username', sa.TEXT(), autoincrement=False, nullable=True))
-    op.add_column('rabbitmq_brokers', sa.Column('monitoring_password', sa.TEXT(), autoincrement=False, nullable=True))
-    op.add_column('managers', sa.Column('monitoring_username', sa.TEXT(), autoincrement=False, nullable=True))
-    op.add_column('managers', sa.Column('monitoring_password', sa.TEXT(), autoincrement=False, nullable=True))
-    op.add_column('db_nodes', sa.Column('monitoring_password', sa.TEXT(), autoincrement=False, nullable=True))
-    op.add_column('db_nodes', sa.Column('monitoring_username', sa.TEXT(), autoincrement=False, nullable=True))
+    op.add_column('rabbitmq_brokers',
+                  sa.Column('monitoring_username', sa.TEXT(),
+                            autoincrement=False, nullable=True))
+    op.add_column('rabbitmq_brokers',
+                  sa.Column('monitoring_password', sa.TEXT(),
+                            autoincrement=False, nullable=True))
+    op.add_column('managers',
+                  sa.Column('monitoring_username', sa.TEXT(),
+                            autoincrement=False, nullable=True))
+    op.add_column('managers',
+                  sa.Column('monitoring_password', sa.TEXT(),
+                            autoincrement=False, nullable=True))
+    op.add_column('db_nodes',
+                  sa.Column('monitoring_password', sa.TEXT(),
+                            autoincrement=False, nullable=True))
+    op.add_column('db_nodes',
+                  sa.Column('monitoring_username', sa.TEXT(),
+                            autoincrement=False, nullable=True))
 
 
 def create_log_bundles():
