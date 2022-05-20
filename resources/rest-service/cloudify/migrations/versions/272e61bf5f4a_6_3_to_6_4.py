@@ -32,6 +32,7 @@ def upgrade():
     drop_usagecollector_audit()
     add_manager_agent_name_columns()
     create_log_bundles()
+    drop_old_monitoring_cred_fields()
 
 
 def downgrade():
@@ -40,6 +41,25 @@ def downgrade():
     recreate_usagecollector_audit()
     drop_manager_agent_name_columns()
     drop_log_bundles()
+    create_old_monitoring_cred_fields()
+
+
+def drop_old_monitoring_cred_fields():
+    op.drop_column('db_nodes', 'monitoring_username')
+    op.drop_column('db_nodes', 'monitoring_password')
+    op.drop_column('managers', 'monitoring_password')
+    op.drop_column('managers', 'monitoring_username')
+    op.drop_column('rabbitmq_brokers', 'monitoring_password')
+    op.drop_column('rabbitmq_brokers', 'monitoring_username')
+
+
+def create_old_monitoring_cred_fields():
+    op.add_column('rabbitmq_brokers', sa.Column('monitoring_username', sa.TEXT(), autoincrement=False, nullable=True))
+    op.add_column('rabbitmq_brokers', sa.Column('monitoring_password', sa.TEXT(), autoincrement=False, nullable=True))
+    op.add_column('managers', sa.Column('monitoring_username', sa.TEXT(), autoincrement=False, nullable=True))
+    op.add_column('managers', sa.Column('monitoring_password', sa.TEXT(), autoincrement=False, nullable=True))
+    op.add_column('db_nodes', sa.Column('monitoring_password', sa.TEXT(), autoincrement=False, nullable=True))
+    op.add_column('db_nodes', sa.Column('monitoring_username', sa.TEXT(), autoincrement=False, nullable=True))
 
 
 def create_log_bundles():
