@@ -61,13 +61,13 @@ class TestDeploymentUpdates(base_test.BaseServerTestCase):
         steps_to_create = [
             {
                 'action': 'add',
-                'entity_id': 'a',
+                'entity_id': ['a'],
                 'entity_type': 'node',
                 'topology_order': 0,
             },
             {
                 'action': 'remove',
-                'entity_id': 'b',
+                'entity_id': ['b'],
                 'entity_type': 'relationship',
                 'topology_order': 1,
             }
