@@ -275,7 +275,7 @@ def _diff_node(node_name, new_node, old_node):
             yield DeploymentUpdateStep(
                 action='add',
                 entity_type=RELATIONSHIP,
-                entity_id=entity_id_base.append(rel_index),
+                entity_id=entity_id_base + [rel_index],
             )
             continue
 
@@ -283,7 +283,7 @@ def _diff_node(node_name, new_node, old_node):
             yield DeploymentUpdateStep(
                 action='modify',
                 entity_type=RELATIONSHIP,
-                entity_id=entity_id_base.extend([old_rel_index, rel_index]),
+                entity_id=entity_id_base + [old_rel_index, rel_index],
             )
 
         for op_type in [SOURCE_OPERATIONS, TARGET_OPERATIONS]:
@@ -292,7 +292,7 @@ def _diff_node(node_name, new_node, old_node):
                 yield DeploymentUpdateStep(
                     action=action,
                     entity_type=OPERATION,
-                    entity_id=entity_id_base.extend([rel_index, op_type, key]),
+                    entity_id=entity_id_base + [rel_index, op_type, key],
                 )
         for action, key in _diff_dicts(
                 relationship.get(PROPERTIES),
@@ -301,7 +301,7 @@ def _diff_node(node_name, new_node, old_node):
             yield DeploymentUpdateStep(
                 action=action,
                 entity_type=PROPERTY,
-                entity_id=entity_id_base.extend([rel_index, PROPERTIES, key]),
+                entity_id=entity_id_base + [rel_index, PROPERTIES, key],
                 supported=False,
             )
 
@@ -320,7 +320,7 @@ def _diff_node(node_name, new_node, old_node):
             yield DeploymentUpdateStep(
                 action='remove',
                 entity_type=RELATIONSHIP,
-                entity_id=entity_id_base.apend(rel_index),
+                entity_id=entity_id_base + [rel_index],
             )
 
     for action, key in _diff_dicts(new_node[PROPERTIES], old_node[PROPERTIES]):

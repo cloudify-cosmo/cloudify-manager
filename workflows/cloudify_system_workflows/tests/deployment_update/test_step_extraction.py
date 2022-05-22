@@ -67,7 +67,7 @@ class StepExtractorTestCase(unittest.TestCase):
     def test_entity_name(self):
         step = DeploymentUpdateStep(action='add',
                                     entity_type=NODE,
-                                    entity_id='nodes:node1')
+                                    entity_id=['nodes', 'node1'])
         self.assertEqual('node1', step.entity_name)
 
     def test_update_topology_order_of_add_node_steps(self):
@@ -75,27 +75,27 @@ class StepExtractorTestCase(unittest.TestCase):
         add_node_a_step = DeploymentUpdateStep(
             action='add',
             entity_type=NODE,
-            entity_id='nodes:node_a')
+            entity_id=['nodes', 'node_a'])
         add_node_b_step = DeploymentUpdateStep(
             action='add',
             entity_type=NODE,
-            entity_id='nodes:node_b')
+            entity_id=['nodes', 'node_b'])
         add_node_c_step = DeploymentUpdateStep(
             action='add',
             entity_type=NODE,
-            entity_id='nodes:node_c')
+            entity_id=['nodes', 'node_c'])
         add_node_d_step = DeploymentUpdateStep(
             action='add',
             entity_type=NODE,
-            entity_id='nodes:node_d')
+            entity_id=['nodes', 'node_d'])
         add_node_e_step = DeploymentUpdateStep(
             action='add',
             entity_type=NODE,
-            entity_id='nodes:node_e')
+            entity_id=['nodes', 'node_e'])
         add_node_f_step = DeploymentUpdateStep(
             action='add',
             entity_type=NODE,
-            entity_id='nodes:node_f')
+            entity_id=['nodes', 'node_f'])
         steps = [add_node_a_step, add_node_b_step, add_node_c_step,
                  add_node_d_step, add_node_e_step, add_node_f_step]
 
@@ -139,11 +139,15 @@ class StepExtractorTestCase(unittest.TestCase):
             self._get_node_scheme('node_f'),
         ]
         steps, _ = extract_steps([], self.deployment, self.deployment_plan)
-        order_by_id = {s.entity_id: s.topology_order for s in steps}
-        assert order_by_id['nodes:node_c'] > order_by_id['nodes:node_a']
-        assert order_by_id['nodes:node_c'] > order_by_id['nodes:node_b']
-        assert order_by_id['nodes:node_e'] > order_by_id['nodes:node_c']
-        assert order_by_id['nodes:node_e'] > order_by_id['nodes:node_d']
+        order_by_id = {tuple(s.entity_id): s.topology_order for s in steps}
+        assert order_by_id[('nodes', 'node_c')] > \
+               order_by_id[('nodes', 'node_a')]
+        assert order_by_id[('nodes', 'node_c')] > \
+               order_by_id[('nodes', 'node_b')]
+        assert order_by_id[('nodes', 'node_e')] > \
+               order_by_id[('nodes', 'node_c')]
+        assert order_by_id[('nodes', 'node_e')] > \
+               order_by_id[('nodes', 'node_d')]
 
     def test_description_no_change(self):
         self.deployment[DESCRIPTION] = 'description'
@@ -159,7 +163,7 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='modify',
                 entity_type=DESCRIPTION,
-                entity_id='description')
+                entity_id=['description'])
         ]
 
     def test_outputs_no_change(self):
@@ -175,7 +179,7 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='add',
                 entity_type=OUTPUT,
-                entity_id='outputs:output1')
+                entity_id=['outputs', 'output1'])
         ]
 
     def test_outputs_remove_output(self):
@@ -185,7 +189,7 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='remove',
                 entity_type=OUTPUT,
-                entity_id='outputs:output1')
+                entity_id=['outputs', 'output1'])
         ]
 
     def test_outputs_modify_output(self):
@@ -196,7 +200,7 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='modify',
                 entity_type=OUTPUT,
-                entity_id='outputs:output1')
+                entity_id=['outputs', 'output1'])
         ]
 
     def test_workflows_no_change(self):
@@ -222,7 +226,7 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='add',
                 entity_type=WORKFLOW,
-                entity_id='workflows:added_workflow')
+                entity_id=['workflows', 'added_workflow'])
         ]
 
     def test_workflows_add_workflow_script(self):
@@ -236,7 +240,7 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='add',
                 entity_type=WORKFLOW,
-                entity_id='workflows:new_workflow')
+                entity_id=['workflows', 'new_workflow'])
         ]
 
     def test_workflows_remove_workflow(self):
@@ -251,7 +255,7 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='remove',
                 entity_type=WORKFLOW,
-                entity_id='workflows:removed_workflow')
+                entity_id=['workflows', 'removed_workflow'])
         ]
 
     def test_workflows_modify_workflow_of_existing_plugin(self):
@@ -272,7 +276,7 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='modify',
                 entity_type=WORKFLOW,
-                entity_id='workflows:added_workflow')
+                entity_id=['workflows', 'added_workflow'])
         ]
 
     def test_nodes_no_change(self):
@@ -288,7 +292,7 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='add',
                 entity_type=NODE,
-                entity_id='nodes:node1')
+                entity_id=['nodes', 'node1'])
         ]
 
     def test_nodes_remove_node(self):
@@ -298,7 +302,7 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='remove',
                 entity_type=NODE,
-                entity_id='nodes:node1')
+                entity_id=['nodes', 'node1'])
         ]
 
     def test_nodes_add_and_remove_node_changed_type(self):
@@ -313,7 +317,7 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='modify',
                 entity_type=NODE,
-                entity_id='nodes:node1',
+                entity_id=['nodes', 'node1'],
                 supported=False),
         ]
 
@@ -329,7 +333,7 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='modify',
                 entity_type=NODE,
-                entity_id='nodes:node1',
+                entity_id=['nodes', 'node1'],
                 supported=False),
         ]
 
@@ -352,7 +356,7 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='add',
                 entity_type=PROPERTY,
-                entity_id='nodes:node1:properties:property1')
+                entity_id=['nodes', 'node1', 'properties', 'property1'])
         ]
 
     def test_node_properties_remove_property(self):
@@ -365,7 +369,7 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='remove',
                 entity_type=PROPERTY,
-                entity_id='nodes:node1:properties:property1')
+                entity_id=['nodes', 'node1', 'properties', 'property1'])
         ]
 
     def test_node_properties_modify_property(self):
@@ -379,7 +383,7 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='modify',
                 entity_type=PROPERTY,
-                entity_id='nodes:node1:properties:property1')
+                entity_id=['nodes', 'node1', 'properties', 'property1'])
         ]
 
     def test_node_operations_no_change(self):
@@ -407,7 +411,8 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='add',
                 entity_type=OPERATION,
-                entity_id='nodes:node1:operations:full.operation1.name')
+                entity_id=['nodes', 'node1', 'operations',
+                           'full.operation1.name'])
         ]
 
     def test_node_operations_remove_operation(self):
@@ -423,7 +428,8 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='remove',
                 entity_type=OPERATION,
-                entity_id='nodes:node1:operations:full.operation1.name')
+                entity_id=['nodes', 'node1', 'operations',
+                           'full.operation1.name'])
         ]
 
     def test_node_operations_modify_operation(self):
@@ -443,7 +449,8 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='modify',
                 entity_type=OPERATION,
-                entity_id='nodes:node1:operations:full.operation1.name')
+                entity_id=['nodes', 'node1', 'operations',
+                           'full.operation1.name'])
         ]
 
     def test_relationships_no_change(self):
@@ -474,7 +481,7 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='add',
                 entity_type=RELATIONSHIP,
-                entity_id='nodes:node1:relationships:[0]')
+                entity_id=['nodes', 'node1', 'relationships', 0])
         ]
 
     def test_relationships_remove_relationship(self):
@@ -492,7 +499,7 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='remove',
                 entity_type=RELATIONSHIP,
-                entity_id='nodes:node1:relationships:[0]')
+                entity_id=['nodes', 'node1', 'relationships', 0])
         ]
 
     def test_relationships_change_type(self):
@@ -517,11 +524,11 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='remove',
                 entity_type=RELATIONSHIP,
-                entity_id='nodes:node1:relationships:[0]'),
+                entity_id=['nodes', 'node1', 'relationships', 0]),
             DeploymentUpdateStep(
                 action='add',
                 entity_type=RELATIONSHIP,
-                entity_id='nodes:node1:relationships:[0]')
+                entity_id=['nodes', 'node1', 'relationships', 0])
         ]
 
     def test_relationships_change_target_non_contained_in(self):
@@ -545,11 +552,11 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='remove',
                 entity_type=RELATIONSHIP,
-                entity_id='nodes:node1:relationships:[0]'),
+                entity_id=['nodes', 'node1', 'relationships', 0]),
             DeploymentUpdateStep(
                 action='add',
                 entity_type=RELATIONSHIP,
-                entity_id='nodes:node1:relationships:[0]')
+                entity_id=['nodes', 'node1', 'relationships', 0])
         ]
 
     def test_relationships_change_target_contained_in(self):
@@ -575,7 +582,7 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='modify',
                 entity_type=NODE,
-                entity_id='nodes:node1',
+                entity_id=['nodes', 'node1'],
                 supported=False),
         ]
 
@@ -600,11 +607,11 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='remove',
                 entity_type=RELATIONSHIP,
-                entity_id='nodes:node1:relationships:[0]'),
+                entity_id=['nodes', 'node1', 'relationships', 0]),
             DeploymentUpdateStep(
                 action='add',
                 entity_type=RELATIONSHIP,
-                entity_id='nodes:node1:relationships:[0]')
+                entity_id=['nodes', 'node1', 'relationships', 0])
         ]
 
     def test_relationships_modify_order(self):
@@ -643,15 +650,15 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='modify',
                 entity_type=RELATIONSHIP,
-                entity_id='nodes:node1:relationships:[0]:[3]'),
+                entity_id=['nodes', 'node1', 'relationships', 0, 3]),
             DeploymentUpdateStep(
                 action='modify',
                 entity_type=RELATIONSHIP,
-                entity_id='nodes:node1:relationships:[1]:[0]'),
+                entity_id=['nodes', 'node1', 'relationships', 1, 0]),
             DeploymentUpdateStep(
                 action='modify',
                 entity_type=RELATIONSHIP,
-                entity_id='nodes:node1:relationships:[3]:[1]')
+                entity_id=['nodes', 'node1', 'relationships', 3, 1])
         }
 
     def test_relationships_modify_order_with_add_and_remove(self):
@@ -688,19 +695,19 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='modify',
                 entity_type=RELATIONSHIP,
-                entity_id='nodes:node1:relationships:[0]:[3]'),
+                entity_id=['nodes', 'node1', 'relationships', 0, 3]),
             DeploymentUpdateStep(
                 action='remove',
                 entity_type=RELATIONSHIP,
-                entity_id='nodes:node1:relationships:[2]'),
+                entity_id=['nodes', 'node1', 'relationships', 2]),
             DeploymentUpdateStep(
                 action='add',
                 entity_type=RELATIONSHIP,
-                entity_id='nodes:node1:relationships:[2]'),
+                entity_id=['nodes', 'node1', 'relationships', 2]),
             DeploymentUpdateStep(
                 action='add',
                 entity_type=RELATIONSHIP,
-                entity_id='nodes:node1:relationships:[0]')
+                entity_id=['nodes', 'node1', 'relationships', 0])
         }
 
     def test_relationships_add_source_operation(self):
@@ -727,8 +734,8 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='add',
                 entity_type=OPERATION,
-                entity_id='nodes:node1:relationships:[0]:'
-                          'source_operations:full.operation1')
+                entity_id=['nodes', 'node1', 'relationships', 0,
+                           'source_operations', 'full.operation1'])
         ]
 
     def test_relationships_remove_source_operation(self):
@@ -755,8 +762,8 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='remove',
                 entity_type=OPERATION,
-                entity_id='nodes:node1:relationships:[0]:'
-                          'source_operations:full.operation1')
+                entity_id=['nodes', 'node1', 'relationships', 0,
+                           'source_operations', 'full.operation1'])
         ]
 
     def test_duplicate_relationship(self):
@@ -805,8 +812,8 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='modify',
                 entity_type=OPERATION,
-                entity_id='nodes:node1:relationships:[0]:'
-                          'source_operations:full.operation1')
+                entity_id=['nodes', 'node1', 'relationships', 0,
+                           'source_operations', 'full.operation1'])
         ]
 
     def test_relationships_add_target_operation(self):
@@ -833,8 +840,8 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='add',
                 entity_type=OPERATION,
-                entity_id='nodes:node1:relationships:[0]:'
-                          'target_operations:full.operation1')
+                entity_id=['nodes', 'node1', 'relationships', 0,
+                           'target_operations', 'full.operation1'])
         ]
 
     def test_relationships_remove_target_operation(self):
@@ -861,8 +868,8 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='remove',
                 entity_type=OPERATION,
-                entity_id='nodes:node1:relationships:[0]:'
-                          'target_operations:full.operation1')
+                entity_id=['nodes', 'node1', 'relationships', 0,
+                           'target_operations', 'full.operation1'])
         ]
 
     def test_relationships_modify_target_operation(self):
@@ -897,8 +904,8 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='modify',
                 entity_type=OPERATION,
-                entity_id='nodes:node1:relationships:[0]:'
-                          'target_operations:full.operation1')
+                entity_id=['nodes', 'node1', 'relationships', 0,
+                           'target_operations', 'full.operation1'])
         ]
 
     def test_get_matching_relationship(self):
@@ -1082,8 +1089,8 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='add',
                 entity_type=PROPERTY,
-                entity_id='nodes:node1:relationships:[0]:'
-                          'properties:property1',
+                entity_id=['nodes', 'node1', 'relationships', 0,
+                           'properties', 'property1'],
                 supported=False)
         ]
 
@@ -1114,8 +1121,8 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='remove',
                 entity_type=PROPERTY,
-                entity_id='nodes:node1:relationships:[0]:'
-                          'properties:property1',
+                entity_id=['nodes', 'node1', 'relationships', 0,
+                           'properties', 'property1'],
                 supported=False)
         ]
 
@@ -1148,8 +1155,8 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='modify',
                 entity_type=PROPERTY,
-                entity_id='nodes:node1:relationships:[0]:'
-                          'properties:property1',
+                entity_id=['nodes', 'node1', 'relationships', 0,
+                           'properties', 'property1'],
                 supported=False)
         ]
 
@@ -1174,7 +1181,7 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='add',
                 entity_type=POLICY_TYPE,
-                entity_id='policy_types:policy_type1',
+                entity_id=['policy_types', 'policy_type1'],
                 supported=False)
         ]
 
@@ -1186,7 +1193,7 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='remove',
                 entity_type=POLICY_TYPE,
-                entity_id='policy_types:policy_type1',
+                entity_id=['policy_types', 'policy_type1'],
                 supported=False)
         ]
 
@@ -1202,7 +1209,7 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='modify',
                 entity_type=POLICY_TYPE,
-                entity_id='policy_types:policy_type1',
+                entity_id=['policy_types', 'policy_type1'],
                 supported=False)
         ]
 
@@ -1227,7 +1234,7 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='add',
                 entity_type=POLICY_TRIGGER,
-                entity_id='policy_triggers:policy_trigger1',
+                entity_id=['policy_triggers', 'policy_trigger1'],
                 supported=False)
         ]
 
@@ -1241,7 +1248,7 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='remove',
                 entity_type=POLICY_TRIGGER,
-                entity_id='policy_triggers:policy_trigger1',
+                entity_id=['policy_triggers', 'policy_trigger1'],
                 supported=False)
         ]
 
@@ -1259,7 +1266,7 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='modify',
                 entity_type=POLICY_TRIGGER,
-                entity_id='policy_triggers:policy_trigger1',
+                entity_id=['policy_triggers', 'policy_trigger1'],
                 supported=False)
         ]
 
@@ -1280,7 +1287,7 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='add',
                 entity_type=GROUP,
-                entity_id='groups:group1',
+                entity_id=['groups', 'group1'],
                 supported=False)
         ]
 
@@ -1292,7 +1299,7 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='remove',
                 entity_type=GROUP,
-                entity_id='groups:group1',
+                entity_id=['groups', 'group1'],
                 supported=False)
         ]
 
@@ -1305,7 +1312,7 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='modify',
                 entity_type=GROUP,
-                entity_id='groups:group1',
+                entity_id=['groups', 'group1'],
                 supported=False)
         ]
 
@@ -1335,7 +1342,7 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='add',
                 entity_type=PLUGIN,
-                entity_id='plugins_to_install:node1:new'
+                entity_id=['plugins_to_install', 'node1', 'new']
             )
         ]
 
@@ -1353,7 +1360,7 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='add',
                 entity_type=PLUGIN,
-                entity_id='plugins_to_install:node1:new',
+                entity_id=['plugins_to_install', 'node1', 'new'],
                 supported=True)
         ]
 
@@ -1383,7 +1390,7 @@ class StepExtractorTestCase(unittest.TestCase):
             DeploymentUpdateStep(
                 action='modify',
                 entity_type=PLUGIN,
-                entity_id='plugins_to_install:node1:name',
+                entity_id=['plugins_to_install', 'node1', 'name'],
                 supported=True)
         ]
 
@@ -1414,298 +1421,302 @@ class StepExtractorTestCase(unittest.TestCase):
             'modify_description': DeploymentUpdateStep(
                 'modify',
                 DESCRIPTION,
-                'description'),
+                ['description']),
 
             'remove_node': DeploymentUpdateStep(
                 'remove',
                 NODE,
-                'nodes:node1'),
+                ['nodes', 'node1']),
 
             'add_node': DeploymentUpdateStep(
                 'add',
                 NODE,
-                'nodes:node2',
+                ['nodes', 'node2'],
                 topology_order=0),
 
             'modify_node_changed_type': DeploymentUpdateStep(
                 'modify',
                 NODE,
-                'nodes:node3',
+                ['nodes', 'node3'],
                 supported=False),
 
             'add_property': DeploymentUpdateStep(
                 'add',
                 PROPERTY,
-                'nodes:node4:properties:added_prop'),
+                ['nodes', 'node4', 'properties', 'added_prop']),
 
             'remove_property': DeploymentUpdateStep(
                 'remove',
                 PROPERTY,
-                'nodes:node4:properties:removed_prop'),
+                ['nodes', 'node4', 'properties', 'removed_prop']),
 
             'modify_property': DeploymentUpdateStep(
                 'modify',
                 PROPERTY,
-                'nodes:node4:properties:modified_prop'),
+                ['nodes', 'node4', 'properties', 'modified_prop']),
 
             'remove_relationship': DeploymentUpdateStep(
                 'remove',
                 RELATIONSHIP,
-                'nodes:node6:relationships:[0]'),
+                ['nodes', 'node6', 'relationships', 0]),
 
             'add_relationship': DeploymentUpdateStep(
                 'add',
                 RELATIONSHIP,
-                'nodes:node7:relationships:[0]'),
+                ['nodes', 'node7', 'relationships', 0]),
 
             'remove_relationship_changed_target': DeploymentUpdateStep(
                 'remove',
                 RELATIONSHIP,
-                'nodes:node9:relationships:[0]'),
+                ['nodes', 'node9', 'relationships', 0]),
 
             'add_relationship_changed_target': DeploymentUpdateStep(
                 'add',
                 RELATIONSHIP,
-                'nodes:node9:relationships:[0]'),
+                ['nodes', 'node9', 'relationships', 0]),
 
             'remove_relationship_changed_type_and_target':
                 DeploymentUpdateStep(
                     'remove',
                     RELATIONSHIP,
-                    'nodes:node10:relationships:[0]'),
+                    ['nodes', 'node10', 'relationships', 0]),
 
             'add_relationship_changed_type_and_target':
                 DeploymentUpdateStep(
                     'add',
                     RELATIONSHIP,
-                    'nodes:node10:relationships:[0]'),
+                    ['nodes', 'node10', 'relationships', 0]),
 
             'add_operation': DeploymentUpdateStep(
                 'add',
                 OPERATION,
-                'nodes:node11:operations:interface1.added_operation'),
+                ['nodes', 'node11', 'operations',
+                 'interface1.added_operation']),
 
             'add_operation_shortened': DeploymentUpdateStep(
                 'add',
                 OPERATION,
-                'nodes:node11:operations:added_operation'),
+                ['nodes', 'node11', 'operations', 'added_operation']),
 
             'remove_operation': DeploymentUpdateStep(
                 'remove',
                 OPERATION,
-                'nodes:node11:operations:interface1.removed_operation'),
+                ['nodes', 'node11', 'operations',
+                 'interface1.removed_operation']),
 
             'remove_operation_shortened': DeploymentUpdateStep(
                 'remove',
                 OPERATION,
-                'nodes:node11:operations:removed_operation'),
+                ['nodes', 'node11', 'operations', 'removed_operation']),
 
             'modify_operation': DeploymentUpdateStep(
                 'modify',
                 OPERATION,
-                'nodes:node11:operations:interface1.modified_operation'),
+                ['nodes', 'node11', 'operations',
+                 'interface1.modified_operation']),
 
             'modify_operation_shortened': DeploymentUpdateStep(
                 'modify',
                 OPERATION,
-                'nodes:node11:operations:modified_operation'),
+                ['nodes', 'node11', 'operations', 'modified_operation']),
 
             'add_relationship_operation': DeploymentUpdateStep(
                 'add',
                 OPERATION,
-                'nodes:node12:relationships:[0]:target_operations:'
-                'interface_for_modified_and_added.added_operation'),
+                ['nodes', 'node12', 'relationships', 0, 'target_operations',
+                 'interface_for_modified_and_added.added_operation']),
 
             'add_relationship_operation_shortened':
                 DeploymentUpdateStep(
                     'add',
                     OPERATION,
-                    'nodes:node12:relationships:[0]:target_operations:'
-                    'added_operation'),
+                    ['nodes', 'node12', 'relationships', 0,
+                     'target_operations', 'added_operation']),
 
 
             'remove_relationship_operation': DeploymentUpdateStep(
                 'remove',
                 OPERATION,
-                'nodes:node12:relationships:[0]:source_operations:'
-                'interface_for_intact_and_removed.removed_operation'),
+                ['nodes', 'node12', 'relationships', 0, 'source_operations',
+                 'interface_for_intact_and_removed.removed_operation']),
 
             'remove_relationship_operation_shortened':
                 DeploymentUpdateStep(
                     'remove',
                     OPERATION,
-                    'nodes:node12:relationships:[0]:source_operations:'
-                    'removed_operation'),
+                    ['nodes', 'node12', 'relationships', 0,
+                     'source_operations', 'removed_operation']),
 
             'modify_relationship_operation': DeploymentUpdateStep(
                 'modify',
                 OPERATION,
-                'nodes:node12:relationships:[0]:target_operations:'
-                'interface_for_modified_and_added.modified_operation'),
+                ['nodes', 'node12', 'relationships', 0, 'target_operations',
+                 'interface_for_modified_and_added.modified_operation']),
 
             'modify_relationship_operation_shortened':
                 DeploymentUpdateStep(
                     'modify',
                     OPERATION,
-                    'nodes:node12:relationships:[0]:target_operations:'
-                    'modified_operation'),
+                    ['nodes', 'node12', 'relationships', 0,
+                     'target_operations', 'modified_operation']),
 
             'add_output': DeploymentUpdateStep(
                 'add',
                 OUTPUT,
-                'outputs:added_output'),
+                ['outputs', 'added_output']),
 
             'remove_output': DeploymentUpdateStep(
                 'remove',
                 OUTPUT,
-                'outputs:removed_output'),
+                ['outputs', 'removed_output']),
 
             'modify_output': DeploymentUpdateStep(
                 'modify',
                 OUTPUT,
-                'outputs:modified_output'),
+                ['outputs', 'modified_output']),
 
             'add_workflow_same_plugin': DeploymentUpdateStep(
                 'add',
                 WORKFLOW,
-                'workflows:added_workflow_same_plugin'),
+                ['workflows', 'added_workflow_same_plugin']),
 
             'add_workflow_new_plugin': DeploymentUpdateStep(
                 'add',
                 WORKFLOW,
-                'workflows:added_workflow_new_plugin'),
+                ['workflows', 'added_workflow_new_plugin']),
 
             'remove_workflow': DeploymentUpdateStep(
                 'remove',
                 WORKFLOW,
-                'workflows:removed_workflow'),
+                ['workflows', 'removed_workflow']),
 
             'modify_workflow_same_plugin': DeploymentUpdateStep(
                 'modify',
                 WORKFLOW,
-                'workflows:modified_workflow_same_plugin'),
+                ['workflows', 'modified_workflow_same_plugin']),
 
             'modify_workflow_new_plugin': DeploymentUpdateStep(
                 'modify',
                 WORKFLOW,
-                'workflows:modified_workflow_new_plugin'),
+                ['workflows', 'modified_workflow_new_plugin']),
 
             'add_policy_type': DeploymentUpdateStep(
                 'add',
                 POLICY_TYPE,
-                'policy_types:added_policy_type',
+                ['policy_types', 'added_policy_type'],
                 supported=False),
 
             'remove_policy_type': DeploymentUpdateStep(
                 'remove',
                 POLICY_TYPE,
-                'policy_types:removed_policy_type',
+                ['policy_types', 'removed_policy_type'],
                 supported=False),
 
             'modify_policy_type': DeploymentUpdateStep(
                 'modify',
                 POLICY_TYPE,
-                'policy_types:modified_policy_type',
+                ['policy_types', 'modified_policy_type'],
                 supported=False),
 
             'add_policy_trigger': DeploymentUpdateStep(
                 'add',
                 POLICY_TRIGGER,
-                'policy_triggers:added_policy_trigger',
+                ['policy_triggers', 'added_policy_trigger'],
                 supported=False),
 
             'remove_policy_trigger': DeploymentUpdateStep(
                 'remove',
                 POLICY_TRIGGER,
-                'policy_triggers:removed_policy_trigger',
+                ['policy_triggers', 'removed_policy_trigger'],
                 supported=False),
 
             'modify_policy_trigger': DeploymentUpdateStep(
                 'modify',
                 POLICY_TRIGGER,
-                'policy_triggers:modified_policy_trigger',
+                ['policy_triggers', 'modified_policy_trigger'],
                 supported=False),
 
             'add_group': DeploymentUpdateStep(
                 'add',
                 GROUP,
-                'groups:added_group',
+                ['groups', 'added_group'],
                 supported=False),
 
             'remove_group': DeploymentUpdateStep(
                 'remove',
                 GROUP,
-                'groups:removed_group',
+                ['groups', 'removed_group'],
                 supported=False),
 
             'modify_group': DeploymentUpdateStep(
                 'modify',
                 GROUP,
-                'groups:modified_group',
+                ['groups', 'modified_group'],
                 supported=False),
 
             'add_relationship_property': DeploymentUpdateStep(
                 'add',
                 PROPERTY,
-                'nodes:node13:relationships:[0]:'
-                'properties:added_relationship_prop',
+                ['nodes', 'node13', 'relationships', 0,
+                 'properties', 'added_relationship_prop'],
                 supported=False),
 
             'remove_relationship_property': DeploymentUpdateStep(
                 'remove',
                 PROPERTY,
-                'nodes:node13:relationships:[0]:'
-                'properties:removed_relationship_prop',
+                ['nodes', 'node13', 'relationships', 0,
+                 'properties', 'removed_relationship_prop'],
                 supported=False),
 
             'modify_relationship_property': DeploymentUpdateStep(
                 'modify',
                 PROPERTY,
-                'nodes:node13:relationships:[0]:'
-                'properties:modified_relationship_prop',
+                ['nodes', 'node13', 'relationships', 0,
+                 'properties', 'modified_relationship_prop'],
                 supported=False),
 
             'add_ha_plugin_plugins_to_install': DeploymentUpdateStep(
                 'add',
                 PLUGIN,
-                'plugins_to_install:node18:plugin3_name'),
+                ['plugins_to_install', 'node18', 'plugin3_name']),
 
             'add_ha_plugin_plugin3_name': DeploymentUpdateStep(
                 'add',
                 PLUGIN,
-                'plugins:node18:plugin3_name'),
+                ['plugins', 'node18', 'plugin3_name']),
 
             'add_cda_plugin_used_by_host': DeploymentUpdateStep(
                 'add',
                 PLUGIN,
-                'plugins:node16:cda_plugin_for_operations2'),
+                ['plugins', 'node16', 'cda_plugin_for_operations2']),
 
             'add_cda_operation': DeploymentUpdateStep(
                 'add',
                 OPERATION,
-                'nodes:node16:operations:'
-                'interface_for_plugin_based_operations.'
-                'added_operation_new_cda_plugin',
+                ['nodes', 'node16', 'operations',
+                 'interface_for_plugin_based_operations.'
+                 'added_operation_new_cda_plugin'],
                 supported=True),
 
             'add_cda_operation_shortened': DeploymentUpdateStep(
                 'add',
                 OPERATION,
-                'nodes:node16:operations:added_operation_new_cda_plugin',
+                ['nodes', 'node16', 'operations',
+                 'added_operation_new_cda_plugin'],
                 supported=True),
 
             'modify_ha_operation': DeploymentUpdateStep(
                 'modify',
                 OPERATION,
-                'nodes:node18:operations:'
-                'interface_for_plugin_based_operations.'
-                'ha_operation_before',
+                ['nodes', 'node18', 'operations',
+                 'interface_for_plugin_based_operations.'
+                 'ha_operation_before'],
                 supported=True),
 
             'modify_ha_operation_shortened': DeploymentUpdateStep(
                 'modify',
                 OPERATION,
-                'nodes:node18:operations:ha_operation_before',
+                ['nodes', 'node18', 'operations', 'ha_operation_before'],
                 supported=True)
         }
         steps, unsupported_steps = extract_steps(
