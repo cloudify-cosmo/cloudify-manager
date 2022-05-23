@@ -17,6 +17,7 @@ from .execution_schedules import (               # NOQA
 from .log_bundles import (                       # NOQA
     LogBundles,
     LogBundlesId,
+    LogBundlesIdArchive,
 )
 
 from .manager import (                           # NOQA
