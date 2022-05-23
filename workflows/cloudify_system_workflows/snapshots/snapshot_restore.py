@@ -492,6 +492,8 @@ class SnapshotRestore(object):
         update_suffix = ' WHERE users.id=0"'
         # Discard the id, we don't need it
         admin_account.pop('id')
+        # api_token_key only existed up until 6.4
+        admin_account.pop('api_token_key', None)
         updates = []
         for column, value in admin_account.items():
             if value:
