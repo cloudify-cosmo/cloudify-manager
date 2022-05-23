@@ -1,5 +1,4 @@
 import os
-import shutil
 
 from flask_restful_swagger import swagger
 
@@ -19,7 +18,7 @@ def _get_bundle_path(bundle_id):
     return os.path.join(
         config.instance.file_server_root,
         FILE_SERVER_LOG_BUNDLES_FOLDER,
-        bundle_id
+        bundle_id + '.zip'
     )
 
 
@@ -113,7 +112,8 @@ class LogBundlesId(SecuredResource):
 
         sm.delete(log_bundle)
         path = _get_bundle_path(log_bundle_id)
-        shutil.rmtree(path, ignore_errors=True)
+        if os.path.exists(path):
+            os.remove(path)
         return log_bundle, 200
 
     @authorize('log_bundle_status_update')
@@ -143,7 +143,7 @@ class LogBundlesIdArchive(SecuredResource):
                 'Failed log bundle cannot be downloaded'
             )
 
-        log_bundle_uri = '{0}/{1}/{2}/{2}.zip'.format(
+        log_bundle_uri = '{0}/{1}/{2}.zip'.format(
             FILE_SERVER_RESOURCES_FOLDER,
             FILE_SERVER_LOG_BUNDLES_FOLDER,
             log_bundle_id
