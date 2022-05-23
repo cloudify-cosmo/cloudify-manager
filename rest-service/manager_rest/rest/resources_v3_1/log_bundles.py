@@ -132,7 +132,7 @@ class LogBundlesId(SecuredResource):
 class LogBundlesIdArchive(SecuredResource):
 
     @swagger.operation(
-        nickname='downloadLogBUndle',
+        nickname='downloadLogBundle',
         notes='Downloads log bundle as an archive.'
     )
     @authorize('log_bundle_download')

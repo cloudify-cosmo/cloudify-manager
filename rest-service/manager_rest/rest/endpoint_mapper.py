@@ -122,6 +122,7 @@ def setup_resources(api):
         'LicenseCheck': 'license-check',
         'LogBundles': 'log-bundles',
         'LogBundlesId': 'log-bundles/<string:log_bundle_id>',
+        'LogBundlesIdArchive': 'log-bundles/<string:log_bundle_id>/archive',
         'Sites': 'sites',
         'SitesName': 'sites/<string:name>',
         'ClusterStatus': 'cluster-status',
