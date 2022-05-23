@@ -143,7 +143,7 @@ class LogBundlesIdArchive(SecuredResource):
                 'Failed log bundle cannot be downloaded'
             )
 
-        log_bundle_uri = '{0}/{1}/{2}/{2}.zip'.format(
+        log_bundle_uri = '{0}/{1}/{2}.zip'.format(
             FILE_SERVER_RESOURCES_FOLDER,
             FILE_SERVER_LOG_BUNDLES_FOLDER,
             log_bundle_id

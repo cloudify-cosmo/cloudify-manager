@@ -1,3 +1,4 @@
+import os
 import shutil
 import subprocess
 
@@ -5,7 +6,7 @@ from cloudify.manager import get_rest_client
 from cloudify.workflows import ctx
 
 
-def create(log_bundle_id):
+def create(log_bundle_id, **kwargs):
     ctx.logger.info('Creating log bundle `{0}`'.format(log_bundle_id))
     client = get_rest_client(tenant=ctx.tenant_name)
 
@@ -22,9 +23,9 @@ def create(log_bundle_id):
                     for node in client.manager.get_brokers()}
     addresses = manager_nodes | db_nodes | broker_nodes
 
-    log_bundle_tmp_path = subprocess.check_call(
+    log_bundle_tmp_path = subprocess.check_output(
         [
-            '/opt/mgmtworker/scripts/fetch_logs',
+            '/opt/mgmtworker/scripts/fetch-logs',
             '-a', ','.join(addresses),
         ],
         env={
@@ -32,7 +33,8 @@ def create(log_bundle_id):
             'MONITORING_PASSWORD': monitoring_password,
         },
         stderr=subprocess.STDOUT,
-    )
+    ).strip()
 
-    destination = f'/opt/manager/resources/log_bundles/{log_bundle_id}'
+    destination = f'/opt/manager/resources/log_bundles/{log_bundle_id}.zip'
     shutil.move(log_bundle_tmp_path, destination)
+    os.chmod(destination, 0o440)
