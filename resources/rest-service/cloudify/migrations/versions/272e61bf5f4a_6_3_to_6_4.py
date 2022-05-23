@@ -256,10 +256,11 @@ def depup_steps_entity_id_to_array():
     op.alter_column('deployment_update_steps',
                     column_name='entity_id',
                     type_=postgresql.ARRAY(sa.Text()),
-                    postgresql_using='entity_id::text[]')
+                    postgresql_using="string_to_array(entity_id, ':')")
 
 
 def depup_steps_entity_id_to_text():
     op.alter_column('deployment_update_steps',
                     column_name='entity_id',
-                    type_=sa.Text())
+                    type_=sa.Text(),
+                    postgresql_using="array_to_string(entity_id, ':')")
