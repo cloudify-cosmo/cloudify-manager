@@ -160,6 +160,7 @@ def create_log_bundles():
 
 def drop_log_bundles():
     op.drop_table('log_bundles')
+    op.execute('DROP TYPE log_bundle_status;')
 
 
 def create_tokens():
