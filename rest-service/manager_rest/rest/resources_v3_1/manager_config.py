@@ -21,6 +21,7 @@ from manager_rest.rest.rest_decorators import (
     marshal_with
 )
 from manager_rest import config, manager_exceptions
+from manager_rest.utils import is_administrator
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import get_storage_manager, models
@@ -54,8 +55,15 @@ class ManagerConfig(SecuredResource):
             filters = {'scope': scope}
         else:
             filters = None
-        return [item.to_dict() for item in
-                sm.list(models.Config, filters=filters).items]
+        is_admin = is_administrator(tenant=None)
+        configs = [item.to_dict() for item in
+                   sm.list(models.Config, filters=filters).items]
+        if is_admin:
+            return configs
+        for setting in configs:
+            if setting['admin_only']:
+                setting['value'] = '********'
+        return configs
 
     @property
     def _authorization_config(self):
@@ -109,5 +117,8 @@ class ManagerConfigId(SecuredResource):
             raise manager_exceptions.NotFoundError(name)
         elif len(results) > 1:
             raise manager_exceptions.AmbiguousName(
-                'Expected 1 value, but found {0}'.format(len(results)))
-        return results[0]
+                f'Expected 1 value, but found {len(results)}')
+        result = results[0].to_dict()
+        if result['admin_only'] and not is_administrator(tenant=None):
+            result['value'] = '********'
+        return result

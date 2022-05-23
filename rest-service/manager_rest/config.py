@@ -15,6 +15,7 @@ from cloudify._compat import text_type
 from cloudify.utils import ipv6_url_compat
 
 from manager_rest.manager_exceptions import (
+    UnauthorizedError,
     ConflictError,
     AmbiguousName,
     NotFoundError
@@ -274,6 +275,7 @@ class Config(object):
         config dictionary parameter
         """
         from manager_rest.storage import models
+        from manager_rest.utils import is_administrator
 
         engine = create_engine(self.db_url)
         session = orm.Session(bind=engine)
@@ -292,6 +294,9 @@ class Config(object):
             entry = self._find_entry(stored_configs, name)
             if not entry.is_editable and not force:
                 raise ConflictError('{0} is not editable'.format(entry.name))
+            if entry.admin_only and not is_administrator(tenant=None):
+                raise UnauthorizedError(
+                    f'{entry.name} can only be edited by administrators')
             if entry.schema:
                 if entry.schema['type'] == 'number':
                     try:
