@@ -31,6 +31,7 @@ config_table = sa.table(
     sa.Column('value', JSONString()),
     sa.Column('schema', JSONString()),
     sa.Column('is_editable', sa.Boolean),
+    sa.Column('admin_only', sa.Boolean),
     sa.Column('updated_at', UTCDateTime()),
     sa.Column('scope', sa.Text),
 )
@@ -44,6 +45,7 @@ def upgrade():
     add_manager_agent_name_columns()
     create_log_bundles()
     drop_old_monitoring_cred_fields()
+    add_config_admin_only_column()
     add_config_log_fetch_credentials()
 
 
@@ -55,6 +57,7 @@ def downgrade():
     drop_manager_agent_name_columns()
     drop_log_bundles()
     create_old_monitoring_cred_fields()
+    drop_config_admin_only_column()
     drop_config_log_fetch_credentials()
 
 
@@ -68,6 +71,7 @@ def add_config_log_fetch_credentials():
                 'scope': 'rest',
                 'schema': None,
                 'is_editable': True,
+                'admin_only': True,
             },
             {
                 'name': 'log_fetch_password',
@@ -75,6 +79,7 @@ def add_config_log_fetch_credentials():
                 'scope': 'rest',
                 'schema': None,
                 'is_editable': True,
+                'admin_only': True,
             },
         ]
     )
@@ -86,9 +91,8 @@ def drop_config_log_fetch_credentials():
             config_table
             .delete()
             .where(
-                (config_table.c.name == op.inline_literal(
-                    key)) &  # NOQA
-                (config_table.c.scope == op.inline_literal('rest'))
+                (config_table.c.name == op.inline_literal(key))
+                & (config_table.c.scope == op.inline_literal('rest'))
             )
         )
 
@@ -265,3 +269,25 @@ def depup_steps_entity_id_to_text():
                     column_name='entity_id',
                     type_=sa.Text(),
                     postgresql_using="array_to_string(entity_id, ':')")
+
+
+def add_config_admin_only_column():
+    op.add_column(
+        'config',
+        sa.Column('admin_only', sa.Boolean(),
+                  server_default='false', nullable=False)
+    )
+    for key in [
+        'ldap_username',
+        'ldap_password',
+    ]:
+        op.execute(
+            config_table
+            .update()
+            .where(config_table.c.name == op.inline_literal(key))
+            .values(admin_only=True)
+        )
+
+
+def drop_config_admin_only_column():
+    op.drop_column('config', 'admin_only')

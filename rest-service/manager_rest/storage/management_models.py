@@ -609,6 +609,8 @@ class Config(SQLModelBase):
     value = db.Column(JSONString, nullable=False)
     schema = db.Column(JSONString, nullable=True)
     is_editable = db.Column(db.Boolean, default=True)
+    admin_only = db.Column(db.Boolean, default=False, server_default='false',
+                           nullable=False)
     updated_at = db.Column(UTCDateTime)
     scope = db.Column(db.Text, primary_key=True)
 
