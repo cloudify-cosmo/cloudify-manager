@@ -13,6 +13,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import mock
+
 from manager_rest import manager_exceptions
 from manager_rest.test import base_test
 from manager_rest.storage import models
@@ -129,3 +131,37 @@ class ManagerConfigTestCase(base_test.BaseServerTestCase):
             self.client.manager.get_config(name='rest.x').value, 5)
         self.assertEqual(
             self.client.manager.get_config(name='agent.x').value, 7)
+
+    def test_admin_only(self):
+        self._put_config(name='x', scope='y', value='z', admin_only=True)
+
+        # GETting a single value
+        assert self.client.manager.get_config(name='x').value == 'z'
+        with mock.patch(
+            'manager_rest.rest.resources_v3_1.manager_config.is_administrator',
+            return_value=False
+        ):
+            assert self.client.manager.get_config(name='x').value == '********'
+
+        # listing
+        configs = self.client.manager.get_config(scope='y')
+        assert len(configs) == 1
+        assert configs[0].value == 'z'
+
+        with mock.patch(
+            'manager_rest.rest.resources_v3_1.manager_config.is_administrator',
+            return_value=False
+        ):
+            configs = self.client.manager.get_config(scope='y')
+            assert len(configs) == 1
+            assert configs[0].value == '********'
+
+        # updating
+        self.client.manager.put_config('x', 'z2')
+        with mock.patch(
+            'manager_rest.utils.is_administrator',
+            return_value=False
+        ):
+            with self.assertRaises(CloudifyClientError) as cm:
+                self.client.manager.put_config('x', 'z3')
+            assert cm.exception.status_code == 401
