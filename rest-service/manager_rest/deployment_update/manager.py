@@ -26,7 +26,6 @@ from dsl_parser import constants, tasks
 
 from manager_rest import manager_exceptions, workflow_executor
 from manager_rest.resource_manager import get_resource_manager
-from manager_rest.deployment_update import step_extractor
 from manager_rest.deployment_update.utils import extract_ids
 from manager_rest.deployment_update.validator import StepValidator
 from manager_rest.storage import (get_storage_manager,
@@ -175,32 +174,6 @@ class DeploymentUpdateManager(object):
                                            topology_order=topology_order)
         step.set_deployment_update(deployment_update)
         return self.sm.put(step)
-
-    def extract_steps_from_deployment_update(self, deployment_update):
-        nodes = [node.to_dict() for node in deployment_update.deployment.nodes]
-        supported_steps, unsupported_steps = step_extractor.extract_steps(
-            nodes,
-            deployment_update.deployment,
-            deployment_update.deployment_plan)
-
-        if unsupported_steps:
-            deployment_update.state = STATES.FAILED
-            self.sm.update(deployment_update)
-            unsupported_entity_ids = [step.entity_id
-                                      for step in unsupported_steps]
-            raise manager_exceptions.UnsupportedChangeInDeploymentUpdate(
-                'The blueprint you provided for the deployment update '
-                'contains changes currently unsupported by the deployment '
-                'update mechanism.\n'
-                'Unsupported changes: {0}'.format('\n'.join(
-                    unsupported_entity_ids)))
-
-        for step in supported_steps:
-            self.create_deployment_update_step(deployment_update,
-                                               step.action,
-                                               step.entity_type,
-                                               step.entity_id,
-                                               step.topology_order)
 
     def commit_deployment_update(self,
                                  dep_update,

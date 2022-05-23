@@ -95,15 +95,14 @@ def _modified_attr_nodes(steps):
         'property': 'properties'
     }
     for step in steps:
-        parts = step['entity_id'].split(':')
-        if len(parts) < 2:
+        if len(step['entity_id']) < 2:
             continue
-        node_id = parts[1]
+        node_id = step['entity_id'][1]
         entity_type = step['entity_type']
         if entity_type in modified_entity_type:
             modified[node_id].append(modified_entity_type[entity_type])
         if entity_type == 'operation':
-            if 'relationships' in parts:
+            if 'relationships' in step['entity_id']:
                 modified[node_id].append('relationships')
             else:
                 modified[node_id].append('operations')
@@ -145,7 +144,7 @@ def _added_nodes(steps):
     added = set()
     for step in steps:
         if step['entity_type'] == 'node' and step['action'] == 'add':
-            added.add(step['entity_id'])
+            added.add(tuple(step['entity_id']))
     return list(added)
 
 
@@ -154,7 +153,7 @@ def _removed_nodes(steps):
     added = set()
     for step in steps:
         if step['entity_type'] == 'node' and step['action'] == 'remove':
-            added.add(step['entity_id'])
+            added.add(tuple(step['entity_id']))
     return list(added)
 
 
@@ -317,7 +316,7 @@ def update_deployment_nodes(*, update_id):
             **new_attributes
         )
     for node_path in update_nodes.get('add', []):
-        node_name = node_path.split(':')[-1]
+        node_name = node_path[-1]
         for plan_node in plan_nodes:
             if plan_node['name'] == node_name:
                 create_nodes.append(plan_node)
@@ -349,8 +348,7 @@ def _relationship_changed_nodes(steps):
     for step in steps:
         if step['entity_type'] != 'relationship':
             continue
-        parts = step['entity_id'].split(':')
-        nodes_label, node_id, relationships_label = parts[:3]
+        nodes_label, node_id, relationships_label = step['entity_id'][:3]
         if nodes_label != 'nodes' or relationships_label != 'relationships':
             continue
         nodes.add(node_id)
@@ -552,7 +550,7 @@ def delete_removed_nodes(*, update_id):
 
     update_nodes = dep_up['deployment_update_nodes'] or {}
     for node_path in update_nodes.get('remove', []):
-        node_name = node_path.split(':')[-1]
+        node_name = node_path[-1]
         workflow_ctx.delete_node(dep_up.deployment_id, node_name)
 
 
@@ -601,17 +599,17 @@ def update_operations(*, update_id):
     for step in dep_up.steps:
         if step.get('entity_type') != 'operation':
             continue
-        parts = step['entity_id'].split(':')
-        if len(parts) == 4:
+        if len(step['entity_id']) == 4:
             # eg: nodes:node2:operations:cloudify.interfaces.lifecycle.start
-            _, node_id, _, op_name = parts
+            _, node_id, _, op_name = step['entity_id']
             workflow_ctx._update_operation_inputs(
                 deployment_id=dep_up.deployment_id,
                 node_id=node_id, operation=op_name)
-        elif len(parts) == 6:
+        elif len(step['entity_id']) == 6:
             # eg: nodes:node2:relationships:[0]:target_operations:
             #     cloudify.interfaces.relationship_lifecycle.establish
-            _, node_id, _, rel_index, source_or_target, op_name = parts
+            _, node_id, _, rel_index, source_or_target, op_name =\
+                step['entity_id']
             rel_index = int(rel_index.strip('[]'))
             workflow_ctx._update_operation_inputs(
                 deployment_id=dep_up.deployment_id,
@@ -713,10 +711,9 @@ def _find_reinstall_instances(steps):
     for step in steps:
         if step['entity_type'] not in ('property', 'operation'):
             continue
-        modified = step['entity_id'].split(':')
-        if not modified or modified[0] != 'nodes':
+        if not step['entity_id'] or step['entity_id'][0] != 'nodes':
             continue
-        nodes_to_reinstall.add(modified[1])
+        nodes_to_reinstall.add(step['entity_id'][1])
     to_reinstall = []
     for node_id in nodes_to_reinstall:
         node = workflow_ctx.get_node(node_id)
@@ -848,13 +845,12 @@ class InstallParameters:
         }
         for step in self.steps:
             entity_type = step['entity_type']
-            parts = step['entity_id'].split(':')
-            if len(parts) < 2:
+            if len(step['entity_id']) < 2:
                 continue
-            entity_id = parts[1]
+            entity_id = step['entity_id'][1]
 
             if step['entity_type'] == 'relationship':
-                relationship = parts[3]
+                relationship = step['entity_id'][3]
                 modified_ids[entity_type].setdefault(entity_id, []).append(
                     relationship)
             elif entity_type in modified_ids:

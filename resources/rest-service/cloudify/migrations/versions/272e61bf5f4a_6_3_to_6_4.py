@@ -37,6 +37,7 @@ config_table = sa.table(
 
 
 def upgrade():
+    depup_steps_entity_id_to_array()
     create_tokens()
     upgrade_plugin_updates()
     drop_usagecollector_audit()
@@ -47,6 +48,7 @@ def upgrade():
 
 
 def downgrade():
+    depup_steps_entity_id_to_text()
     drop_tokens()
     downgrade_plugin_updates()
     recreate_usagecollector_audit()
@@ -249,3 +251,17 @@ def drop_manager_agent_name_columns():
     op.drop_column('events', 'manager_name')
     op.drop_column('logs', 'agent_name')
     op.drop_column('logs', 'manager_name')
+
+
+def depup_steps_entity_id_to_array():
+    op.alter_column('deployment_update_steps',
+                    column_name='entity_id',
+                    type_=postgresql.ARRAY(sa.Text()),
+                    postgresql_using="string_to_array(entity_id, ':')")
+
+
+def depup_steps_entity_id_to_text():
+    op.alter_column('deployment_update_steps',
+                    column_name='entity_id',
+                    type_=sa.Text(),
+                    postgresql_using="array_to_string(entity_id, ':')")

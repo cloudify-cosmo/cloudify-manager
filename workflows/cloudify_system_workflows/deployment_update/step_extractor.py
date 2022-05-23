@@ -60,7 +60,7 @@ class DeploymentUpdateStep(object):
 
     @property
     def entity_name(self):
-        return self.entity_id.split(':')[-1]
+        return self.entity_id[-1]
 
     def as_dict(self):
         if not self.supported:
@@ -74,7 +74,7 @@ class DeploymentUpdateStep(object):
         }
 
     def __hash__(self):
-        return hash(self.entity_id)
+        return hash(tuple(self.entity_id))
 
     def __eq__(self, other):
         if isinstance(other, self.__class__):
@@ -128,7 +128,7 @@ def _create_steps(nodes, deployment, new_plan):
         yield DeploymentUpdateStep(
             action='modify',
             entity_type=DESCRIPTION,
-            entity_id=DESCRIPTION,
+            entity_id=[DESCRIPTION],
         )
     new_nodes = {node['id']: node for node in new_plan[NODES]}
     yield from _extract_host_agent_plugins_steps(new_nodes, nodes)
@@ -137,20 +137,20 @@ def _create_steps(nodes, deployment, new_plan):
         yield DeploymentUpdateStep(
             action=action,
             entity_type=OUTPUT,
-            entity_id=f'{OUTPUTS}:{key}'
+            entity_id=[OUTPUTS, key],
         )
     for action, key in _diff_dicts(new_plan[WORKFLOWS], deployment.workflows):
         yield DeploymentUpdateStep(
             action=action,
             entity_type=WORKFLOW,
-            entity_id=f'{WORKFLOWS}:{key}'
+            entity_id=[WORKFLOWS, key],
         )
     for action, key in _diff_dicts(
                 new_plan[POLICY_TYPES], deployment.policy_types):
         yield DeploymentUpdateStep(
             action=action,
             entity_type=POLICY_TYPE,
-            entity_id=f'{POLICY_TYPES}:{key}',
+            entity_id=[POLICY_TYPES, key],
             supported=False
         )
     for action, key in _diff_dicts(
@@ -159,7 +159,7 @@ def _create_steps(nodes, deployment, new_plan):
         yield DeploymentUpdateStep(
             action=action,
             entity_type=POLICY_TRIGGER,
-            entity_id=f'{POLICY_TRIGGERS}:{key}',
+            entity_id=[POLICY_TRIGGERS, key],
             supported=False
         )
     for action, key in _diff_dicts(
@@ -168,7 +168,7 @@ def _create_steps(nodes, deployment, new_plan):
         yield DeploymentUpdateStep(
             action=action,
             entity_type=GROUP,
-            entity_id=f'{GROUPS}:{key}',
+            entity_id=[GROUPS, key],
             supported=False
         )
 
@@ -192,8 +192,7 @@ def _extract_host_agent_plugins_steps(new_nodes, old_nodes):
                 if old_plugin == new_plugin:
                     continue
 
-                entity_id =\
-                    f'{entity_type}:{new_node_name}:{new_plugin["name"]}'
+                entity_id = [entity_type, new_node_name, new_plugin["name"]]
                 action = 'add' if not old_plugin else 'modify'
                 yield DeploymentUpdateStep(
                     action=action,
@@ -211,14 +210,12 @@ def _find_matching_plugin(new_plugin, old_plugins):
 
 
 def _diff_nodes(new_nodes, old_nodes):
-    # with self.entity_id_builder.extend_id(NODES):
     for node_name, node in new_nodes.items():
-        # with self.entity_id_builder.extend_id(node_name):
         if node_name not in old_nodes:
             yield DeploymentUpdateStep(
                 action='add',
                 entity_type=NODE,
-                entity_id=f'{NODES}:{node_name}',
+                entity_id=[NODES, node_name],
             )
             continue
         old_node = old_nodes[node_name]
@@ -229,7 +226,7 @@ def _diff_nodes(new_nodes, old_nodes):
             yield DeploymentUpdateStep(
                 action='modify',
                 entity_type=NODE,
-                entity_id=f'{NODES}:{node_name}',
+                entity_id=[NODES, node_name],
                 supported=False
             )
             # Since the node was classified as added or
@@ -242,7 +239,7 @@ def _diff_nodes(new_nodes, old_nodes):
             yield DeploymentUpdateStep(
                 action='remove',
                 entity_type=NODE,
-                entity_id=f'{NODES}:{node_name}',
+                entity_id=[NODES, node_name],
             )
 
 
@@ -260,12 +257,12 @@ def _diff_node(node_name, new_node, old_node):
         yield DeploymentUpdateStep(
             action=action,
             entity_type=OPERATION,
-            entity_id=f'{NODES}:{node_name}:{OPERATIONS}:{key}'
+            entity_id=[NODES, node_name, OPERATIONS, key],
         )
 
     seen_relationships = Counter()
     for rel_index, relationship in enumerate(new_node[RELATIONSHIPS]):
-        entity_id_base = f'{NODES}:{node_name}:{RELATIONSHIPS}'
+        entity_id_base = [NODES, node_name, RELATIONSHIPS]
         rel_key = _relationship_key(relationship)
         old_relationship, old_rel_index = \
             _find_relationship(
@@ -278,7 +275,7 @@ def _diff_node(node_name, new_node, old_node):
             yield DeploymentUpdateStep(
                 action='add',
                 entity_type=RELATIONSHIP,
-                entity_id=f'{entity_id_base}:[{rel_index}]',
+                entity_id=entity_id_base + [rel_index],
             )
             continue
 
@@ -286,7 +283,7 @@ def _diff_node(node_name, new_node, old_node):
             yield DeploymentUpdateStep(
                 action='modify',
                 entity_type=RELATIONSHIP,
-                entity_id=f'{entity_id_base}:[{old_rel_index}]:[{rel_index}]',
+                entity_id=entity_id_base + [old_rel_index, rel_index],
             )
 
         for op_type in [SOURCE_OPERATIONS, TARGET_OPERATIONS]:
@@ -295,7 +292,7 @@ def _diff_node(node_name, new_node, old_node):
                 yield DeploymentUpdateStep(
                     action=action,
                     entity_type=OPERATION,
-                    entity_id=f'{entity_id_base}:[{rel_index}]:{op_type}:{key}'
+                    entity_id=entity_id_base + [rel_index, op_type, key],
                 )
         for action, key in _diff_dicts(
                 relationship.get(PROPERTIES),
@@ -304,13 +301,13 @@ def _diff_node(node_name, new_node, old_node):
             yield DeploymentUpdateStep(
                 action=action,
                 entity_type=PROPERTY,
-                entity_id=f'{entity_id_base}:[{rel_index}]:{PROPERTIES}:{key}',
+                entity_id=entity_id_base + [rel_index, PROPERTIES, key],
                 supported=False,
             )
 
     seen_relationships = Counter()
     for rel_index, relationship in enumerate(old_node[RELATIONSHIPS]):
-        entity_id_base = f'{NODES}:{node_name}:{RELATIONSHIPS}'
+        entity_id_base = [NODES, node_name, RELATIONSHIPS]
         rel_key = _relationship_key(relationship)
         matching_relationship, _ = \
             _find_relationship(
@@ -323,33 +320,14 @@ def _diff_node(node_name, new_node, old_node):
             yield DeploymentUpdateStep(
                 action='remove',
                 entity_type=RELATIONSHIP,
-                entity_id=f'{entity_id_base}:[{rel_index}]',
+                entity_id=entity_id_base + [rel_index],
             )
 
     for action, key in _diff_dicts(new_node[PROPERTIES], old_node[PROPERTIES]):
         yield DeploymentUpdateStep(
             action=action,
             entity_type=PROPERTY,
-            entity_id=f'{NODES}:{node_name}:{PROPERTIES}:{key}'
-        )
-
-
-def _diff_operations(entity_id_base, operations, old_operations):
-    for op_name in set(operations) | set(old_operations):
-        new_operation = operations.get(op_name)
-        old_operation = old_operations.get(op_name)
-        if new_operation is not None and old_operation is None:
-            action = 'add'
-        elif new_operation is None and old_operation is not None:
-            action = 'remove'
-        elif new_operation != old_operation:
-            action = 'modify'
-        else:
-            continue
-        yield DeploymentUpdateStep(
-            action=action,
-            entity_type=OPERATION,
-            entity_id=f'{entity_id_base}:{op_name}',
+            entity_id=[NODES, node_name, PROPERTIES, key],
         )
 
 
