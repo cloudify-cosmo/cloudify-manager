@@ -108,7 +108,13 @@ class BlueprintUploadAutouploadPluginsTest(AgentlessTestCase):
                            parse_version("3"))
 
     def _upload_and_verify_blueprint(self, blueprint_id, blueprint_filename):
-        blueprint = self.client.blueprints.upload(
+        self.client.blueprints.upload(
             resource('dsl/{}'.format(blueprint_filename)),
-            entity_id=blueprint_id)
+            entity_id=blueprint_id,
+            async_upload=True,
+        )
+        blueprint = self.client.blueprints.get(blueprint_id)
+        exc = self.client.executions.get(blueprint.upload_execution['id'])
+        self.wait_for_execution_to_end(exc)
+        blueprint = self.client.blueprints.get(blueprint_id)
         self.assertEqual(blueprint['state'], BlueprintUploadState.UPLOADED)
