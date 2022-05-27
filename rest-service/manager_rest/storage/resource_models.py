@@ -604,7 +604,9 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             return any(state == 'started' for state in ni_states)
         if node_instance_active_rule == 'none':
             return not any(state == 'started' for state in ni_states)
-        return False
+        raise manager_exceptions.InvalidWorkflowAvailabilityRule(
+            "Invalid value for 'node_instances_active' availability rule: "
+            f"'{node_instance_active_rule}'")
 
     @classmethod
     def compare_statuses(
