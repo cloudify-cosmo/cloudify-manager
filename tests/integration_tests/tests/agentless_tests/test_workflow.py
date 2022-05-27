@@ -468,3 +468,56 @@ class BasicWorkflowsTest(AgentlessTestCase):
             2, sum(i == constants.RELATIONSHIP_INSTANCE for i in invocations))
         self.assertEqual(
             1, sum(i == constants.NODE_INSTANCE for i in invocations))
+
+    def test_workflows_availability_node_instances_state(self):
+        bp_template = """
+tosca_definitions_version: cloudify_dsl_1_4
+
+imports:
+    - cloudify/types/types.yaml
+
+node_templates:
+    node1:
+        type: cloudify.nodes.Root
+    node2:
+        type: cloudify.nodes.Root
+    node3:
+        type: cloudify.nodes.Root
+
+workflows:
+    wf1:
+        mapping: file:///dev/null
+        availability_rules:
+            node_instances_active: none
+    wf2:
+        mapping: file:///dev/null
+        availability_rules:
+            node_instances_active: some
+    wf3:
+        mapping: file:///dev/null
+        availability_rules:
+            node_instances_active: all
+"""
+        base_bp_path = \
+            self.make_yaml_file(bp_template.format(active='none'))
+        deployment, _ = self.deploy_application(base_bp_path)
+        with self.assertRaises(CloudifyClientError) as cm:
+            self.execute_workflow('wf1', deployment.id)
+        assert cm.exception.error_code == 'unavailable_workflow_error'
+        self.execute_workflow('wf2', deployment.id)  # doesn't throw
+        self.execute_workflow('wf3', deployment.id)  # doesn't throw
+
+        node_instances = self.client.node_instances.list(
+            deployment_id=deployment.id, _include=['id', 'state'])
+        active_node_instance_ids = [ni['id'] for ni in node_instances
+                                    if ni['state'] == 'started']
+        self.client.node_instances.update(
+            active_node_instance_ids[0], state='foo', force=True)
+
+        with self.assertRaises(CloudifyClientError) as cm:
+            self.execute_workflow('wf1', deployment.id)
+        assert cm.exception.error_code == 'unavailable_workflow_error'
+        self.execute_workflow('wf2', deployment.id)  # doesn't throw
+        with self.assertRaises(CloudifyClientError) as cm:
+            self.execute_workflow('wf3', deployment.id)
+        assert cm.exception.error_code == 'unavailable_workflow_error'
