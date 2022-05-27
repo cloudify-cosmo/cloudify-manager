@@ -590,8 +590,21 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             return True
         if not rules.get('available', True):
             return False
+        ni_active_rule = rules.get('node_instances_active')
+        if ni_active_rule:
+            return self._node_instances_active_states_match(ni_active_rule)
         # TODO add other availability rules checking here
         return True
+
+    def _node_instances_active_states_match(self, node_instance_active_rule):
+        ni_states = set(ni.state for n in self.nodes for ni in n.instances)
+        if node_instance_active_rule == 'all':
+            return all(state == 'started' for state in ni_states)
+        if node_instance_active_rule == 'some':
+            return any(state == 'started' for state in ni_states)
+        if node_instance_active_rule == 'none':
+            return not any(state == 'started' for state in ni_states)
+        return False
 
     @classmethod
     def compare_statuses(
