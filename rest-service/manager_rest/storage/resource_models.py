@@ -598,19 +598,26 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
     def _true_or_none(self, rule):
         return rule is True or rule is None
 
-    def _node_instances_active_states_match(self, node_instance_active_rule):
-        if node_instance_active_rule is None:
+    def _node_instances_active_states_match(self, node_instance_active_rules):
+        if node_instance_active_rules is None:
             return True
         ni_states = set(ni.state for n in self.nodes for ni in n.instances)
-        if node_instance_active_rule == 'all':
-            return all(state == 'started' for state in ni_states)
-        if node_instance_active_rule == 'some':
-            return any(state == 'started' for state in ni_states)
-        if node_instance_active_rule == 'none':
-            return not any(state == 'started' for state in ni_states)
-        raise manager_exceptions.InvalidWorkflowAvailabilityRule(
-            "Invalid value for 'node_instances_active' availability rule: "
-            f"'{node_instance_active_rule}'")
+        result = False
+        for rule in node_instance_active_rules:
+            if rule == 'all':
+                result |= all(state == 'started' for state in ni_states)
+            elif rule == 'partial':
+                result |= any(state == 'started' for state in ni_states) \
+                          and any(state != 'started' for state in ni_states)
+            elif rule == 'none':
+                result |= not any(state == 'started' for state in ni_states)
+            else:
+                raise manager_exceptions.InvalidWorkflowAvailabilityRule(
+                    "Invalid value for 'node_instances_active' availability "
+                    f"rule: '{node_instance_active_rules}'")
+            if result is True:
+                return True
+        return False
 
     @classmethod
     def compare_statuses(

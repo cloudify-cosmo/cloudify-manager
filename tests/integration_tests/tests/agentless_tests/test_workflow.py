@@ -488,15 +488,15 @@ workflows:
     wf1:
         mapping: file:///dev/null
         availability_rules:
-            node_instances_active: none
+            node_instances_active: [none]
     wf2:
         mapping: file:///dev/null
         availability_rules:
-            node_instances_active: some
+            node_instances_active: [some]
     wf3:
         mapping: file:///dev/null
         availability_rules:
-            node_instances_active: all
+            node_instances_active: [all]
 """
         base_bp_path = \
             self.make_yaml_file(bp_template.format(active='none'))
