@@ -693,6 +693,8 @@ workflows:
   check_status:
     mapping: default_workflows.cloudify.plugins.workflows.check_status
     is_cascading: true
+    availability_rules:
+      node_instances_active: [ 'all', 'partial' ]
     parameters:
       run_by_dependency_order:
         default: false
@@ -879,6 +881,8 @@ workflows:
   install_new_agents:
     mapping: default_workflows.cloudify.plugins.workflows.install_new_agents
     is_cascading: false
+    availability_rules:
+      node_instances_active: [ 'all', 'partial' ]
     parameters:
       install_agent_timeout:
         default: 300
@@ -910,6 +914,8 @@ workflows:
   validate_agents:
     mapping: default_workflows.cloudify.plugins.workflows.validate_agents
     is_cascading: false
+    availability_rules:
+      node_instances_active: [ 'all', 'partial' ]
     parameters:
       node_ids:
         default: []
@@ -951,6 +957,8 @@ workflows:
   pull:
     mapping: default_workflows.cloudify.plugins.workflows.pull
     is_cascading: false
+    availability_rules:
+      node_instances_active: [ 'all', 'partial' ]
     parameters:
       operation_parms:
         default: {}
