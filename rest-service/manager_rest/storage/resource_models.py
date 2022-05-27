@@ -585,13 +585,32 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                 for wf_name, wf in self.workflows.items()]
 
     def _is_workflow_available(self, workflow):
+        validation_methods = {
+            'available': self._true_or_none,
+            'node_instances_active': self._node_instances_active_states_match,
+        }
         rules = workflow.get('availability_rules')
         if not rules:
             return True
-        if not rules.get('available', True):
-            return False
-        # TODO add other availability rules checking here
-        return True
+        return all(validation_methods[rule](rules[rule])
+                   for rule in rules if rule in validation_methods)
+
+    def _true_or_none(self, rule):
+        return rule is True or rule is None
+
+    def _node_instances_active_states_match(self, node_instance_active_rule):
+        if node_instance_active_rule is None:
+            return True
+        ni_states = set(ni.state for n in self.nodes for ni in n.instances)
+        if node_instance_active_rule == 'all':
+            return all(state == 'started' for state in ni_states)
+        if node_instance_active_rule == 'some':
+            return any(state == 'started' for state in ni_states)
+        if node_instance_active_rule == 'none':
+            return not any(state == 'started' for state in ni_states)
+        raise manager_exceptions.InvalidWorkflowAvailabilityRule(
+            "Invalid value for 'node_instances_active' availability rule: "
+            f"'{node_instance_active_rule}'")
 
     @classmethod
     def compare_statuses(
