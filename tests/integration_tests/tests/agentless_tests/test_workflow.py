@@ -488,11 +488,11 @@ workflows:
     wf1:
         mapping: file:///dev/null
         availability_rules:
-            node_instances_active: [none]
+            node_instances_active: [none, all]
     wf2:
         mapping: file:///dev/null
         availability_rules:
-            node_instances_active: [some]
+            node_instances_active: [partial]
     wf3:
         mapping: file:///dev/null
         availability_rules:
@@ -501,11 +501,10 @@ workflows:
         base_bp_path = \
             self.make_yaml_file(bp_template.format(active='none'))
         deployment, _ = self.deploy_application(base_bp_path)
+        self.execute_workflow('wf1', deployment.id)
         with self.assertRaises(CloudifyClientError) as cm:
-            self.execute_workflow('wf1', deployment.id)
+            self.execute_workflow('wf2', deployment.id)
         assert cm.exception.error_code == 'unavailable_workflow_error'
-        self.execute_workflow('wf2', deployment.id)  # doesn't throw
-        self.execute_workflow('wf3', deployment.id)  # doesn't throw
 
         node_instances = self.client.node_instances.list(
             deployment_id=deployment.id, _include=['id', 'state'])
@@ -517,7 +516,4 @@ workflows:
         with self.assertRaises(CloudifyClientError) as cm:
             self.execute_workflow('wf1', deployment.id)
         assert cm.exception.error_code == 'unavailable_workflow_error'
-        self.execute_workflow('wf2', deployment.id)  # doesn't throw
-        with self.assertRaises(CloudifyClientError) as cm:
-            self.execute_workflow('wf3', deployment.id)
-        assert cm.exception.error_code == 'unavailable_workflow_error'
+        self.execute_workflow('wf2', deployment.id)
