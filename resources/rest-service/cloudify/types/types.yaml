@@ -687,6 +687,8 @@ workflows:
   install:
     mapping: default_workflows.cloudify.plugins.workflows.install
     is_cascading: false
+    availability_rules:
+      node_instances_active: ['none', 'partial']
 
   check_status:
     mapping: default_workflows.cloudify.plugins.workflows.check_status
@@ -704,6 +706,8 @@ workflows:
   check_drift:
     mapping: default_workflows.cloudify.plugins.workflows.check_drift
     is_cascading: true
+    availability_rules:
+      node_instances_active: ['all', 'partial']
     parameters:
       run_by_dependency_order:
         default: false
@@ -717,6 +721,8 @@ workflows:
   uninstall:
     mapping: default_workflows.cloudify.plugins.workflows.uninstall
     is_cascading: false
+    availability_rules:
+      node_instances_active: [ 'all', 'partial' ]
     parameters:
       ignore_failure:
         default: false
@@ -725,6 +731,8 @@ workflows:
   start:
     mapping: default_workflows.cloudify.plugins.workflows.start
     is_cascading: false
+    availability_rules:
+      node_instances_active: [ 'none', 'partial' ]
     parameters:
       operation_parms:
         default: {}
@@ -740,6 +748,8 @@ workflows:
   stop:
     mapping: default_workflows.cloudify.plugins.workflows.stop
     is_cascading: false
+    availability_rules:
+      node_instances_active: [ 'all', 'partial' ]
     parameters:
       operation_parms:
         default: {}
@@ -755,6 +765,8 @@ workflows:
   restart:
     mapping: default_workflows.cloudify.plugins.workflows.restart
     is_cascading: false
+    availability_rules:
+      node_instances_active: [ 'all', 'partial' ]
     parameters:
       stop_parms:
         default: {}
@@ -790,6 +802,8 @@ workflows:
   heal:
     mapping: default_workflows.cloudify.plugins.workflows.auto_heal_reinstall_node_subgraph
     is_cascading: false
+    availability_rules:
+      node_instances_active: [ 'all', 'partial' ]
     parameters:
       node_instance_id:
         description: Which node instance has failed
@@ -803,6 +817,8 @@ workflows:
   scale:
     mapping: default_workflows.cloudify.plugins.workflows.scale_entity
     is_cascading: false
+    availability_rules:
+      node_instances_active: [ 'all', 'partial' ]
     parameters:
       scalable_entity_name:
         description: >
@@ -904,6 +920,8 @@ workflows:
 
   rollback:
     mapping: default_workflows.cloudify.plugins.workflows.rollback
+    availability_rules:
+      node_instances_active: [ 'all', 'partial' ]
     parameters:
       type_names:
         default: []
