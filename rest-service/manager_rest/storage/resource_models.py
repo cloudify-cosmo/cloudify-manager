@@ -605,19 +605,16 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         result = False
         for rule in node_instance_active_rules:
             if rule == 'all':
-                result |= all(state == 'started' for state in ni_states)
+                result |= (ni_states == {'started'})
             elif rule == 'partial':
-                result |= any(state == 'started' for state in ni_states) \
-                          and any(state != 'started' for state in ni_states)
+                result |= (len(ni_states) > 1 and 'started' in ni_states)
             elif rule == 'none':
-                result |= not any(state == 'started' for state in ni_states)
+                result |= ('started' not in ni_states)
             else:
                 raise manager_exceptions.InvalidWorkflowAvailabilityRule(
                     "Invalid value for 'node_instances_active' availability "
                     f"rule: '{node_instance_active_rules}'")
-            if result is True:
-                return True
-        return False
+        return result
 
     @classmethod
     def compare_statuses(
