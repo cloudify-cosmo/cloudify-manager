@@ -1,50 +1,80 @@
 import os
 import mock
-import json
 import pytest
 
 from cloudify_system_workflows.blueprint import extract_parser_context
 from cloudify_system_workflows.dsl_import_resolver\
-    .resolver_with_catalog_support import PLUGIN_CATALOG_URL
+    .resolver_with_catalog_support import PLUGINS_MARKETPLACE_API_UPL
 from cloudify.exceptions import InvalidBlueprintImport
 
+mock_plugin_data = {
+    "items": [
+        {
+            "name": "cloudify-openstack-plugin",
+            "logo_url":
+                "https://cloudify.co/wp-content/uploads/2019/08/oslogo.png",
+            "id": "6f58d23f-f5e5-4477-8dff-7684bba8e7bf"
+        },
+    ]
+}
+mock_plugin_data_empty = {
+    "items": []
+}
 
-mock_plugins_catalog = [
-    {
-        "name": "cloudify-openstack-plugin",
-        "icon": "https://cloudify.co/wp-content/uploads/2019/08/oslogo.png",
-        "versions": {
-            "2.14.17": {
-                "wagons": [
-                    {
-                        "name": "Centos Core",
-                        "url": "cloudify-openstack-plugin_2.14.17.wgn"
-                    },
-                ],
-                "yaml": "cloudify-openstack-plugin/2.14.17/plugin.yaml"
-            },
-            "3.2.21": {
-                "wagons": [
-                    {
-                        "name": "Centos Core",
-                        "url": "cloudify-openstack-plugin_3.2.21.wgn"
-                    },
-                ],
-                "yaml": "cloudify-openstack-plugin/3.2.21/plugin.yaml"
-            },
-            "3.2.22": {
-                "wagons": [
-                    {
-                        "name": "Redhat Maipo",
-                        "url": "cloudify-openstack-plugin_3.2.22.wgn"
-                    },
-                ],
-                "yaml": "cloudify-openstack-plugin/3.2.22/plugin.yaml"
-            },
-        }
-    },
-]
+
+mock_plugin_versions = {
+    "items": [
+        {
+            "version": "2.14.17",
+            "yaml_url": "cloudify-openstack-plugin/2.14.17/plugin.yaml",
+            "wagon_urls": [{
+                "release": "Centos Core",
+                "url": "cloudify-openstack-plugin_2.14.17.wgn"
+            }]
+        },        {
+            "version": "3.2.21",
+            "yaml_url": "cloudify-openstack-plugin/3.2.21/plugin.yaml",
+            "wagon_urls": [{
+                "release": "Centos Core",
+                "url": "cloudify-openstack-plugin_3.2.21.wgn"
+            }]
+        },
+        {
+            "version": "3.2.22",
+            "yaml_url": "cloudify-openstack-plugin/3.2.22/plugin.yaml",
+            "wagon_urls": [{
+                "release": "Redhat Maipo",
+                "url": "cloudify-openstack-plugin_3.2.22.wgn"
+            }]
+        },
+    ]
+}
+
 plugins_versions = {}
+
+
+def mock_requests_get(*args, **kwargs):
+    class MockResponse:
+        def __init__(self, json_data, status_code):
+            self.json_data = json_data
+            self.status_code = status_code
+            self.ok = (self.status_code == 200)
+
+        def json(self):
+            return self.json_data
+
+    print(args)
+
+    if args[0].startswith(PLUGINS_MARKETPLACE_API_UPL + "?name"):
+        plugin_name = args[0].split('?name=')[-1]
+        if plugin_name == 'cloudify-openstack-plugin':
+            return MockResponse(mock_plugin_data, 200)
+        return MockResponse(mock_plugin_data_empty, 200)
+    if args[0].startswith(PLUGINS_MARKETPLACE_API_UPL) and \
+            args[0].endswith("/versions"):
+        return MockResponse(mock_plugin_versions, 200)
+
+    return MockResponse(None, 404)
 
 
 @pytest.fixture
@@ -65,12 +95,7 @@ def mock_client():
 
 
 def local_download_file(url, dest_path, target_filename=None):
-    if url == PLUGIN_CATALOG_URL:
-        target_filename = 'plugin_catalog.json'
-        file_path = os.path.join(dest_path, target_filename)
-        json.dump(mock_plugins_catalog, open(file_path, "w"))
-        return file_path
-    elif url.endswith('.wgn'):
+    if url.endswith('.wgn'):
         p_name, p_version = url.strip('.wgn').split('_')
         plugin = mock.MagicMock()
         plugin.package_name = p_name
@@ -84,8 +109,9 @@ class TestPluginAutoupload:
         os.path.dirname(__file__),
         '..', '..', '..', '..', 'resources', 'rest-service')
 
+    @mock.patch('requests.get', side_effect=mock_requests_get)
     def _parse_plugin_import(
-            self, mock_client, import_url, clear_plugins=True):
+            self, mock_client, import_url, mock_requests, clear_plugins=True):
         if clear_plugins:
             plugins_versions.clear()
         parser_context = extract_parser_context(

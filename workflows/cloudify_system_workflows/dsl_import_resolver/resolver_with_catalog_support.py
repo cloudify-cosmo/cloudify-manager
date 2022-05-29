@@ -184,7 +184,7 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
                 name, "plugins catalog unreachable at {}".format(
                     PLUGINS_MARKETPLACE_API_UPL)))
 
-        if not plugin.json() and not plugin.json().get('items'):
+        if not plugin.json() or not plugin.json().get('items'):
             raise FileNotFoundError()
 
         plugin_id = plugin.json()['items'][0].get('id')
@@ -192,8 +192,8 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
 
         plugin_versions = requests.get(
             PLUGINS_MARKETPLACE_API_UPL + '/{}/versions'.format(plugin_id))
-        if not plugin_versions.ok or not plugin_versions.json() or\
-                not plugin_versions.json().get('items'):
+        if not plugin_versions.ok or not plugin_versions.json() \
+                or not plugin_versions.json().get('items'):
             raise FileNotFoundError()
 
         # Find maximal matching version
