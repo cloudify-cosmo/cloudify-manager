@@ -14,7 +14,6 @@
 #  * limitations under the License.
 
 import os
-import json
 import zipfile
 import tempfile
 import requests
@@ -40,8 +39,7 @@ FILE_SERVER_BLUEPRINTS_FOLDER = 'blueprints'
 PLUGIN_PREFIX = 'plugin:'
 BLUEPRINT_PREFIX = 'blueprint:'
 EXTRA_VERSION_CONSTRAINT = 'additional_version_constraint'
-PLUGIN_CATALOG_URL = "https://repository.cloudifysource.org/cloudify/wagons/" \
-                     "plugins_allversions.json"
+PLUGINS_MARKETPLACE_API_UPL = "https://marketplace.cloudify.co/plugins"
 
 
 class ResolverWithCatalogSupport(DefaultImportResolver):
@@ -177,49 +175,50 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
             'the console, or cfy plugins upload. Error: {}'
 
         plugin_target_path = tempfile.mkdtemp()
-        try:
-            catalog_path = self._download_file(PLUGIN_CATALOG_URL,
-                                               plugin_target_path)
-        except Exception as e:
-            raise InvalidBlueprintImport(download_error_msg.format(name, e))
-        plugins_data = open(catalog_path).read()
-        plugins_data = json.loads(plugins_data)
-        try:
-            plugin = next(x for x in plugins_data if x["name"] == name)
-        except StopIteration:
+
+        # Get plugin data from marketplace
+        plugin = requests.get(
+            PLUGINS_MARKETPLACE_API_UPL + '?name={}'.format(name))
+        if not plugin.ok:
+            raise InvalidBlueprintImport(download_error_msg.format(
+                name, "plugins catalog unreachable at {}".format(
+                    PLUGINS_MARKETPLACE_API_UPL)))
+
+        if not plugin.json() and not plugin.json().get('items'):
             raise FileNotFoundError()
 
-        matching_versions = [
-            (v, parse_version(v)) for v in plugin['versions'].keys()
-            if (parse_version(v) in specifier_set
-                and plugin['versions'][v]['yaml']
-                and plugin['versions'][v]['wagons']
-                and self.matching_distro_wagon(
-                        plugin['versions'][v]['wagons'],
-                        distribution)
-                )
-        ]
+        plugin_id = plugin.json()['items'][0].get('id')
+        logo_url = plugin.json()['items'][0].get('logo_url')
+
+        plugin_versions = requests.get(
+            PLUGINS_MARKETPLACE_API_UPL + '/{}/versions'.format(plugin_id))
+        if not plugin_versions.ok or not plugin_versions.json() or\
+                not plugin_versions.json().get('items'):
+            raise FileNotFoundError()
+
+        # Find maximal matching version
+        matching_versions = []
+        for version in plugin_versions.json().get('items'):
+            parsed_version = parse_version(version.get('version'))
+            yaml_url = version.get('yaml_url')
+            wagon_url = self.matching_distro_wagon(version.get('wagon_urls'),
+                                                   distribution)
+            if parsed_version in specifier_set and yaml_url and wagon_url:
+                matching_versions.append((parsed_version, yaml_url, wagon_url))
         if not matching_versions:
             raise FileNotFoundError()
 
-        max_item = max(matching_versions, key=lambda v_p: v_p[1])
-        matching_plugin_data = plugin['versions'][max_item[0]]
+        _, yaml_url, wagon_url = max(matching_versions, key=lambda v: v[0])
 
-        p_yaml = matching_plugin_data['yaml']
-        if 'v2_yaml' in matching_plugin_data:
-            p_yaml = matching_plugin_data['v2_yaml']
-        p_wagon = self.matching_distro_wagon(matching_plugin_data['wagons'],
-                                             distribution)
+        # Download plugin files
         try:
-            self._download_file(p_yaml, plugin_target_path)
-            self._download_file(p_wagon, plugin_target_path)
-            if plugin['icon']:
-                self._download_file(plugin['icon'], plugin_target_path,
-                                    'icon.png')
+            self._download_file(yaml_url, plugin_target_path)
+            self._download_file(wagon_url, plugin_target_path)
+            if logo_url:
+                self._download_file(logo_url, plugin_target_path, 'icon.png')
         except Exception as e:
             raise InvalidBlueprintImport(download_error_msg.format(name, e))
 
-        os.remove(catalog_path)
         plugin_zip = plugin_target_path + '.zip'
         self._create_zip(plugin_target_path, plugin_zip,
                          include_folder=False)
@@ -230,8 +229,8 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
     @staticmethod
     def matching_distro_wagon(wagons, distro):
         matching_wagons = [x['url'] for x in wagons
-                           if x['name'].lower() == distro
-                           or x['name'].lower().startswith('manylinux')]
+                           if x['release'].lower() == distro
+                           or x['release'] == 'manylinux']
         if matching_wagons:
             return matching_wagons[0]
 
