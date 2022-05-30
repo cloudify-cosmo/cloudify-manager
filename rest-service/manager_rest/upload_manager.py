@@ -410,7 +410,8 @@ class UploadedBlueprintsManager(UploadedDataManager):
                 data_id,
                 application_file_name,
                 blueprint_url,
-                config.instance.file_server_root,   # for the import resolver
+                config.instance.file_server_root,     # for the import resolver
+                config.instance.marketplace_api_url,  # for the import resolver
                 labels=labels,
             )
             rm.sm.update(new_blueprint)
@@ -650,7 +651,8 @@ class UploadedBlueprintsValidator(UploadedBlueprintsManager):
                 data_id,
                 application_file_name,
                 blueprint_url,
-                config.instance.file_server_root,   # for the import resolver
+                config.instance.file_server_root,     # for the import resolver
+                config.instance.marketplace_api_url,  # for the import resolver
                 validate_only=True,
             )
             workflow_executor.execute_workflow(messages)

@@ -3,9 +3,9 @@ import mock
 import pytest
 
 from cloudify_system_workflows.blueprint import extract_parser_context
-from cloudify_system_workflows.dsl_import_resolver\
-    .resolver_with_catalog_support import PLUGINS_MARKETPLACE_API_UPL
 from cloudify.exceptions import InvalidBlueprintImport
+
+MARKETPLACE_API_UPL = "http://127.0.0.1"
 
 mock_plugin_data = {
     "items": [
@@ -65,12 +65,12 @@ def mock_requests_get(*args, **kwargs):
 
     print(args)
 
-    if args[0].startswith(PLUGINS_MARKETPLACE_API_UPL + "?name"):
+    if args[0].startswith(MARKETPLACE_API_UPL + "/plugins?name"):
         plugin_name = args[0].split('?name=')[-1]
         if plugin_name == 'cloudify-openstack-plugin':
             return MockResponse(mock_plugin_data, 200)
         return MockResponse(mock_plugin_data_empty, 200)
-    if args[0].startswith(PLUGINS_MARKETPLACE_API_UPL) and \
+    if args[0].startswith(MARKETPLACE_API_UPL + "/plugins") and \
             args[0].endswith("/versions"):
         return MockResponse(mock_plugin_versions, 200)
 
@@ -117,6 +117,7 @@ class TestPluginAutoupload:
         parser_context = extract_parser_context(
             None,
             resolver_parameters={'file_server_root': self.file_server_root,
+                                 'marketplace_api_url': MARKETPLACE_API_UPL,
                                  'client': mock_client})
         import_resolver = parser_context['resolver']
         plugin = import_resolver.retrieve_plugin(import_url)

@@ -39,7 +39,6 @@ FILE_SERVER_BLUEPRINTS_FOLDER = 'blueprints'
 PLUGIN_PREFIX = 'plugin:'
 BLUEPRINT_PREFIX = 'blueprint:'
 EXTRA_VERSION_CONSTRAINT = 'additional_version_constraint'
-PLUGINS_MARKETPLACE_API_UPL = "https://marketplace.cloudify.co/plugins"
 
 
 class ResolverWithCatalogSupport(DefaultImportResolver):
@@ -60,11 +59,13 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
                  plugin_version_constraints=None,
                  plugin_mappings=None,
                  file_server_root=None,
+                 marketplace_api_url=None,
                  client=None):
         super(ResolverWithCatalogSupport, self).__init__(rules, fallback)
         self.version_constraints = plugin_version_constraints or {}
         self.mappings = plugin_mappings or {}
         self.file_server_root = file_server_root
+        self.marketplace_api_url = marketplace_api_url
         self.client = client
 
     @staticmethod
@@ -175,14 +176,15 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
             'the console, or cfy plugins upload. Error: {}'
 
         plugin_target_path = tempfile.mkdtemp()
+        plugins_marketplace = self.marketplace_api_url + "/plugins"
 
         # Get plugin data from marketplace
         plugin = requests.get(
-            PLUGINS_MARKETPLACE_API_UPL + '?name={}'.format(name))
+            plugins_marketplace + '?name={}'.format(name))
         if not plugin.ok:
             raise InvalidBlueprintImport(download_error_msg.format(
                 name, "plugins catalog unreachable at {}".format(
-                    PLUGINS_MARKETPLACE_API_UPL)))
+                    plugins_marketplace)))
 
         if not plugin.json() or not plugin.json().get('items'):
             raise FileNotFoundError()
@@ -191,7 +193,7 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
         logo_url = plugin.json()['items'][0].get('logo_url')
 
         plugin_versions = requests.get(
-            PLUGINS_MARKETPLACE_API_UPL + '/{}/versions'.format(plugin_id))
+            plugins_marketplace + '/{}/versions'.format(plugin_id))
         if not plugin_versions.ok or not plugin_versions.json() \
                 or not plugin_versions.json().get('items'):
             raise FileNotFoundError()
