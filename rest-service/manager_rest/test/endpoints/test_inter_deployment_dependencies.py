@@ -1,3 +1,5 @@
+import mock
+
 import uuid
 
 from cloudify.models_states import DeploymentState
@@ -698,14 +700,18 @@ class InterDeploymentDependenciesTest(BaseServerTestCase):
 
     def test_alerts_uninstall_deployment(self):
         self._prepare_dependent_deployments()
-        self.assertRaisesRegex(
-            CloudifyClientError,
-            '1] Deployment `app` uses a shared resource from the current '
-            'deployment in its node `vm`',
-            self.client.executions.start,
-            'infra',
-            'uninstall'
-        )
+        self.client.executions.start('infra', 'install')
+        with mock.patch('manager_rest.storage.resource_models'
+                        '.Deployment._is_workflow_available',
+                        return_value=True):
+            self.assertRaisesRegex(
+                CloudifyClientError,
+                '1] Deployment `app` uses a shared resource from the current '
+                'deployment in its node `vm`',
+                self.client.executions.start,
+                'infra',
+                'uninstall'
+            )
 
     def test_alerts_delete_deployment(self):
         self._prepare_dependent_deployments()

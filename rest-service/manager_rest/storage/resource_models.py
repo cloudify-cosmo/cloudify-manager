@@ -598,19 +598,23 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
     def _true_or_none(self, rule):
         return rule is True or rule is None
 
-    def _node_instances_active_states_match(self, node_instance_active_rule):
-        if node_instance_active_rule is None:
+    def _node_instances_active_states_match(self, node_instance_active_rules):
+        if node_instance_active_rules is None:
             return True
         ni_states = set(ni.state for n in self.nodes for ni in n.instances)
-        if node_instance_active_rule == 'all':
-            return all(state == 'started' for state in ni_states)
-        if node_instance_active_rule == 'some':
-            return any(state == 'started' for state in ni_states)
-        if node_instance_active_rule == 'none':
-            return not any(state == 'started' for state in ni_states)
-        raise manager_exceptions.InvalidWorkflowAvailabilityRule(
-            "Invalid value for 'node_instances_active' availability rule: "
-            f"'{node_instance_active_rule}'")
+        result = False
+        for rule in node_instance_active_rules:
+            if rule == 'all':
+                result |= (ni_states == {'started'})
+            elif rule == 'partial':
+                result |= (len(ni_states) > 1 and 'started' in ni_states)
+            elif rule == 'none':
+                result |= ('started' not in ni_states)
+            else:
+                raise manager_exceptions.InvalidWorkflowAvailabilityRule(
+                    "Invalid value for 'node_instances_active' availability "
+                    f"rule: '{node_instance_active_rules}'")
+        return result
 
     @classmethod
     def compare_statuses(
@@ -1043,6 +1047,7 @@ class Execution(CreatedAtMixin, SQLResourceBase):
         # before parameters
         self.allow_custom_parameters = kwargs.pop(
             'allow_custom_parameters', False)
+        self._forced = kwargs.pop('force', False)
         super().__init__(**kwargs)
 
     __tablename__ = 'executions'
@@ -1216,7 +1221,8 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             import GetValuesWithStorageManager
 
         workflow = self.get_workflow(deployment, workflow_id)
-        if not deployment._is_workflow_available(workflow):
+        if not self._forced \
+                and not deployment._is_workflow_available(workflow):
             raise manager_exceptions.UnavailableWorkflowError(
                 f'Workflow not available: {workflow_id}')
 

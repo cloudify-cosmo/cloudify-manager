@@ -182,6 +182,7 @@ class Executions(SecuredResource):
                 is_dry_run=dry_run,
                 status=force_status or ExecutionState.PENDING,
                 allow_custom_parameters=allow_custom_parameters,
+                force=force,
             )
             if creator:
                 execution.creator = creator
