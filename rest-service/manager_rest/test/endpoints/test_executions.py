@@ -641,7 +641,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         self.put_deployment('dep-1')
         self._create_execution_and_update_token('dep-2', uuid.uuid4().hex)
         self.client.executions.start('dep-1', 'install')
-        self.client.executions.start('dep-1', 'uninstall')
+        self.client.executions.start('dep-1', 'uninstall', force=True)
         # now we have 5 executions: 2 of them are deployment creations,
         # and one is not terminated -> so only 2 are eligible for deletion
         self.client.executions.delete()
