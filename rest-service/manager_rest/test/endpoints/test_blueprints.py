@@ -42,6 +42,8 @@ def mocked_requests_get(*args, **kwargs):
         def __init__(self, json_data, status_code):
             self.json_data = json_data
             self.status_code = status_code
+            self.ok = (self.status_code == 200)
+            self.text = str(self.json_data)
     return MockResponse({'error_code': 'no can do'}, 404)
 
 
@@ -461,7 +463,6 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
     @mock.patch('requests.get', side_effect=mocked_requests_get)
     def test_blueprint_upload_autoupload_plugins_network_failure(
             self, mock_get, mock_get_managers):
-        mock_get.side_effect = Exception('Faulty network')
         blueprint_id = 'bp_with_plugin_import_no_github'
         self.assertRaisesRegex(
             InvalidBlueprintImport,

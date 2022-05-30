@@ -47,6 +47,7 @@ def upgrade():
     drop_old_monitoring_cred_fields()
     add_config_admin_only_column()
     add_config_log_fetch_credentials()
+    add_config_marketplace_url()
 
 
 def downgrade():
@@ -59,6 +60,7 @@ def downgrade():
     create_old_monitoring_cred_fields()
     drop_config_admin_only_column()
     drop_config_log_fetch_credentials()
+    drop_config_marketplace_url()
 
 
 def add_config_log_fetch_credentials():
@@ -85,6 +87,21 @@ def add_config_log_fetch_credentials():
     )
 
 
+def add_config_marketplace_url():
+    op.bulk_insert(
+        config_table,
+        [
+            {
+                'name': 'marketplace_api_url',
+                'value': 'https://marketplace.cloudify.co',
+                'scope': 'rest',
+                'schema': {'type': 'string'},
+                'is_editable': True,
+            },
+        ]
+    )
+
+
 def drop_config_log_fetch_credentials():
     for key in ['log_fetch_username', 'log_fetch_password']:
         op.execute(
@@ -95,6 +112,14 @@ def drop_config_log_fetch_credentials():
                 & (config_table.c.scope == op.inline_literal('rest'))
             )
         )
+
+
+def drop_config_marketplace_url():
+    op.execute(
+        config_table.delete().where(
+            config_table.c.name == op.inline_literal('marketplace_api_url')
+        )
+    )
 
 
 def drop_old_monitoring_cred_fields():

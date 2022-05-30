@@ -14,7 +14,6 @@
 #  * limitations under the License.
 
 import os
-import json
 import zipfile
 import tempfile
 import requests
@@ -40,8 +39,6 @@ FILE_SERVER_BLUEPRINTS_FOLDER = 'blueprints'
 PLUGIN_PREFIX = 'plugin:'
 BLUEPRINT_PREFIX = 'blueprint:'
 EXTRA_VERSION_CONSTRAINT = 'additional_version_constraint'
-PLUGIN_CATALOG_URL = "https://repository.cloudifysource.org/cloudify/wagons/" \
-                     "plugins_allversions.json"
 
 
 class ResolverWithCatalogSupport(DefaultImportResolver):
@@ -62,11 +59,13 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
                  plugin_version_constraints=None,
                  plugin_mappings=None,
                  file_server_root=None,
+                 marketplace_api_url=None,
                  client=None):
         super(ResolverWithCatalogSupport, self).__init__(rules, fallback)
         self.version_constraints = plugin_version_constraints or {}
         self.mappings = plugin_mappings or {}
         self.file_server_root = file_server_root
+        self.marketplace_api_url = marketplace_api_url
         self.client = client
 
     @staticmethod
@@ -177,49 +176,50 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
             'the console, or cfy plugins upload. Error: {}'
 
         plugin_target_path = tempfile.mkdtemp()
-        try:
-            catalog_path = self._download_file(PLUGIN_CATALOG_URL,
-                                               plugin_target_path)
-        except Exception as e:
-            raise InvalidBlueprintImport(download_error_msg.format(name, e))
-        plugins_data = open(catalog_path).read()
-        plugins_data = json.loads(plugins_data)
-        try:
-            plugin = next(x for x in plugins_data if x["name"] == name)
-        except StopIteration:
+        plugins_marketplace = self.marketplace_api_url + "/plugins"
+
+        # Get plugin data from marketplace
+        plugin = requests.get(f'{plugins_marketplace}?name={name}')
+        if not plugin.ok:
+            raise InvalidBlueprintImport(download_error_msg.format(
+                name, f"plugins catalog unreachable at "
+                      f"{plugins_marketplace}: {plugin.text}"))
+
+        if not plugin.json() or not plugin.json().get('items'):
             raise FileNotFoundError()
 
-        matching_versions = [
-            (v, parse_version(v)) for v in plugin['versions'].keys()
-            if (parse_version(v) in specifier_set
-                and plugin['versions'][v]['yaml']
-                and plugin['versions'][v]['wagons']
-                and self.matching_distro_wagon(
-                        plugin['versions'][v]['wagons'],
-                        distribution)
-                )
-        ]
+        plugin_id = plugin.json()['items'][0].get('id')
+        logo_url = plugin.json()['items'][0].get('logo_url')
+
+        plugin_versions = requests.get(
+            f'{plugins_marketplace}/{plugin_id}/versions')
+        if not plugin_versions.ok or not plugin_versions.json() \
+                or not plugin_versions.json().get('items'):
+            raise FileNotFoundError()
+
+        # Find maximal matching version
+        matching_versions = []
+        for version in plugin_versions.json().get('items'):
+            parsed_version = parse_version(version.get('version'))
+            yaml_url = version.get('yaml_url')
+            wagon_url = self.matching_distro_wagon(version.get('wagon_urls'),
+                                                   distribution)
+            if parsed_version in specifier_set and yaml_url and wagon_url:
+                matching_versions.append((parsed_version, yaml_url, wagon_url))
         if not matching_versions:
             raise FileNotFoundError()
 
-        max_item = max(matching_versions, key=lambda v_p: v_p[1])
-        matching_plugin_data = plugin['versions'][max_item[0]]
+        _, yaml_url, wagon_url = max(matching_versions, key=lambda v: v[0])
 
-        p_yaml = matching_plugin_data['yaml']
-        if 'v2_yaml' in matching_plugin_data:
-            p_yaml = matching_plugin_data['v2_yaml']
-        p_wagon = self.matching_distro_wagon(matching_plugin_data['wagons'],
-                                             distribution)
+        # Download plugin files
         try:
-            self._download_file(p_yaml, plugin_target_path)
-            self._download_file(p_wagon, plugin_target_path)
-            if plugin['icon']:
-                self._download_file(plugin['icon'], plugin_target_path,
-                                    'icon.png')
+            self._download_file(yaml_url, plugin_target_path)
+            self._download_file(wagon_url, plugin_target_path)
+            if logo_url:
+                self._download_file(logo_url, plugin_target_path, 'icon.png')
         except Exception as e:
             raise InvalidBlueprintImport(download_error_msg.format(name, e))
 
-        os.remove(catalog_path)
         plugin_zip = plugin_target_path + '.zip'
         self._create_zip(plugin_target_path, plugin_zip,
                          include_folder=False)
@@ -230,8 +230,8 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
     @staticmethod
     def matching_distro_wagon(wagons, distro):
         matching_wagons = [x['url'] for x in wagons
-                           if x['name'].lower() == distro
-                           or x['name'].lower().startswith('manylinux')]
+                           if x['release'].lower() == distro
+                           or x['release'].lower().startswith('manylinux')]
         if matching_wagons:
             return matching_wagons[0]
 
@@ -262,7 +262,7 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
                     # If the code below doesn't raise any exception then it's
                     # the case where a version has been provided with no
                     # operator to prefix it.
-                    specs &= SpecifierSet('==={}'.format(spec))
+                    specs &= SpecifierSet(f'==={spec}')
             return specs
 
         filters['package_name'] = name
@@ -301,7 +301,7 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
             except FileNotFoundError:
                 version_message = ''
                 if version_specified:
-                    version_message = ' with version {}'.format(specifier_set)
+                    version_message = f' with version {specifier_set}'
                 raise InvalidBlueprintImport(
                     'Couldn\'t find plugin "{0}"{1} for {2} in the plugins '
                     'catalog. Please upload the plugin using the console, '

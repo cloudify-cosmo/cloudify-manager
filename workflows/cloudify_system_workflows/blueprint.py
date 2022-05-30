@@ -28,6 +28,7 @@ def upload(ctx, **kwargs):
     app_file_name = kwargs['app_file_name']
     url = kwargs['url']
     file_server_root = kwargs['file_server_root']
+    marketplace_api_url = kwargs['marketplace_api_url']
     validate_only = kwargs['validate_only']
     labels = kwargs.get('labels')
 
@@ -130,6 +131,7 @@ def upload(ctx, **kwargs):
             provider_context,
             resolver_parameters={
                 'file_server_root': file_server_root,
+                'marketplace_api_url': marketplace_api_url,
                 'client': client
             })
     except dsl_parser_utils.ResolverInstantiationError as e:

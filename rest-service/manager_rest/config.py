@@ -132,6 +132,8 @@ class Config(object):
     rest_service_log_files_backup_count = Setting(
         'rest_service_log_files_backup_count')
 
+    marketplace_api_url = Setting('marketplace_api_url')
+
     monitoring_timeout = Setting('monitoring_timeout')
 
     test_mode = Setting('test_mode', default=False)
