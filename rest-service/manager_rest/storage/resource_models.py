@@ -1047,6 +1047,7 @@ class Execution(CreatedAtMixin, SQLResourceBase):
         # before parameters
         self.allow_custom_parameters = kwargs.pop(
             'allow_custom_parameters', False)
+        self._forced = kwargs.pop('force', False)
         super().__init__(**kwargs)
 
     __tablename__ = 'executions'
@@ -1220,7 +1221,8 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             import GetValuesWithStorageManager
 
         workflow = self.get_workflow(deployment, workflow_id)
-        if not deployment._is_workflow_available(workflow):
+        if not self._forced \
+                and not deployment._is_workflow_available(workflow):
             raise manager_exceptions.UnavailableWorkflowError(
                 f'Workflow not available: {workflow_id}')
 
