@@ -43,6 +43,7 @@ def mocked_requests_get(*args, **kwargs):
             self.json_data = json_data
             self.status_code = status_code
             self.ok = (self.status_code == 200)
+            self.text = str(self.json_data)
     return MockResponse({'error_code': 'no can do'}, 404)
 
 

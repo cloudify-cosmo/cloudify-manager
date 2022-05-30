@@ -179,12 +179,11 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
         plugins_marketplace = self.marketplace_api_url + "/plugins"
 
         # Get plugin data from marketplace
-        plugin = requests.get(
-            plugins_marketplace + '?name={}'.format(name))
+        plugin = requests.get(f'{plugins_marketplace}?name={name}')
         if not plugin.ok:
             raise InvalidBlueprintImport(download_error_msg.format(
-                name, "plugins catalog unreachable at {}".format(
-                    plugins_marketplace)))
+                name, f"plugins catalog unreachable at "
+                      f"{plugins_marketplace}: {plugin.text}"))
 
         if not plugin.json() or not plugin.json().get('items'):
             raise FileNotFoundError()
@@ -193,7 +192,7 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
         logo_url = plugin.json()['items'][0].get('logo_url')
 
         plugin_versions = requests.get(
-            plugins_marketplace + '/{}/versions'.format(plugin_id))
+            f'{plugins_marketplace}/{plugin_id}/versions')
         if not plugin_versions.ok or not plugin_versions.json() \
                 or not plugin_versions.json().get('items'):
             raise FileNotFoundError()
@@ -232,7 +231,7 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
     def matching_distro_wagon(wagons, distro):
         matching_wagons = [x['url'] for x in wagons
                            if x['release'].lower() == distro
-                           or x['release'] == 'manylinux']
+                           or x['release'].lower().startswith('manylinux')]
         if matching_wagons:
             return matching_wagons[0]
 
@@ -263,7 +262,7 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
                     # If the code below doesn't raise any exception then it's
                     # the case where a version has been provided with no
                     # operator to prefix it.
-                    specs &= SpecifierSet('==={}'.format(spec))
+                    specs &= SpecifierSet(f'==={spec}')
             return specs
 
         filters['package_name'] = name
@@ -302,7 +301,7 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
             except FileNotFoundError:
                 version_message = ''
                 if version_specified:
-                    version_message = ' with version {}'.format(specifier_set)
+                    version_message = f' with version {specifier_set}'
                 raise InvalidBlueprintImport(
                     'Couldn\'t find plugin "{0}"{1} for {2} in the plugins '
                     'catalog. Please upload the plugin using the console, '

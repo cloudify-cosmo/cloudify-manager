@@ -612,6 +612,7 @@ class BaseServerTestCase(unittest.TestCase):
         test_config.postgresql_db_name = cls._find_db_name(test_config)
         test_config.file_server_root = cls.tmpdir
         test_config.file_server_url = 'http://localhost:53229'
+        test_config.marketplace_api_url = 'http://localhost'
 
         test_config.rest_service_log_level = 'INFO'
         test_config.rest_service_log_path = cls.rest_service_log
