@@ -699,10 +699,16 @@ workflows:
       run_by_dependency_order:
         default: false
       type_names:
+        type: list
+        item_type: node_type
         default: []
       node_ids:
+        type: list
+        item_type: node_id
         default: []
       node_instance_ids:
+        type: list
+        item_type: node_instance
         default: []
 
   check_drift:
@@ -714,10 +720,16 @@ workflows:
       run_by_dependency_order:
         default: false
       type_names:
+        type: list
+        item_type: node_type
         default: []
       node_ids:
+        type: list
+        item_type: node_id
         default: []
       node_instance_ids:
+        type: list
+        item_type: node_instance
         default: []
 
   uninstall:
@@ -741,10 +753,16 @@ workflows:
       run_by_dependency_order:
         default: true
       type_names:
+        type: list
+        item_type: node_type
         default: []
       node_ids:
+        type: list
+        item_type: node_id
         default: []
       node_instance_ids:
+        type: list
+        item_type: node_instance
         default: []
 
   stop:
@@ -758,10 +776,16 @@ workflows:
       run_by_dependency_order:
         default: true
       type_names:
+        type: list
+        item_type: node_type
         default: []
       node_ids:
+        type: list
+        item_type: node_id
         default: []
       node_instance_ids:
+        type: list
+        item_type: node_instance
         default: []
 
   restart:
@@ -777,10 +801,16 @@ workflows:
       run_by_dependency_order:
         default: true
       type_names:
+        type: list
+        item_type: node_type
         default: []
       node_ids:
+        type: list
+        item_type: node_id
         default: []
       node_instance_ids:
+        type: list
+        item_type: node_instance
         default: []
 
   execute_operation:
@@ -795,10 +825,16 @@ workflows:
       run_by_dependency_order:
         default: false
       type_names:
+        type: list
+        item_type: node_type
         default: []
       node_ids:
+        type: list
+        item_type: node_id
         default: []
       node_instance_ids:
+        type: list
+        item_type: node_instance
         default: []
 
   heal:
@@ -809,6 +845,7 @@ workflows:
     parameters:
       node_instance_id:
         description: Which node instance has failed
+        type: node_instance
       diagnose_value:
         description: Diagnosed reason of failure
         default: Not provided
@@ -887,8 +924,12 @@ workflows:
       install_agent_timeout:
         default: 300
       node_ids:
+        type: list
+        item_type: node_id
         default: []
       node_instance_ids:
+        type: list
+        item_type: node_instance
         default: []
       install_methods:
         default: null
@@ -918,8 +959,12 @@ workflows:
       node_instances_active: [ 'all', 'partial' ]
     parameters:
       node_ids:
+        type: list
+        item_type: node_id
         default: []
       node_instance_ids:
+        type: list
+        item_type: node_instance
         default: []
       install_methods:
         default: null
@@ -930,24 +975,30 @@ workflows:
       node_instances_active: [ 'all', 'partial' ]
     parameters:
       type_names:
-        default: []
         description: >
           A list of type names. The operation will be executed
           only on node instances which are of these types or of types which
           (recursively) derive from them. An empty list means no filtering
           will take place and all type names are valid.
-      node_ids:
+        type: list
+        item_type: node_type
         default: []
+      node_ids:
         description: >
           A list of node ids. The operation will be executed only on node
           instances which are instances of these nodes. An empty list means
           no filtering will take place and all nodes are valid.
-      node_instance_ids:
+        type: list
+        item_type: node_id
         default: []
+      node_instance_ids:
         description: >
           A list of node instance ids. The operation will be executed only on
           the node instances specified. An empty list means no filtering will
           take place and all node instances are valid.
+        type: list
+        item_type: node_instance
+        default: []
       full_rollback:
         default: false
         type: boolean
@@ -965,10 +1016,16 @@ workflows:
       run_by_dependency_order:
         default: true
       type_names:
+        type: list
+        item_type: node_type
         default: []
       node_ids:
+        type: list
+        item_type: node_id
         default: []
       node_instance_ids:
+        type: list
+        item_type: node_instance
         default: []
 
 ##################################################################################
@@ -1111,7 +1168,7 @@ data_types:
       id:
         description: >
           This is the blueprint ID that the Component's node is connected to.
-        type: string
+        type: blueprint_id
         required: false
       main_file_name:
         description: >
@@ -1142,7 +1199,7 @@ data_types:
       id:
         description: >
           This is the deployment ID that the Component's node is connected to.
-        type: string
+        type: deployment_id
         required: false
       inputs:
         description: >
@@ -1247,7 +1304,7 @@ data_types:
       id:
         description: >
           This is the deployment ID that the SharedResource node is connected to.
-        type: string
+        type: deployment_id
         required: true
 
   cloudify.datatypes.SharedResource:
