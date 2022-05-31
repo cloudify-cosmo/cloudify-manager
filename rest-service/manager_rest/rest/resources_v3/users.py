@@ -138,7 +138,6 @@ class UsersIdPremium(SecuredMultiTenancyResource):
         """
         Get details for a single user
         """
-        rest_utils.validate_inputs({'username': username})
         return multi_tenancy.get_user(username)
 
     @authorize('user_delete')
