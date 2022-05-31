@@ -1050,6 +1050,8 @@ class Execution(CreatedAtMixin, SQLResourceBase):
         self._forced = kwargs.pop('force', False)
         super().__init__(**kwargs)
 
+    _forced = None
+
     __tablename__ = 'executions'
     STATUS_DISPLAY_NAMES = {
         ExecutionState.TERMINATED: 'completed'
