@@ -938,14 +938,15 @@ class TestExecutionModelValidationTests(unittest.TestCase):
         d = models.Deployment(workflows={
             'wf': {'availability_rules': {'available': False}},
         })
+        execution = models.Execution(
+            parameters={},
+            deployment=d,
+            workflow_id='wf',
+        )
         with self.assertRaisesRegex(
             manager_exceptions.UnavailableWorkflowError, 'wf'
         ):
-            models.Execution(
-                parameters={},
-                deployment=d,
-                workflow_id='wf',
-            )
+            execution.render_message()
 
 
 @mock.patch(

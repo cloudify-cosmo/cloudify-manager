@@ -26,7 +26,8 @@ pytestmark = pytest.mark.group_agents
 class TestAgentAliveVerification(AgentlessTestCase):
 
     def test_uninstall(self):
-        deployment = self.deploy(resource("dsl/basic_stop_not_exists.yaml"))
+        deployment, _ = self.deploy_application(
+            resource("dsl/basic_stop_not_exists.yaml"))
         self.undeploy_application(deployment.id,
                                   parameters={
                                       'ignore_failure': True
