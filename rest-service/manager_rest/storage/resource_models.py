@@ -581,10 +581,10 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                          parameters=wf.get('parameters', dict()),
                          is_cascading=wf.get('is_cascading', False),
                          availability_rules=wf.get('availability_rules'),
-                         is_available=self._is_workflow_available(wf))
+                         is_available=self.is_workflow_available(wf))
                 for wf_name, wf in self.workflows.items()]
 
-    def _is_workflow_available(self, workflow):
+    def is_workflow_available(self, workflow):
         validation_methods = {
             'available': self._true_or_none,
             'node_instances_active': self._node_instances_active_states_match,
@@ -1047,10 +1047,10 @@ class Execution(CreatedAtMixin, SQLResourceBase):
         # before parameters
         self.allow_custom_parameters = kwargs.pop(
             'allow_custom_parameters', False)
-        self._forced = kwargs.pop('force', False)
+        self.forced = kwargs.pop('force', False)
         super().__init__(**kwargs)
 
-    _forced = None
+    forced = None
 
     __tablename__ = 'executions'
     STATUS_DISPLAY_NAMES = {
@@ -1223,10 +1223,6 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             import GetValuesWithStorageManager
 
         workflow = self.get_workflow(deployment, workflow_id)
-        if not self._forced \
-                and not deployment._is_workflow_available(workflow):
-            raise manager_exceptions.UnavailableWorkflowError(
-                f'Workflow not available: {workflow_id}')
 
         workflow_parameters = workflow.get('parameters', {})
         custom_parameters = parameters.keys() - workflow_parameters.keys()
@@ -1324,6 +1320,12 @@ class Execution(CreatedAtMixin, SQLResourceBase):
         self.ensure_defaults()
         workflow = self.get_workflow()
         session = db.session.object_session(self)
+
+        if self.deployment is not None and \
+                not self.forced \
+                and not self.deployment.is_workflow_available(workflow):
+            raise manager_exceptions.UnavailableWorkflowError(
+                f'Workflow not available: {self.workflow_id}')
 
         token = self.update_execution_token()
         context = {
