@@ -459,6 +459,86 @@ class NodesTest(_NodeSetupMixin, base_test.BaseServerTestCase):
         )
         assert inst.system_properties == {'property1': 'value1'}
 
+    def test_system_properties_drifted_count(self):
+        node = self._node('node1')
+        inst1 = self._instance('ni1', node=node)
+
+        # at first, nothing is drifted
+        assert not inst1.has_configuration_drift
+        assert not inst1.node.drifted_instances
+        assert not inst1.node.deployment.drifted_instances
+
+        # when we set a drift result, node & deployment counts are updated
+        self.client.node_instances.update(
+            'ni1',
+            system_properties={'configuration_drift': {'result': 'drift1'}},
+            version=1,
+        )
+        assert inst1.has_configuration_drift
+        assert inst1.node.drifted_instances == 1
+        assert inst1.node.deployment.drifted_instances == 1
+
+        # now, another instance is drifted, and counts are updated
+        inst2 = self._instance('ni2', node=node)
+        self.client.node_instances.update(
+            'ni2',
+            system_properties={'configuration_drift': {'result': 'drift1'}},
+            version=1,
+        )
+        assert inst2.has_configuration_drift
+        assert inst2.node.drifted_instances == 2
+        assert inst2.node.deployment.drifted_instances == 2
+
+        # the first one is not drifted anymore, counts are updated
+        self.client.node_instances.update(
+            'ni1',
+            system_properties={'configuration_drift': {'result': None}},
+            version=2,
+        )
+        assert not inst1.has_configuration_drift
+        assert inst1.node.drifted_instances == 1
+        assert inst1.node.deployment.drifted_instances == 1
+
+    def test_system_properties_unavailable_count(self):
+        node = self._node('node1')
+        inst1 = self._instance('ni1', node=node)
+
+        # at first, nothing is drifted
+        assert not inst1.is_status_check_ok
+        assert not inst1.node.unavailable_instances
+        assert not inst1.node.deployment.unavailable_instances
+
+        # when we set a drift result, node & deployment counts are updated
+        self.client.node_instances.update(
+            'ni1',
+            system_properties={'status': {'ok': False}},
+            version=1,
+        )
+        assert not inst1.is_status_check_ok
+        assert inst1.node.unavailable_instances == 1
+        assert inst1.node.deployment.unavailable_instances == 1
+
+        # now, another instance is drifted, and counts are updated
+        inst2 = self._instance('ni2', node=node)
+        self.client.node_instances.update(
+            'ni2',
+            system_properties={'status': {'ok': False}},
+            version=1,
+        )
+        assert not inst2.is_status_check_ok
+        assert inst2.node.unavailable_instances == 2
+        assert inst2.node.deployment.unavailable_instances == 2
+
+        # the first one is not drifted anymore, counts are updated
+        self.client.node_instances.update(
+            'ni1',
+            system_properties={'status': {'ok': True}},
+            version=2,
+        )
+        assert inst1.is_status_check_ok
+        assert inst1.node.unavailable_instances == 1
+        assert inst1.node.deployment.unavailable_instances == 1
+
 
 class NodesCreateTest(base_test.BaseServerTestCase):
     def setUp(self):
