@@ -99,7 +99,7 @@ class NodesTest(_NodeSetupMixin, base_test.BaseServerTestCase):
         assert response.status_code == 200
         assert response.json['id'] == '1234'
         assert response.json['runtime_properties'] == {'key': 'value'}
-        assert response.json['is_status_check_ok']
+        assert not response.json['is_status_check_ok']
         assert not response.json['has_configuration_drift']
 
     def test_sort_nodes_list(self):
@@ -126,7 +126,7 @@ class NodesTest(_NodeSetupMixin, base_test.BaseServerTestCase):
         self._instance(
             'ni1',
             node=node,
-            system_properties={}
+            system_properties={'status': {'ok': True}},
         )
         self._instance(
             'ni2',
@@ -141,7 +141,7 @@ class NodesTest(_NodeSetupMixin, base_test.BaseServerTestCase):
         nodes = self.client.nodes.list(
             deployment_id='d1', _instance_counts=True)
         assert len(nodes) == 1
-        assert nodes[0].unavailable_instances == 1
+        assert nodes[0].unavailable_instances == 2
         assert nodes[0].drifted_instances == 1
 
     def test_bad_patch_node(self):
@@ -727,9 +727,9 @@ class NodeInstancesDeleteTest(_NodeSetupMixin, base_test.BaseServerTestCase):
     ({'status': {'ok': True}}, True),
     ({'status': {'ok': False}}, False),
     ({'status': {'ok': None}}, False),
-    ({'status': {}}, True),
-    ({}, True),
-    (None, True),
+    ({'status': {}}, False),
+    ({}, False),
+    (None, False),
 ])
 def test_status_check_ok(system_properties, expected_status):
     ni = models.NodeInstance(system_properties=system_properties)

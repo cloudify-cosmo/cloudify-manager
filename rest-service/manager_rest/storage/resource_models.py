@@ -2129,7 +2129,7 @@ class NodeInstance(SQLResourceBase):
         """
         props = self.system_properties or {}
         status = props.get('status') or {}
-        return bool(status.get('ok', True))
+        return bool(status.get('ok', False))
 
     def compute_configuration_drift(self):
         """Has this NI's configuration drifted?
