@@ -2062,6 +2062,12 @@ class NodeInstance(SQLResourceBase):
         v1=['scaling_groups'],
         v2=['scaling_groups']
     )
+    def __init__(self, *args, **kwargs):
+        super(NodeInstance, self).__init__(*args, **kwargs)
+        # those values are recomputed on update, but let's default them too,
+        # when creating an instance python-side
+        self.has_configuration_drift = self.compute_configuration_drift()
+        self.is_status_check_ok = self.compute_status_check()
 
     # TODO: This probably should be a foreign key, but there's no guarantee
     # in the code, currently, that the host will be created beforehand
@@ -2074,17 +2080,23 @@ class NodeInstance(SQLResourceBase):
     state = db.Column(db.Text, nullable=False, index=True)
     version = db.Column(db.Integer, nullable=False)
 
+    has_configuration_drift = db.Column(
+        db.Boolean,
+        server_default='false',
+        nullable=False,
+        default=False,
+    )
+    is_status_check_ok = db.Column(
+        db.Boolean,
+        server_default='false',
+        nullable=False,
+        default=False,
+    )
+
     # This automatically increments the version on each update
     __mapper_args__ = {'version_id_col': version}
 
     _node_fk = foreign_key(Node._storage_id)
-
-    @classproperty
-    def resource_fields(cls):
-        fields = super(NodeInstance, cls).resource_fields
-        fields['is_status_check_ok'] = flask_fields.Boolean
-        fields['has_configuration_drift'] = flask_fields.Boolean
-        return fields
 
     @declared_attr
     def node(cls):
@@ -2105,8 +2117,7 @@ class NodeInstance(SQLResourceBase):
     def allowed_filter_attrs(cls):
         return ['id']
 
-    @property
-    def is_status_check_ok(self):
+    def compute_status_check(self):
         """Has the last status check for this NI succeeded?
 
         This examines the result of the most recent check_status call
@@ -2118,8 +2129,7 @@ class NodeInstance(SQLResourceBase):
         status = props.get('status') or {}
         return bool(status.get('ok', True))
 
-    @property
-    def has_configuration_drift(self):
+    def compute_configuration_drift(self):
         """Has this NI's configuration drifted?
 
         This examines the result of the most recent check_drift call

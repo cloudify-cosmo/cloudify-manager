@@ -210,30 +210,42 @@ class NodeInstancesId(SecuredResource):
             request.args.get('force', False)
         )
 
-        instance = get_storage_manager().get(
-            models.NodeInstance,
-            node_instance_id,
-            locking=True
-        )
-        if request_dict.keys() | {
-            'runtime_properties', 'state', 'system_properties'
-        }:
-            # Added for backwards compatibility with older client versions that
-            # had version=0 by default
-            if not force and instance.version > version:
-                raise manager_exceptions.ConflictError(
-                    'Node instance update conflict [current version={0}, '
-                    'update version={1}]'.format(instance.version, version)
-                )
-            if 'runtime_properties' in request_dict:
-                instance.runtime_properties = \
-                    request_dict['runtime_properties']
-            if 'system_properties' in request_dict:
-                instance.system_properties = request_dict['system_properties']
-            if 'state' in request_dict:
-                instance.state = request_dict['state']
-        if 'relationships' in request_dict:
-            if not is_deployment_update():
-                raise manager_exceptions.OnlyDeploymentUpdate()
-            instance.relationships = request_dict['relationships']
-        return get_storage_manager().update(instance)
+        sm = get_storage_manager()
+        with sm.transaction():
+            instance = sm.get(
+                models.NodeInstance,
+                node_instance_id,
+                locking=True,
+            )
+            if request_dict.keys() | {
+                'runtime_properties', 'state', 'system_properties'
+            }:
+                # Added for backwards compatibility with older client versions
+                # that had version=0 by default
+                if not force and instance.version > version:
+                    raise manager_exceptions.ConflictError(
+                        'Node instance update conflict [current version='
+                        f'{instance.version}, update version={version}]'
+                    )
+                if 'runtime_properties' in request_dict:
+                    instance.runtime_properties = \
+                        request_dict['runtime_properties']
+                if 'system_properties' in request_dict:
+                    old_properties = instance.system_properties
+                    instance.system_properties = \
+                        request_dict['system_properties']
+                    self._process_system_properties(instance, old_properties)
+                if 'state' in request_dict:
+                    instance.state = request_dict['state']
+            if 'relationships' in request_dict:
+                if not is_deployment_update():
+                    raise manager_exceptions.OnlyDeploymentUpdate()
+                instance.relationships = request_dict['relationships']
+            return sm.update(instance)
+
+    def _process_system_properties(self, instance, old_properties):
+        if instance.system_properties == old_properties:
+            # nothing changed, so nothing to do
+            return
+        instance.has_configuration_drift = instance.compute_configuration_drift()
+        instance.is_status_check_ok = instance.compute_status_check()
