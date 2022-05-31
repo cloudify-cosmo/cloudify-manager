@@ -605,7 +605,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         result = False
         for rule in node_instance_active_rules:
             if rule == 'all':
-                result |= (ni_states == {'started'})
+                result |= (ni_states == set() or ni_states == {'started'})
             elif rule == 'partial':
                 result |= (len(ni_states) > 1 and 'started' in ni_states)
             elif rule == 'none':
