@@ -138,10 +138,6 @@ class NodesTest(_NodeSetupMixin, base_test.BaseServerTestCase):
             node=node,
             system_properties={'configuration_drift': {'result': 'drift'}}
         )
-        with self.assertRaises(CloudifyClientError) as cm:
-            self.client.nodes.list(_instance_counts=True)
-        assert cm.exception.status_code == 409
-
         nodes = self.client.nodes.list(
             deployment_id='d1', _instance_counts=True)
         assert len(nodes) == 1
@@ -737,7 +733,7 @@ class NodeInstancesDeleteTest(_NodeSetupMixin, base_test.BaseServerTestCase):
 ])
 def test_status_check_ok(system_properties, expected_status):
     ni = models.NodeInstance(system_properties=system_properties)
-    assert ni.is_status_check_ok == expected_status
+    assert ni.compute_status_check() == expected_status
 
 
 @pytest.mark.parametrize('system_properties,expected_drift', [
@@ -795,4 +791,4 @@ def test_status_check_ok(system_properties, expected_status):
 ])
 def test_has_drift(system_properties, expected_drift):
     ni = models.NodeInstance(system_properties=system_properties)
-    assert ni.has_configuration_drift == expected_drift
+    assert ni.compute_configuration_drift() == expected_drift

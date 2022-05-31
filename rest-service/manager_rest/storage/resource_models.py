@@ -466,6 +466,11 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
     latest_execution_total_operations = association_proxy(
         'latest_execution', 'total_operations')
 
+    drifted_instances =\
+        db.Column(db.Integer, server_default='0', nullable=False, default=0)
+    unavailable_instances =\
+        db.Column(db.Integer, server_default='0', nullable=False, default=0)
+
     @classproperty
     def autoload_relationships(cls):
         return [
@@ -1988,6 +1993,11 @@ class Node(SQLResourceBase):
     type = db.Column(db.Text, nullable=False, index=True)
     type_hierarchy = db.Column(db.PickleType(protocol=2))
 
+    drifted_instances =\
+        db.Column(db.Integer, server_default='0', nullable=False, default=0)
+    unavailable_instances =\
+        db.Column(db.Integer, server_default='0', nullable=False, default=0)
+
     _deployment_fk = foreign_key(Deployment._storage_id)
 
     # These are for fixing a bug where wrong number of instances was returned
@@ -1995,12 +2005,8 @@ class Node(SQLResourceBase):
     _extra_fields = {
         'actual_number_of_instances': flask_fields.Integer,
         'actual_planned_number_of_instances': flask_fields.Integer,
-        'drifted_instances': flask_fields.Integer,
-        'unavailable_instances': flask_fields.Integer,
     }
     actual_planned_number_of_instances = 0
-    drifted_instances = None
-    unavailable_instances = None
 
     @hybrid_property
     def actual_number_of_instances(self):
@@ -2031,10 +2037,6 @@ class Node(SQLResourceBase):
         d = super(Node, self).to_dict(suppress_error)
         d['name'] = d['id']
         return d
-
-    def set_instance_counts(self, drifted, unavailable):
-        self.drifted_instances = drifted
-        self.unavailable_instances = unavailable
 
     def set_deployment(self, deployment):
         self._set_parent(deployment)

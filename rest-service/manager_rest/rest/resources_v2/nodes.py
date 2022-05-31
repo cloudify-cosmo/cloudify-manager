@@ -58,10 +58,6 @@ class Nodes(resources_v1.Nodes):
             '_get_all_results',
             request.args.get('_get_all_results', False)
         )
-        instance_counts = rest_utils.verify_and_convert_bool(
-            '_instance_counts',
-            request.args.get('_instance_counts', False)
-        )
         nodes_list = get_storage_manager().list(
             models.Node,
             include=_include,
@@ -85,32 +81,7 @@ class Nodes(resources_v1.Nodes):
                     scale_by *= group['properties']['planned_instances']
             node.set_actual_planned_node_instances(
                 scale_by * node.planned_number_of_instances)
-        if instance_counts:
-            if not filters.get('deployment_id'):
-                raise manager_exceptions.ConflictError(
-                    'instance_counts is only available when '
-                    'filtering by deployment_id')
-            self._add_instance_counts(nodes_list)
         return nodes_list
-
-    def _add_instance_counts(self, nodes):
-        """Add instance counts to the given nodes
-
-        Get all instances for these nodes, group them by node, and calculate
-        the amount of drifted/unavailable instances.
-        """
-        instances = models.NodeInstance.query.filter(
-            models.NodeInstance._node_fk.in_([n._storage_id for n in nodes])
-        ).all()
-        instances_by_node = {}
-        for ni in instances:
-            instances_by_node.setdefault(ni._node_fk, set()).add(ni)
-        for node in nodes:
-            instances = instances_by_node.get(node._storage_id)
-            node.set_instance_counts(
-                drifted=sum(ni.has_configuration_drift for ni in instances),
-                unavailable=sum(not ni.is_status_check_ok for ni in instances),
-            )
 
 
 class NodeInstances(resources_v1.NodeInstances):
