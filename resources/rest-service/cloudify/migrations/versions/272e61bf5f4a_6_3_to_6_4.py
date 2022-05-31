@@ -48,6 +48,7 @@ def upgrade():
     add_config_admin_only_column()
     add_config_log_fetch_credentials()
     add_config_marketplace_url()
+    add_drift_availability_columns()
 
 
 def downgrade():
@@ -61,6 +62,7 @@ def downgrade():
     drop_config_admin_only_column()
     drop_config_log_fetch_credentials()
     drop_config_marketplace_url()
+    drop_drift_availability_columns()
 
 
 def add_config_log_fetch_credentials():
@@ -316,3 +318,155 @@ def add_config_admin_only_column():
 
 def drop_config_admin_only_column():
     op.drop_column('config', 'admin_only')
+
+
+def add_drift_availability_columns():
+    op.add_column(
+        'deployments',
+        sa.Column(
+            'drifted_instances',
+            sa.Integer(),
+            server_default='0',
+            nullable=False,
+        ),
+    )
+    op.add_column(
+        'deployments',
+        sa.Column(
+            'unavailable_instances',
+            sa.Integer(),
+            server_default='0',
+            nullable=False,
+        ),
+    )
+    op.add_column(
+        'node_instances',
+        sa.Column(
+            'is_status_check_ok',
+            sa.Boolean(),
+            server_default='false',
+            nullable=False,
+        ),
+    )
+    op.add_column(
+        'node_instances',
+        sa.Column(
+            'has_configuration_drift',
+            sa.Boolean(),
+            server_default='false',
+            nullable=False,
+        ),
+    )
+    op.add_column(
+        'nodes',
+        sa.Column(
+            'drifted_instances',
+            sa.Integer(),
+            server_default='0',
+            nullable=False,
+        ),
+    )
+    op.add_column(
+        'nodes',
+        sa.Column(
+            'unavailable_instances',
+            sa.Integer(),
+            server_default='0',
+            nullable=False,
+        ),
+    )
+    # while we do want is_status_check_ok to be false by default for new
+    # node instances, let's make all the EXISTING instances already passing
+    # the status check - before 6.4, the user didn't have a way to check their
+    # status, but they still kept those instances around, so out of the two
+    # possibilities, let's assume the status was OK
+    op.execute("UPDATE node_instances SET is_status_check_ok = true;")
+
+    # Handle drifted/unavailable instance counts for node & deployment.
+    # Create separate triggers for insert (uses NEW) and delete/update
+    # (uses OLD). Then, those triggers will call the SQL function
+    # recalc_drift_instance_counts which actually does the computation
+    op.execute("""
+CREATE OR REPLACE FUNCTION recalc_drift_instance_counts(node_id integer)
+RETURNS void AS $$
+UPDATE nodes n
+SET
+    drifted_instances = (
+        SELECT COUNT(1)
+        FROM node_instances
+        WHERE node_instances._node_fk = n._storage_id
+        AND node_instances.has_configuration_drift
+    ),
+    unavailable_instances = (
+        SELECT COUNT(1)
+        FROM node_instances
+        WHERE node_instances._node_fk = n._storage_id
+        AND NOT node_instances.is_status_check_ok
+    )
+WHERE n._storage_id = node_id;
+
+UPDATE deployments d
+SET
+    drifted_instances = (
+        SELECT SUM(n.drifted_instances)
+        FROM nodes n
+        WHERE n._deployment_fk = d._storage_id
+    ),
+    unavailable_instances = (
+        SELECT SUM(n.unavailable_instances)
+        FROM nodes n
+        WHERE n._deployment_fk = d._storage_id
+    )
+WHERE d._storage_id = (
+    SELECT n._deployment_fk
+    FROM nodes n
+    WHERE n._storage_id = node_id
+    LIMIT 1
+);
+$$ LANGUAGE sql;
+
+CREATE OR REPLACE FUNCTION recalc_drift_instance_counts_insert()
+RETURNS TRIGGER AS $$
+BEGIN
+    PERFORM recalc_drift_instance_counts(NEW._node_fk);
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION recalc_drift_instance_counts_update()
+RETURNS TRIGGER AS $$
+BEGIN
+    PERFORM recalc_drift_instance_counts(OLD._node_fk);
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER recalc_drift_instance_counts_insert
+AFTER INSERT
+ON node_instances
+FOR EACH ROW
+EXECUTE PROCEDURE recalc_drift_instance_counts_insert();
+
+CREATE TRIGGER recalc_drift_instance_counts_update
+AFTER  DELETE
+OR UPDATE OF has_configuration_drift, is_status_check_ok
+ON node_instances
+FOR EACH ROW
+EXECUTE PROCEDURE recalc_drift_instance_counts_update();
+""")
+
+
+def drop_drift_availability_columns():
+    op.drop_column('node_instances', 'is_status_check_ok')
+    op.drop_column('node_instances', 'has_configuration_drift')
+    op.drop_column('deployments', 'unavailable_instances')
+    op.drop_column('deployments', 'drifted_instances')
+    op.drop_column('nodes', 'unavailable_instances')
+    op.drop_column('nodes', 'drifted_instances')
+    op.execute("""
+DROP TRIGGER recalc_drift_instance_counts_insert ON node_instances;
+DROP TRIGGER recalc_drift_instance_counts_update ON node_instances;
+DROP FUNCTION recalc_drift_instance_counts_insert();
+DROP FUNCTION recalc_drift_instance_counts_update();
+DROP FUNCTION recalc_drift_instance_counts(integer);
+""")
