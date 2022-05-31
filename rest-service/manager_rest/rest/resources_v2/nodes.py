@@ -17,7 +17,6 @@
 from flask import request
 from flask_restful_swagger import swagger
 
-from manager_rest import manager_exceptions
 from manager_rest.rest import (
     resources_v1,
     rest_decorators,

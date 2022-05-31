@@ -2064,6 +2064,7 @@ class NodeInstance(SQLResourceBase):
         v1=['scaling_groups'],
         v2=['scaling_groups']
     )
+
     def __init__(self, *args, **kwargs):
         super(NodeInstance, self).__init__(*args, **kwargs)
         # those values are recomputed on update, but let's default them too,
