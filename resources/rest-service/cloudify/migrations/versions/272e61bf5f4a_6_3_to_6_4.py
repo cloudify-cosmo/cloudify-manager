@@ -457,12 +457,6 @@ EXECUTE PROCEDURE recalc_drift_instance_counts_update();
 
 
 def drop_drift_availability_columns():
-    op.drop_column('node_instances', 'is_status_check_ok')
-    op.drop_column('node_instances', 'has_configuration_drift')
-    op.drop_column('deployments', 'unavailable_instances')
-    op.drop_column('deployments', 'drifted_instances')
-    op.drop_column('nodes', 'unavailable_instances')
-    op.drop_column('nodes', 'drifted_instances')
     op.execute("""
 DROP TRIGGER recalc_drift_instance_counts_insert ON node_instances;
 DROP TRIGGER recalc_drift_instance_counts_update ON node_instances;
@@ -470,3 +464,9 @@ DROP FUNCTION recalc_drift_instance_counts_insert();
 DROP FUNCTION recalc_drift_instance_counts_update();
 DROP FUNCTION recalc_drift_instance_counts(integer);
 """)
+    op.drop_column('node_instances', 'is_status_check_ok')
+    op.drop_column('node_instances', 'has_configuration_drift')
+    op.drop_column('deployments', 'unavailable_instances')
+    op.drop_column('deployments', 'drifted_instances')
+    op.drop_column('nodes', 'unavailable_instances')
+    op.drop_column('nodes', 'drifted_instances')
