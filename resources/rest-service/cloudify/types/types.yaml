@@ -455,6 +455,11 @@ node_types:
           implementation: cfy_extensions.cloudify_types.component.delete
         refresh:
           implementation: cfy_extensions.cloudify_types.component.refresh
+        check_drift:
+          implementation: cfy_extensions.cloudify_types.component.check_drift
+      cloudify.interfaces.validation:
+        check_status:
+          implementation: cfy_extensions.cloudify_types.component.check_status
 
   cloudify.nodes.ServiceComponent:
     derived_from: cloudify.nodes.Component
@@ -478,6 +483,11 @@ node_types:
           implementation: cfy_extensions.cloudify_types.shared_resource.disconnect_deployment
         refresh:
           implementation: cfy_extensions.cloudify_types.shared_resource.refresh
+        check_drift:
+          implementation: cfy_extensions.cloudify_types.shared_resource.check_drift
+      cloudify.interfaces.validation:
+        check_status:
+          implementation: cfy_extensions.cloudify_types.shared_resource.check_status
 
   cloudify.nodes.Blueprint:
     derived_from: cloudify.nodes.Root
