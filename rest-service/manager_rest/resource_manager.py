@@ -287,6 +287,7 @@ class ResourceManager(object):
             )
             wf = execution.get_workflow()  # try this here to fail early
             if not execution.forced \
+                    and not execution.resume \
                     and not execution.deployment.is_workflow_available(wf):
                 raise manager_exceptions.UnavailableWorkflowError(
                     f'Workflow not available: {execution.workflow_id}')
