@@ -169,3 +169,39 @@ def refresh(**kwargs):
     deployment_id = deployment.get('id', '')
     client, _ = get_client(kwargs)
     populate_runtime_with_wf_results(client, deployment_id)
+
+
+@operation(resumable=True)
+def check_drift(**kwargs):
+    # Discover the drift by comparing the capabilities of a deployment to the
+    # runtime properties / capabilities of a node_instance
+    config = get_desired_operation_input('resource_config', kwargs)
+    deployment_id = config.get('deployment', {}).get('id')
+    client, _ = get_client(kwargs)
+    deployment_capabilities = client.deployments.capabilities\
+        .get(deployment_id)\
+        .get('capabilities')
+    node_instance_capabilities = client.node_instances\
+        .get(kwargs['ctx'].instance.id, _include=['id', 'runtime_properties'])\
+        .get('runtime_properties', {})\
+        .get('capabilities')
+
+    return _capabilities_diff(
+        deployment_capabilities,
+        node_instance_capabilities
+    )
+
+
+@operation(resumable=True)
+def check_status(**kwargs):
+    # collect the status don't run and check_status workflows. The shared
+    # resource should not run workflows triggered by consumers
+    pass
+
+
+def _capabilities_diff(a, b):
+    set_a = set(a.items()) if isinstance(a, dict) else set()
+    set_b = set(b.items()) if isinstance(b, dict) else set()
+    diff = set_a ^ set_b  # symmetric difference of sets
+    # Return a list of modified capability keys
+    return {'capabilities': list(set(c[0] for c in diff))} if diff else None
