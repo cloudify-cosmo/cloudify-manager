@@ -466,6 +466,11 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
     latest_execution_total_operations = association_proxy(
         'latest_execution', 'total_operations')
 
+    drifted_instances =\
+        db.Column(db.Integer, server_default='0', nullable=False, default=0)
+    unavailable_instances =\
+        db.Column(db.Integer, server_default='0', nullable=False, default=0)
+
     @classproperty
     def autoload_relationships(cls):
         return [
@@ -1989,6 +1994,11 @@ class Node(SQLResourceBase):
     type = db.Column(db.Text, nullable=False, index=True)
     type_hierarchy = db.Column(db.PickleType(protocol=2))
 
+    drifted_instances =\
+        db.Column(db.Integer, server_default='0', nullable=False, default=0)
+    unavailable_instances =\
+        db.Column(db.Integer, server_default='0', nullable=False, default=0)
+
     _deployment_fk = foreign_key(Deployment._storage_id)
 
     # These are for fixing a bug where wrong number of instances was returned
@@ -1996,12 +2006,8 @@ class Node(SQLResourceBase):
     _extra_fields = {
         'actual_number_of_instances': flask_fields.Integer,
         'actual_planned_number_of_instances': flask_fields.Integer,
-        'drifted_instances': flask_fields.Integer,
-        'unavailable_instances': flask_fields.Integer,
     }
     actual_planned_number_of_instances = 0
-    drifted_instances = None
-    unavailable_instances = None
 
     @hybrid_property
     def actual_number_of_instances(self):
@@ -2033,10 +2039,6 @@ class Node(SQLResourceBase):
         d['name'] = d['id']
         return d
 
-    def set_instance_counts(self, drifted, unavailable):
-        self.drifted_instances = drifted
-        self.unavailable_instances = unavailable
-
     def set_deployment(self, deployment):
         self._set_parent(deployment)
         self.deployment = deployment
@@ -2064,6 +2066,13 @@ class NodeInstance(SQLResourceBase):
         v2=['scaling_groups']
     )
 
+    def __init__(self, *args, **kwargs):
+        super(NodeInstance, self).__init__(*args, **kwargs)
+        # those values are recomputed on update, but let's default them too,
+        # when creating an instance python-side
+        self.update_configuration_drift()
+        self.update_status_check()
+
     # TODO: This probably should be a foreign key, but there's no guarantee
     # in the code, currently, that the host will be created beforehand
     host_id = db.Column(db.Text)
@@ -2075,17 +2084,23 @@ class NodeInstance(SQLResourceBase):
     state = db.Column(db.Text, nullable=False, index=True)
     version = db.Column(db.Integer, nullable=False)
 
+    has_configuration_drift = db.Column(
+        db.Boolean,
+        server_default='false',
+        nullable=False,
+        default=False,
+    )
+    is_status_check_ok = db.Column(
+        db.Boolean,
+        server_default='false',
+        nullable=False,
+        default=False,
+    )
+
     # This automatically increments the version on each update
     __mapper_args__ = {'version_id_col': version}
 
     _node_fk = foreign_key(Node._storage_id)
-
-    @classproperty
-    def resource_fields(cls):
-        fields = super(NodeInstance, cls).resource_fields
-        fields['is_status_check_ok'] = flask_fields.Boolean
-        fields['has_configuration_drift'] = flask_fields.Boolean
-        return fields
 
     @declared_attr
     def node(cls):
@@ -2106,26 +2121,23 @@ class NodeInstance(SQLResourceBase):
     def allowed_filter_attrs(cls):
         return ['id']
 
-    @property
-    def is_status_check_ok(self):
+    def update_status_check(self):
         """Has the last status check for this NI succeeded?
 
         This examines the result of the most recent check_status call
-        on this node instance, and returns whether the call succeeded.
+        on this node instance, and sets the is_status_check_ok attribute
 
         If the result is missing, the result is succeeded.
         """
         props = self.system_properties or {}
         status = props.get('status') or {}
-        return bool(status.get('ok', True))
+        self.is_status_check_ok = bool(status.get('ok', False))
 
-    @property
-    def has_configuration_drift(self):
+    def update_configuration_drift(self):
         """Has this NI's configuration drifted?
 
         This examines the result of the most recent check_drift call
-        on this node instance, and returns whether there was any configuration
-        drift reported.
+        on this node instance, and sets the has_configuration_drift attribute
 
         The instance is drifted if either the instance itself, or any of its
         relationships have drifted.
@@ -2140,8 +2152,9 @@ class NodeInstance(SQLResourceBase):
             [instance_drift], sources_drift.values(), targets_drift.values()
         ):
             if not drift.get('ok', True) or drift.get('result') is not None:
-                return True
-        return False
+                self.has_configuration_drift = True
+                return
+        self.has_configuration_drift = False
 
 
 class Agent(CreatedAtMixin, SQLResourceBase):
