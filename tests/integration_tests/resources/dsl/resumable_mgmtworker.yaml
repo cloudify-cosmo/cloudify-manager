@@ -30,3 +30,6 @@ node_templates:
     relationships:
       - type: cloudify.relationships.depends_on
         target: node1
+
+  node3:
+    type: cloudify.nodes.Root

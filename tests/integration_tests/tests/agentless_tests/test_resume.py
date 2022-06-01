@@ -313,6 +313,10 @@ class TestResumeMgmtworker(AgentlessTestCase):
         the assert in this test.
         """
         dep = self._create_deployment()
+        ni = self.client.node_instances.list(deployment_id=dep.id,
+                                             node_id='node3')
+        self.client.node_instances.update(ni.items[0]['id'],
+                                          state='started')
         execution = self.execute_workflow(
             workflow_name='restart',
             wait_for_execution=False,
