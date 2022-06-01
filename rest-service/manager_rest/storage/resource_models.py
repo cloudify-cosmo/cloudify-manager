@@ -2069,8 +2069,8 @@ class NodeInstance(SQLResourceBase):
         super(NodeInstance, self).__init__(*args, **kwargs)
         # those values are recomputed on update, but let's default them too,
         # when creating an instance python-side
-        self.has_configuration_drift = self.compute_configuration_drift()
-        self.is_status_check_ok = self.compute_status_check()
+        self.update_configuration_drift()
+        self.update_status_check()
 
     # TODO: This probably should be a foreign key, but there's no guarantee
     # in the code, currently, that the host will be created beforehand
@@ -2120,24 +2120,23 @@ class NodeInstance(SQLResourceBase):
     def allowed_filter_attrs(cls):
         return ['id']
 
-    def compute_status_check(self):
+    def update_status_check(self):
         """Has the last status check for this NI succeeded?
 
         This examines the result of the most recent check_status call
-        on this node instance, and returns whether the call succeeded.
+        on this node instance, and sets the is_status_check_ok attribute
 
         If the result is missing, the result is succeeded.
         """
         props = self.system_properties or {}
         status = props.get('status') or {}
-        return bool(status.get('ok', False))
+        self.is_status_check_ok = bool(status.get('ok', False))
 
-    def compute_configuration_drift(self):
+    def update_configuration_drift(self):
         """Has this NI's configuration drifted?
 
         This examines the result of the most recent check_drift call
-        on this node instance, and returns whether there was any configuration
-        drift reported.
+        on this node instance, and sets the has_configuration_drift attribute
 
         The instance is drifted if either the instance itself, or any of its
         relationships have drifted.
@@ -2152,8 +2151,9 @@ class NodeInstance(SQLResourceBase):
             [instance_drift], sources_drift.values(), targets_drift.values()
         ):
             if not drift.get('ok', True) or drift.get('result') is not None:
-                return True
-        return False
+                self.has_configuration_drift = True
+                return
+        self.has_configuration_drift = False
 
 
 class Agent(CreatedAtMixin, SQLResourceBase):

@@ -247,6 +247,5 @@ class NodeInstancesId(SecuredResource):
         if instance.system_properties == old_properties:
             # nothing changed, so nothing to do
             return
-        instance.has_configuration_drift = \
-            instance.compute_configuration_drift()
-        instance.is_status_check_ok = instance.compute_status_check()
+        instance.update_configuration_drift()
+        instance.update_status_check()

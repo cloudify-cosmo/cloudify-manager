@@ -733,7 +733,7 @@ class NodeInstancesDeleteTest(_NodeSetupMixin, base_test.BaseServerTestCase):
 ])
 def test_status_check_ok(system_properties, expected_status):
     ni = models.NodeInstance(system_properties=system_properties)
-    assert ni.compute_status_check() == expected_status
+    assert ni.is_status_check_ok == expected_status
 
 
 @pytest.mark.parametrize('system_properties,expected_drift', [
@@ -791,4 +791,4 @@ def test_status_check_ok(system_properties, expected_status):
 ])
 def test_has_drift(system_properties, expected_drift):
     ni = models.NodeInstance(system_properties=system_properties)
-    assert ni.compute_configuration_drift() == expected_drift
+    assert ni.has_configuration_drift == expected_drift
