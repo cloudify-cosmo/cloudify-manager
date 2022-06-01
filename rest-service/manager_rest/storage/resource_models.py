@@ -1326,8 +1326,9 @@ class Execution(CreatedAtMixin, SQLResourceBase):
         workflow = self.get_workflow()
         session = db.session.object_session(self)
 
-        if self.deployment is not None and \
-                not self.forced \
+        if self.deployment is not None \
+                and not self.forced \
+                and not self.resume \
                 and not self.deployment.is_workflow_available(workflow):
             raise manager_exceptions.UnavailableWorkflowError(
                 f'Workflow not available: {self.workflow_id}')
