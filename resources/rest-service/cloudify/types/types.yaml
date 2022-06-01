@@ -856,6 +856,8 @@ workflows:
   scale:
     mapping: default_workflows.cloudify.plugins.workflows.scale_entity
     is_cascading: false
+    availability_rules:
+      node_instances_active: [ 'all', 'partial' ]
     parameters:
       scalable_entity_name:
         description: >
