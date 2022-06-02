@@ -523,6 +523,55 @@ node_types:
         delete:
           implementation: cfy_extensions.cloudify_types.blueprint.delete
 
+  cloudify.nodes.Password:
+    derived_from: cloudify.nodes.Root
+    properties:
+      length:
+        description: Length of the password in characters.
+        type: integer
+        default: 8
+      uppercase:
+        description: |
+          Minimum number of uppercase characters in the password.
+          -1 = no uppercase characters used.
+        type: integer
+        default: 0
+      lowercase:
+        description: |
+          Minimum number of lowercase characters in the password.
+          -1 = no lowercase characters used.
+        type: integer
+        default: 0
+      digits:
+        description: |
+          Minimum number of numeric characters in the password.
+          -1 = no numeric characters used.
+        type: integer
+        default: 0
+      symbols:
+        description: |
+          Minimum number of symbol characters (e.g. !@_='^+& ) in the password.
+          -1 = no symbol characters used.
+        type: integer
+        default: 0
+      secret_name:
+        description: Optional secret name to store the password. If not provided, defaults to <deployment id>_<node_name>
+        type: string
+        required: false
+      uninstall_removes_secret:
+        description: Optional whether to remove the secret from Manager when this deployment is uninstalled.
+        type: boolean
+        default: false
+        required: false
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          implementation: cfy_extensions.cloudify_types.password.create
+        delete:
+          implementation: cfy_extensions.cloudify_types.password.delete
+      cloudify.interfaces.validation:
+        create:
+          implementation: cfy_extensions.cloudify_types.password.creation_validation
 
 ##################################################################################
 # Base relationship definitions
