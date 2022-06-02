@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from time import sleep
-
 import pytest
 
 from integration_tests import AgentlessTestCase
@@ -93,7 +91,6 @@ capabilities:
             workflow_id='check_drift',
         )
         self.wait_for_execution_to_end(check_drift_execution)
-        sleep(2)  # give triggered functions some time to run
         node_instance = self.client.node_instances.list(
             deployment_id='root_dep',
             node_id='shared_resource_node',
@@ -115,7 +112,6 @@ capabilities:
             workflow_id='check_drift',
         )
         self.wait_for_execution_to_end(check_drift_execution)
-        sleep(2)  # give triggered functions some time to run
         node_instance = self.client.node_instances.get(node_instance.id)
         assert node_instance['has_configuration_drift'] is True
         assert 'configuration_drift' in node_instance.system_properties
