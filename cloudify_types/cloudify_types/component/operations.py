@@ -17,6 +17,7 @@ from cloudify import manager, ctx
 from cloudify.decorators import operation
 from cloudify.constants import COMPONENT
 from cloudify.exceptions import NonRecoverableError
+from cloudify.models_states import DeploymentState, ExecutionState
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from cloudify_types.utils import (do_upload_blueprint,
@@ -342,7 +343,7 @@ def check_drift(timeout=EXECUTIONS_TIMEOUT, **kwargs):
     client, _ = get_client(kwargs)
     config = get_desired_operation_input('resource_config', kwargs)
     runtime_deployment_prop = ctx.instance.runtime_properties.get(
-            'deployment', {})
+        'deployment', {})
     runtime_deployment_id = runtime_deployment_prop.get('id')
     deployment = config.get('deployment', {})
     deployment_id = (runtime_deployment_id or
@@ -354,12 +355,12 @@ def check_drift(timeout=EXECUTIONS_TIMEOUT, **kwargs):
         timeout=timeout,
         expected_result=True)
 
-    deployment_capabilities = client.deployments.capabilities \
-        .get(deployment_id) \
+    deployment_capabilities = client.deployments.capabilities\
+        .get(deployment_id)\
         .get('capabilities')
-    node_instance_capabilities = client.node_instances \
+    node_instance_capabilities = client.node_instances\
         .get(kwargs['ctx'].instance.id, _include=['id', 'runtime_properties'])\
-        .get('runtime_properties', {}) \
+        .get('runtime_properties', {})\
         .get('capabilities')
 
     modified_keys = list(_capabilities_diff(
@@ -369,15 +370,49 @@ def check_drift(timeout=EXECUTIONS_TIMEOUT, **kwargs):
     return {'capabilities': modified_keys} if modified_keys else None
 
 
-@operation(resumable=True)
-def check_status(**kwargs):
-    # run the check status workflow and collect the status
-    pass
-
-
 def _capabilities_diff(a, b):
     a_dict = a if isinstance(a, dict) else {}
     b_dict = b if isinstance(b, dict) else {}
     for k in a_dict.keys() | b_dict.keys():
         if a_dict.get(k) != b_dict.get(k):
             yield k
+
+
+@operation(resumable=True)
+def check_status(timeout=EXECUTIONS_TIMEOUT, **kwargs):
+    """Discover status of a deployment basing on its different attributes."""
+    client, _ = get_client(kwargs)
+    config = get_desired_operation_input('resource_config', kwargs)
+    runtime_deployment_prop = ctx.instance.runtime_properties.get(
+        'deployment', {})
+    runtime_deployment_id = runtime_deployment_prop.get('id')
+    deployment = config.get('deployment', {})
+    deployment_id = (runtime_deployment_id or
+                     deployment.get('id') or
+                     ctx.instance.id)
+
+    poll_with_timeout(
+        lambda: is_all_executions_finished(client, deployment_id),
+        timeout=timeout,
+        expected_result=True)
+
+    deployment = client.deployments.get(deployment_id)
+    if deployment.installation_status != DeploymentState.ACTIVE:
+        raise Exception(
+            f"Expected deployment '{deployment.id}' to be installed, but got "
+            f"installation status: '{deployment.installation_status}'")
+    if deployment.deployment_status != DeploymentState.GOOD:
+        raise Exception(
+            f"Expected deployment '{deployment.id}' to be in a good state, "
+            f"but got deployment status: '{deployment.deployment_status}'")
+    if deployment.latest_execution_status == ExecutionState.FAILED:
+        raise Exception(
+            f"The latest execution for '{deployment.id}' failed")
+    if deployment.unavailable_instances > 0:
+        raise Exception(
+            f"There are {deployment.unavailable_instances} unavailable "
+            f"instances in deployment '{deployment.id}'")
+    if deployment.drifted_instances > 0:
+        raise Exception(
+            f"There are {deployment.drifted_instances} drifted "
+            f"instances in deployment '{deployment.id}'")

@@ -17,6 +17,7 @@ from cloudify.decorators import operation
 
 from cloudify.constants import SHARED_RESOURCE
 from cloudify.exceptions import NonRecoverableError
+from cloudify.models_states import DeploymentState, ExecutionState
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from cloudify_types.utils import (errors_nonrecoverable,
@@ -193,16 +194,37 @@ def check_drift(**kwargs):
     return {'capabilities': modified_keys} if modified_keys else None
 
 
-@operation(resumable=True)
-def check_status(**kwargs):
-    # collect the status don't run and check_status workflows. The shared
-    # resource should not run workflows triggered by consumers
-    pass
-
-
 def _capabilities_diff(a, b):
     a_dict = a if isinstance(a, dict) else {}
     b_dict = b if isinstance(b, dict) else {}
     for k in a_dict.keys() | b_dict.keys():
         if a_dict.get(k) != b_dict.get(k):
             yield k
+
+
+@operation(resumable=True)
+def check_status(**kwargs):
+    """Discover status of a deployment basing on its different attributes."""
+    config = get_desired_operation_input('resource_config', kwargs)
+    deployment_id = config.get('deployment', {}).get('id')
+    client, _ = get_client(kwargs)
+    deployment = client.deployments.get(deployment_id)
+    if deployment.installation_status != DeploymentState.ACTIVE:
+        raise Exception(
+            f"Expected deployment '{deployment.id}' to be installed, but got "
+            f"installation status: '{deployment.installation_status}'")
+    if deployment.deployment_status != DeploymentState.GOOD:
+        raise Exception(
+            f"Expected deployment '{deployment.id}' to be in a good state, "
+            f"but got deployment status: '{deployment.deployment_status}'")
+    if deployment.latest_execution_status == ExecutionState.FAILED:
+        raise Exception(
+            f"The latest execution for '{deployment.id}' failed")
+    if deployment.unavailable_instances > 0:
+        raise Exception(
+            f"There are {deployment.unavailable_instances} unavailable "
+            f"instances in deployment '{deployment.id}'")
+    if deployment.drifted_instances > 0:
+        raise Exception(
+            f"There are {deployment.drifted_instances} drifted "
+            f"instances in deployment '{deployment.id}'")
