@@ -142,7 +142,6 @@ class UserGroupsUsers(SecuredMultiTenancyResource):
         """
         request_dict = rest_utils.get_json_and_verify_params({'username',
                                                               'group_name'})
-        rest_utils.validate_inputs(request_dict)
         multi_tenancy.remove_user_from_group(
             request_dict['username'],
             request_dict['group_name']
