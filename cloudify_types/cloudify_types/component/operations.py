@@ -362,10 +362,11 @@ def check_drift(timeout=EXECUTIONS_TIMEOUT, **kwargs):
         .get('runtime_properties', {}) \
         .get('capabilities')
 
-    return _capabilities_diff(
+    modified_keys = list(_capabilities_diff(
         deployment_capabilities,
         node_instance_capabilities
-    )
+    ))
+    return {'capabilities': modified_keys} if modified_keys else None
 
 
 @operation(resumable=True)
@@ -375,8 +376,8 @@ def check_status(**kwargs):
 
 
 def _capabilities_diff(a, b):
-    set_a = set(a.items()) if isinstance(a, dict) else set()
-    set_b = set(b.items()) if isinstance(b, dict) else set()
-    diff = set_a ^ set_b  # symmetric difference of sets
-    # Return a list of modified capability keys
-    return {'capabilities': list(set(c[0] for c in diff))} if diff else None
+    a_dict = a if isinstance(a, dict) else {}
+    b_dict = b if isinstance(b, dict) else {}
+    for k in a_dict.keys() | b_dict.keys():
+        if a_dict.get(k) != b_dict.get(k):
+            yield k
