@@ -333,3 +333,50 @@ def refresh(**kwargs):
                      deployment.get('id') or
                      ctx.instance.id)
     populate_runtime_with_wf_results(client, deployment_id)
+
+
+@operation(resumable=True)
+def check_drift(timeout=EXECUTIONS_TIMEOUT, **kwargs):
+    # Discover the drift by comparing the capabilities of a deployment to the
+    # runtime properties / capabilities of a node_instance
+    client, _ = get_client(kwargs)
+    config = get_desired_operation_input('resource_config', kwargs)
+    runtime_deployment_prop = ctx.instance.runtime_properties.get(
+            'deployment', {})
+    runtime_deployment_id = runtime_deployment_prop.get('id')
+    deployment = config.get('deployment', {})
+    deployment_id = (runtime_deployment_id or
+                     deployment.get('id') or
+                     ctx.instance.id)
+
+    poll_with_timeout(
+        lambda: is_all_executions_finished(client, deployment_id),
+        timeout=timeout,
+        expected_result=True)
+
+    deployment_capabilities = client.deployments.capabilities \
+        .get(deployment_id) \
+        .get('capabilities')
+    node_instance_capabilities = client.node_instances \
+        .get(kwargs['ctx'].instance.id, _include=['id', 'runtime_properties'])\
+        .get('runtime_properties', {}) \
+        .get('capabilities')
+
+    return _capabilities_diff(
+        deployment_capabilities,
+        node_instance_capabilities
+    )
+
+
+@operation(resumable=True)
+def check_status(**kwargs):
+    # run the check status workflow and collect the status
+    pass
+
+
+def _capabilities_diff(a, b):
+    set_a = set(a.items()) if isinstance(a, dict) else set()
+    set_b = set(b.items()) if isinstance(b, dict) else set()
+    diff = set_a ^ set_b  # symmetric difference of sets
+    # Return a list of modified capability keys
+    return {'capabilities': list(set(c[0] for c in diff))} if diff else None
