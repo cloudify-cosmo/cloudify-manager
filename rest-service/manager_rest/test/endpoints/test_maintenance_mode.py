@@ -279,10 +279,3 @@ class MaintenanceModeTest(BaseServerTestCase):
     def _activate_and_deactivate_maintenance_mode(self):
         self._activate_maintenance_mode()
         self.client.maintenance_mode.deactivate()
-
-    # make request internal
-    def _get_remote_addr(self):
-        return 'mock_ip'
-
-    def _get_host(self):
-        return 'mock_ip'
