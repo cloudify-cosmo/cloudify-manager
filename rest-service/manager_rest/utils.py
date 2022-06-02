@@ -61,22 +61,6 @@ def is_sanity_mode():
     return os.path.isfile(constants.SANITY_MODE_FILE_PATH)
 
 
-def is_internal_request():
-    remote_addr = _get_remote_addr()
-    http_hosts = [_get_host(), constants.LOCAL_ADDRESS]
-
-    # cloudify-rest is the host for the auth request for the file-server
-    return remote_addr in http_hosts or 'cloudify-rest' in _get_host()
-
-
-def _get_host():
-    return request.host
-
-
-def _get_remote_addr():
-    return request.remote_addr
-
-
 def copy_resources(file_server_root, resources_path=None):
     if resources_path is None:
         resources_path = path.abspath(__file__)
