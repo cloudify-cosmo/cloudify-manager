@@ -389,37 +389,37 @@ def add_drift_availability_columns():
     op.execute("""
 CREATE OR REPLACE FUNCTION recalc_drift_instance_counts(node_id integer)
 RETURNS void AS $$
-UPDATE nodes n
+UPDATE public.nodes n
 SET
     drifted_instances = (
         SELECT COUNT(1)
-        FROM node_instances
-        WHERE node_instances._node_fk = n._storage_id
-        AND node_instances.has_configuration_drift
+        FROM public.node_instances ni
+        WHERE ni._node_fk = n._storage_id
+        AND ni.has_configuration_drift
     ),
     unavailable_instances = (
         SELECT COUNT(1)
-        FROM node_instances
-        WHERE node_instances._node_fk = n._storage_id
-        AND NOT node_instances.is_status_check_ok
+        FROM public.node_instances ni
+        WHERE ni._node_fk = n._storage_id
+        AND NOT ni.is_status_check_ok
     )
 WHERE n._storage_id = node_id;
 
-UPDATE deployments d
+UPDATE public.deployments d
 SET
     drifted_instances = (
         SELECT SUM(n.drifted_instances)
-        FROM nodes n
+        FROM public.nodes n
         WHERE n._deployment_fk = d._storage_id
     ),
     unavailable_instances = (
         SELECT SUM(n.unavailable_instances)
-        FROM nodes n
+        FROM public.nodes n
         WHERE n._deployment_fk = d._storage_id
     )
 WHERE d._storage_id = (
     SELECT n._deployment_fk
-    FROM nodes n
+    FROM public.nodes n
     WHERE n._storage_id = node_id
     LIMIT 1
 );
@@ -428,7 +428,7 @@ $$ LANGUAGE sql;
 CREATE OR REPLACE FUNCTION recalc_drift_instance_counts_insert()
 RETURNS TRIGGER AS $$
 BEGIN
-    PERFORM recalc_drift_instance_counts(NEW._node_fk);
+    PERFORM public.recalc_drift_instance_counts(NEW._node_fk);
     RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
@@ -436,7 +436,7 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION recalc_drift_instance_counts_update()
 RETURNS TRIGGER AS $$
 BEGIN
-    PERFORM recalc_drift_instance_counts(OLD._node_fk);
+    PERFORM public.recalc_drift_instance_counts(OLD._node_fk);
     RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
