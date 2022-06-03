@@ -22,7 +22,9 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 from cloudify_types.utils import (errors_nonrecoverable,
                                   get_desired_operation_input,
                                   get_deployment_by_id,
-                                  get_client, get_idd)
+                                  get_client, get_idd,
+                                  capabilities_diff,
+                                  validate_deployment_status)
 
 from cloudify_types.component.utils import (
     populate_runtime_with_wf_results)
@@ -169,3 +171,35 @@ def refresh(**kwargs):
     deployment_id = deployment.get('id', '')
     client, _ = get_client(kwargs)
     populate_runtime_with_wf_results(client, deployment_id)
+
+
+@operation(resumable=True)
+def check_drift(**kwargs):
+    # Discover the drift by comparing the capabilities of a deployment to the
+    # runtime properties / capabilities of a node_instance
+    config = get_desired_operation_input('resource_config', kwargs)
+    deployment_id = config.get('deployment', {}).get('id')
+    client, _ = get_client(kwargs)
+    deployment_capabilities = client.deployments.capabilities\
+        .get(deployment_id)\
+        .get('capabilities')
+    node_instance_capabilities = client.node_instances\
+        .get(kwargs['ctx'].instance.id, _include=['id', 'runtime_properties'])\
+        .get('runtime_properties', {})\
+        .get('capabilities')
+
+    modified_keys = list(capabilities_diff(
+        deployment_capabilities,
+        node_instance_capabilities
+    ))
+    return {'capabilities': modified_keys} if modified_keys else None
+
+
+@operation(resumable=True)
+def check_status(**kwargs):
+    """Discover status of a deployment basing on its different attributes."""
+    config = get_desired_operation_input('resource_config', kwargs)
+    deployment_id = config.get('deployment', {}).get('id')
+    client, _ = get_client(kwargs)
+    deployment = client.deployments.get(deployment_id)
+    validate_deployment_status(deployment)

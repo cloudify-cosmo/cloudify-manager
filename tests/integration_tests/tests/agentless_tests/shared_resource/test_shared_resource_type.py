@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import pytest
+
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import wait_for_executions
 
@@ -78,3 +79,45 @@ capabilities:
         self.assertRaises(RuntimeError, self.deploy_application,
                           self.test_blueprint_path,
                           deployment_id='root_dep')
+
+    def test_drift(self):
+        self._create_shared_resource_deployment()
+        self.deploy_application(
+            self.test_blueprint_path,
+            deployment_id='root_dep',
+        )
+        check_drift_execution = self.client.executions.start(
+            deployment_id='root_dep',
+            workflow_id='check_drift',
+        )
+        self.wait_for_execution_to_end(check_drift_execution)
+        node_instance = self.client.node_instances.list(
+            deployment_id='root_dep',
+            node_id='shared_resource_node',
+            _include=['id', 'runtime_properties', 'has_configuration_drift'],
+        )[0]
+        assert node_instance['has_configuration_drift'] is False
+        node_instance_rp = node_instance.runtime_properties
+        assert 'capabilities' in node_instance_rp
+        node_instance_rp['capabilities'].update({'test': 2, 'foo': 'bar'})
+        self.client.node_instances.update(
+            node_instance['id'],
+            runtime_properties=node_instance_rp,
+            force=True,
+        )
+
+        # Check drift again
+        check_drift_execution = self.client.executions.start(
+            deployment_id='root_dep',
+            workflow_id='check_drift',
+        )
+        self.wait_for_execution_to_end(check_drift_execution)
+        node_instance = self.client.node_instances.get(node_instance.id)
+        assert node_instance['has_configuration_drift'] is True
+        assert 'configuration_drift' in node_instance.system_properties
+        capabilities_drift = node_instance\
+            .system_properties['configuration_drift']\
+            .get('result', {})\
+            .get('capabilities')
+        assert capabilities_drift
+        assert set(capabilities_drift) == {'test', 'foo'}

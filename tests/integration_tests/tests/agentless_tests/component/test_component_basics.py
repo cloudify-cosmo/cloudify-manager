@@ -206,6 +206,62 @@ node_templates:
         with pytest.raises(CloudifyClientError):
             self.client.deployments.get(deployment_id)
 
+    def test_drift(self):
+        component_blueprint = """
+tosca_definitions_version: cloudify_dsl_1_4
+
+imports:
+  - cloudify/types/types.yaml
+
+capabilities:
+    test:
+        value: 1
+"""
+        blueprint_path = self.make_yaml_file(component_blueprint)
+        self.client.blueprints.upload(blueprint_path,
+                                      entity_id=self.basic_blueprint_id)
+        wait_for_blueprint_upload(self.basic_blueprint_id, self.client, True)
+        dsl_path = resource('dsl/component_with_blueprint_id.yaml')
+        self.deploy_application(dsl_path, deployment_id='root_dep')
+        check_drift_execution = self.client.executions.start(
+            deployment_id='root_dep',
+            workflow_id='check_drift',
+        )
+        self.wait_for_execution_to_end(check_drift_execution)
+        node_instance = self.client.node_instances.list(
+            deployment_id='root_dep',
+            node_id='component_node',
+            _include=['id', 'runtime_properties', 'has_configuration_drift'],
+        )[0]
+        assert node_instance['has_configuration_drift'] is False
+        node_instance_rp = node_instance.runtime_properties
+        assert 'capabilities' in node_instance_rp
+        node_instance_rp['capabilities'].update({'test': 2, 'foo': 'bar'})
+        self.client.node_instances.update(
+            node_instance['id'],
+            runtime_properties=node_instance_rp,
+            force=True,
+        )
+
+        # Check drift again
+        check_drift_execution = self.client.executions.start(
+            deployment_id='root_dep',
+            workflow_id='check_drift',
+        )
+        self.wait_for_execution_to_end(check_drift_execution)
+        node_instance = self.client.node_instances.get(node_instance.id)
+        assert node_instance['has_configuration_drift'] is True
+        assert 'configuration_drift' in node_instance.system_properties
+        capabilities_drift = node_instance\
+            .system_properties['configuration_drift']\
+            .get('result', {})\
+            .get('capabilities')
+        assert capabilities_drift
+        assert set(capabilities_drift) == {'test', 'foo'}
+
+        deployment = self.client.deployments.get('root_dep')
+        assert deployment.get('drifted_instances') == 1
+
 
 @wait_for_executions
 class ComponentPluginsTest(AgentlessTestCase):

@@ -108,11 +108,13 @@ def is_all_executions_finished(client, deployment_id=None):
     """
     offset = 0
 
+    execution_list_args = {'include_system_workflows': True,
+                           '_size': PAGINATION_SIZE}
+    if deployment_id:
+        execution_list_args['deployment_id'] = deployment_id
     while True:
-        executions = client.executions.list(
-            include_system_workflows=True,
-            _offset=offset,
-            _size=PAGINATION_SIZE)
+        execution_list_args['_offset'] = offset
+        executions = client.executions.list(**execution_list_args)
 
         for execution in executions:
             execution_status = execution.get('status')

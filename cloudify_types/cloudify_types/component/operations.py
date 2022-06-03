@@ -25,7 +25,9 @@ from cloudify_types.utils import (do_upload_blueprint,
                                   validate_labels,
                                   errors_nonrecoverable,
                                   get_desired_operation_input,
-                                  get_client, get_idd)
+                                  get_client, get_idd,
+                                  capabilities_diff,
+                                  validate_deployment_status)
 from .polling import (
     poll_with_timeout,
     is_all_executions_finished,
@@ -333,3 +335,59 @@ def refresh(**kwargs):
                      deployment.get('id') or
                      ctx.instance.id)
     populate_runtime_with_wf_results(client, deployment_id)
+
+
+@operation(resumable=True)
+def check_drift(timeout=EXECUTIONS_TIMEOUT, **kwargs):
+    # Discover the drift by comparing the capabilities of a deployment to the
+    # runtime properties / capabilities of a node_instance
+    client, _ = get_client(kwargs)
+    config = get_desired_operation_input('resource_config', kwargs)
+    runtime_deployment_prop = ctx.instance.runtime_properties.get(
+        'deployment', {})
+    runtime_deployment_id = runtime_deployment_prop.get('id')
+    deployment = config.get('deployment', {})
+    deployment_id = (runtime_deployment_id or
+                     deployment.get('id') or
+                     ctx.instance.id)
+
+    poll_with_timeout(
+        lambda: is_all_executions_finished(client, deployment_id),
+        timeout=timeout,
+        expected_result=True)
+
+    deployment_capabilities = client.deployments.capabilities\
+        .get(deployment_id)\
+        .get('capabilities')
+    node_instance_capabilities = client.node_instances\
+        .get(kwargs['ctx'].instance.id, _include=['id', 'runtime_properties'])\
+        .get('runtime_properties', {})\
+        .get('capabilities')
+
+    modified_keys = list(capabilities_diff(
+        deployment_capabilities,
+        node_instance_capabilities
+    ))
+    return {'capabilities': modified_keys} if modified_keys else None
+
+
+@operation(resumable=True)
+def check_status(timeout=EXECUTIONS_TIMEOUT, **kwargs):
+    """Discover status of a deployment basing on its different attributes."""
+    client, _ = get_client(kwargs)
+    config = get_desired_operation_input('resource_config', kwargs)
+    runtime_deployment_prop = ctx.instance.runtime_properties.get(
+        'deployment', {})
+    runtime_deployment_id = runtime_deployment_prop.get('id')
+    deployment = config.get('deployment', {})
+    deployment_id = (runtime_deployment_id or
+                     deployment.get('id') or
+                     ctx.instance.id)
+
+    poll_with_timeout(
+        lambda: is_all_executions_finished(client, deployment_id),
+        timeout=timeout,
+        expected_result=True)
+
+    deployment = client.deployments.get(deployment_id)
+    validate_deployment_status(deployment)
