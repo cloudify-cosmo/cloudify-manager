@@ -17,7 +17,6 @@ from cloudify import manager, ctx
 from cloudify.decorators import operation
 from cloudify.constants import COMPONENT
 from cloudify.exceptions import NonRecoverableError
-from cloudify.models_states import DeploymentState, ExecutionState
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from cloudify_types.utils import (do_upload_blueprint,
@@ -26,7 +25,9 @@ from cloudify_types.utils import (do_upload_blueprint,
                                   validate_labels,
                                   errors_nonrecoverable,
                                   get_desired_operation_input,
-                                  get_client, get_idd)
+                                  get_client, get_idd,
+                                  capabilities_diff,
+                                  validate_deployment_status)
 from .polling import (
     poll_with_timeout,
     is_all_executions_finished,
@@ -363,19 +364,11 @@ def check_drift(timeout=EXECUTIONS_TIMEOUT, **kwargs):
         .get('runtime_properties', {})\
         .get('capabilities')
 
-    modified_keys = list(_capabilities_diff(
+    modified_keys = list(capabilities_diff(
         deployment_capabilities,
         node_instance_capabilities
     ))
     return {'capabilities': modified_keys} if modified_keys else None
-
-
-def _capabilities_diff(a, b):
-    a_dict = a if isinstance(a, dict) else {}
-    b_dict = b if isinstance(b, dict) else {}
-    for k in a_dict.keys() | b_dict.keys():
-        if a_dict.get(k) != b_dict.get(k):
-            yield k
 
 
 @operation(resumable=True)
@@ -397,22 +390,4 @@ def check_status(timeout=EXECUTIONS_TIMEOUT, **kwargs):
         expected_result=True)
 
     deployment = client.deployments.get(deployment_id)
-    if deployment.installation_status != DeploymentState.ACTIVE:
-        raise Exception(
-            f"Expected deployment '{deployment.id}' to be installed, but got "
-            f"installation status: '{deployment.installation_status}'")
-    if deployment.deployment_status != DeploymentState.GOOD:
-        raise Exception(
-            f"Expected deployment '{deployment.id}' to be in a good state, "
-            f"but got deployment status: '{deployment.deployment_status}'")
-    if deployment.latest_execution_status == ExecutionState.FAILED:
-        raise Exception(
-            f"The latest execution for '{deployment.id}' failed")
-    if deployment.unavailable_instances > 0:
-        raise Exception(
-            f"There are {deployment.unavailable_instances} unavailable "
-            f"instances in deployment '{deployment.id}'")
-    if deployment.drifted_instances > 0:
-        raise Exception(
-            f"There are {deployment.drifted_instances} drifted "
-            f"instances in deployment '{deployment.id}'")
+    validate_deployment_status(deployment)

@@ -33,6 +33,7 @@ from cloudify_rest_client.exceptions import (CloudifyClientError,
 from cloudify.exceptions import NonRecoverableError, OperationRetry
 from cloudify.deployment_dependencies import (dependency_creator_generator,
                                               create_deployment_dependency)
+from cloudify.models_states import DeploymentState, ExecutionState
 
 from cloudify_types.constants import EXTERNAL_RESOURCE
 from cloudify_types.polling import wait_for_blueprint_to_upload
@@ -461,3 +462,33 @@ def _zipping(source, destination, include_folder=True):
                     file_path, os.path.relpath(file_path, source_dir))
     ctx.logger.debug('Successful zip archive creation')
     return destination
+
+
+def capabilities_diff(a, b):
+    a_dict = a if isinstance(a, dict) else {}
+    b_dict = b if isinstance(b, dict) else {}
+    for k in a_dict.keys() | b_dict.keys():
+        if a_dict.get(k) != b_dict.get(k):
+            yield k
+
+
+def validate_deployment_status(deployment):
+    if deployment.installation_status != DeploymentState.ACTIVE:
+        raise Exception(
+            f"Expected deployment '{deployment.id}' to be installed, but got "
+            f"installation status: '{deployment.installation_status}'")
+    if deployment.deployment_status != DeploymentState.GOOD:
+        raise Exception(
+            f"Expected deployment '{deployment.id}' to be in a good state, "
+            f"but got deployment status: '{deployment.deployment_status}'")
+    if deployment.latest_execution_status == ExecutionState.FAILED:
+        raise Exception(
+            f"The latest execution for '{deployment.id}' failed")
+    if deployment.unavailable_instances > 0:
+        raise Exception(
+            f"There are {deployment.unavailable_instances} unavailable "
+            f"instances in deployment '{deployment.id}'")
+    if deployment.drifted_instances > 0:
+        raise Exception(
+            f"There are {deployment.drifted_instances} drifted "
+            f"instances in deployment '{deployment.id}'")
