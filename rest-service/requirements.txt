@@ -11,7 +11,7 @@ async-timeout==3.0.1      # via aiohttp
 attrs==21.4.0             # via aiohttp, jsonschema
 babel==2.9.1              # via flask-babelex
 blinker==1.4              # via flask-mail, flask-principal
-bottle==0.12.19           # via cloudify-common
+bottle==0.12.20           # via cloudify-common
 cachetools==3.1.1         # via cloudify-rest-service (setup.py)
 certifi==2021.10.8        # via requests
 cffi==1.14.6              # via cloudify-rest-service (setup.py), cryptography
