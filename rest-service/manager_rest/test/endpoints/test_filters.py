@@ -214,19 +214,67 @@ class DeploymentFiltersFunctionalityCase(FiltersFunctionalityBaseCase):
         super().setUp(models.Deployment)
 
     def test_filters_applied(self):
-        self.client.sites.create('site_1')
-        self.client.sites.create('other_site')
-        dep1 = self.put_deployment_with_labels(self.LABELS,
-                                               resource_id='res_1',
-                                               site_name='site_1')
-        dep2 = self.put_deployment_with_labels(self.LABELS_2,
-                                               resource_id='res_2',
-                                               site_name='other_site')
-        dep3 = self.put_deployment_with_labels(self.LABELS_3,
-                                               resource_id='res_3',
-                                               site_name='other_site')
-        _, _, _, dep4 = self.put_deployment(deployment_id='res_4',
-                                            blueprint_id='res_4')
+        site1 = models.Site(
+            id='site_1',
+            name='site_1',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        other_site = models.Site(
+            id='other_site',
+            name='other_site',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        bp1 = models.Blueprint(
+            id='res_1', creator=self.user, tenant=self.tenant)
+        dep1 = models.Deployment(
+            id='res_1',
+            blueprint=bp1,
+            labels=[
+                models.DeploymentLabel(key='a', value='b', creator=self.user),
+                models.DeploymentLabel(key='a', value='z', creator=self.user),
+                models.DeploymentLabel(key='c', value='d', creator=self.user),
+            ],
+            site=site1,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        bp2 = models.Blueprint(
+            id='res_2', creator=self.user, tenant=self.tenant)
+        dep2 = models.Deployment(
+            id='res_2',
+            blueprint=bp2,
+            labels=[
+                models.DeploymentLabel(key='a', value='b', creator=self.user),
+                models.DeploymentLabel(key='c', value='z', creator=self.user),
+                models.DeploymentLabel(key='e', value='f', creator=self.user),
+            ],
+            site=other_site,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        bp3 = models.Blueprint(
+            id='res_3', creator=self.user, tenant=self.tenant)
+        dep3 = models.Deployment(
+            id='res_3',
+            blueprint=bp3,
+            labels=[
+                models.DeploymentLabel(key='g', value='f', creator=self.user),
+            ],
+            site=other_site,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        bp4 = models.Blueprint(
+            id='res_4', creator=self.user, tenant=self.tenant)
+        dep4 = models.Deployment(
+            id='res_4',
+            blueprint=bp4,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+
         self._test_labels_filters_applied(dep1.id, dep2.id, dep3.id, dep4.id)
         self.assert_filters_applied(
             [('a', ['b'], LabelsOperator.ANY_OF, 'label'),
