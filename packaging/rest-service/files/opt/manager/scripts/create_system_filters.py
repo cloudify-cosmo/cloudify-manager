@@ -67,7 +67,7 @@ def create_system_filters():
             'libvirt-deployments': 'libvirt',
             'utilities-deployments': 'utilities',
             'host-pool-deployments': 'host-pool',
-            'diamon-deployments': 'diamon',
+            'diamond-deployments': 'diamond',
             'openstack-deployments': 'openstack',
             'openstack-v3-deployments': 'openstack-v3',
             'vcloud-deployments': 'vcloud',
