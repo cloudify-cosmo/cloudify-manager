@@ -49,26 +49,37 @@ def create_system_filters():
                 ]
             }
             _add_deployments_filter(service_filter, creator, tenant, now)
-        if 'csys-k8s-filter' not in curr_dep_filters_ids:
+
+        for filter_id, obj_type_value in {
+            'csys-k8s-filter': 'k8s',
+            'csys-terraform-filter': 'terraform',
+            'aws-deployments': 'aws',
+            'azure-deployments': 'azure',
+            'gcp-deployments': 'gcp',
+            'terragrunt-deployments': 'terragrunt',
+            'helm-deployments': 'helm',
+            'ansible-deployments': 'ansible',
+            'starlingx-deployments': 'starlingx',
+            'vsphere-deployments': 'vsphere',
+            'docker-deployments': 'docker',
+            'netconf-deployments': 'netconf',
+            'fabric-deployments': 'fabric',
+            'libvirt-deployments': 'libvirt',
+            'utilities-deployments': 'utilities',
+            'host-pool-deployments': 'host-pool',
+            'diamond-deployments': 'diamond',
+            'openstack-deployments': 'openstack',
+            'openstack-v3-deployments': 'openstack-v3',
+            'vcloud-deployments': 'vcloud',
+        }.items():
+            if filter_id in curr_dep_filters_ids:
+                continue
             service_filter = {
-                'id': 'csys-k8s-filter',
+                'id': filter_id,
                 'value': [
                     {
                         'key': 'obj-type',
-                        'values': ['k8s'],
-                        'operator': 'any_of',
-                        'type': 'label',
-                    }
-                ]
-            }
-            _add_deployments_filter(service_filter, creator, tenant, now)
-        if 'csys-terraform-filter' not in curr_dep_filters_ids:
-            service_filter = {
-                'id': 'csys-terraform-filter',
-                'value': [
-                    {
-                        'key': 'obj-type',
-                        'values': ['terraform'],
+                        'values': [obj_type_value],
                         'operator': 'any_of',
                         'type': 'label',
                     }
