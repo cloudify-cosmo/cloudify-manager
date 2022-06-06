@@ -123,6 +123,8 @@ class TestClient(FlaskClient):
     """A helper class that overrides flask's default testing.FlaskClient
     class for the purpose of adding authorization headers to all rest calls
     """
+    __test__ = False
+
     def __init__(self, *args, **kwargs):
         self._user = kwargs.pop('user')
         super(TestClient, self).__init__(*args, **kwargs)

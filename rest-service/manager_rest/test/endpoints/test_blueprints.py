@@ -86,7 +86,7 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         self.assertRaisesRegex(
             exceptions.CloudifyClientError,
             '409: blueprint with id=blueprint already exists',
-            callable_obj=self.put_blueprint)
+            self.put_blueprint)
 
     def test_put_blueprint_archive(self):
         self._test_put_blueprint_archive(archiving.make_targzfile, 'tar.gz')
