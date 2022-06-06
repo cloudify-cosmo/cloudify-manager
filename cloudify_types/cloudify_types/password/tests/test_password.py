@@ -31,18 +31,47 @@ class TestPassword(unittest.TestCase):
     def test_create_password_defaults(self):
         created_password = self._create_password()
         assert len(created_password) == 8
-        assert self._ctx.instance.runtime_properties.get(
-            'secret_name') == 'pswd_test_pswd_node_name'
 
-    def test_create_password_set_secret_name(self):
+    def test_create_password_set_secret(self):
         node_props = NODE_PROPS.copy()
         node_props['secret_name'] = 'myPassword'
         self._ctx = self.get_mock_ctx('test', node_props=node_props)
         current_ctx.set(self._ctx)
 
-        self._create_password()
-        assert self._ctx.instance.runtime_properties.get(
-            'secret_name') == 'myPassword'
+        with patch('cloudify.manager.get_rest_client') as mock_client:
+            self.cfy_mock_client.secrets.create = Mock()
+            mock_client.return_value = self.cfy_mock_client
+            created_password = self._create_password()
+            self.cfy_mock_client.secrets.create.assert_called()
+            _, _, kwargs = self.cfy_mock_client.secrets.create.mock_calls[0]
+
+        assert kwargs.get('key') == 'myPassword'
+        assert kwargs.get('value') == created_password
+
+    def test_create_password_use_existing(self):
+        node_props = NODE_PROPS.copy()
+        node_props['secret_name'] = 'myPassword'
+        node_props['use_secret_if_exists'] = True
+        self._ctx = self.get_mock_ctx('test', node_props=node_props)
+        current_ctx.set(self._ctx)
+
+        with patch('cloudify.manager.get_rest_client') as mock_client:
+            self.cfy_mock_client.secrets.get = Mock(return_value='123456')
+            mock_client.return_value = self.cfy_mock_client
+            created_password = self._create_password()
+            self.cfy_mock_client.secrets.get.assert_called()
+        assert created_password == '123456'
+
+    def test_create_password_use_existing_no_secret_name(self):
+        node_props = NODE_PROPS.copy()
+        node_props['use_secret_if_exists'] = True
+        self._ctx = self.get_mock_ctx('test', node_props=node_props)
+        current_ctx.set(self._ctx)
+
+        self.assertRaisesRegex(NonRecoverableError,
+                               r'Can\'t enable `use_secret_if_exists` '
+                               r'property without providing a secret_name',
+                               self._create_password)
 
     def test_create_password_only_uppercase_and_digits(self):
         node_props = NODE_PROPS.copy()
@@ -122,16 +151,9 @@ class TestPassword(unittest.TestCase):
                                self._create_password)
 
     def _create_password(self):
-        with patch('cloudify.manager.get_rest_client') as mock_client:
-            self.cfy_mock_client.secrets.create = Mock()
-            mock_client.return_value = self.cfy_mock_client
-
-            creation_validation()
-            create()
-
-            self.cfy_mock_client.secrets.create.assert_called()
-            _, _, kwargs = self.cfy_mock_client.secrets.create.mock_calls[0]
-        return kwargs.get('value')
+        creation_validation()
+        create()
+        return self._ctx.instance.runtime_properties.get('password')
 
     @staticmethod
     def get_mock_ctx(test_name, node_props=NODE_PROPS):

@@ -4,8 +4,8 @@ from string import ascii_lowercase, ascii_uppercase, digits, punctuation
 from cloudify import manager, ctx
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
+from cloudify_rest_client.exceptions import CloudifyClientError
 from cloudify_types.utils import (_set_secrets,
-                                  _delete_secrets,
                                   errors_nonrecoverable,
                                   get_desired_operation_input)
 
@@ -19,9 +19,24 @@ def create(**kwargs):
     min_digits = get_desired_operation_input('digits', kwargs)
     min_symbols = get_desired_operation_input('symbols', kwargs)
     secret_name = get_desired_operation_input('secret_name', kwargs)
+    use_secret_if_exists = get_desired_operation_input('use_secret_if_exists',
+                                                       kwargs)
+    if use_secret_if_exists:
+        if not secret_name:
+            raise NonRecoverableError(
+                "Can't enable `use_secret_if_exists` property without "
+                "providing a secret_name")
+        else:
+            password = _get_secret(secret_name)
+            if password:
+                ctx.instance.runtime_properties['password'] = password
+                ctx.logger.info('Using existing password from secret `%s`',
+                                secret_name)
+                return True
 
-    if not secret_name:
-        secret_name = f'pswd_{ctx.deployment.id}_{ctx.node.id}'
+    # For resumability
+    if ctx.instance.runtime_properties.get('password'):
+        return True
 
     password = []
     required_length = 0
@@ -55,21 +70,18 @@ def create(**kwargs):
     SystemRandom().shuffle(password)
     password = ''.join(password)
 
-    _set_secrets(manager.get_rest_client(), {secret_name: password})
-    ctx.instance.runtime_properties['secret_name'] = secret_name
-    ctx.logger.info('Created password. Secret name: %s', secret_name)
+    ctx.instance.runtime_properties['password'] = password
+    ctx.logger.info('Created password.')
+    if secret_name:
+        _set_secrets(manager.get_rest_client(), {secret_name: password})
     return True
 
 
 @operation(resumable=True)
 @errors_nonrecoverable
 def delete(**kwargs):
-    secret_name = ctx.instance.runtime_properties.get('secret_name')
-    remove_secret = \
-        get_desired_operation_input('uninstall_removes_secret', kwargs)
-    if remove_secret:
-        _delete_secrets(manager.get_rest_client(), [secret_name])
-    return True
+    if 'password' in ctx.instance.runtime_properties:
+        del ctx.instance.runtime_properties['password']
 
 
 @errors_nonrecoverable
@@ -101,3 +113,10 @@ def creation_validation(**kwargs):
             'Could not satisfy password requirements: lengths of required '
             'character groups is larger than the password length')
     return True
+
+
+def _get_secret(key):
+    try:
+        return manager.get_rest_client().secrets.get(key)
+    except CloudifyClientError:
+        return

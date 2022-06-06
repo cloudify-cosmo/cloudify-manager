@@ -555,11 +555,17 @@ node_types:
         type: integer
         default: 0
       secret_name:
-        description: Optional secret name to store the password. If not provided, defaults to <deployment id>_<node_name>
+        description: |
+          Optional secret name to store the password. If not provided,
+          the password will only exist as a runtime property.
         type: string
         required: false
-      uninstall_removes_secret:
-        description: Optional whether to remove the secret from Manager when this deployment is uninstalled.
+      use_secret_if_exists:
+        description: |
+          Whether to retrieve the password from an existing secret
+          with the name defined in secret_name. Can only be used if
+          secret_name is provided. If a secret with such a name does not
+          exist, it will be created.
         type: boolean
         default: false
     interfaces:
