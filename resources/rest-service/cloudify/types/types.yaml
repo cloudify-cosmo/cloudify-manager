@@ -562,7 +562,6 @@ node_types:
         description: Optional whether to remove the secret from Manager when this deployment is uninstalled.
         type: boolean
         default: false
-        required: false
     interfaces:
       cloudify.interfaces.lifecycle:
         create:

@@ -1,10 +1,9 @@
-from random import choice, shuffle
+from secrets import choice, SystemRandom
 from string import ascii_lowercase, ascii_uppercase, digits, punctuation
 
 from cloudify import manager, ctx
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
-from cloudify_rest_client.client import CloudifyClient
 from cloudify_types.utils import (_set_secrets,
                                   _delete_secrets,
                                   errors_nonrecoverable,
@@ -26,7 +25,7 @@ def create(**kwargs):
 
     password = []
     required_length = 0
-    symbols  = ' ' + punctuation
+    symbols = ' ' + punctuation
 
     alphabet = \
         (ascii_uppercase if min_uppercase >= 0 else '') + \
@@ -53,7 +52,7 @@ def create(**kwargs):
     for _ in range(length - required_length):
         password.append(choice(alphabet))
 
-    shuffle(password)
+    SystemRandom().shuffle(password)
     password = ''.join(password)
 
     _set_secrets(manager.get_rest_client(), {secret_name: password})
@@ -83,26 +82,22 @@ def creation_validation(**kwargs):
 
     if length < 6:
         raise NonRecoverableError(
-            f'Password length is required to be at least 6 characters')
+            'Password length is required to be at least 6 characters')
 
-    if (min_uppercase < -1 or  min_lowercase < -1 or min_digits < -1 or
+    if (min_uppercase < -1 or min_lowercase < -1 or min_digits < -1 or
             min_symbols < -1):
         raise NonRecoverableError(
-            f'Illegal character group length provided: expecting an integer '
-            f'greater than 0, or -1 for not using this character group')
+            'Illegal character group length provided: expecting an integer '
+            'greater than 0, or -1 for not using this character group')
 
-    if (min_uppercase == -1 and  min_lowercase == -1 and min_digits == -1 and
+    if (min_uppercase == -1 and min_lowercase == -1 and min_digits == -1 and
             min_symbols == -1):
         raise NonRecoverableError(
-            f'Could not satisfy password requirements: at least one character '
-            f'group should be used')
+            'Could not satisfy password requirements: at least one character '
+            'group should be used')
 
     if min_uppercase + min_lowercase + min_digits + min_symbols > length:
         raise NonRecoverableError(
-            f'Could not satisfy password requirements: lengths of required '
-            f'character groups is larger than the password length')
+            'Could not satisfy password requirements: lengths of required '
+            'character groups is larger than the password length')
     return True
-
-
-def _generate_password(len, alphabet):
-    return ''.join(choice(alphabet) for _ in range(len))
