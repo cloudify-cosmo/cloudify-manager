@@ -145,8 +145,6 @@ class TestClient(FlaskClient):
 
 
 class BaseServerTestCase(unittest.TestCase):
-    # hack for running tests with py2's unnitest, but using py3's
-    # assert method name; to be removed once we run unittests on py3 only
     LABELS = [{'env': 'aws'}, {'arch': 'k8s'}]
     LABELS_2 = [{'env': 'gcp'}, {'arch': 'k8s'}]
     FILTER_ID = 'filter'
@@ -161,10 +159,6 @@ class BaseServerTestCase(unittest.TestCase):
         FilterRule('arch', ['k8s'], LabelsOperator.ANY_OF, 'label'),
         FilterRule('created_by', ['admin'], AttrsOperator.ANY_OF, 'attribute'),
     ]
-
-    def assertEmpty(self, obj):
-        self.assertIsNotNone(obj)
-        self.assertFalse(obj)
 
     def assert_metadata_filtered(self, resource_list, filtered_cnt):
         self.assertEqual(resource_list.metadata.get('filtered'), filtered_cnt)

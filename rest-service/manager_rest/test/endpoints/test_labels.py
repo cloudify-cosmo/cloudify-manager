@@ -85,7 +85,7 @@ class LabelsBaseTestCase(base_test.BaseServerTestCase):
         resource = self.put_resource_with_labels(self.LABELS)
         self.assert_resource_labels(resource.labels, self.LABELS)
         updated_res = self.update_resource_labels(resource.id, [])
-        self.assertEmpty(updated_res.labels)
+        assert not updated_res.labels
 
     def test_creation_failure_with_invalid_label_key(self):
         err_label = [{'k ey': 'value'}]
@@ -160,11 +160,11 @@ class LabelsBaseTestCase(base_test.BaseServerTestCase):
 
     def test_resource_labels_empty_labels(self):
         keys_list = self.labels_client.list_keys()
-        self.assertEmpty(keys_list.items)
+        assert not keys_list.items
 
     def test_resource_labels_key_does_not_exist(self):
         not_exist = self.labels_client.list_key_values('env')
-        self.assertEmpty(not_exist.items)
+        assert not not_exist.items
 
     def test_get_reserved_labels(self):
         reserved_labels = self.labels_client.get_reserved_labels_keys()
@@ -257,7 +257,7 @@ class BlueprintsLabelsTestCase(LabelsBaseTestCase):
 
     def test_blueprint_creation_success_without_labels(self):
         blueprint = self.put_blueprint()
-        self.assertEmpty(blueprint.labels)
+        assert not blueprint.labels
 
     def test_update_empty_blueprint_labels(self):
         blueprint = self.put_blueprint_with_labels(self.LABELS)
