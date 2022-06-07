@@ -593,6 +593,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         validation_methods = {
             'available': self._true_or_none,
             'node_instances_active': self._node_instances_active_states_match,
+            'node_types_required': self._node_types_required_match
         }
         rules = workflow.get('availability_rules')
         if not rules:
@@ -620,6 +621,12 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                     "Invalid value for 'node_instances_active' availability "
                     f"rule: '{node_instance_active_rules}'")
         return result
+
+    def _node_types_required_match(self, required_node_types):
+        if not required_node_types:
+            return True
+        node_types = set(t for n in self.nodes for t in n.type_hierarchy)
+        return bool(node_types & set(required_node_types))
 
     @classmethod
     def compare_statuses(
