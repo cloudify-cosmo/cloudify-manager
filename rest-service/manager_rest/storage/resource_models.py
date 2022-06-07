@@ -593,7 +593,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         validation_methods = {
             'available': self._true_or_none,
             'node_instances_active': self._node_instances_active_states_match,
-            'node_types_required': self._node_types_required_match
+            'node_types_required': self._node_types_required_match,
         }
         rules = workflow.get('availability_rules')
         if not rules:
