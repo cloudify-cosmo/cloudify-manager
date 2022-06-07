@@ -626,6 +626,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         if not required_node_types:
             return True
         node_types = set(t for n in self.nodes for t in n.type_hierarchy)
+        # Even one matching node type is sufficient to pass this validation
         return bool(node_types & set(required_node_types))
 
     @classmethod
