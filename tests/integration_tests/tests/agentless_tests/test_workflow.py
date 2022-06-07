@@ -517,3 +517,52 @@ workflows:
             self.execute_workflow('wf1', deployment.id)
         assert cm.exception.error_code == 'unavailable_workflow_error'
         self.execute_workflow('wf2', deployment.id)
+
+    def test_workflows_availability_node_types(self):
+        bp_template = """
+tosca_definitions_version: cloudify_dsl_1_4
+
+imports:
+    - cloudify/types/types.yaml
+
+node_types:
+    type1:
+        derived_from: cloudify.nodes.Root
+    type2:
+        derived_from: type1
+    type3:
+        derived_from: type2
+
+node_templates:
+    node1:
+        type: type1
+    node2:
+        type: type2
+
+workflows:
+    wf1:
+        mapping: file:///dev/null
+        availability_rules:
+            node_types_required: []
+    wf2:
+        mapping: file:///dev/null
+        availability_rules:
+            node_types_required: [type1]
+    wf3:
+        mapping: file:///dev/null
+        availability_rules:
+            node_types_required: [type1, type2]
+    wf4:
+        mapping: file:///dev/null
+        availability_rules:
+            node_types_required: [type3]
+"""
+        base_bp_path = \
+            self.make_yaml_file(bp_template)
+        deployment, _ = self.deploy_application(base_bp_path)
+        self.execute_workflow('wf1', deployment.id)
+        self.execute_workflow('wf2', deployment.id)
+        self.execute_workflow('wf3', deployment.id)
+        with self.assertRaises(CloudifyClientError) as cm:
+            self.execute_workflow('wf4', deployment.id)
+        assert cm.exception.error_code == 'unavailable_workflow_error'
