@@ -204,3 +204,15 @@ def store_pid(ctx, delay=180, **kwargs):
     ctx.instance.runtime_properties['pid'] = os.getpid()
     ctx.instance.update()
     time.sleep(delay)
+
+
+@operation
+def limit_scale(ctx):
+    """Only allow a limited amount of instances of this node to be created
+
+    Used in scale-resume tests.
+    """
+    allowed = int(ctx.node.properties['allowed'])
+    if ctx.instance.index > allowed:
+        raise NonRecoverableError(f'instance {ctx.instance.index} disallowed')
+    ctx.logger.info('instance %d created', ctx.instance.index)
