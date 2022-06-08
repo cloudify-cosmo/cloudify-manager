@@ -231,6 +231,7 @@ class SnapshotRestore(object):
                 self._update_node_instance_indices()
                 self._set_default_user_profile_flags()
                 self._create_system_filters()
+                self._copy_blueprint_icons()
                 postgres.refresh_roles()
 
             if self._restore_certificates:
@@ -353,6 +354,11 @@ class SnapshotRestore(object):
             for user in users:
                 self._client.users.set_show_getting_started(user.username,
                                                             False)
+
+    def _copy_blueprint_icons(self):
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        script_path = os.path.join(dir_path, 'copy_icons.py')
+        utils.run([MANAGER_PYTHON, script_path])
 
     def _generate_new_token(self):
         dir_path = os.path.dirname(os.path.realpath(__file__))

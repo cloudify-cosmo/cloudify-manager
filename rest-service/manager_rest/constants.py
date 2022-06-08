@@ -39,6 +39,8 @@ DEFAULT_TENANT_ROLE = 'user'
 BOOTSTRAP_ADMIN_ID = 0
 DEFAULT_TENANT_ID = 0
 
+FILE_SERVER_ROOT = '/opt/manager/resources'
+# This is the URL-ey counterpart of the FILE_SERVER_ROOT
 FILE_SERVER_RESOURCES_FOLDER = '/resources'
 FILE_SERVER_BLUEPRINTS_FOLDER = 'blueprints'
 FILE_SERVER_DEPLOYMENTS_FOLDER = 'deployments'
