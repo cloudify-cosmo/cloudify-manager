@@ -2,12 +2,13 @@ import os
 import sys
 import shutil
 
-from manager_rest.flask_utils import setup_flask_app
-from manager_rest import config
-from manager_rest.constants import (FILE_SERVER_BLUEPRINTS_FOLDER,
+from manager_rest.constants import (FILE_SERVER_ROOT,
+                                    FILE_SERVER_BLUEPRINTS_FOLDER,
                                     BLUEPRINT_ICON_FILENAME)
 
 STAGE_ICONS_PATH = '/opt/cloudify-stage/dist/userData/blueprint-icons'
+FS_BLUEPRINTS_PATH = os.path.join(FILE_SERVER_ROOT,
+                                  FILE_SERVER_BLUEPRINTS_FOLDER)
 
 
 def load_icons():
@@ -15,13 +16,9 @@ def load_icons():
         sys.stderr.write('No stage icons found, aborting icon copy.\n')
         return
 
-    with setup_flask_app().app_context():
-        config.instance.load_configuration()
-        fs_blueprints_path = os.path.join(config.instance.file_server_root,
-                                          FILE_SERVER_BLUEPRINTS_FOLDER)
     existing_blueprints = {}
-    for tenant in os.listdir(fs_blueprints_path):
-        tenant_path = os.path.join(fs_blueprints_path, tenant)
+    for tenant in os.listdir(FS_BLUEPRINTS_PATH):
+        tenant_path = os.path.join(FS_BLUEPRINTS_PATH, tenant)
         for blueprint in os.listdir(tenant_path):
             existing_blueprints.setdefault(blueprint, []).append(tenant)
 
@@ -31,7 +28,7 @@ def load_icons():
         icon_path = os.path.join(STAGE_ICONS_PATH, blueprint, 'icon.png')
         if blueprint in existing_blueprints:
             for tenant in existing_blueprints[blueprint]:
-                dest_path = os.path.join(fs_blueprints_path,
+                dest_path = os.path.join(FS_BLUEPRINTS_PATH,
                                          tenant,
                                          blueprint,
                                          BLUEPRINT_ICON_FILENAME)
@@ -49,7 +46,4 @@ def load_icons():
 
 
 if __name__ == '__main__':
-    if 'MANAGER_REST_CONFIG_PATH' not in os.environ:
-        os.environ['MANAGER_REST_CONFIG_PATH'] = \
-            "/opt/manager/cloudify-rest.conf"
     load_icons()
