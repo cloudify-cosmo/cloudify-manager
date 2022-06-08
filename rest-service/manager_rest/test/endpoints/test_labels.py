@@ -86,7 +86,7 @@ class LabelsBaseTestCase(base_test.BaseServerTestCase):
         resource = self.put_resource_with_labels(self.LABELS)
         self.assert_resource_labels(resource.labels, self.LABELS)
         updated_res = self.update_resource_labels(resource.id, [])
-        assert not updated_res.labels
+        assert updated_res.labels == []
 
     def test_creation_failure_with_invalid_label_key(self):
         err_label = [{'k ey': 'value'}]
