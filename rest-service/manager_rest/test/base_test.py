@@ -123,6 +123,8 @@ class TestClient(FlaskClient):
     """A helper class that overrides flask's default testing.FlaskClient
     class for the purpose of adding authorization headers to all rest calls
     """
+    __test__ = False
+
     def __init__(self, *args, **kwargs):
         self._user = kwargs.pop('user')
         super(TestClient, self).__init__(*args, **kwargs)
@@ -145,8 +147,6 @@ class TestClient(FlaskClient):
 
 
 class BaseServerTestCase(unittest.TestCase):
-    # hack for running tests with py2's unnitest, but using py3's
-    # assert method name; to be removed once we run unittests on py3 only
     LABELS = [{'env': 'aws'}, {'arch': 'k8s'}]
     LABELS_2 = [{'env': 'gcp'}, {'arch': 'k8s'}]
     FILTER_ID = 'filter'
@@ -161,10 +161,6 @@ class BaseServerTestCase(unittest.TestCase):
         FilterRule('arch', ['k8s'], LabelsOperator.ANY_OF, 'label'),
         FilterRule('created_by', ['admin'], AttrsOperator.ANY_OF, 'attribute'),
     ]
-
-    def assertEmpty(self, obj):
-        self.assertIsNotNone(obj)
-        self.assertFalse(obj)
 
     def assert_metadata_filtered(self, resource_list, filtered_cnt):
         self.assertEqual(resource_list.metadata.get('filtered'), filtered_cnt)
@@ -1133,22 +1129,6 @@ class BaseServerTestCase(unittest.TestCase):
             func,
             *args
         )
-
-    def put_deployment_with_labels(self, labels, resource_id=None,
-                                   client=None, blueprint_file_name=None,
-                                   **deployment_kwargs):
-        client = client or self.client
-        resource_id = resource_id or 'i{0}'.format(uuid.uuid4())
-        blueprint_file_name = blueprint_file_name or 'blueprint.yaml'
-        _, _, _, deployment = self.put_deployment(
-            blueprint_file_name=blueprint_file_name,
-            blueprint_id=resource_id,
-            deployment_id=resource_id,
-            labels=labels,
-            client=client,
-            **deployment_kwargs)
-
-        return deployment
 
     def put_blueprint_with_labels(self, labels, resource_id=None,
                                   **blueprint_kwargs):

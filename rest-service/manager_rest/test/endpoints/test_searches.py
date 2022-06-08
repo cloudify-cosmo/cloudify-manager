@@ -1,3 +1,5 @@
+import uuid
+
 from cloudify.models_states import DeploymentState
 from cloudify_rest_client.exceptions import CloudifyClientError
 
@@ -15,9 +17,32 @@ class SearchesTestCase(base_test.BaseServerTestCase):
     FILTER_RULES = [FilterRule('key1', ['val1'], 'any_of', 'label'),
                     FilterRule('key2', [], 'is_not_null', 'label')]
 
+    def setUp(self):
+        super().setUp()
+        self.bp = models.Blueprint(
+            id=uuid.uuid4().hex,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+
+    def _put_deployment_with_labels(self, labels):
+        return models.Deployment(
+            id=uuid.uuid4().hex,
+            blueprint=self.bp,
+            labels=[
+                models.DeploymentLabel(
+                    key=list(label.keys())[0],
+                    value=list(label.values())[0],
+                    creator=self.user,
+                ) for label in labels
+            ],
+            creator=self.user,
+            tenant=self.tenant,
+        )
+
     def test_list_deployments_with_filter_rules(self):
-        dep1 = self.put_deployment_with_labels(self.LABELS)
-        self.put_deployment_with_labels(self.LABELS_2)
+        dep1 = self._put_deployment_with_labels(self.LABELS)
+        self._put_deployment_with_labels(self.LABELS_2)
         deployments = self.client.deployments.list(
             filter_rules=self.FILTER_RULES)
         self.assertEqual(len(deployments), 1)
@@ -25,8 +50,8 @@ class SearchesTestCase(base_test.BaseServerTestCase):
         self.assert_metadata_filtered(deployments, 1)
 
     def test_list_deployments_with_filter_rules_upper(self):
-        self.put_deployment_with_labels(self.LABELS)
-        self.put_deployment_with_labels(self.LABELS_2)
+        self._put_deployment_with_labels(self.LABELS)
+        self._put_deployment_with_labels(self.LABELS_2)
         deployments = self.client.deployments.list(
             filter_rules=[FilterRule('KEy1', ['val1'], 'any_of', 'label')])
         self.assertEqual(len(deployments), 2)
@@ -37,9 +62,9 @@ class SearchesTestCase(base_test.BaseServerTestCase):
         self.assert_metadata_filtered(deployments, 2)
 
     def test_list_deployments_with_filter_rules_and_filter_id(self):
-        self.put_deployment_with_labels(self.LABELS)
-        self.put_deployment_with_labels(self.LABELS_2)
-        dep3 = self.put_deployment_with_labels(self.LABELS_3)
+        self._put_deployment_with_labels(self.LABELS)
+        self._put_deployment_with_labels(self.LABELS_2)
+        dep3 = self._put_deployment_with_labels(self.LABELS_3)
         self._test_list_resources_with_filter_rules_and_filter_id(
             self.client.deployments_filters, self.client.deployments, dep3)
 
@@ -57,9 +82,9 @@ class SearchesTestCase(base_test.BaseServerTestCase):
                 FilterRule('bp_key2', ['bp_2_val1'], 'any_of', 'label'),
                 FilterRule('bp_key1', [], 'is_not_null', 'label')])
         self.assertEqual(len(all_blueprints), 2)
-        self.assert_metadata_filtered(all_blueprints, 0)
+        self.assert_metadata_filtered(all_blueprints, 1)  # the one is self.bp
         self.assertEqual(len(second_blueprint), 1)
-        self.assert_metadata_filtered(second_blueprint, 1)
+        self.assert_metadata_filtered(second_blueprint, 2)
 
     def test_list_blueprints_with_filter_rules_and_filter_id(self):
         self.put_blueprint_with_labels(self.LABELS, blueprint_id='bp1')
@@ -70,8 +95,8 @@ class SearchesTestCase(base_test.BaseServerTestCase):
             self.client.blueprints_filters, self.client.blueprints, bp3)
 
     def test_list_deployments_with_duplicate_filter_rules(self):
-        dep1 = self.put_deployment_with_labels(self.LABELS)
-        self.put_deployment_with_labels(self.LABELS_2)
+        dep1 = self._put_deployment_with_labels(self.LABELS)
+        self._put_deployment_with_labels(self.LABELS_2)
         self.create_filter(self.client.deployments_filters, self.FILTER_ID,
                            self.FILTER_RULES)
         deployments = self.client.deployments.list(
@@ -118,8 +143,8 @@ class SearchesTestCase(base_test.BaseServerTestCase):
             _include=['id']
         )
         self.assertEqual(len(resources), 1)
-        self.assertEqual(resources[0].keys(), {'id'})
-        self.assertEqual(resources[0]['id'], compared_resource['id'])
+        self.assertEqual(dict(resources[0]).keys(), {'id'})
+        self.assertEqual(resources[0].id, compared_resource.id)
 
     def test_searches_with_search_and_search_name(self):
         self.put_deployment(deployment_id='qwe1', blueprint_id='bp1',

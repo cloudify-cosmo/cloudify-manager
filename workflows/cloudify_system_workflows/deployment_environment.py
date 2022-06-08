@@ -103,7 +103,7 @@ def create(ctx, labels=None, inputs=None, skip_plugins_validation=False,
            display_name=None, **_):
     client = get_rest_client(tenant=ctx.tenant_name)
     bp = client.blueprints.get(ctx.blueprint.id)
-    plan_node_ids = [n['id'] for n in bp.plan['nodes']]
+    plan_node_ids = [n['id'] for n in bp.plan.get('nodes', [])]
     existing_ni_ids = get_instance_ids_by_node_ids(client, plan_node_ids)
     deployment_plan = tasks.prepare_deployment_plan(
         bp.plan,

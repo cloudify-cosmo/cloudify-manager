@@ -17,6 +17,7 @@ import uuid
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 
+from manager_rest.storage import models
 from manager_rest.test import base_test
 from manager_rest.constants import RESERVED_LABELS
 
@@ -85,7 +86,7 @@ class LabelsBaseTestCase(base_test.BaseServerTestCase):
         resource = self.put_resource_with_labels(self.LABELS)
         self.assert_resource_labels(resource.labels, self.LABELS)
         updated_res = self.update_resource_labels(resource.id, [])
-        self.assertEmpty(updated_res.labels)
+        assert updated_res.labels == []
 
     def test_creation_failure_with_invalid_label_key(self):
         err_label = [{'k ey': 'value'}]
@@ -159,12 +160,11 @@ class LabelsBaseTestCase(base_test.BaseServerTestCase):
         self.assertEqual(arch_values.items, ['k8s'])
 
     def test_resource_labels_empty_labels(self):
-        keys_list = self.labels_client.list_keys()
-        self.assertEmpty(keys_list.items)
+        assert self.labels_client.list_keys().items == []
 
     def test_resource_labels_key_does_not_exist(self):
         not_exist = self.labels_client.list_key_values('env')
-        self.assertEmpty(not_exist.items)
+        assert not_exist.items == []
 
     def test_get_reserved_labels(self):
         reserved_labels = self.labels_client.get_reserved_labels_keys()
@@ -175,74 +175,179 @@ class DeploymentsLabelsTestCase(LabelsBaseTestCase):
     __test__ = True
 
     def setUp(self):
-        super().setUp('deployments', self.put_deployment_with_labels)
+        super().setUp('deployments', self._make_deployment)
+        self.bp = models.Blueprint(
+            id='bp1',
+            plan={},
+            creator=self.user,
+            tenant=self.tenant,
+            state='uploaded',
+        )
+
+    def _make_deployment(self, labels, resource_id='dep1'):
+        dep = self.client.deployments.create(
+            deployment_id=resource_id,
+            blueprint_id='bp1',
+            labels=labels,
+        )
+        self.create_deployment_environment(dep)
+        return self.client.deployments.get(dep.id)
 
     def test_deployment_creation_success_without_labels(self):
-        _, _, _, deployment = self.put_deployment()
-        self.assertEmpty(deployment.labels)
+        dep = models.Deployment(
+            id='dep1',
+            blueprint=self.bp,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        assert dep.labels == []
 
     def test_update_empty_deployments_labels(self):
-        _, _, _, deployment = self.put_deployment()
-        self.assertEqual(deployment.labels, [])
-        updated_dep = self.client.deployments.update_labels(deployment.id,
+        dep = models.Deployment(
+            id='dep1',
+            blueprint=self.bp,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        self.assertEqual(dep.labels, [])
+        updated_dep = self.client.deployments.update_labels(dep.id,
                                                             self.LABELS)
         self.assert_resource_labels(updated_dep.labels, self.LABELS)
 
     def test_create_deployment_labels_from_blueprint(self):
-        self.put_blueprint(blueprint_id='bp1',
-                           blueprint_file_name='blueprint_with_labels_1.yaml')
+        models.Blueprint(
+            id='bp2',
+            state='uploaded',
+            plan={
+                'labels': {
+                    'key1': {'values': ['value1']},
+                    'key2': {'values': ['value2']},
+                },
 
+            },
+            creator=self.user,
+            tenant=self.tenant,
+        )
         deployment = self.client.deployments.create(
-            blueprint_id='bp1', deployment_id='dep1',
-            labels=[{'key1': 'key1_val1'}, {'new_key': 'NEW_VALUe'}])
+            blueprint_id='bp2',
+            deployment_id='dep1',
+            labels=[{'key1': 'value2'}, {'key3': 'value3'}],
+        )
         self.create_deployment_environment(deployment)
         deployment = self.client.deployments.get(deployment.id)
 
         expected_dep_labels = [
-            {'key1': 'key1_val1'}, {'key2': 'kEy2_vaL1'}, {'key2': 'va l:u,E'},
-            {'key2': 'key2_val2'}, {'new_key': 'NEW_VALUe'}
+            {'key1': 'value1'},
+            {'key2': 'value2'},
+            {'key1': 'value2'},
+            {'key3': 'value3'},
         ]
         self.assert_resource_labels(deployment.labels, expected_dep_labels)
 
     def test_get_label_intrinsic_function(self):
-        new_labels = [{'input_key': 'input_value'}, {'key1': 'key1_val3'},
-                      {'key1': 'key1_val2'}, {'key2': 'key2_val2'},
-                      {'key3': 'output_value'}]
-        self.put_deployment(
-            blueprint_file_name='blueprint_with_capabilities.yaml',
-            deployment_id='dep1')
-        deployment = self.put_deployment_with_labels(
-            new_labels,
-            blueprint_file_name='blueprint_with_get_label.yaml')
+        # prepare a deployment and a node
+        deployment = models.Deployment(
+            id='dep1',
+            blueprint=self.bp,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        node = models.Node(
+            id='node1',
+            type='cloudify.nodes.Root',
+            deployment=deployment,
+            deploy_number_of_instances=0,
+            max_number_of_instances=0,
+            min_number_of_instances=0,
+            number_of_instances=0,
+            planned_number_of_instances=0,
+            creator=self.user,
+            tenant=self.tenant,
+        )
 
+        deployment.labels = [
+            models.DeploymentLabel(
+                key='key1',
+                value='value1',
+                creator=self.user
+            ),
+            models.DeploymentLabel(
+                key='key1',
+                value='value2',
+                creator=self.user
+            ),
+        ]
+
+        # all of those will use get_label:
+        deployment.outputs = {
+            'out1': {'value': {'get_label': 'key1'}},
+            'out2': {'value': {'get_label': ['key1', 0]}},
+        }
+        deployment.capabilities = {
+            'cap1': {'value': {'get_label': 'key1'}},
+            'cap2': {'value': {'get_label': ['key1', 0]}},
+        }
+        node.properties = {
+            'prop1': {'get_label': 'key1'},
+            'prop2': {'get_label': ['key1', 0]},
+        }
+
+        # and now, check that the get_label was evaluated
         capabilities = self.client.deployments.capabilities.get(deployment.id)[
             'capabilities']
         outputs = self.client.deployments.outputs.get(deployment.id)['outputs']
         node = self.client.nodes.get(deployment.id, 'node1',
                                      evaluate_functions=True)
 
-        assert node.properties['prop1'] == ['key2_val1', 'key2_val2']
-        assert node.properties['prop2'] == 'key1_val1'
-        self.assertEqual(capabilities,
-                         {'cap1': 'key1_val2', 'cap2': ['input_value']})
-        self.assertEqual(outputs, {'output1': 'default_value',
-                                   'output2': 'output_value'})
-        return deployment
+        assert (
+            node.properties['prop1'] ==
+            capabilities['cap1'] ==
+            outputs['out1'] ==
+            ['value1', 'value2']
+        )
+        assert (
+            node.properties['prop2'] ==
+            capabilities['cap2'] ==
+            outputs['out2'] ==
+            'value1'
+        )
 
     def test_get_label_not_exist_fails(self):
-        self.put_deployment(
-            deployment_id='dep1',
-            blueprint_file_name='blueprint_with_get_label_not_exist.yaml')
+        models.Deployment(
+            id='dep1',
+            outputs={'out1': {'value': {'get_label': 'nonexistent'}}},
+            blueprint=self.bp,
+            creator=self.user,
+            tenant=self.tenant,
+        )
         self.assertRaisesRegex(CloudifyClientError,
                                'does not have a label',
                                self.client.deployments.outputs.get,
                                deployment_id='dep1')
 
     def test_get_label_index_out_of_range_fails(self):
-        self.put_deployment(
-            deployment_id='dep1',
-            blueprint_file_name='blueprint_with_get_label_index_out_of_'
-                                'range.yaml')
+        deployment = models.Deployment(
+            id='dep1',
+            blueprint=self.bp,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        deployment.labels = [
+            models.DeploymentLabel(
+                key='key1',
+                value='value1',
+                creator=self.user
+            ),
+        ]
+        deployment.outputs = {
+            'out1': {'value': {'get_label': ['key1', 0]}},
+        }
+        outputs = self.client.deployments.outputs.get('dep1')['outputs']
+        assert outputs == {'out1': 'value1'}
+
+        deployment.outputs = {
+            'out1': {'value': {'get_label': ['key1', 1]}},
+        }
         self.assertRaisesRegex(CloudifyClientError,
                                'index is out of range',
                                self.client.deployments.outputs.get,
@@ -257,7 +362,7 @@ class BlueprintsLabelsTestCase(LabelsBaseTestCase):
 
     def test_blueprint_creation_success_without_labels(self):
         blueprint = self.put_blueprint()
-        self.assertEmpty(blueprint.labels)
+        assert blueprint.labels == []
 
     def test_update_empty_blueprint_labels(self):
         blueprint = self.put_blueprint_with_labels(self.LABELS)

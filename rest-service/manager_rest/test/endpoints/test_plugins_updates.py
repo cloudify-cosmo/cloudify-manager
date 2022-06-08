@@ -299,10 +299,10 @@ class PluginsUpdateTest(PluginsUpdatesBaseTest):
                 finalize_plugins_update(plugins_update.id)
         self.assertRegex(plugins_update['temp_blueprint_id'],
                          r'^plugins-update\-.*\-bp$')
-        self.assertEmpty(self.sm.list(
+        assert not self.sm.list(
             models.Deployment,
             filters={'blueprint_id': plugins_update['temp_blueprint_id']},
-        ).items)
+        ).items
         updated_deployment = self.sm.get(
             models.Deployment,
             plugins_update.deployments_per_tenant[

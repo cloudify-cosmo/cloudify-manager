@@ -1311,15 +1311,52 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         return resource_id
 
     def test_list_deployments_with_filter_id(self):
-        self.put_deployment_with_labels(self.LABELS)
-        dep2 = self.put_deployment_with_labels(self.LABELS_2)
-        self.create_filter(self.client.deployments_filters,
-                           self.FILTER_ID, self.FILTER_RULES)
-        deployments = self.client.deployments.list(
-            filter_id=self.FILTER_ID)
-        self.assertEqual(len(deployments), 1)
-        self.assertEqual(deployments[0].id, dep2.id)
-        self.assert_metadata_filtered(deployments, 1)
+        bp = models.Blueprint(
+            id='bp1',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        dep1 = models.Deployment(
+            id='dep1',
+            blueprint=bp,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        dep2 = models.Deployment(
+            id='dep2',
+            blueprint=bp,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        dep1.labels = [
+            models.DeploymentLabel(
+                key='key1',
+                value='value1',
+                creator=self.user,
+            ),
+        ]
+        dep2.labels = [
+            models.DeploymentLabel(
+                key='key1',
+                value='value2',
+                creator=self.user,
+            ),
+        ]
+        self.client.deployments_filters.create(
+            filter_id='filter1',
+            filter_rules=[
+                {
+                    'key': 'key1',
+                    'values': ['value1'],
+                    'operator': 'any_of',
+                    'type': 'label',
+                },
+            ],
+        )
+        deployments = self.client.deployments.list(filter_id='filter1')
+        assert len(deployments) == 1
+        assert deployments[0].id == dep1.id
+        assert deployments.metadata['filtered'] == 1
 
     def test_update_attributes(self):
         self.put_blueprint()
