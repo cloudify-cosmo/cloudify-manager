@@ -219,6 +219,8 @@ class FunctionEvaluationStorage(object):
             return deployment.blueprint.id
         elif (entity, prop) == ('deployment', 'id'):
             return self._deployment_id
+        elif (entity, prop) == ('deployment', 'name'):
+            return deployment.display_name
         elif (entity, prop) == ('deployment', 'owner'):
             return deployment.creator.username
         raise FunctionsEvaluationError('Cannot retrieve this entity-property '
