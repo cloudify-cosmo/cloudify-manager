@@ -160,12 +160,11 @@ class LabelsBaseTestCase(base_test.BaseServerTestCase):
         self.assertEqual(arch_values.items, ['k8s'])
 
     def test_resource_labels_empty_labels(self):
-        keys_list = self.labels_client.list_keys()
-        assert not keys_list.items
+        assert self.labels_client.list_keys().items == []
 
     def test_resource_labels_key_does_not_exist(self):
         not_exist = self.labels_client.list_key_values('env')
-        assert not not_exist.items
+        assert not_exist.items == []
 
     def test_get_reserved_labels(self):
         reserved_labels = self.labels_client.get_reserved_labels_keys()
@@ -201,7 +200,7 @@ class DeploymentsLabelsTestCase(LabelsBaseTestCase):
             creator=self.user,
             tenant=self.tenant,
         )
-        assert not dep.labels
+        assert dep.labels == []
 
     def test_update_empty_deployments_labels(self):
         dep = models.Deployment(
@@ -363,7 +362,7 @@ class BlueprintsLabelsTestCase(LabelsBaseTestCase):
 
     def test_blueprint_creation_success_without_labels(self):
         blueprint = self.put_blueprint()
-        assert not blueprint.labels
+        assert blueprint.labels == []
 
     def test_update_empty_blueprint_labels(self):
         blueprint = self.put_blueprint_with_labels(self.LABELS)
