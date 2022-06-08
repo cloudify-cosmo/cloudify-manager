@@ -19,7 +19,12 @@ def load_icons():
     existing_blueprints = {}
     for tenant in os.listdir(FS_BLUEPRINTS_PATH):
         tenant_path = os.path.join(FS_BLUEPRINTS_PATH, tenant)
+        if not os.isdir(tenant_path):
+            continue
         for blueprint in os.listdir(tenant_path):
+            blueprint_path = os.path.join(tenant_path, blueprint)
+            if not os.isdir(blueprint_path):
+                continue
             existing_blueprints.setdefault(blueprint, []).append(tenant)
 
     icon_blueprints = os.listdir(STAGE_ICONS_PATH)
