@@ -862,6 +862,28 @@ workflows:
       ignore_failure:
         default: true
         type: boolean
+      check_status:
+        default: true
+        type: boolean
+        description: >
+          Run check_status on the target node instances before attempting the
+          heal. Only instances that fail the check (and the instances contained
+          in them) will be healed, and instances that pass the check will be
+          skipped.
+      allow_reinstall:
+        default: true
+        type: boolean
+        description: >
+          If any instances throw an error in the heal operation, or if they
+          don't declare the heal operation at all, they will be reinstalled.
+          If this is set to false, the reinstallation is disallowed, and an
+          error will be thrown instead.
+      force_reinstall:
+        default: false
+        type: boolean
+        description: >
+          Do not attempt to run the heal operation even for nodes that do
+          declare it. Instead, reinstall the target instances.
 
   scale:
     mapping: default_workflows.cloudify.plugins.workflows.scale_entity
