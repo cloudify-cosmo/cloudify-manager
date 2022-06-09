@@ -214,5 +214,6 @@ def limit_scale(ctx):
     """
     allowed = int(ctx.node.properties['allowed'])
     if ctx.instance.index > allowed:
-        raise NonRecoverableError(f'instance {ctx.instance.index} disallowed')
+        raise NonRecoverableError(
+            'instance {0} disallowed'.format(ctx.instance.index))
     ctx.logger.info('instance %d created', ctx.instance.index)
