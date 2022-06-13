@@ -29,6 +29,7 @@ from cloudify.exceptions import InvalidBlueprintImport
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from dsl_parser import parser
+from dsl_parser.version import DSL_VERSION_PREFIX
 from dsl_parser.import_resolver.default_import_resolver import (
     DefaultImportResolver)
 
@@ -85,7 +86,7 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
             return self._fetch_plugin_import(import_url, dsl_version)
         return super(ResolverWithCatalogSupport, self).fetch_import(import_url)
 
-    def retrieve_plugin(self, import_url):
+    def retrieve_plugin(self, import_url, dsl_version=None):
         if not self._is_plugin_url(import_url):
             raise InvalidBlueprintImport(
                 'Error retrieving plugin, expected plugin url, got: {0}'
@@ -93,7 +94,7 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
         plugin_spec = import_url.replace(PLUGIN_PREFIX, '', 1).strip()
         name, plugin_filters = self._make_plugin_filters(
             plugin_spec, self.version_constraints, self.mappings)
-        return self._find_plugin(name, plugin_filters)
+        return self._find_plugin(name, plugin_filters, dsl_version)
 
     def _rewrite_from_mappings(self, import_url):
         for plugin_name, mapping in self.mappings.items():
@@ -142,7 +143,7 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
         return name, filters
 
     def _resolve_plugin_yaml_url(self, import_url, dsl_version):
-        plugin = self.retrieve_plugin(import_url)
+        plugin = self.retrieve_plugin(import_url, dsl_version)
         return self._make_plugin_yaml_url(plugin, dsl_version)
 
     @staticmethod
@@ -170,7 +171,8 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
                         f.write(chunk)
         return file_path
 
-    def _upload_missing_plugin(self, name, specifier_set, distribution):
+    def _upload_missing_plugin(self, name, specifier_set, distribution,
+                               dsl_version=None):
         download_error_msg = \
             'Couldn\'t download plugin {}. Please upload the plugin using ' \
             'the console, or cfy plugins upload. Error: {}'
@@ -201,18 +203,28 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
         matching_versions = []
         for version in plugin_versions.json().get('items'):
             parsed_version = parse_version(version.get('version'))
-            yaml_url = version.get('yaml_url')
+            yaml_urls = version.get('yaml_urls')
             wagon_url = self.matching_distro_wagon(version.get('wagon_urls'),
                                                    distribution)
-            if parsed_version in specifier_set and yaml_url and wagon_url:
-                matching_versions.append((parsed_version, yaml_url, wagon_url))
+            if parsed_version in specifier_set and yaml_urls and wagon_url:
+                matching_versions.append((
+                    parsed_version, yaml_urls, wagon_url))
         if not matching_versions:
             raise FileNotFoundError()
 
-        _, yaml_url, wagon_url = max(matching_versions, key=lambda v: v[0])
+        _, yaml_urls, wagon_url = max(matching_versions, key=lambda v: v[0])
 
         # Download plugin files
         try:
+            yaml_url = None
+            if dsl_version:
+                dsl_version = DSL_VERSION_PREFIX + dsl_version
+                for p_yaml in yaml_urls:
+                    if p_yaml['dsl_version'] == dsl_version:
+                        yaml_url = p_yaml['url']
+                        break
+            if not dsl_version or not yaml_url:
+                yaml_url = yaml_urls[0]['url']
             self._download_file(yaml_url, plugin_target_path)
             self._download_file(wagon_url, plugin_target_path)
             if logo_url:
@@ -247,7 +259,7 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
                                  if v in SpecifierSet(extra_constraint)]
         return matching_versions
 
-    def _find_plugin(self, name, filters):
+    def _find_plugin(self, name, filters, dsl_version=None):
         def _get_specifier_set(package_versions):
             # Flat out the versions, in case one of them contains a few
             # operators/specific versions
@@ -289,7 +301,8 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
                 manager_data = self.client.manager.get_managers()[0]
                 distribution = f'{manager_data["distribution"]} ' \
                                f'{manager_data["distro_release"]}'.lower()
-                self._upload_missing_plugin(name, specifier_set, distribution)
+                self._upload_missing_plugin(name, specifier_set, distribution,
+                                            dsl_version)
             except CloudifyClientError as e:
                 if e.status_code == 409:
                     # This may happen if we try to auto-upload the same plugin
