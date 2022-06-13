@@ -44,7 +44,7 @@ mock_plugin_versions = {
                 },
                 {
                     "dsl_version": "cloudify_dsl_1_4",
-                    "url": "cloudify-openstack-plugin/3.2.22/v2_plugin.yaml",
+                    "url": "cloudify-openstack-plugin/3.2.21/v2_plugin.yaml",
                 }
             ],
             "wagon_urls": [{
