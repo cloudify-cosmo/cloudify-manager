@@ -26,14 +26,27 @@ mock_plugin_versions = {
     "items": [
         {
             "version": "2.14.17",
-            "yaml_url": "cloudify-openstack-plugin/2.14.17/plugin.yaml",
+            "yaml_urls": [{
+                "dsl_version": "cloudify_dsl_1_3",
+                "url": "cloudify-openstack-plugin/2.14.17/plugin.yaml"
+            }],
             "wagon_urls": [{
                 "release": "Centos Core",
                 "url": "cloudify-openstack-plugin_2.14.17.wgn"
             }]
-        },        {
+        },
+        {
             "version": "3.2.21",
-            "yaml_url": "cloudify-openstack-plugin/3.2.21/plugin.yaml",
+            "yaml_urls": [
+                {
+                    "dsl_version": "cloudify_dsl_1_3",
+                    "url": "cloudify-openstack-plugin/3.2.21/plugin.yaml",
+                },
+                {
+                    "dsl_version": "cloudify_dsl_1_4",
+                    "url": "cloudify-openstack-plugin/3.2.22/v2_plugin.yaml",
+                }
+            ],
             "wagon_urls": [{
                 "release": "Centos Core",
                 "url": "cloudify-openstack-plugin_3.2.21.wgn"
@@ -41,7 +54,10 @@ mock_plugin_versions = {
         },
         {
             "version": "3.2.22",
-            "yaml_url": "cloudify-openstack-plugin/3.2.22/plugin.yaml",
+            "yaml_urls": [{
+                "dsl_version": "cloudify_dsl_1_4",
+                "url": "cloudify-openstack-plugin/3.2.22/v2_plugin.yaml",
+            }],
             "wagon_urls": [{
                 "release": "Redhat Maipo",
                 "url": "cloudify-openstack-plugin_3.2.22.wgn"
@@ -51,6 +67,7 @@ mock_plugin_versions = {
 }
 
 plugins_versions = {}
+plugin_yamls = []
 
 
 def mock_requests_get(*args, **kwargs):
@@ -62,8 +79,6 @@ def mock_requests_get(*args, **kwargs):
 
         def json(self):
             return self.json_data
-
-    print(args)
 
     if args[0].startswith(MARKETPLACE_API_UPL + "/plugins?name"):
         plugin_name = args[0].split('?name=')[-1]
@@ -102,6 +117,8 @@ def local_download_file(url, dest_path, target_filename=None):
         plugin.package_version = p_version
         plugins_versions.setdefault(p_name, []).append(plugin)
         return
+    if url.endswith('.yaml'):
+        plugin_yamls.append(url.split('/')[-1])
 
 
 class TestPluginAutoupload:
@@ -111,7 +128,9 @@ class TestPluginAutoupload:
 
     @mock.patch('requests.get', side_effect=mock_requests_get)
     def _parse_plugin_import(
-            self, mock_client, import_url, mock_requests, clear_plugins=True):
+            self, mock_client, import_url, mock_requests, clear_plugins=True,
+            dsl_version=None):
+        plugin_yamls.clear()
         if clear_plugins:
             plugins_versions.clear()
         parser_context = extract_parser_context(
@@ -120,7 +139,7 @@ class TestPluginAutoupload:
                                  'marketplace_api_url': MARKETPLACE_API_UPL,
                                  'client': mock_client})
         import_resolver = parser_context['resolver']
-        plugin = import_resolver.retrieve_plugin(import_url)
+        plugin = import_resolver.retrieve_plugin(import_url, dsl_version)
         return plugin
 
     def test_autoupload_plugins(self, mock_client):
@@ -136,6 +155,21 @@ class TestPluginAutoupload:
             'plugin:cloudify-openstack-plugin')
         assert plugin.package_name == 'cloudify-openstack-plugin'
         assert plugin.package_version == '3.2.21'
+
+    def test_autoupload_plugins_picks_correct_dsl_yaml(self, mock_client):
+        plugin = self._parse_plugin_import(
+            mock_client,
+            'plugin:cloudify-openstack-plugin', dsl_version='1_3')
+        assert plugin.package_name == 'cloudify-openstack-plugin'
+        assert plugin.package_version == '3.2.21'
+        assert plugin_yamls == ['plugin.yaml']
+
+        plugin = self._parse_plugin_import(
+            mock_client,
+            'plugin:cloudify-openstack-plugin', dsl_version='1_4')
+        assert plugin.package_name == 'cloudify-openstack-plugin'
+        assert plugin.package_version == '3.2.21'
+        assert plugin_yamls == ['v2_plugin.yaml']
 
     def test_autoupload_plugins_bad_version(self, mock_client):
         with pytest.raises(
