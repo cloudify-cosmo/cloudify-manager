@@ -1292,7 +1292,10 @@ class Execution(CreatedAtMixin, SQLResourceBase):
                 for n, e in constraint_violations.items()
             ))
 
-        missing_parameters = workflow_parameters.keys() - parameters.keys()
+        required_parameter_keys = \
+            [k for k, v in workflow_parameters.items()
+             if v.get('required', True)]
+        missing_parameters = required_parameter_keys - parameters.keys()
         if missing_parameters:
             raise manager_exceptions.IllegalExecutionParametersError(
                 f'Workflow "{workflow_id}" must be provided with the following'
