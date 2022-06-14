@@ -49,9 +49,10 @@ class SitesName(SecuredResource):
         else:
             new_site.created_at = utils.get_formatted_timestamp()
 
-        if 'creator' in request_dict:
+        if 'created_by' in request_dict:
             check_user_action_allowed('set_owner')
-            new_site.creator = rest_utils.valid_user(request_dict['creator'])
+            new_site.creator = rest_utils.valid_user(
+                request_dict['created_by'])
         return get_storage_manager().put(new_site)
 
     @rest_decorators.marshal_with(models.Site)
