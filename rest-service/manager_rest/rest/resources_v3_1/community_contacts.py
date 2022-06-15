@@ -20,7 +20,7 @@ class CommunityContacts(SecuredResource):
             'first_name': {'type': text_type},
             'last_name': {'type': text_type},
             'email': {'type': text_type},
-            'phone': {'type': text_type},
+            'phone': {'type': text_type, 'optional': True},
             'is_eula': {'type': bool},
         })
         if not request_dict['is_eula']:
