@@ -1182,6 +1182,19 @@ class Execution(CreatedAtMixin, SQLResourceBase):
     @validates('parameters')
     def _validate_parameters(self, key, parameters):
         parameters = parameters or {}
+
+        # This is a temporary solution that allows running a "heal" workflow
+        # without providing a node_instance_id, in that case check_status=true
+        # should be passed implicitly.
+        if self.workflow_id == 'heal' \
+                and not parameters.get('node_instance_id'):
+            if not parameters.get('check_status') \
+                or parameters.get('check_status').lower() \
+                    not in ['y', 'yes', 'true', 'on']:
+                raise manager_exceptions.IllegalExecutionParametersError(
+                    'Workflow "heal" must be provided with either '
+                    '"node_instance_id" or "check_status=true" parameter to '
+                    'execute (but not both)')
         if self.workflow_id is not None and self.deployment is not None:
             self.merge_workflow_parameters(
                 parameters, self.deployment, self.workflow_id)
