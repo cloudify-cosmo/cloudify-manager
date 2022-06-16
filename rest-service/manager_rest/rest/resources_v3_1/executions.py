@@ -159,7 +159,7 @@ class ExecutionGroups(SecuredResource):
             'parameters': {'optional': True},
             'force': {'optional': True},
             'concurrency': {'optional': True},
-            'owner': {'optional': True},
+            'created_by': {'optional': True},
             'created_at': {'optional': True},
             'associated_executions': {'optional': True},
         })
@@ -175,9 +175,9 @@ class ExecutionGroups(SecuredResource):
             created_at = parse_datetime_string(request_dict['created_at'])
 
         owner = None
-        if request_dict.get('owner'):
+        if request_dict.get('created_by'):
             check_user_action_allowed('set_owner')
-            owner = valid_user(request_dict['owner'])
+            owner = valid_user(request_dict['created_by'])
 
         sm = get_storage_manager()
 

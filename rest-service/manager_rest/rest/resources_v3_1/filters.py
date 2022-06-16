@@ -83,9 +83,9 @@ class FiltersId(SecuredResource):
             check_user_action_allowed('set_timestamp', None, True)
             created_at = rest_utils.parse_datetime_string(
                 request_dict['created_at'])
-        if 'creator' in request_dict:
+        if 'created_by' in request_dict:
             check_user_action_allowed('set_owner', None, True)
-            creator = rest_utils.valid_user(request_dict['creator'])
+            creator = rest_utils.valid_user(request_dict['created_by'])
 
         now = get_formatted_timestamp()
         new_filter = filters_model(

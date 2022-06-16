@@ -102,7 +102,7 @@ class PluginsUpdate(SecuredResource):
                 AUTO_CORRECT_TYPES: {'type': bool, 'optional': True},
                 REEVALUATE_ACTIVE_STATUSES: {'type': bool, 'optional': True},
                 'all_tenants': {'type': bool, 'optional': True},
-                'creator': {'type': text_type, 'optional': True},
+                'created_by': {'type': text_type, 'optional': True},
                 'created_at': {'type': text_type, 'optional': True},
                 'update_id': {'type': text_type, 'optional': True},
                 'execution_id': {'type': text_type, 'optional': True},
@@ -127,7 +127,8 @@ class PluginsUpdate(SecuredResource):
 
         update_manager = get_plugins_updates_manager()
 
-        if any(arg in args for arg in ['creator', 'created_at', 'update_id',
+        if any(arg in args for arg in ['created_by', 'created_at',
+                                       'update_id',
                                        'execution_id', 'state',
                                        'affected_deployments',
                                        'temp_blueprint_id']):
@@ -152,10 +153,10 @@ class PluginsUpdate(SecuredResource):
                 all_tenants=args.get('all_tennats', False),
             )
 
-            if args.get('creator'):
+            if args.get('created_by'):
                 check_user_action_allowed('set_owner', None, True)
                 plugins_update.creator = rest_utils.valid_user(
-                    args['creator'])
+                    args['created_by'])
 
             plugins_update.state = args['state']
             if args.get('execution_id'):

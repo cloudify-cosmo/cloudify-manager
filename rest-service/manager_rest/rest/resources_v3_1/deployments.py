@@ -846,7 +846,7 @@ class DeploymentGroupsId(SecuredResource):
             'deployment_ids': {'optional': True},
             'new_deployments': {'optional': True},
             'deployments_from_group': {'optional': True},
-            'creator': {'optional': True},
+            'created_by': {'optional': True},
             'created_at': {'optional': True},
         })
 
@@ -856,9 +856,9 @@ class DeploymentGroupsId(SecuredResource):
             created_at = rest_utils.parse_datetime_string(
                 request_dict['created_at'])
 
-        if request_dict.get('creator'):
+        if request_dict.get('created_by'):
             check_user_action_allowed('set_owner', None, True)
-            creator = rest_utils.valid_user(request_dict['creator'])
+            creator = rest_utils.valid_user(request_dict['created_by'])
 
         sm = get_storage_manager()
         with sm.transaction():

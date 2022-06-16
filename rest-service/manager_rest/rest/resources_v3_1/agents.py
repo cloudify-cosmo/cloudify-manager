@@ -188,9 +188,9 @@ class AgentsName(SecuredResource):
             check_user_action_allowed('set_timestamp', None, True)
             created_at = parse_datetime_string(request_dict['created_at'])
 
-        if request_dict.get('owner'):
+        if request_dict.get('created_by'):
             check_user_action_allowed('set_owner', None, True)
-            owner = valid_user(request_dict['owner'])
+            owner = valid_user(request_dict['created_by'])
 
         now = utils.get_formatted_timestamp()
         rabbitmq_password = request_dict.get('rabbitmq_password')

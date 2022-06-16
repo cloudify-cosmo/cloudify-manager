@@ -90,7 +90,7 @@ class BlueprintsId(resources_v2.BlueprintsId):
         rest_utils.validate_inputs({'blueprint_id': blueprint_id})
         args = get_args_and_verify_arguments(
             [Argument('async_upload', type=boolean, default=False),
-             Argument('owner'),
+             Argument('created_by'),
              Argument('created_at'),
              Argument('labels')]
         )
@@ -100,9 +100,9 @@ class BlueprintsId(resources_v2.BlueprintsId):
             check_user_action_allowed('set_timestamp', None, True)
             created_at = rest_utils.parse_datetime_string(args.created_at)
 
-        if args.owner:
+        if args.created_by:
             check_user_action_allowed('set_owner', None, True)
-            owner = rest_utils.valid_user(args.owner)
+            owner = rest_utils.valid_user(args.created_by)
 
         async_upload = args.async_upload
         visibility = rest_utils.get_visibility_parameter(
