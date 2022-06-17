@@ -27,6 +27,7 @@ from cloudify.deployment_dependencies import (create_deployment_dependency,
 from cloudify.zip_utils import make_zip64_archive
 
 from manager_rest import utils, manager_exceptions, workflow_executor
+from manager_rest.constants import RESERVED_LABELS
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import (authorize,
                                                  check_user_action_allowed)
@@ -120,6 +121,15 @@ class DeploymentsId(resources_v1.DeploymentsId):
     @staticmethod
     def _update_labels_for_deployment(rm, deployment, new_labels,
                                       creator=None, created_at=None):
+        labels_not_allowed = set(key for (key, _) in new_labels
+                                 if key in RESERVED_LABELS)
+        if labels_not_allowed:
+            raise manager_exceptions.BadParametersError(
+                'Label change declined, these labels are controlled by the '
+                'manager and can’t be changed: ' +
+                ', '.join(labels_not_allowed)
+            )
+
         sm = get_storage_manager()
         deployment_parents = deployment.deployment_parents
         new_parents = rm.get_deployment_parents_from_labels(new_labels)
