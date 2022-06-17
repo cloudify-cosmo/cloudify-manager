@@ -79,7 +79,7 @@ class Executions(SecuredResource):
         request_dict = get_json_and_verify_params({
             'deployment_id': {'type': str},
             'workflow_id': {'type': str},
-            'creator': {'optional': True},
+            'created_by': {'optional': True},
             'created_at': {'optional': True},
             'started_at': {'optional': True},
             'ended_at': {'optional': True},
@@ -106,7 +106,7 @@ class Executions(SecuredResource):
         wait_after_fail = request_dict.get('wait_after_fail', 600)
         scheduled_time = request_dict.get('scheduled_time', None)
         force_status = request_dict.get('force_status', None)
-        creator = request_dict.get('creator')
+        creator = request_dict.get('created_by')
         created_at = request_dict.get('created_at')
         started_at = request_dict.get('started_at')
         ended_at = request_dict.get('ended_at')

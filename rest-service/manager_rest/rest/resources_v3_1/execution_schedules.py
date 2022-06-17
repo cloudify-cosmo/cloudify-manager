@@ -68,9 +68,9 @@ class ExecutionSchedulesId(SecuredResource):
             check_user_action_allowed('set_timestamp', None, True)
             created_at = parse_datetime_string(request_dict['created_at'])
 
-        if request_dict.get('creator'):
+        if request_dict.get('created_by'):
             check_user_action_allowed('set_owner', None, True)
-            creator = valid_user(request_dict['creator'])
+            creator = valid_user(request_dict['created_by'])
 
         workflow_id = request_dict['workflow_id']
         execution_arguments = self._get_execution_arguments(request_dict)
