@@ -28,11 +28,7 @@ class TestPassword(unittest.TestCase):
         current_ctx.set(self._ctx)
         self.cfy_mock_client = MockCloudifyRestClient()
 
-    def test_create_password_defaults(self):
-        created_password = self._create_password()
-        assert len(created_password) == 8
-
-    def test_create_password_set_secret(self):
+    def test_create_password(self):
         node_props = NODE_PROPS.copy()
         node_props['secret_name'] = 'myPassword'
         self._ctx = self.get_mock_ctx('test', node_props=node_props)
@@ -41,12 +37,20 @@ class TestPassword(unittest.TestCase):
         with patch('cloudify.manager.get_rest_client') as mock_client:
             self.cfy_mock_client.secrets.create = Mock()
             mock_client.return_value = self.cfy_mock_client
-            created_password = self._create_password()
+            created_password_attr = self._create_password()
             self.cfy_mock_client.secrets.create.assert_called()
             _, _, kwargs = self.cfy_mock_client.secrets.create.mock_calls[0]
 
+        assert created_password_attr == {'get_secret': 'myPassword'}
         assert kwargs.get('key') == 'myPassword'
-        assert kwargs.get('value') == created_password
+        assert len(kwargs.get('value')) == 8
+
+    def test_create_password_default_sercret_name(self):
+        with patch('cloudify.manager.get_rest_client') as mock_client:
+            self.cfy_mock_client.secrets.create = Mock()
+            mock_client.return_value = self.cfy_mock_client
+            created_password_attr = self._create_password()
+        assert created_password_attr == {'get_secret': 'ps_test_pswd_node_id'}
 
     def test_create_password_use_existing(self):
         node_props = NODE_PROPS.copy()
@@ -54,13 +58,14 @@ class TestPassword(unittest.TestCase):
         node_props['use_secret_if_exists'] = True
         self._ctx = self.get_mock_ctx('test', node_props=node_props)
         current_ctx.set(self._ctx)
-
+    #
         with patch('cloudify.manager.get_rest_client') as mock_client:
-            self.cfy_mock_client.secrets.get = Mock(return_value='123456')
+            self.cfy_mock_client.secrets.create = Mock()
+            self.cfy_mock_client.secrets.get = Mock()
             mock_client.return_value = self.cfy_mock_client
-            created_password = self._create_password()
+            self._create_password()
             self.cfy_mock_client.secrets.get.assert_called()
-        assert created_password == '123456'
+            self.cfy_mock_client.secrets.create.assert_not_called()
 
     def test_create_password_use_existing_no_secret_name(self):
         node_props = NODE_PROPS.copy()
@@ -80,7 +85,13 @@ class TestPassword(unittest.TestCase):
         self._ctx = self.get_mock_ctx('test', node_props=node_props)
         current_ctx.set(self._ctx)
 
-        created_password = self._create_password()
+        with patch('cloudify.manager.get_rest_client') as mock_client:
+            self.cfy_mock_client.secrets.create = Mock()
+            mock_client.return_value = self.cfy_mock_client
+            self._create_password()
+            _, _, kwargs = self.cfy_mock_client.secrets.create.mock_calls[0]
+
+        created_password = kwargs.get('value')
         assert len(created_password) == 8
         assert not any(ch in punctuation + ' ' for ch in created_password)
         assert not any(ch in ascii_lowercase for ch in created_password)
@@ -93,7 +104,13 @@ class TestPassword(unittest.TestCase):
         self._ctx = self.get_mock_ctx('test', node_props=node_props)
         current_ctx.set(self._ctx)
 
-        created_password = self._create_password()
+        with patch('cloudify.manager.get_rest_client') as mock_client:
+            self.cfy_mock_client.secrets.create = Mock()
+            mock_client.return_value = self.cfy_mock_client
+            self._create_password()
+            _, _, kwargs = self.cfy_mock_client.secrets.create.mock_calls[0]
+
+        created_password = kwargs.get('value')
         assert len(created_password) == 12
         num_digits, num_symbols = 0, 0
         for ch in created_password:

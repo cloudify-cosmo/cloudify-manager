@@ -6,6 +6,7 @@ from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
 from cloudify_rest_client.exceptions import CloudifyClientError
 from cloudify_types.utils import (_set_secrets,
+                                  _delete_secrets,
                                   errors_nonrecoverable,
                                   get_desired_operation_input)
 
@@ -29,7 +30,9 @@ def create(**kwargs):
         else:
             password = _get_secret(secret_name)
             if password:
-                ctx.instance.runtime_properties['password'] = password
+                ctx.instance.runtime_properties['secret_name'] = secret_name
+                ctx.instance.runtime_properties['password'] = \
+                    {"get_secret": secret_name}
                 ctx.logger.info('Using existing password from secret `%s`',
                                 secret_name)
                 return True
@@ -37,6 +40,9 @@ def create(**kwargs):
     # For resumability
     if ctx.instance.runtime_properties.get('password'):
         return True
+
+    if not secret_name:
+        secret_name = f'ps_{ctx.deployment.id}_{ctx.instance.id}'
 
     password = []
     required_length = 0
@@ -70,18 +76,20 @@ def create(**kwargs):
     SystemRandom().shuffle(password)
     password = ''.join(password)
 
-    ctx.instance.runtime_properties['password'] = password
-    ctx.logger.info('Created password.')
-    if secret_name:
-        _set_secrets(manager.get_rest_client(), {secret_name: password})
+    _set_secrets(manager.get_rest_client(), {secret_name: password})
+    ctx.instance.runtime_properties['password'] = {"get_secret": secret_name}
+    ctx.instance.runtime_properties['secret_name'] = secret_name
+    ctx.logger.info('Created password secret.')
     return True
 
 
 @operation(resumable=True)
 @errors_nonrecoverable
 def delete(**kwargs):
-    if 'password' in ctx.instance.runtime_properties:
-        del ctx.instance.runtime_properties['password']
+    secret_name = ctx.instance.runtime_properties.get('secret_name')
+    _delete_secrets(manager.get_rest_client(), [secret_name])
+    del ctx.instance.runtime_properties['password']
+    del ctx.instance.runtime_properties['secret_name']
 
 
 @errors_nonrecoverable

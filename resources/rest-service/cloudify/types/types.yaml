@@ -523,7 +523,7 @@ node_types:
         delete:
           implementation: cfy_extensions.cloudify_types.blueprint.delete
 
-  cloudify.nodes.Password:
+  cloudify.nodes.PasswordSecret:
     derived_from: cloudify.nodes.Root
     properties:
       length:
@@ -557,7 +557,7 @@ node_types:
       secret_name:
         description: |
           Optional secret name to store the password. If not provided,
-          the password will only exist as a runtime property.
+          `ps_{deployment id}_{node instance name}` will be used.
         type: string
         required: false
       use_secret_if_exists:
@@ -571,12 +571,12 @@ node_types:
     interfaces:
       cloudify.interfaces.lifecycle:
         create:
-          implementation: cfy_extensions.cloudify_types.password.create
+          implementation: cfy_extensions.cloudify_types.password_secret.create
         delete:
-          implementation: cfy_extensions.cloudify_types.password.delete
+          implementation: cfy_extensions.cloudify_types.password_secret.delete
       cloudify.interfaces.validation:
         create:
-          implementation: cfy_extensions.cloudify_types.password.creation_validation
+          implementation: cfy_extensions.cloudify_types.password_secret.creation_validation
 
 ##################################################################################
 # Base relationship definitions
