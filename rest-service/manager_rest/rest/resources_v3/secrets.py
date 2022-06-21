@@ -292,7 +292,11 @@ class SecretsExport(SecuredResource):
                               for item, value in new_secret.items()
                               if item in include}
             secrets_list.append(new_secret)
-        if password and include and 'value' in include:
+
+        encrypt = password
+        if include and 'value' not in include:
+            encrypt = False
+        if encrypt:
             self._encrypt_values(secrets_list, password)
         return secrets_list
 
