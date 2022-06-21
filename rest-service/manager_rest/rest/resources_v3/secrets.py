@@ -1,18 +1,3 @@
-#########
-# Copyright (c) 2016 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 from flask import request
 from flask_security import current_user
 from cryptography.fernet import InvalidToken
@@ -272,17 +257,21 @@ class SecretsExport(SecuredResource):
     def get(self, filters=None, all_tenants=None, search=None):
         passphrase = request.args.get('_passphrase')
         include_metadata = request.args.get('_include_metadata')
+        include = request.args.get('_include')
         secrets = get_storage_manager().list(
             models.Secret,
             filters=filters,
             substr_filters=search,
             all_tenants=all_tenants,
+            include=include,
             get_all_results=True,
         )
         return self._create_export_response(secrets, passphrase,
-                                            include_metadata)
+                                            include_metadata,
+                                            include)
 
-    def _create_export_response(self, secrets, password, include_metadata):
+    def _create_export_response(self, secrets, password, include_metadata,
+                                include):
         secrets_list = []
         for secret in secrets.items:
             if secret.is_hidden_value and not \
@@ -298,8 +287,16 @@ class SecretsExport(SecuredResource):
                 new_secret['creator'] = secret.created_by
                 new_secret['created_at'] = secret.created_at
                 new_secret['updated_at'] = secret.updated_at
+            if include:
+                new_secret = {item: value
+                              for item, value in new_secret.items()
+                              if item in include}
             secrets_list.append(new_secret)
-        if password:
+
+        encrypt = password
+        if include and 'value' not in include:
+            encrypt = False
+        if encrypt:
             self._encrypt_values(secrets_list, password)
         return secrets_list
 
