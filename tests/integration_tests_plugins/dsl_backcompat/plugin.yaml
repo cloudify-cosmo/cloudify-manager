@@ -1,0 +1,33 @@
+plugins:
+  mock_labels:
+    executor: central_deployment_agent
+    package_name: dsl_backcompat
+    package_version: 0.0.1
+
+data_types:
+    cloudify.datatypes.cool.Config:
+      properties:
+        some_deployment:
+          description: Some deployment ID.
+          type: deployment_id
+
+workflows:
+  test_parameters_1:
+    mapping: file:///dev/null
+    availability_rules:
+      node_instances_active: ['none', 'partial']
+    parameters:
+      a_string:
+        description: A string
+        type: string
+      some_blueprint:
+        description: A blueprint identifier
+        type: blueprint_id
+  test_parameters_2:
+    mapping: file:///dev/null
+    parameters:
+      some_deployment:
+        description: A deployment identifier
+        type: deployment_id
+    availability_rules:
+      node_types_required: []
