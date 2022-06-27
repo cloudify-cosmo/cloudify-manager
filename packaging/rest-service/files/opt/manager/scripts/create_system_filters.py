@@ -45,7 +45,13 @@ def create_system_filters():
                         'values': ['environment'],
                         'operator': 'is_not',
                         'type': 'label'
-                    }
+                    },
+                    {
+                        'key': 'csys-obj-parent',
+                        'values': [],
+                        'operator': 'is_null',
+                        'type': 'label'
+                    },
                 ]
             }
             _add_deployments_filter(service_filter, creator, tenant, now)
