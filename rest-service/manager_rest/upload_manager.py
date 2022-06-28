@@ -24,6 +24,7 @@ from manager_rest.constants import (FILE_SERVER_PLUGINS_FOLDER,
                                     FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
                                     FILE_SERVER_BLUEPRINTS_FOLDER,
                                     BLUEPRINT_ICON_FILENAME)
+from manager_rest.dsl_back_compat import create_bc_plugin_yaml
 from manager_rest.archiving import get_archive_type
 from manager_rest.security.authorization import check_user_action_allowed
 from manager_rest.storage.models import Blueprint, Plugin
@@ -697,8 +698,10 @@ class UploadedPluginsManager(UploadedDataManager):
             os.remove(archive_target_path)
             shutil.move(archive_name, archive_target_path)
             try:
-                wagon_target_path, _ = \
+                wagon_target_path, yamls_target_path = \
                     self._verify_archive(archive_target_path)
+                create_bc_plugin_yaml(
+                    yamls_target_path, archive_target_path, current_app.logger)
             except RuntimeError as re:
                 raise manager_exceptions.InvalidPluginError(str(re))
 
