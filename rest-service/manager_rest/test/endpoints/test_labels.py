@@ -353,6 +353,38 @@ class DeploymentsLabelsTestCase(LabelsBaseTestCase):
                                self.client.deployments.outputs.get,
                                deployment_id='dep1')
 
+    def test_add_computed_label(self):
+        """Attempting to add a label that is computed, does nothing"""
+        dep = models.Deployment(
+            id='dep1',
+            blueprint=self.bp,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        self.assertEqual(dep.labels, [])
+        self.client.deployments.update_labels(
+            dep.id, [{'csys-consumer-id': 'ignored'}])
+        # the label was not stored, because it's computed-only
+        self.assertEqual(dep.labels, [])
+
+    def test_remove_computed_label(self):
+        """Attempting to remove a label that is computed, does nothing"""
+        label = models.DeploymentLabel(
+            key='csys-consumer-id',
+            value='consumer',
+            creator=self.user,
+        )
+        dep = models.Deployment(
+            id='dep1',
+            blueprint=self.bp,
+            creator=self.user,
+            tenant=self.tenant,
+            labels=[label],
+        )
+        self.assertEqual(dep.labels, [label])
+        self.client.deployments.update_labels(dep.id, [])
+        self.assertEqual(dep.labels, [label])
+
 
 class BlueprintsLabelsTestCase(LabelsBaseTestCase):
     __test__ = True
