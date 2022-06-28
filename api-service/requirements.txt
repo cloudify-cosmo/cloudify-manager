@@ -18,5 +18,5 @@ typing-extensions==4.0.1
 uvicorn==0.16.0
 uvloop==0.14.0
 watchgod==0.7
-websockets==9.1  # >10.0 requires Python>=3.7
+websockets==10.0  # >10.0 requires Python>=3.7
 zipp==3.6.0
