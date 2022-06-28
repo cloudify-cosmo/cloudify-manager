@@ -13,7 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 setup(
@@ -21,11 +21,7 @@ setup(
     version='6.4.0.dev1',
     author='Cloudify',
     author_email='cosmo-admin@cloudify.co',
-    packages=[
-        'cloudify_types',
-        'cloudify_types.component',
-        'cloudify_types.shared_resource'
-    ],
+    packages=find_packages(),
     license='LICENSE',
     description='Various special Cloudify types implementation.',
     install_requires=[
