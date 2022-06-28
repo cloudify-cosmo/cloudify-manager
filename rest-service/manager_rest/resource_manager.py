@@ -1631,7 +1631,9 @@ class ResourceManager(object):
                           visibility,
                           site=None,
                           runtime_only_evaluation=False,
-                          display_name=None):
+                          display_name=None,
+                          created_at=None,
+                          created_by=None):
         verify_blueprint_uploaded_state(blueprint)
         visibility = self.get_resource_visibility(models.Deployment,
                                                   deployment_id,
@@ -1648,10 +1650,12 @@ class ResourceManager(object):
         new_deployment = models.Deployment(
             id=deployment_id,
             display_name=display_name,
-            created_at=now,
+            created_at=created_at or now,
             updated_at=now,
             deployment_status=DeploymentState.REQUIRE_ATTENTION,
         )
+        if created_by:
+            new_deployment.creator = created_by
         new_deployment.runtime_only_evaluation = runtime_only_evaluation
         new_deployment.blueprint = blueprint
         new_deployment.visibility = visibility
