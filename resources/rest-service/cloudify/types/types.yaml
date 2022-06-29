@@ -756,7 +756,7 @@ workflows:
 
   check_status:
     mapping: default_workflows.cloudify.plugins.workflows.check_status
-    is_cascading: true
+    is_cascading: false
     availability_rules:
       node_instances_active: [ 'all', 'partial' ]
     parameters:
@@ -777,7 +777,7 @@ workflows:
 
   check_drift:
     mapping: default_workflows.cloudify.plugins.workflows.check_drift
-    is_cascading: true
+    is_cascading: false
     availability_rules:
       node_instances_active: ['all', 'partial']
     parameters:
