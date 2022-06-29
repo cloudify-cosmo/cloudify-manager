@@ -313,6 +313,7 @@ class OperationsTestCase(OperationsTestBase, base_test.BaseServerTestCase):
         assert ni.system_properties is not None
         assert 'configuration_drift' in ni.system_properties
         assert ni.system_properties['configuration_drift']['ok']
+        assert not ni.has_configuration_drift
         assert 'status' not in ni.system_properties
 
         with mock.patch(f'{OPERATIONS_MODULE}.current_execution', exc):
@@ -320,6 +321,7 @@ class OperationsTestCase(OperationsTestBase, base_test.BaseServerTestCase):
                 'start_op', state=constants.TASK_SUCCEEDED)
         assert 'configuration_drift' in ni.system_properties
         assert 'status' in ni.system_properties
+        assert ni.is_status_check_ok
         assert ni.system_properties['status']['ok']
 
 

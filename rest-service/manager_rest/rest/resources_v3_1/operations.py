@@ -270,6 +270,7 @@ class OperationsId(SecuredResource):
                     'task': None,
                     'timestamp': datetime.utcnow().isoformat(),
                 })
+            node_instance.update_configuration_drift()
         elif state == 'started':
             node_instance.system_properties.setdefault(
                 'previous_status', None)
@@ -280,6 +281,7 @@ class OperationsId(SecuredResource):
                     'task': None,
                     'timestamp': datetime.utcnow().isoformat(),
                 })
+            node_instance.update_status_check()
         node_instance.state = state
         sm.update(node_instance, modified_attrs=('state', 'system_properties'))
 
