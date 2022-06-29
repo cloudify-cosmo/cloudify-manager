@@ -219,9 +219,15 @@ class DeploymentsId(resources_v1.DeploymentsId):
         sm = get_storage_manager()
         blueprint = sm.get(models.Blueprint, blueprint_id)
         if blueprint.state != BlueprintUploadState.UPLOADED:
-            raise DeploymentCreationError(
-                'Unable to create a deployment based on a blueprint which is '
-                f'not `uploaded` but: `{blueprint.state}`')
+            error_msg = 'Unable to create a deployment based on a blueprint ' \
+                        f'which is not `uploaded` but: `{blueprint.state}`'
+            if (not args.async_create or
+                    blueprint.state in BlueprintUploadState.FAILED_STATES):
+                raise DeploymentCreationError(error_msg)
+            try:
+                blueprint, _ = rest_utils.get_uploaded_blueprint(sm, blueprint)
+            except (manager_exceptions.InvalidBlueprintError, TimeoutError):
+                raise DeploymentCreationError(error_msg)
         site_name = _get_site_name(request_dict)
         site = sm.get(models.Site, site_name) if site_name else None
 
