@@ -32,7 +32,7 @@ def create_bc_plugin_yaml(yamls, archive_target_path, logger):
         if not nodes:
             continue
         for path, element in nodes.items():
-            if not element:
+            if not element or not isinstance(element, dict):
                 continue
             if element.get('type') in TYPES_BASED_ON_DB_ENTITIES:
                 _substitute_tree_node(
@@ -47,8 +47,8 @@ def create_bc_plugin_yaml(yamls, archive_target_path, logger):
         nodes = _nodes_in_tree(plugin_yaml, selector)
         if not nodes:
             continue
-        for path, availability_rules in nodes.items():
-            if not availability_rules:
+        for path, rules in nodes.items():
+            if not rules or not isinstance(rules, dict):
                 continue
             _remove_tree_node(plugin_yaml, path)
             modifications_required |= True
