@@ -561,7 +561,9 @@ class UploadedBlueprintsManager(UploadedDataManager):
         # Filename will be like [BLUEPRINT_ID].tar.gz or [BLUEPRINT_ID].zip
         archive_filename = [fn for fn in os.listdir(archive_dir)
                             if fn.startswith(blueprint_id)][0]
-        archive_path = os.path.join(archive_dir, archive_filename)
+        base_filename = _base_archive_filename(archive_filename)
+        orig_archive_path = os.path.join(archive_dir, archive_filename)
+        new_archive_path = os.path.join(archive_dir, f'{base_filename}.tar.gz')
         with tempfile.TemporaryDirectory(dir=file_server_root) as tmpdir:
             # Copy blueprint files into `[tmpdir]/blueprint` directory
             os.chdir(tmpdir)
@@ -577,8 +579,9 @@ class UploadedBlueprintsManager(UploadedDataManager):
             with tempfile.NamedTemporaryFile(dir=file_server_root) as fh:
                 with tarfile.open(fh.name, "w:gz") as tar_handle:
                     tar_handle.add(self._get_kind())
-                shutil.copy2(fh.name, archive_path)
-            os.chmod(archive_path, 0o644)
+                shutil.copy2(fh.name, new_archive_path)
+                os.remove(orig_archive_path)
+            os.chmod(new_archive_path, 0o644)
 
     @classmethod
     def _process_plugins(cls, file_server_root, blueprint_id):
@@ -1014,3 +1017,13 @@ def _flatten_labels_dict(labels):
     for k, v in labels.items():
         flattened[k] = v.get('values')
     return flattened
+
+
+def _base_archive_filename(archive_filename):
+    while True:
+        filename, _, ext = archive_filename.rpartition('.')
+        if ext in ['tar', 'tgz', 'zip']:
+            return filename
+        if ext in ['bz2', 'gz', 'lzma', 'xz']:
+            continue
+        return archive_filename
