@@ -110,6 +110,15 @@ class TestPlugins(AgentlessTestCase):
             time.sleep(0.5)
         assert state == PluginInstallationState.INSTALLED
 
+    @pytest.mark.usefixtures('dsl_backcompat_plugin')
+    def test_plugin_backward_compatibility_generation(self):
+        bp13_path = test_utils.get_resource('dsl/dsl_versions_test_1_3.yaml')
+        bp14_path = test_utils.get_resource('dsl/dsl_versions_test_1_4.yaml')
+        self.client.blueprints.upload(bp13_path, 'bp13')
+        test_utils.wait_for_blueprint_upload('bp13', self.client)
+        self.client.blueprints.upload(bp14_path, 'bp14')
+        test_utils.wait_for_blueprint_upload('bp14', self.client)
+
 
 class TestPluginsSystemState(AgentlessTestCase):
     def test_installing_corrupted_plugin_doesnt_affect_system_integrity(self):

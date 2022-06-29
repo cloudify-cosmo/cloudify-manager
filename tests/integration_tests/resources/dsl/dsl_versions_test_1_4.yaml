@@ -1,0 +1,19 @@
+tosca_definitions_version: cloudify_dsl_1_4
+
+imports:
+    - cloudify/types/types.yaml
+    - plugin:dsl_backcompat?version=0.0.1
+
+node_types:
+  type1:
+    derived_from: cloudify.nodes.Root
+    properties:
+      config:
+        type: cloudify.datatypes.cool.Config
+
+node_templates:
+  node1:
+    type: type1
+    properties:
+      config:
+        some_deployment: foobar

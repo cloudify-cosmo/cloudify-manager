@@ -1631,7 +1631,9 @@ class ResourceManager(object):
                           visibility,
                           site=None,
                           runtime_only_evaluation=False,
-                          display_name=None):
+                          display_name=None,
+                          created_at=None,
+                          created_by=None):
         verify_blueprint_uploaded_state(blueprint)
         visibility = self.get_resource_visibility(models.Deployment,
                                                   deployment_id,
@@ -1648,10 +1650,12 @@ class ResourceManager(object):
         new_deployment = models.Deployment(
             id=deployment_id,
             display_name=display_name,
-            created_at=now,
+            created_at=created_at or now,
             updated_at=now,
             deployment_status=DeploymentState.REQUIRE_ATTENTION,
         )
+        if created_by:
+            new_deployment.creator = created_by
         new_deployment.runtime_only_evaluation = runtime_only_evaluation
         new_deployment.blueprint = blueprint
         new_deployment.visibility = visibility
@@ -2634,20 +2638,35 @@ class ResourceManager(object):
                                     creator=creator,
                                     created_at=created_at)
 
-    @staticmethod
-    def get_labels_to_create(resource, new_labels):
-        new_labels_set = set(new_labels)
+    def is_computed_label(self, resource, key):
+        """Is this label computed by the manager?
+
+        Some labels aren't governed by the user, but are set by the manager
+        based on the resource itself. For example, the csys-consumer-id is
+        based on the dependencies of the deployment.
+        """
+        if isinstance(resource, models.Deployment):
+            if key == 'csys-consumer-id':
+                return True
+        return False
+
+    def get_labels_to_create(self, resource, new_labels):
+        new_labels_set = {
+            label for label in new_labels
+            if not self.is_computed_label(resource, label[0])
+        }
         existing_labels = resource.labels
         existing_labels_tup = set(
             (label.key, label.value) for label in existing_labels)
 
         return new_labels_set - existing_labels_tup
 
-    @staticmethod
-    def get_labels_to_delete(resource, new_labels):
+    def get_labels_to_delete(self, resource, new_labels):
         labels_to_delete = set()
         new_labels_set = set(new_labels)
         for label in resource.labels:
+            if self.is_computed_label(resource, label.key):
+                continue
             if (label.key, label.value) not in new_labels_set:
                 labels_to_delete.add(label)
         return labels_to_delete

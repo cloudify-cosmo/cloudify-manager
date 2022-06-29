@@ -198,6 +198,15 @@ class DeploymentsId(resources_v1.DeploymentsId):
                 'Unable to create deployment asynchronously with provided '
                 'workdir zip.'
             )
+        created_at = owner = None
+        if request_dict.get('created_at'):
+            check_user_action_allowed('set_timestamp', None, True)
+            created_at = rest_utils.parse_datetime_string(
+                request_dict['created_at'])
+
+        if request_dict.get('created_by'):
+            check_user_action_allowed('set_owner', None, True)
+            owner = rest_utils.valid_user(request_dict['created_by'])
         visibility = rest_utils.get_visibility_parameter(
             optional=True,
             valid_values=VisibilityState.STATES
@@ -228,6 +237,8 @@ class DeploymentsId(resources_v1.DeploymentsId):
                 site=site,
                 runtime_only_evaluation=request_dict.get(
                     'runtime_only_evaluation', False),
+                created_at=created_at,
+                created_by=owner,
             )
             if request_dict.get('workdir_zip'):
                 tmpdir_path = mkdtemp()

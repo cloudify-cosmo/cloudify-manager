@@ -137,11 +137,11 @@ class TestPluginParseWithResolver(BaseServerTestCase):
                            'mock_blueprint/plugin_1_3.yaml'])
         import_url = PLUGIN_IMPORT_FORMAT.format(TEST_PACKAGE_NAME, '')
         plugin_str = self.resolver.fetch_import(import_url, '1_3')
-        assert plugin_str
-        with self.assertRaisesRegex(InvalidPluginError, r'but found 2$'):
-            self.resolver.fetch_import(import_url)
-        with self.assertRaisesRegex(InvalidPluginError, r'but found 0$'):
-            self.resolver.fetch_import(import_url, '1_4')
+        assert plugin_str.startswith('# this_is_plugin_1, DSL version 1_3')
+        plugin_str = self.resolver.fetch_import(import_url)
+        assert plugin_str.startswith('# this_is_plugin_1')
+        plugin_str = self.resolver.fetch_import(import_url, '1_4')
+        assert plugin_str.startswith('# this_is_plugin_1\n')
 
     def test_fetch_plugin_yaml_matching_dsl_version(self):
         self.upload_plugin_multiple_yamls(
@@ -150,8 +150,8 @@ class TestPluginParseWithResolver(BaseServerTestCase):
             package_yamls=['mock_blueprint/plugin_1_3.yaml',
                            'mock_blueprint/plugin_1_4.yaml'])
         import_url = PLUGIN_IMPORT_FORMAT.format(TEST_PACKAGE_NAME, '')
-        with self.assertRaisesRegex(InvalidPluginError, r'but found 2$'):
-            self.resolver.fetch_import(import_url)
+        plugin_str = self.resolver.fetch_import(import_url)
+        assert plugin_str.startswith('# this_is_plugin_1')
         plugin_str = self.resolver.fetch_import(import_url, '1_3')
         assert plugin_str.startswith('# this_is_plugin_1, DSL version 1_3')
         plugin_str = self.resolver.fetch_import(import_url, '1_4')
