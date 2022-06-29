@@ -344,6 +344,10 @@ def check_drift(timeout=EXECUTIONS_TIMEOUT, **kwargs):
     client, _ = get_client(kwargs)
     deployment_id = _current_deployment_id(**kwargs)
 
+    client.executions.start(
+        deployment_id=deployment_id,
+        workflow_id='check_drift'
+    )
     poll_with_timeout(
         lambda: is_all_executions_finished(client, deployment_id),
         timeout=timeout,
@@ -371,6 +375,10 @@ def check_status(timeout=EXECUTIONS_TIMEOUT, **kwargs):
     client, _ = get_client(kwargs)
     deployment_id = _current_deployment_id(**kwargs)
 
+    client.executions.start(
+        deployment_id=deployment_id,
+        workflow_id='check_status'
+    )
     poll_with_timeout(
         lambda: is_all_executions_finished(client, deployment_id),
         timeout=timeout,
