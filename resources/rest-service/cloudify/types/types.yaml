@@ -910,6 +910,7 @@ workflows:
       node_instance_id:
         description: Which node instance has failed
         type: node_instance
+        required: false
       diagnose_value:
         description: Diagnosed reason of failure
         default: Not provided
