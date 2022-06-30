@@ -457,6 +457,8 @@ node_types:
           implementation: cfy_extensions.cloudify_types.component.refresh
         check_drift:
           implementation: cfy_extensions.cloudify_types.component.check_drift
+        heal:
+          implementation: cfy_extensions.cloudify_types.component.heal
       cloudify.interfaces.validation:
         check_status:
           implementation: cfy_extensions.cloudify_types.component.check_status

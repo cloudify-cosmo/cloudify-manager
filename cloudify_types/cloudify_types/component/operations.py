@@ -389,6 +389,13 @@ def check_status(timeout=EXECUTIONS_TIMEOUT, **kwargs):
     validate_deployment_status(deployment)
 
 
+@operation
+def heal(timeout=EXECUTIONS_TIMEOUT, **kwargs):
+    """Attempt to heal a deployment"""
+    # TODO
+    pass
+
+
 def _current_deployment_id(**kwargs):
     config = get_desired_operation_input('resource_config', kwargs)
     runtime_deployment_prop = ctx.instance.runtime_properties.get(
