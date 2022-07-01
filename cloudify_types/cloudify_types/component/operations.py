@@ -391,9 +391,22 @@ def check_status(timeout=EXECUTIONS_TIMEOUT, **kwargs):
 
 @operation
 def heal(timeout=EXECUTIONS_TIMEOUT, **kwargs):
-    """Attempt to heal a deployment"""
-    # TODO
-    pass
+    """Run a `heal` workflow on a deployment identified by `deployment_id`"""
+    client, _ = get_client(kwargs)
+    deployment_id = _current_deployment_id(**kwargs)
+
+    client.executions.start(
+        deployment_id=deployment_id,
+        workflow_id='heal'
+    )
+    poll_with_timeout(
+        lambda: is_all_executions_finished(client, deployment_id),
+        timeout=timeout,
+        expected_result=True
+    )
+
+    deployment = client.deployments.get(deployment_id)
+    validate_deployment_status(deployment)
 
 
 def _current_deployment_id(**kwargs):
