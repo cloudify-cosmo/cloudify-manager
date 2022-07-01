@@ -342,26 +342,24 @@ def check_drift(timeout=EXECUTIONS_TIMEOUT, **kwargs):
     # Discover the drift by comparing the capabilities of a deployment to the
     # runtime properties / capabilities of a node_instance
     client, _ = get_client(kwargs)
-    config = get_desired_operation_input('resource_config', kwargs)
-    runtime_deployment_prop = ctx.instance.runtime_properties.get(
-        'deployment', {})
-    runtime_deployment_id = runtime_deployment_prop.get('id')
-    deployment = config.get('deployment', {})
-    deployment_id = (runtime_deployment_id or
-                     deployment.get('id') or
-                     ctx.instance.id)
+    deployment_id = _current_deployment_id(**kwargs)
 
+    client.executions.start(
+        deployment_id=deployment_id,
+        workflow_id='check_drift'
+    )
     poll_with_timeout(
         lambda: is_all_executions_finished(client, deployment_id),
         timeout=timeout,
-        expected_result=True)
+        expected_result=True
+    )
 
-    deployment_capabilities = client.deployments.capabilities\
-        .get(deployment_id)\
+    deployment_capabilities = client.deployments.capabilities \
+        .get(deployment_id) \
         .get('capabilities')
-    node_instance_capabilities = client.node_instances\
+    node_instance_capabilities = client.node_instances \
         .get(kwargs['ctx'].instance.id, _include=['id', 'runtime_properties'])\
-        .get('runtime_properties', {})\
+        .get('runtime_properties', {}) \
         .get('capabilities')
 
     modified_keys = list(capabilities_diff(
@@ -375,19 +373,48 @@ def check_drift(timeout=EXECUTIONS_TIMEOUT, **kwargs):
 def check_status(timeout=EXECUTIONS_TIMEOUT, **kwargs):
     """Discover status of a deployment basing on its different attributes."""
     client, _ = get_client(kwargs)
+    deployment_id = _current_deployment_id(**kwargs)
+
+    client.executions.start(
+        deployment_id=deployment_id,
+        workflow_id='check_status'
+    )
+    poll_with_timeout(
+        lambda: is_all_executions_finished(client, deployment_id),
+        timeout=timeout,
+        expected_result=True
+    )
+
+    deployment = client.deployments.get(deployment_id)
+    validate_deployment_status(deployment)
+
+
+@operation
+def heal(timeout=EXECUTIONS_TIMEOUT, **kwargs):
+    """Run a `heal` workflow on a deployment identified by `deployment_id`"""
+    client, _ = get_client(kwargs)
+    deployment_id = _current_deployment_id(**kwargs)
+
+    client.executions.start(
+        deployment_id=deployment_id,
+        workflow_id='heal'
+    )
+    poll_with_timeout(
+        lambda: is_all_executions_finished(client, deployment_id),
+        timeout=timeout,
+        expected_result=True
+    )
+
+    deployment = client.deployments.get(deployment_id)
+    validate_deployment_status(deployment)
+
+
+def _current_deployment_id(**kwargs):
     config = get_desired_operation_input('resource_config', kwargs)
     runtime_deployment_prop = ctx.instance.runtime_properties.get(
         'deployment', {})
     runtime_deployment_id = runtime_deployment_prop.get('id')
     deployment = config.get('deployment', {})
-    deployment_id = (runtime_deployment_id or
-                     deployment.get('id') or
-                     ctx.instance.id)
-
-    poll_with_timeout(
-        lambda: is_all_executions_finished(client, deployment_id),
-        timeout=timeout,
-        expected_result=True)
-
-    deployment = client.deployments.get(deployment_id)
-    validate_deployment_status(deployment)
+    return runtime_deployment_id \
+        or deployment.get('id') \
+        or ctx.instance.id
