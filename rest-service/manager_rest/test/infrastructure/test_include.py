@@ -121,20 +121,8 @@ class IncludeQueryParamTests(base_test.BaseServerTestCase):
         self.assertEqual(execution_id, response.id)
         self.assertIsNotNone(response.created_at)
 
-    def test_execution_with_status_field(self):
-        # status_display is defaulted to status in recent clients
-        deployment_id = self.client.deployments.list()[0].id
-        response = self.client.executions.list(
-            deployment_id=deployment_id,
-            _include=['id', 'status']
-        )
-        for e in response:
-            self.assertEqual(3, len(e))
-            self.assertIn('id', e)
-            self.assertIn('status', e)
-            self.assertIn('status_display', e)
-
     def test_execution_with_status_display_field(self):
+        # status_display is special because it's a hybrid_property
         deployment_id = self.client.deployments.list()[0].id
         response = self.client.executions.list(
             deployment_id=deployment_id,
