@@ -2,6 +2,12 @@
 %define __jar_repack %{nil}
 %define PIP_INSTALL /opt/mgmtworker/env/bin/pip install -c "${RPM_SOURCE_DIR}/packaging/mgmtworker/constraints.txt"
 
+# this prevents networkx<2 failure in RH8
+%if "%{dist}" != ".el7"
+%undefine __brp_mangle_shebangs
+%define _build_id_links none
+%endif
+
 Name:           cloudify-management-worker
 Version:        %{CLOUDIFY_VERSION}
 Release:        %{CLOUDIFY_PACKAGE_RELEASE}%{?dist}

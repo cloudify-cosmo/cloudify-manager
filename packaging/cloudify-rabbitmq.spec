@@ -1,3 +1,6 @@
+%if "%{dist}" != ".el7"
+%define _build_id_links none
+%endif
 
 Name:           cloudify-rabbitmq
 Version:        %{CLOUDIFY_VERSION}
