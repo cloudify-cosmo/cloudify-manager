@@ -125,7 +125,7 @@ class Executions(SecuredResource):
             if ended_at:
                 ended_at = parse_datetime_string(ended_at)
 
-        if force_status or execution_id:
+        if force_status or execution_id or not deployment_id:
             check_user_action_allowed('set_execution_details', None, True)
 
         if force_status and scheduled_time:
@@ -173,17 +173,20 @@ class Executions(SecuredResource):
         sm = get_storage_manager()
         rm = get_resource_manager()
         with sm.transaction():
-            deployment = sm.get(models.Deployment, deployment_id)
-            rm.verify_deployment_environment_created_successfully(deployment)
-            execution = models.Execution(
-                workflow_id=workflow_id,
-                deployment=deployment,
-                parameters=parameters,
-                is_dry_run=dry_run,
-                status=force_status or ExecutionState.PENDING,
-                allow_custom_parameters=allow_custom_parameters,
-                force=force,
-            )
+            kwargs = {
+                'workflow_id': workflow_id,
+                'parameters': parameters,
+                'is_dry_run': dry_run,
+                'status': force_status or ExecutionState.PENDING,
+                'allow_custom_parameters': allow_custom_parameters,
+                'force': force,
+            }
+            if deployment_id:
+                deployment = sm.get(models.Deployment, deployment_id)
+                rm.verify_deployment_environment_created_successfully(
+                    deployment)
+                kwargs['deployment'] = deployment
+            execution = models.Execution(**kwargs)
             if creator:
                 execution.creator = creator
             if created_at:
