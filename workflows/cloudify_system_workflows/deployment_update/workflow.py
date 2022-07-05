@@ -16,7 +16,7 @@ from ..deployment_environment import format_plan_schedule
 from ..search_utils import GetValuesWithRest, get_instance_ids_by_node_ids
 
 from .step_extractor import extract_steps
-from .update_instances import reinstall_instances
+from .update_instances import update_or_reinstall_instances
 from .utils import clear_graph
 
 
@@ -872,7 +872,8 @@ def _execute_deployment_update(ctx, update_id, install_params):
         clear_graph(graph)
         _establish_relationships(ctx, graph, install_params)
 
-    reinstall_instances(
+    update_or_reinstall_instances(
+        ctx,
         graph,
         dep_up,
         install_params.added_instances,

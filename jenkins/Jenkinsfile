@@ -74,9 +74,11 @@ pipeline {
                 echo 'Running pytest <<workflows>>'
                 sh '''
                   . .venv/bin/activate
+                  cd workflows
+                  pip install -Ur test-requirements.txt
                   pytest \
                     -sv \
-                    workflows
+                    cloudify_system_workflows
                 '''
                 echo 'Running pytest <<cloudify_types>>'
                 sh '''
