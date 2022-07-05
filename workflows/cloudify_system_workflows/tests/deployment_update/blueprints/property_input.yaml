@@ -1,0 +1,18 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - minimal_types.yaml
+
+inputs:
+  inp1: {}
+
+node_types:
+  t1:
+    properties:
+      prop1: {}
+
+node_templates:
+  n1:
+    type: t1
+    properties:
+      prop1: {get_input: inp1}
