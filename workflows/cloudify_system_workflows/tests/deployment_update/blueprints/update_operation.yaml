@@ -1,0 +1,137 @@
+# test blueprint for checking the update flow. This contains several nodes,
+# each with a different setup, and when we run the update workflow on a
+# deployment created from this blueprint (with changing an input), each node
+# will have some operations called on it, and we'll assert that the operations
+# are as expected.
+
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - minimal_types.yaml
+
+inputs:
+  inp1: {}
+
+node_types:
+  t1:
+    properties:
+      expected_calls:
+        type: list
+      prop1:
+        default: prop1_default
+
+node_templates:
+  # n1 has not changed, and check_drift returns null:
+  # only check_drift is called, but not update
+  n1:
+    type: t1
+    properties:
+      expected_calls:
+        - check_drift
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        check_drift:
+          implementation: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+        update:
+          implementation: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+
+  # n2 has changed, and doesn't declare check_drift:
+  # update is called
+  n2:
+    type: t1
+    properties:
+      prop1: {get_input: inp1}
+      expected_calls:
+        - update
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        update:
+          implementation: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+
+  # n3 has not changed, and doesn't declare check_drift:
+  # update is not called
+  n3:
+    type: t1
+    properties:
+      expected_calls: []
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        update:
+          implementation: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+
+  # n4 has not changed, but check_drift reports drift:
+  # update is called (create is defined but not called)
+  n4:
+    type: t1
+    properties:
+      expected_calls:
+        - check_drift
+        - update
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        check_drift:
+          implementation: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+          inputs:
+            return_value: {drift: true}
+        create:
+          implementation: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+        update:
+          implementation: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+
+  # n5 has not changed, but check_drift reports drift, and update is not defined:
+  # instance is reinstalled
+  n5:
+    type: t1
+    properties:
+      expected_calls:
+        - check_drift
+        - create
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        check_drift:
+          implementation: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+          inputs:
+            return_value: {drift: true}
+        create:
+          implementation: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+
+  # n6 has not changed, but check_drift reports drift, and update fails:
+  # update is called, but since it failed, instance is reinstalled
+  n6:
+    type: t1
+    properties:
+      expected_calls:
+        - check_drift
+        - update
+        - create
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        check_drift:
+          implementation: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+          inputs:
+            return_value: {drift: true}
+        update:
+          implementation: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+          inputs:
+            fail: true
+        create:
+          implementation: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+
+  # n7 has not changed, but check_drift fails:
+  # instance is reinstalled
+  n7:
+    type: t1
+    properties:
+      expected_calls:
+        - check_drift
+        - create
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        check_drift:
+          implementation: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+          inputs:
+            fail: true
+        update:
+          implementation: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+        create:
+          implementation: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op

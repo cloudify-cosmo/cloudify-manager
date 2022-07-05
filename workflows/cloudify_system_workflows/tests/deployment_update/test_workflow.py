@@ -1,5 +1,6 @@
 import os
 
+from cloudify.exceptions import NonRecoverableError
 from cloudify.workflows import local
 
 
@@ -56,3 +57,42 @@ def test_change_property():
     dep_env = local.load_env('d1', storage)
     node = dep_env.storage.get_node('n1', evaluate_functions=True)
     assert node.properties['prop1'] == 'value2'
+
+
+def test_update_operation(subtests):
+    """Test the update instances flow.
+
+    This function is essentially just the driver code, and the actual cases
+    and expectations are encoded in the blueprint itself.
+    """
+    storage = deploy('update_operation.yaml', resource_id='d1', inputs={
+        'inp1': 'value1',
+    })
+    dep_env = local.load_env('d1', storage)
+    storage.create_deployment_update('d1', 'update1', {
+        'new_inputs': {'inp1': 'value2'}
+    })
+    dep_env.execute('update', parameters={'update_id': 'update1'})
+
+    for ni in dep_env.storage.get_node_instances():
+        with subtests.test(ni.node_id):
+            node = dep_env.storage.get_node(ni.node_id)
+            actual_calls = ni.runtime_properties.get('invocations', [])
+            expected_calls = node.properties['expected_calls']
+            assert actual_calls == expected_calls
+
+
+def op(ctx, return_value=None, fail=False):
+    """Operation used in the update-operation test.
+
+    Store the call in runtime-properties, and return the given value, or fail.
+    """
+    if 'invocations' not in ctx.instance.runtime_properties:
+        ctx.instance.runtime_properties['invocations'] = []
+    name = ctx.operation.name.split('.')[-1]
+    invocations = ctx.instance.runtime_properties['invocations']
+    invocations.append(name)
+    ctx.instance.runtime_properties['invocations'] = invocations
+    if fail:
+        raise NonRecoverableError()
+    return return_value
