@@ -1280,7 +1280,7 @@ class Execution(CreatedAtMixin, SQLResourceBase):
                 continue
             try:
                 getter = GetValuesWithStorageManager(get_storage_manager(),
-                                                     self.deployment_id)
+                                                     deployment.id)
                 validate_input_value(name, constraints, parameters[name],
                                      param_type, param_item_type, getter)
             except (dsl_exceptions.DSLParsingException,
