@@ -16,6 +16,8 @@ from ..deployment_environment import format_plan_schedule
 from ..search_utils import GetValuesWithRest, get_instance_ids_by_node_ids
 
 from .step_extractor import extract_steps
+from .update_instances import reinstall_instances
+from .utils import clear_graph
 
 
 def prepare_plan(*, update_id):
@@ -665,11 +667,6 @@ def _post_update_graph(ctx, update_id, **kwargs):
     return graph
 
 
-def _clear_graph(graph):
-    for task in graph.tasks:
-        graph.remove_task(task)
-
-
 def _unlink_relationships(ctx, graph, install_params):
     node_instances = (
         install_params.reduced_instances
@@ -704,55 +701,6 @@ def _establish_relationships(ctx, graph, install_params):
         node_instances=set(node_instances),
         modified_relationship_ids=modified_relationship_ids
     )
-
-
-def _find_reinstall_instances(steps):
-    nodes_to_reinstall = set()
-    for step in steps:
-        if step['entity_type'] not in ('property', 'operation'):
-            continue
-        if not step['entity_id'] or step['entity_id'][0] != 'nodes':
-            continue
-        nodes_to_reinstall.add(step['entity_id'][1])
-    to_reinstall = []
-    for node_id in nodes_to_reinstall:
-        node = workflow_ctx.get_node(node_id)
-        to_reinstall.extend(node.instances)
-    return to_reinstall
-
-
-def _reinstall_instances(graph, dep_up, to_install, to_uninstall,
-                         ignore_failure=False, skip_reinstall=False):
-    install_ids = {ni.id for ni in to_install}
-    uninstall_ids = {ni.id for ni in to_uninstall}
-    skip_ids = install_ids | uninstall_ids
-    subgraph = set()
-    if skip_reinstall:
-        to_reinstall = []
-    else:
-        to_reinstall = _find_reinstall_instances(dep_up.steps)
-    for ni in to_reinstall:
-        if ni.id in skip_ids:
-            continue
-        subgraph |= ni.get_contained_subgraph()
-    subgraph -= set(to_uninstall)
-    intact_nodes = (
-        set(workflow_ctx.node_instances)
-        - subgraph
-        - set(to_uninstall)
-    )
-    for n in subgraph:
-        for r in n._relationship_instances:
-            if r in uninstall_ids:
-                n._relationship_instances.pop(r)
-    if subgraph:
-        _clear_graph(graph)
-        lifecycle.reinstall_node_instances(
-            graph=graph,
-            node_instances=subgraph,
-            related_nodes=intact_nodes,
-            ignore_failure=ignore_failure
-        )
 
 
 class InstallParameters:
@@ -902,11 +850,11 @@ def _execute_deployment_update(ctx, update_id, install_params):
     dep_up = workflow_ctx.get_deployment_update(update_id)
 
     if install_params.reduced and not install_params.skip_uninstall:
-        _clear_graph(graph)
+        clear_graph(graph)
         _unlink_relationships(ctx, graph, install_params)
 
     if install_params.removed and not install_params.skip_uninstall:
-        _clear_graph(graph)
+        clear_graph(graph)
         lifecycle.uninstall_node_instances(
             graph=graph,
             ignore_failure=install_params.ignore_failure,
@@ -914,17 +862,17 @@ def _execute_deployment_update(ctx, update_id, install_params):
             related_nodes=install_params.removed_target_instances,
         )
     if install_params.added and not install_params.skip_install:
-        _clear_graph(graph)
+        clear_graph(graph)
         lifecycle.install_node_instances(
             graph=graph,
             node_instances=install_params.added_instances,
             related_nodes=install_params.added_target_instances,
         )
     if install_params.extended and not install_params.skip_install:
-        _clear_graph(graph)
+        clear_graph(graph)
         _establish_relationships(ctx, graph, install_params)
 
-    _reinstall_instances(
+    reinstall_instances(
         graph,
         dep_up,
         install_params.added_instances,
@@ -968,7 +916,7 @@ def update_deployment(ctx, *, update_id=None, preview=False,
     graph.execute()
 
     if not preview:
-        _clear_graph(graph)
+        clear_graph(graph)
         graph = _perform_update_graph(ctx, update_id)
         graph.execute()
         ctx.refresh_node_instances()
@@ -980,7 +928,7 @@ def update_deployment(ctx, *, update_id=None, preview=False,
         else:
             _execute_deployment_update(ctx, update_id, install_params)
 
-        _clear_graph(graph)
+        clear_graph(graph)
         graph = _post_update_graph(ctx, update_id)
         graph.execute()
 
