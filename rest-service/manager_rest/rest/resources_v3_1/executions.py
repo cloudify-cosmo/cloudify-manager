@@ -162,6 +162,7 @@ class ExecutionGroups(SecuredResource):
             'created_by': {'optional': True},
             'created_at': {'optional': True},
             'associated_executions': {'optional': True},
+            'id': {'optional': True},
         })
         default_parameters = request_dict.get('default_parameters') or {}
         parameters = request_dict.get('parameters') or {}
@@ -187,10 +188,13 @@ class ExecutionGroups(SecuredResource):
                 sm.get(models.Execution, execution)
                 for execution in request_dict['associated_executions']
             ]
+        if request_dict.get('id'):
+            check_user_action_allowed('set_execution_group_details',
+                                      None, True)
         dep_group = sm.get(models.DeploymentGroup,
                            request_dict['deployment_group_id'])
         group = models.ExecutionGroup(
-            id=str(uuid.uuid4()),
+            id=request_dict.get('id') or str(uuid.uuid4()),
             deployment_group=dep_group,
             workflow_id=workflow_id,
             visibility=dep_group.visibility,
