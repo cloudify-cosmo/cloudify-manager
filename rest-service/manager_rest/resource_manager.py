@@ -234,12 +234,14 @@ class ResourceManager(object):
         return res
 
     def _on_deployment_environment_deleted(self, execution):
+        force = False
+        if execution.parameters and execution.parameters.get('force'):
+            force = True
         if execution.status == ExecutionState.TERMINATED:
-            return self.delete_deployment(execution.deployment)
+            return self.delete_deployment(execution.deployment, force)
 
-        if execution.status == ExecutionState.FAILED:
-            if execution.parameters and execution.parameters.get('force'):
-                return self.delete_deployment(execution.deployment)
+        if execution.status == ExecutionState.FAILED and force:
+            return self.delete_deployment(execution.deployment, force)
 
     def start_queued_executions(self):
         """Dequeue and start executions.
@@ -964,7 +966,7 @@ class ResourceManager(object):
                     f"{ ','.join(ni.id for ni in node_instances) }"
                 )
 
-    def delete_deployment(self, deployment):
+    def delete_deployment(self, deployment, force=False):
         """Delete the deployment.
 
         This is run when delete-dep-env finishes.
@@ -978,7 +980,7 @@ class ResourceManager(object):
             deployment_dependencies if dependency.external_target)
         if external_targets:
             self._clean_dependencies_from_external_targets(
-                deployment, external_targets)
+                deployment, external_targets, force=force)
 
         parents = self.sm.list(
             models.Deployment, filters={'id': deployment.deployment_parents})
@@ -1000,7 +1002,8 @@ class ResourceManager(object):
 
     def _clean_dependencies_from_external_targets(self,
                                                   deployment,
-                                                  external_targets):
+                                                  external_targets,
+                                                  force=False):
         manager_ips = [manager.private_ip for manager in self.sm.list(
             models.Manager)]
         external_source = {
@@ -1009,18 +1012,27 @@ class ResourceManager(object):
             'host': manager_ips
         }
         for target in external_targets:
-            target_client_config = json.loads(target)['client_config']
-            external_client = CloudifyClient(**target_client_config)
-            dep = external_client.inter_deployment_dependencies.list()
-            dep_for_removal = [d for d in dep if
-                               d['external_source'] == external_source]
-            for d in dep_for_removal:
-                external_client.inter_deployment_dependencies.delete(
-                    dependency_creator=d['dependency_creator'],
-                    source_deployment=d['source_deployment_id'] or ' ',
-                    target_deployment=d['target_deployment_id'] or ' ',
-                    external_source=external_source
-                )
+            target = json.loads(target)
+            external_client = CloudifyClient(**target['client_config'])
+            try:
+                dep = external_client.inter_deployment_dependencies.list()
+                dep_for_removal = [d for d in dep if
+                                   d['external_source'] == external_source]
+                for d in dep_for_removal:
+                    external_client.inter_deployment_dependencies.delete(
+                        dependency_creator=d['dependency_creator'],
+                        source_deployment=d['source_deployment_id'] or ' ',
+                        target_deployment=d['target_deployment_id'] or ' ',
+                        external_source=external_source
+                    )
+            except Exception as e:
+                error_msg = f"Can't clean dependency on target host " \
+                    f"{target['client_config']['host']} deployment `" \
+                    f"{target['deployment']}` -- {str(e)}"
+                if force:
+                    current_app.logger.error(error_msg)
+                else:
+                    raise manager_exceptions.ManagerException(error_msg)
 
     def reset_operations(self, execution, force=False):
         """Resume the execution: restart failed operations.
