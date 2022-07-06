@@ -1,18 +1,3 @@
-########
-# Copyright (c) 2014 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#        http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#    * See the License for the specific language governing permissions and
-#    * limitations under the License.
-
 import re
 import time
 import uuid
@@ -835,7 +820,7 @@ class ExecutionsTest(AgentlessTestCase):
                 "{0!r} did not match {1!r}".format(message, expected_regex)
             )
 
-        # We expect the instances to remain unchaged after a dry run
+        # We expect the instances to remain unchanged after a dry run
         for instance in self.client.node_instances.list():
             self.assertEqual(instance['state'], 'uninitialized')
 
@@ -1049,3 +1034,23 @@ class ExecutionsTest(AgentlessTestCase):
             self.wait_for_execution_to_end(exc)
         evts = self.client.events.list(execution_id=exc.id)
         assert any(e['event_type'] == 'task_succeeded' for e in evts)
+
+    def test_keep_executing_regardless_of_fail(self):
+        dep = self.deploy(
+            resource('dsl/keep_executing_regardless_of_fail.yaml')
+        )
+        exc_spec = {
+            'deployment_id': dep.id,
+            'workflow_id': 'install',
+        }
+        exc = self.client.executions.start(**exc_spec)
+        self.wait_for_execution_to_end(exc, require_success=False)
+        evts = self.client.events.list(execution_id=exc.id)
+        assert not any(
+            e['event_type'] == 'task_succeeded'
+            for e in evts if e['node_name'] in ['node1', 'node3']
+        )
+        assert any(
+            e['event_type'] == 'task_succeeded'
+            for e in evts if e['node_name'] in ['node2', 'node4']
+        )
