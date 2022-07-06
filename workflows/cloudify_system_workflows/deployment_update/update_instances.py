@@ -88,17 +88,11 @@ def _can_be_updated(instance):
     If this instance defines an update operation, it can be updated. Otherwise,
     we'll need to fall back to reinstalling it.
     """
-    props = instance.system_properties
-
-    if props.get('configuration_drift', {}).get('result'):
-        if not any(instance.node.has_operation(op) for op in [
-            'cloudify.interfaces.lifecycle.update',
-            'cloudify.interfaces.lifecycle.update_config',
-            'cloudify.interfaces.lifecycle.update_apply',
-        ]):
-            return False
-    # TODO also check relationships drift
-    return True
+    return any(instance.node.has_operation(op) for op in [
+        'cloudify.interfaces.lifecycle.update',
+        'cloudify.interfaces.lifecycle.update_config',
+        'cloudify.interfaces.lifecycle.update_apply',
+    ])
 
 
 def _find_update_failed_instances(ctx, instances):
@@ -169,7 +163,6 @@ def update_or_reinstall_instances(
             must_reinstall |= instance.get_contained_subgraph()
 
     instances_to_update = instances_with_drift - must_reinstall
-
     if instances_to_update:
         intact_nodes = set(workflow_ctx.node_instances) - instances_to_update
         clear_graph(graph)
