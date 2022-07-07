@@ -594,11 +594,8 @@ relationships:
         establish: {}
         # uninstall
         unlink: {}
-        # update
-        update_preconfigure: {}
-        update_postconfigure: {}
-        update_establish: {}
         # misc
+        update: {}
         check_drift: {}
     target_interfaces:
       cloudify.interfaces.relationship_lifecycle:
@@ -608,11 +605,8 @@ relationships:
         establish: {}
         # uninstall
         unlink: {}
-        # update
-        update_preconfigure: {}
-        update_postconfigure: {}
-        update_establish: {}
         # misc
+        update: {}
         check_drift: {}
     properties:
       connection_type:
