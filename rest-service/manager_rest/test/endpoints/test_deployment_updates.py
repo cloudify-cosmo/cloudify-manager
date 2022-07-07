@@ -103,7 +103,6 @@ class TestDeploymentUpdates(base_test.BaseServerTestCase):
         for parameters in [
             {'inputs': {'a': 'b'}, 'reinstall_list': 'not_a_list'},
             {'inputs': 'not a dict'},
-            {},  # missing inputs and blueprint-id
             {'inputs': {'a': 'b'}, 'preview': ['not a bool']}
         ]:
             with self.assertRaises(CloudifyClientError):

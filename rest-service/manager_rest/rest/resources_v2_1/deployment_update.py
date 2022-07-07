@@ -150,10 +150,6 @@ class DeploymentUpdate(SecuredResource):
         if not isinstance(reinstall_list, list):
             raise manager_exceptions.BadParametersError(
                 'parameter `reinstall_list` must be of type `list`')
-        if not blueprint_id and not inputs:
-            raise manager_exceptions.BadParametersError(
-                'Must supply either the `blueprint_id` parameter, or new '
-                'inputs, in order the perform a deployment update')
         if blueprint_id is None:
             deployment = get_storage_manager().get(models.Deployment,
                                                    deployment_id)
