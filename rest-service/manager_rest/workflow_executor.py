@@ -108,7 +108,7 @@ def restart_restservice():
 
 def cancel_execution(executions):
     sm = get_storage_manager()
-    managers = sm.list(models.Manager, get_all_results=True)
+    managers = sm.list(models.Manager)
     message = {
         'service_task': {
             'task_name': 'cancel-workflow',
@@ -129,7 +129,7 @@ def _get_plugin_message(plugin, task='install-plugin', target_names=None):
     the mgmtworkers/agents.
     """
     sm = get_storage_manager()
-    managers = sm.list(models.Manager, get_all_results=True)
+    managers = sm.list(models.Manager)
     message = {
         'service_task': {
             'task_name': task,
@@ -158,7 +158,7 @@ def install_plugin(plugin):
     pstates = sm.list(models._PluginState, filters={
         '_plugin_fk': plugin._storage_id,
         'state': PluginInstallationState.PENDING
-    }, get_all_results=True)
+    })
     agents_per_tenant = {}
     managers = []
     for pstate in pstates:
@@ -196,7 +196,7 @@ def uninstall_plugin(plugin):
             PluginInstallationState.INSTALLING,
             PluginInstallationState.ERROR
         ]
-    }, get_all_results=True)
+    })
     agents_per_tenant = {}
     managers = []
     for pstate in pstates:

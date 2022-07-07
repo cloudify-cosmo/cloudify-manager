@@ -131,12 +131,9 @@ def get_cluster_status(detailed=False) -> typing.Dict[str, typing.Any]:
 def _get_cluster_details() -> typing.Tuple[typing.Dict[str, dict], str]:
     storage_manager = get_storage_manager()
     cluster_services = {
-        CloudifyNodeType.MANAGER: storage_manager.list(models.Manager,
-                                                       get_all_results=True),
-        CloudifyNodeType.DB: storage_manager.list(models.DBNodes,
-                                                  get_all_results=True),
-        CloudifyNodeType.BROKER: storage_manager.list(models.RabbitMQBroker,
-                                                      get_all_results=True),
+        CloudifyNodeType.MANAGER: storage_manager.list(models.Manager),
+        CloudifyNodeType.DB: storage_manager.list(models.DBNodes),
+        CloudifyNodeType.BROKER: storage_manager.list(models.RabbitMQBroker),
     }
 
     mapping = {}

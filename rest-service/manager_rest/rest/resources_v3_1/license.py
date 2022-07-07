@@ -63,7 +63,7 @@ class LicenseCommunity(SecuredResource):
             'customer_id': {'type': text_type},
         })
         sm = get_storage_manager()
-        licenses = sm.list(models.License, get_all_results=True)
+        licenses = sm.list(models.License)
         customer_id = str(licenses[0].customer_id) if licenses else None
         if customer_id:
             raise ConflictError(
@@ -94,8 +94,7 @@ class LicenseCheckPremium(SecuredResource):
 
 class LicenseCheckCommunity(SecuredResource):
     def get(self):
-        licenses = get_storage_manager().list(models.License,
-                                              get_all_results=True)
+        licenses = get_storage_manager().list(models.License)
         customer_id = str(licenses[0].customer_id) if licenses else None
         if customer_id:
             return customer_id, 200
