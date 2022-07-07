@@ -44,7 +44,7 @@ def update_encryption_key(old_key, new_key, commit=False):
 
     with setup_flask_app().app_context():
         sm = get_storage_manager()
-        secrets = sm.list(models.Secret, get_all_results=True)
+        secrets = sm.list(models.Secret)
         for secret in secrets:
             # Test the old key. If that works, we need to re-encrypt with the
             # new key.
@@ -64,7 +64,7 @@ def update_encryption_key(old_key, new_key, commit=False):
                 secret.value = new_val
                 sm.update(secret)
 
-        tenants = sm.list(models.Tenant, get_all_results=True)
+        tenants = sm.list(models.Tenant)
         for tenant in tenants:
             # Test the old key. If that works, we need to re-encrypt with the
             # new key.
