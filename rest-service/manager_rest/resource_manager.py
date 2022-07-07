@@ -1422,8 +1422,8 @@ class ResourceManager(object):
         with self.sm.transaction():
             executions = self.sm.list(models.Execution,
                                       filters={'id': lambda col:
-                                               col.in_(execution_ids),
-                                      get_all_results=True})
+                                               col.in_(execution_ids)},
+                                      get_all_results=True)
             if len(executions) > 0:
                 executions = executions.items
             else:
