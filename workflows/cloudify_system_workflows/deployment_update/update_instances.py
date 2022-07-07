@@ -132,6 +132,7 @@ def _clean_updated_property(ctx, instances):
             system_properties=system_properties
         )
 
+
 def _mark_instance_drifted(ctx, instance):
     system_properties = instance.system_properties or {}
     system_properties['configuration_drift'] = {
@@ -144,6 +145,7 @@ def _mark_instance_drifted(ctx, instance):
         force=True,
         system_properties=system_properties
     )
+
 
 def _clean_drift(ctx, instance):
     """Remove all notion of drift from the given instance.
@@ -166,6 +168,7 @@ def _clean_drift(ctx, instance):
             force=True,
             system_properties=system_properties
         )
+
 
 def update_or_reinstall_instances(
     ctx,

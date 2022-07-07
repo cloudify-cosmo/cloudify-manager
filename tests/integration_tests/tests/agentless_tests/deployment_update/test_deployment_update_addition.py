@@ -336,8 +336,8 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
                 base_node_instances,
                 modified_node_instances,
                 keys=['related', 'target', 'source'],
-                excluded_items=
-                ['runtime_properties', 'relationships', 'system_properties']
+                excluded_items=['runtime_properties', 'relationships',
+                                'system_properties']
         )
 
         # Check that there is only 1 from each
@@ -433,8 +433,8 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
                 base_node_instances,
                 modified_node_instances,
                 keys=['target', 'source'],
-                excluded_items=
-                ['relationships', 'runtime_properties', 'system_properties']
+                excluded_items=['relationships', 'runtime_properties',
+                                'system_properties']
         )
 
         # Check that there is only 1 from each

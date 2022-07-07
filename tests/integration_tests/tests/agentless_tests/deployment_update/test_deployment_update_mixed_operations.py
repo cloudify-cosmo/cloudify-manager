@@ -77,8 +77,8 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
                 base_node_instances,
                 modified_node_instances,
                 keys=['stagnant', 'added_relationship', 'new'],
-                excluded_items=
-                ['runtime_properties', 'relationships', 'system_properties']
+                excluded_items=['runtime_properties', 'relationships',
+                                'system_properties']
         )
 
         # Check that there is only 1 from each
