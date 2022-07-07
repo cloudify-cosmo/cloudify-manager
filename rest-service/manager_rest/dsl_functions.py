@@ -123,7 +123,8 @@ class FunctionEvaluationStorage(object):
         filters = dict(deployment_id=self._deployment_id)
         if node_id:
             filters['node_id'] = node_id
-        instances = self.sm.list(NodeInstance, filters=filters).items
+        instances = self.sm.list(NodeInstance, filters=filters,
+                                 get_all_results=True).items
         return [ni.to_dict() for ni in instances]
 
     def get_node_instance(self, node_instance_id):
@@ -236,7 +237,8 @@ class FunctionEvaluationStorage(object):
             return len(consumers_list)
         if prop == 'names':
             consumer_deployments = self.sm.list(
-                Deployment, filters={'id': consumers_list})
+                Deployment, filters={'id': consumers_list},
+                get_all_results=True)
             return [d.display_name for d in consumer_deployments]
         raise FunctionsEvaluationError(
             f'get_consumers has no property {prop}')

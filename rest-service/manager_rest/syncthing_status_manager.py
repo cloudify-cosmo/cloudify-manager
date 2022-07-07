@@ -17,7 +17,8 @@ except ImportError:
 def _last_manager_in_cluster():
     storage_manager = get_storage_manager()
     managers = storage_manager.list(models.Manager,
-                                    sort={'last_seen': 'desc'})
+                                    sort={'last_seen': 'desc'},
+                                    get_all_results=True)
     active_managers = 0
     for manager in managers:
         # Probably new manager, first status report is yet to arrive

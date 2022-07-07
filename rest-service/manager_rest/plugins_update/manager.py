@@ -286,7 +286,8 @@ class PluginsUpdateManager(object):
         return self.sm.list(models.Deployment,
                             filters={'blueprint_id': blueprint_id},
                             all_tenants=all_tenants,
-                            sort={'id': 'asc'}).items
+                            sort={'id': 'asc'},
+                            get_all_results=True).items
 
     def get_plugins_update(self, plugins_update_id):
         return self.sm.get(models.PluginsUpdate, plugins_update_id)
@@ -302,7 +303,8 @@ class PluginsUpdateManager(object):
                             filters=filters,
                             pagination=pagination,
                             substr_filters=substr_filters,
-                            sort=sort)
+                            sort=sort,
+                            get_all_results=True)
 
     def get_reevaluated_plan(self, blueprint, resolver_parameters):
         blueprint_dir = os.path.join(
