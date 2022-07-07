@@ -148,7 +148,7 @@ node_templates:
     properties:
       expected_calls:
         - target_check_drift
-        - target_update_establish
+        - target_update
 
   # n8 doesn't declare check_drift, and has not changed, but a relationship
   # declares check_drift and update for both source and target:
@@ -157,7 +157,7 @@ node_templates:
     properties:
       expected_calls:
         - source_check_drift
-        - source_update_establish
+        - source_update
     relationships:
       - target: n8_rel_target
         type: cloudify.relationships.depends_on
@@ -167,14 +167,14 @@ node_templates:
               implementation: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
               inputs:
                 return_value: {drift: true}
-            update_establish: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+            update: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
         target_interfaces:
           cloudify.interfaces.relationship_lifecycle:
             check_drift:
               implementation: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
               inputs:
                 return_value: {drift: true}
-            update_establish: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+            update: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
 
   # n9_rel_target doesn't do anything by itself, but is a target of n9's relationship
   n9_rel_target:
@@ -196,11 +196,11 @@ node_templates:
         source_interfaces:
           cloudify.interfaces.relationship_lifecycle:
             check_drift: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
-            update_establish: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+            update: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
         target_interfaces:
           cloudify.interfaces.relationship_lifecycle:
             check_drift: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
-            update_establish: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+            update: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
 
   # n10_rel_target doesn't do anything by itself, but is a target of n10's relationship.
   # the check_drift relationship operation fails, so it is reinstalled
@@ -233,21 +233,21 @@ node_templates:
               implementation: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
               inputs:
                 fail: true
-            update_establish: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+            update: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
         target_interfaces:
           cloudify.interfaces.relationship_lifecycle:
             check_drift:
               implementation: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
               inputs:
                 fail: true
-            update_establish: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+            update: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
 
   n11_rel_target:
     type: t1
     properties:
       expected_calls:
         - target_check_drift
-        - target_update_establish
+        - target_update
 
   # n11 reports drift on both itself, and its relationship, and has all the update
   # interfaces run.
@@ -264,7 +264,7 @@ node_templates:
         - update_config
         - update_apply
         - update_postapply
-        - source_update_establish
+        - source_update
     interfaces:
       cloudify.interfaces.lifecycle:
         check_drift:
@@ -286,11 +286,11 @@ node_templates:
               implementation: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
               inputs:
                 return_value: {drift: true}
-            update_establish: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+            update: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
         target_interfaces:
           cloudify.interfaces.relationship_lifecycle:
             check_drift:
               implementation: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
               inputs:
                 return_value: {drift: true}
-            update_establish: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+            update: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
