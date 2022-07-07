@@ -67,6 +67,9 @@ def test_change_property():
     ('skip_drift_check.yaml', {
         'skip_drift_check': True,
     }),
+    ('force_reinstall.yaml', {
+        'force_reinstall': True,
+    })
 ])
 def test_update_operation(subtests, blueprint_filename, parameters):
     """Test the update instances flow.

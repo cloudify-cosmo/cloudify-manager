@@ -11,3 +11,6 @@ workflows:
       skip_drift_check:
         type: boolean
         default: false
+      force_reinstall:
+        type: boolean
+        default: false

@@ -210,6 +210,10 @@ def update_or_reinstall_instances(ctx, graph, dep_up, install_params):
             must_reinstall |= instance.get_contained_subgraph()
     instances_to_update = instances_with_drift - must_reinstall
 
+    if install_params.force_reinstall:
+        must_reinstall |= instances_to_update
+        instances_to_update = set()
+
     if instances_to_update:
         intact_nodes = set(workflow_ctx.node_instances) - instances_to_update
         clear_graph(graph)
