@@ -80,7 +80,8 @@ class DeploymentUpdateManager(object):
                             filters=filters,
                             pagination=pagination,
                             substr_filters=substr_filters,
-                            sort=sort)
+                            sort=sort,
+                            get_all_results=True)
 
     def stage_deployment_update(self,
                                 deployment_id,

@@ -443,7 +443,8 @@ class SQLStorageManager(object):
         return include, filters, substr_filters, sort, distinct
 
     @staticmethod
-    def _paginate(query, pagination, get_all_results=False, locking=False):
+    def _paginate(query, pagination, model_class, get_all_results=False,
+                  locking=False):
         """Paginate the query by size and offset
 
         :param query: Current SQLAlchemy query object
@@ -463,13 +464,20 @@ class SQLStorageManager(object):
             size = config.instance.default_page_size
             offset = 0
 
-        total = query.order_by(None).count()  # Fastest way to count
         if locking:
             query = query.with_for_update()
         if get_all_results:
             results = query.all()
         else:
             results = query.limit(size).offset(offset).all()
+
+        if get_all_results:
+            total = len(results)
+        else:
+            # distinct is required to cope with many-many relationships
+            # (e.g., otherwise you get all 7 results with a total of 460)
+            total = query.order_by(None).distinct(
+                getattr(model_class, model_class.unique_id())).count()
 
         return results, total, size, offset
 
@@ -681,6 +689,7 @@ class SQLStorageManager(object):
         results, total, size, offset = self._paginate(
             query,
             pagination,
+            model_class,
             get_all_results,
             locking=locking,
         )
@@ -714,6 +723,7 @@ class SQLStorageManager(object):
 
         results, total, size, offset = self._paginate(query,
                                                       pagination,
+                                                      model_class,
                                                       get_all_results)
         pagination = {'total': total, 'size': size, 'offset': offset}
 
