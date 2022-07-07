@@ -909,10 +909,15 @@ def _execute_custom_workflow(dep_up, workflow_id, install_params,
 
 
 @workflow
-def update_deployment(ctx, *, update_id=None, preview=False,
-                      ignore_failure=False,
-                      skip_reinstall=False, workflow_id=None,
-                      custom_workflow_timeout=None, **kwargs):
+def update_deployment(
+    ctx,
+    *,
+    update_id=None,
+    preview=False,
+    workflow_id=None,
+    custom_workflow_timeout=None,
+    **kwargs,
+):
     graph = _prepare_update_graph(ctx, update_id, **kwargs)
     graph.execute()
 
