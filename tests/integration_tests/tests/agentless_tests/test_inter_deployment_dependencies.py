@@ -85,9 +85,11 @@ class TestInterDeploymentDependenciesInfrastructure(AgentlessTestCase):
                                client=self.client)
         self._assert_dependencies_count(0)
 
+    @pytest.mark.xfail  # RD-5336
     def test_dependencies_are_updated(self):
         self._test_dependencies_are_updated(skip_uninstall=False)
 
+    @pytest.mark.xfail  # RD-5336
     def test_dependencies_are_updated_but_keeps_old_dependencies(self):
         self._test_dependencies_are_updated(skip_uninstall=True)
 
