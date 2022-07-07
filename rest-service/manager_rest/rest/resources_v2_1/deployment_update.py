@@ -76,11 +76,13 @@ class DeploymentUpdate(SecuredResource):
     def _initiate(self, deployment_id):
         sm = get_storage_manager()
         rm = get_resource_manager()
-        skip_install, skip_uninstall, skip_reinstall, workflow_id, \
-            ignore_failure, install_first, preview, update_plugins, \
-            runtime_eval, auto_correct_args, reevaluate_active_statuses, \
-            force = \
-            self._parse_args(deployment_id, request.json)
+
+        preview = verify_and_convert_bool(
+            'preview', request.json.get('preview', False))
+        runtime_eval = request.json.get('runtime_only_evaluation')
+        force = verify_and_convert_bool(
+            'force', request.json.get('force', False))
+
         with sm.transaction():
             blueprint, inputs, reinstall_list = \
                 self._get_and_validate_blueprint_and_inputs(deployment_id,
@@ -102,14 +104,44 @@ class DeploymentUpdate(SecuredResource):
             )
             execution_args = {
                 'update_id': dep_up.id,
-                'preview': preview,
-                'ignore_failure': ignore_failure,
-                'skip_install': skip_install,
-                'skip_reinstall': skip_reinstall,
-                'skip_uninstall': skip_uninstall,
-                'workflow_id': workflow_id,
                 'blueprint_id': blueprint.id,
                 'inputs': inputs,
+                'preview': preview,
+                'runtime_only_evaluation': runtime_eval,
+                'force': force,
+                'skip_install': verify_and_convert_bool(
+                    'skip_install',
+                    request.json.get('skip_install', False),
+                ),
+                'skip_uninstall': verify_and_convert_bool(
+                    'skip_uninstall',
+                    request.json.get('skip_uninstall', False),
+                ),
+                'skip_reinstall': verify_and_convert_bool(
+                    'skip_reinstall',
+                    request.json.get('skip_reinstall', False),
+                ),
+                'ignore_failure': verify_and_convert_bool(
+                    'ignore_failure',
+                    request.json.get('ignore_failure', False),
+                ),
+                'install_first': verify_and_convert_bool(
+                    'install_first',
+                    request.json.get('install_first', False),
+                ),
+                'workflow_id': request.json.get('workflow_id', None),
+                'update_plugins': verify_and_convert_bool(
+                    'update_plugins',
+                    request.json.get('update_plugins', True)
+                ),
+                'auto_correct_types': verify_and_convert_bool(
+                    'auto_correct_types',
+                    request.json.get('auto_correct_types', False),
+                ),
+                'reevaluate_active_statuses': verify_and_convert_bool(
+                    'reevaluate_active_statuses',
+                    request.json.get('reevaluate_active_statuses', False),
+                ),
             }
             update_exec = models.Execution(
                 deployment=deployment,
@@ -158,56 +190,6 @@ class DeploymentUpdate(SecuredResource):
             blueprint = get_storage_manager().get(models.Blueprint,
                                                   blueprint_id)
         return blueprint, inputs, reinstall_list
-
-    @staticmethod
-    def _parse_args(deployment_id, request_json, using_post_request=False):
-        skip_install = verify_and_convert_bool(
-            'skip_install',
-            request_json.get('skip_install', False))
-        skip_uninstall = verify_and_convert_bool(
-            'skip_uninstall',
-            request_json.get('skip_uninstall', False))
-        skip_reinstall = verify_and_convert_bool(
-            'skip_reinstall',
-            request_json.get('skip_reinstall', using_post_request))
-        ignore_failure = verify_and_convert_bool(
-            'ignore_failure',
-            request_json.get('ignore_failure', False))
-        install_first = verify_and_convert_bool(
-            'install_first',
-            request_json.get('install_first', using_post_request))
-        preview = not using_post_request and verify_and_convert_bool(
-            'preview',
-            request_json.get('preview', False))
-        workflow_id = request_json.get('workflow_id', None)
-        update_plugins = verify_and_convert_bool(
-            'update_plugins',
-            request_json.get('update_plugins', True))
-        runtime_only_evaluation = request_json.get('runtime_only_evaluation')
-        auto_correct_types = verify_and_convert_bool(
-            'auto_correct_types',
-            request_json.get('auto_correct_types', False)
-        )
-        reevaluate_active_statuses = verify_and_convert_bool(
-            'reevaluate_active_statuses',
-            request_json.get('reevaluate_active_statuses', False)
-        )
-        force = verify_and_convert_bool(
-            'force',
-            request_json.get('force', False)
-        )
-        return (skip_install,
-                skip_uninstall,
-                skip_reinstall,
-                workflow_id,
-                ignore_failure,
-                install_first,
-                preview,
-                update_plugins,
-                runtime_only_evaluation,
-                auto_correct_types,
-                reevaluate_active_statuses,
-                force)
 
 
 class DeploymentUpdateId(SecuredResource):
