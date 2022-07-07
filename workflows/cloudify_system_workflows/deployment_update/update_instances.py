@@ -88,11 +88,20 @@ def _can_be_updated(instance):
     If this instance defines an update operation, it can be updated. Otherwise,
     we'll need to fall back to reinstalling it.
     """
-    return any(instance.node.has_operation(op) for op in [
-        'cloudify.interfaces.lifecycle.update',
-        'cloudify.interfaces.lifecycle.update_config',
-        'cloudify.interfaces.lifecycle.update_apply',
-    ])
+    system_props = instance.system_properties
+    drift = system_props.get('configuration_drift') or {}
+    has_own_drift = bool(drift.get('result'))
+
+    if has_own_drift:
+        return any(instance.node.has_operation(op) for op in [
+            'cloudify.interfaces.lifecycle.update',
+            'cloudify.interfaces.lifecycle.update_config',
+            'cloudify.interfaces.lifecycle.update_apply',
+        ])
+    # the instance doesn't have its own drift, so it must have relationships
+    # drift. No need to reinstall it, let's only run the relationship update
+    # operations
+    return True
 
 
 def _find_update_failed_instances(ctx, instances):
@@ -123,6 +132,40 @@ def _clean_updated_property(ctx, instances):
             system_properties=system_properties
         )
 
+def _mark_instance_drifted(ctx, instance):
+    system_properties = instance.system_properties or {}
+    system_properties['configuration_drift'] = {
+        'ok': True,
+        'result': True,
+        'task': None,
+    }
+    ctx.update_node_instance(
+        instance.id,
+        force=True,
+        system_properties=system_properties
+    )
+
+def _clean_drift(ctx, instance):
+    """Remove all notion of drift from the given instance.
+
+    This is to be run after a reinstall, where a node-instance is considered
+    fresh and clean and not drifted.
+    """
+    system_properties = instance.system_properties or {}
+    had_drift = False
+    for source in [
+        'configuration_drift',
+        'source_relationships_configuration_drift',
+        'target_relationships_configuration_drift',
+    ]:
+        had_drift = had_drift or system_properties.pop(source, None)
+    if had_drift:
+        # only update if there's an actual difference
+        ctx.update_node_instance(
+            instance.id,
+            force=True,
+            system_properties=system_properties
+        )
 
 def update_or_reinstall_instances(
     ctx,
@@ -146,23 +189,28 @@ def update_or_reinstall_instances(
 
     must_reinstall = set()
     instances_with_drift = set()
-    if instances_with_check_drift:
-        clear_graph(graph)
-        instances_with_drift, failed_check = _do_check_drift(
-            ctx, instances_with_check_drift)
-        for instance in failed_check:
-            must_reinstall |= instance.get_contained_subgraph()
 
-    # instances that we know have changed, but don't define a way to check
-    # drift, are considered to have drifted by default
-    instances_with_drift |= changed_instances - instances_with_check_drift
+    clear_graph(graph)
+    instances_with_drift, failed_check = _do_check_drift(
+        ctx, set(ctx.node_instances) - to_skip)
+    for instance in failed_check:
+        must_reinstall |= instance.get_contained_subgraph()
+
+    # instances that we know have changed, but didn't declare check_drift:
+    # mark them as drifted anyway, so that the update graph can run the update
+    # operations on them
+    fake_drift_instances = changed_instances - instances_with_check_drift
+    for instance in fake_drift_instances:
+        _mark_instance_drifted(ctx, instance)
+        instances_with_drift.add(instance)
+
     for instance in instances_with_drift:
         if instance in must_reinstall:
             continue
         if not _can_be_updated(instance):
             must_reinstall |= instance.get_contained_subgraph()
-
     instances_to_update = instances_with_drift - must_reinstall
+
     if instances_to_update:
         intact_nodes = set(workflow_ctx.node_instances) - instances_to_update
         clear_graph(graph)
@@ -196,3 +244,10 @@ def update_or_reinstall_instances(
             related_nodes=intact_nodes,
             ignore_failure=ignore_failure
         )
+        # no need to clear fake here, we'll clean them unconditionally
+        for instance in must_reinstall - fake_drift_instances:
+            _clean_drift(ctx, instance)
+
+    # for those instances, we set a "fake" drift marker, so let's clean it up
+    for instance in fake_drift_instances:
+        _clean_drift(ctx, instance)
