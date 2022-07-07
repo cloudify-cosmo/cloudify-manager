@@ -169,7 +169,7 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
                                          'Please refer to the documentation '
                                          'for valid forms of '
                                          'versions'.format(versions, name))
-        plugins = self._sm.list(Plugin, filters=filters, get_all_results=True)
+        plugins = self._sm.list(Plugin, filters=filters)
         if not plugins:
             if version_specified:
                 filters['package_version'] = versions

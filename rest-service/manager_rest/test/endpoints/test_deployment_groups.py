@@ -1022,54 +1022,6 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
         assert execution.workflow_id == 'install'
         assert execution.deployment_id == 'dep1'
 
-    def test_list_groups_count(self):
-        group1 = models.ExecutionGroup(
-            id='group1',
-            workflow_id='workflow',
-            creator=self.user,
-            tenant=self.tenant,
-        )
-        group2 = models.ExecutionGroup(
-            id='group2',
-            workflow_id='workflow',
-            creator=self.user,
-            tenant=self.tenant,
-        )
-        group1.executions = [
-            models.Execution(
-                id='exc1',
-                workflow_id='workflow',
-                creator=self.user,
-                tenant=self.tenant,
-            ),
-            models.Execution(
-                id='exc2',
-                workflow_id='workflow',
-                creator=self.user,
-                tenant=self.tenant,
-            ),
-        ]
-        group2.executions = [
-            models.Execution(
-                id='exc3',
-                workflow_id='workflow',
-                creator=self.user,
-                tenant=self.tenant,
-            ),
-            models.Execution(
-                id='exc4',
-                workflow_id='workflow',
-                creator=self.user,
-                tenant=self.tenant,
-            ),
-        ]
-        groups = self.client.execution_groups.list(
-            _include=['id', 'execution_ids'],
-            _get_data=True,
-        )
-        # before RD-5334, this used to return 4 (because there's 4 executions)
-        assert groups.metadata.pagination.total == 2
-
     def test_get_events(self):
         """Get events by group id.
 
