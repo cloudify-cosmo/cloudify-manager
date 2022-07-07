@@ -70,17 +70,15 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
                 base_nodes,
                 modified_nodes,
                 keys=['stagnant', 'added_relationship', 'new'],
-                excluded_items=['runtime_properties',
-                                'plugins',
-                                'relationships']
+                excluded_items=['plugins', 'relationships']
         )
 
         self._assert_equal_entity_dicts(
                 base_node_instances,
                 modified_node_instances,
                 keys=['stagnant', 'added_relationship', 'new'],
-                excluded_items=['runtime_properties',
-                                'relationships']
+                excluded_items=
+                ['runtime_properties', 'relationships', 'system_properties']
         )
 
         # Check that there is only 1 from each

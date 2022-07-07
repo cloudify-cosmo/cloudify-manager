@@ -62,14 +62,13 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
             base_nodes,
             unmodified_nodes,
             keys=['remove_related', 'removed'],
-            excluded_items=['runtime_properties']
         )
 
         self._assert_equal_entity_dicts(
             base_node_instances,
             unmodified_node_instances,
             keys=['remove_related', 'removed'],
-            excluded_items=['runtime_properties']
+            excluded_items=['runtime_properties', 'system_properties'],
         )
 
         # assert that node and node instance were not removed from storage
@@ -86,13 +85,12 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
                 base_nodes,
                 modified_nodes,
                 keys=['remove_related', 'removed'],
-                excluded_items=['runtime_properties']
         )
         self._assert_equal_entity_dicts(
                 base_node_instances,
                 modified_node_instances,
                 keys=['remove_related', 'removed'],
-                excluded_items=['runtime_properties']
+                excluded_items=['runtime_properties', 'system_properties'],
         )
 
         # assert that node and node instance were removed from storage
@@ -206,14 +204,15 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
                 base_nodes,
                 modified_nodes,
                 keys=['related', 'target', 'source'],
-                excluded_items=['runtime_properties', 'relationships']
+                excluded_items=['relationships']
         )
 
         self._assert_equal_entity_dicts(
                 base_node_instances,
                 modified_node_instances,
                 keys=['related', 'target', 'source'],
-                excluded_items=['runtime_properties', 'relationships']
+                excluded_items=
+                ['runtime_properties', 'relationships', 'system_properties']
         )
 
         # Check that there is only 1 from each
@@ -321,7 +320,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
                 base_node_instances,
                 modified_node_instances,
                 keys=['target', 'source'],
-                excluded_items=['relationships']
+                excluded_items=['relationships', 'system_properties']
         )
 
         # Check that there is only 1 from each

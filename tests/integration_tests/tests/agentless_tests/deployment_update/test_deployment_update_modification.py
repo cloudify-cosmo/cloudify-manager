@@ -101,7 +101,7 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
                 base_node_instances,
                 modified_node_instances,
                 keys=['target', 'frozen', 'modified'],
-                excluded_items=['relationships']
+                excluded_items=['relationships', 'system_properties']
         )
 
         # get the nodes and node instances
@@ -213,7 +213,7 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
                 base_node_instances,
                 modified_node_instances,
                 keys=['modified'],
-                excluded_items=['runtime_properties']
+                excluded_items=['runtime_properties', 'system_properties'],
         )
 
         affected_lifecycle_operation = modified_node['operations'].get(
@@ -268,7 +268,8 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
                 base_node_instances,
                 modified_node_instances,
                 keys=['target', 'source'],
-                excluded_items=['relationships', 'runtime_properties']
+                excluded_items=
+                ['relationships', 'runtime_properties', 'system_properties']
         )
 
         # Check that there is only 1 from each

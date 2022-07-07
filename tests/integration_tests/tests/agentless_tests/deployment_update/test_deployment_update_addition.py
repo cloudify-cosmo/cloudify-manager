@@ -78,14 +78,14 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
                 base_nodes,
                 unmodified_nodes,
                 keys=['intact', 'added'],
-                excluded_items=['runtime_properties', 'plugins']
+                excluded_items=['plugins']
             )
 
             self._assert_equal_entity_dicts(
                 base_node_instances,
                 unmodified_node_instances,
                 keys=['intact', 'added'],
-                excluded_items=['runtime_properties']
+                excluded_items=['runtime_properties', 'system_properties']
             )
 
             # assert that node and node instance were not added to storage
@@ -102,14 +102,14 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
                     base_nodes,
                     modified_nodes,
                     keys=['intact', 'added'],
-                    excluded_items=['runtime_properties', 'plugins']
+                    excluded_items=['plugins']
             )
 
             self._assert_equal_entity_dicts(
                     base_node_instances,
                     modified_node_instances,
                     keys=['intact', 'added'],
-                    excluded_items=['runtime_properties']
+                    excluded_items=['runtime_properties', 'system_properties'],
             )
 
             # assert that node and node instance were added to storage
@@ -224,7 +224,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
                 base_node_instances,
                 modified_node_instances,
                 keys=['modified'],
-                excluded_items=['runtime_properties']
+                excluded_items=['runtime_properties', 'system_properties']
         )
 
         affected_lifecycle_operation = \
@@ -267,7 +267,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
                 base_node_instances,
                 modified_node_instances,
                 keys=['intact'],
-                excluded_items=['runtime_properties']
+                excluded_items=['runtime_properties', 'system_properties']
         )
 
         # assert that node and node instance were added to storage
@@ -329,16 +329,15 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
                 base_nodes,
                 modified_nodes,
                 keys=['related', 'target', 'source'],
-                excluded_items=['runtime_properties',
-                                'plugins',
-                                'relationships']
+                excluded_items=['plugins', 'relationships']
         )
 
         self._assert_equal_entity_dicts(
                 base_node_instances,
                 modified_node_instances,
                 keys=['related', 'target', 'source'],
-                excluded_items=['runtime_properties', 'relationships']
+                excluded_items=
+                ['runtime_properties', 'relationships', 'system_properties']
         )
 
         # Check that there is only 1 from each
@@ -434,7 +433,8 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
                 base_node_instances,
                 modified_node_instances,
                 keys=['target', 'source'],
-                excluded_items=['relationships', 'runtime_properties']
+                excluded_items=
+                ['relationships', 'runtime_properties', 'system_properties']
         )
 
         # Check that there is only 1 from each
