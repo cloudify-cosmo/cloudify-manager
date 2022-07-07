@@ -1,5 +1,6 @@
 import os
 
+from cloudify.constants import NODE_INSTANCE, RELATIONSHIP_INSTANCE
 from cloudify.exceptions import NonRecoverableError
 from cloudify.workflows import local
 
@@ -75,10 +76,12 @@ def test_update_operation(subtests):
     dep_env.execute('update', parameters={'update_id': 'update1'})
 
     for ni in dep_env.storage.get_node_instances():
+        # if ni.node_id != 'n2':
+        #     continue
         with subtests.test(ni.node_id):
             node = dep_env.storage.get_node(ni.node_id)
             actual_calls = ni.runtime_properties.get('invocations', [])
-            expected_calls = node.properties['expected_calls']
+            expected_calls = node.properties.get('expected_calls') or []
             assert actual_calls == expected_calls
 
 
@@ -87,12 +90,25 @@ def op(ctx, return_value=None, fail=False):
 
     Store the call in runtime-properties, and return the given value, or fail.
     """
-    if 'invocations' not in ctx.instance.runtime_properties:
-        ctx.instance.runtime_properties['invocations'] = []
-    name = ctx.operation.name.split('.')[-1]
-    invocations = ctx.instance.runtime_properties['invocations']
+    if ctx.type == RELATIONSHIP_INSTANCE:
+        if ctx._context['related']['is_target']:
+            prefix = 'target_'
+            instance = ctx.target.instance
+        else:
+            prefix = 'source_'
+            instance = ctx.source.instance
+    elif ctx.type == NODE_INSTANCE:
+        instance = ctx.instance
+        prefix = ''
+    else:
+        raise NonRecoverableError(f'unknown ctx.type: {ctx.type}')
+
+    if 'invocations' not in instance.runtime_properties:
+        instance.runtime_properties['invocations'] = []
+    name = prefix + ctx.operation.name.split('.')[-1]
+    invocations = instance.runtime_properties['invocations']
     invocations.append(name)
-    ctx.instance.runtime_properties['invocations'] = invocations
+    instance.runtime_properties['invocations'] = invocations
     if fail:
         raise NonRecoverableError()
     return return_value
