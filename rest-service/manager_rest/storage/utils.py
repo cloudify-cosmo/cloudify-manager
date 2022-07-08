@@ -1,6 +1,7 @@
 from collections import OrderedDict
 
 from manager_rest.storage.models_base import is_orm_attribute
+from manager_rest.storage import models
 
 
 def get_column(model_class, column_name):
@@ -31,9 +32,17 @@ def get_joins(model_class, columns):
 
     :param columns: A set of all columns involved in the query
     """
+
+    model_rel_problems = model_class in [models.ExecutionGroup,
+                                         models.DeploymentGroup]
+
     # Using an ordered dict because the order of the joins is important
     joins = OrderedDict()
     for column_name in columns:
+        if model_rel_problems and column_name == 'execution_ids':
+            # Don't include lazy-loaded many-many columns in joins or the row
+            # count will be thrown off and cause issues with limits/etc
+            continue
         column = getattr(model_class, column_name, None)
         if column is None:
             # This is some sort of derived thing like tenant_roles in User
