@@ -109,40 +109,24 @@ class DeploymentUpdate(SecuredResource):
                 'preview': preview,
                 'runtime_only_evaluation': runtime_eval,
                 'force': force,
-                'skip_install': verify_and_convert_bool(
-                    'skip_install',
-                    request.json.get('skip_install', False),
-                ),
-                'skip_uninstall': verify_and_convert_bool(
-                    'skip_uninstall',
-                    request.json.get('skip_uninstall', False),
-                ),
-                'skip_reinstall': verify_and_convert_bool(
-                    'skip_reinstall',
-                    request.json.get('skip_reinstall', False),
-                ),
-                'ignore_failure': verify_and_convert_bool(
-                    'ignore_failure',
-                    request.json.get('ignore_failure', False),
-                ),
-                'install_first': verify_and_convert_bool(
-                    'install_first',
-                    request.json.get('install_first', False),
-                ),
                 'workflow_id': request.json.get('workflow_id', None),
-                'update_plugins': verify_and_convert_bool(
-                    'update_plugins',
-                    request.json.get('update_plugins', True)
-                ),
-                'auto_correct_types': verify_and_convert_bool(
-                    'auto_correct_types',
-                    request.json.get('auto_correct_types', False),
-                ),
-                'reevaluate_active_statuses': verify_and_convert_bool(
-                    'reevaluate_active_statuses',
-                    request.json.get('reevaluate_active_statuses', False),
-                ),
             }
+            # boolean params
+            for name, default in [
+                ('reevaluate_active_statuses', False),
+                ('auto_correct_types', False),
+                ('update_plugins', True),
+                ('install_first', False),
+                ('ignore_failure', False),
+                ('skip_reinstall', False),
+                ('skip_uninstall', False),
+                ('skip_install', False),
+            ]:
+                execution_args[name] = verify_and_convert_bool(
+                    name,
+                    request.json.get(name, default),
+                )
+
             update_exec = models.Execution(
                 deployment=deployment,
                 workflow_id='update',
