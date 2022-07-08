@@ -1,0 +1,60 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - minimal_types.yaml
+
+inputs:
+  inp1: {}
+
+node_types:
+  t1:
+    properties:
+      expected_calls:
+        type: list
+      prop1:
+        default: prop1_default
+
+
+node_templates:
+  # n1 has a check_drift, which would say there's no drift, but we skip drift check
+  # so update still runs, because the property prop1 changed
+  n1:
+    type: t1
+    properties:
+      expected_calls:
+        - update
+      prop1: {get_input: inp1}
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        check_drift:
+          implementation: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+        update:
+          implementation: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+
+  # n2 has a check_drift, which would say there's no drift, but we skip drift check
+  # so update doesn't run
+  n2:
+    type: t1
+    properties:
+      expected_calls: []
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        check_drift:
+          implementation: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+        update:
+          implementation: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+
+  # n3 has a check_drift, which would say there is drift, but we skip drift check
+  # so update doesn't run
+  n3:
+    type: t1
+    properties:
+      expected_calls: []
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        check_drift:
+          implementation: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+          inputs:
+            return_value: {drift: true}
+        update:
+          implementation: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
