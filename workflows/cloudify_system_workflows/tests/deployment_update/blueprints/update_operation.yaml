@@ -242,17 +242,118 @@ node_templates:
                 fail: true
             update: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
 
-  n11_rel_target:
+  # n11 defines a check_status, which will be called prior to updating
+  n11:
+    type: t1
+    properties:
+      expected_calls:
+        - check_drift
+        - check_status
+        - update
+    interfaces:
+      cloudify.interfaces.validation:
+        check_status: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+      cloudify.interfaces.lifecycle:
+        check_drift:
+          implementation: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+          inputs:
+            return_value: {drift: true}
+        update: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+
+  # n12 defines a check_status, but check_drift returns no drift, so no need to
+  # check the status, because n12 won't be updated anyway
+  n12:
+    type: t1
+    properties:
+      expected_calls:
+        - check_drift
+    interfaces:
+      cloudify.interfaces.validation:
+        check_status: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+      cloudify.interfaces.lifecycle:
+        check_drift: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+        update: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+
+  # n13 defines a check_status that fails, but it also has a heal that succeeds,
+  # so update can proceed
+  n13:
+    type: t1
+    properties:
+      expected_calls:
+        - check_drift
+        - check_status
+        - heal
+        - update
+    interfaces:
+      cloudify.interfaces.validation:
+        check_status:
+          implementation: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+          inputs:
+            fail: true
+      cloudify.interfaces.lifecycle:
+        check_drift:
+          implementation: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+          inputs:
+            return_value: {drift: true}
+        heal: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+        update: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+
+  # n14 defines a check_status that fails, and it has a heal that also fails;
+  # update cannot proceed (even though it is defined) and so we must reinstall
+  n14:
+    type: t1
+    properties:
+      expected_calls:
+        - check_drift
+        - check_status
+        - heal
+        - create
+    interfaces:
+      cloudify.interfaces.validation:
+        check_status:
+          implementation: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+          inputs:
+            fail: true
+      cloudify.interfaces.lifecycle:
+        check_drift:
+          implementation: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+          inputs:
+            return_value: {drift: true}
+        heal:
+          implementation: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+          inputs:
+            fail: true
+        update: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+        create: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+
+  # n15 doesn't define a check_status, so heal is not called
+  n15:
+    type: t1
+    properties:
+      expected_calls:
+        - check_drift
+        - update
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        check_drift:
+          implementation: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+          inputs:
+            return_value: {drift: true}
+        heal: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+        update: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+        create: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+
+  node_all_operations_rel_target:
     type: t1
     properties:
       expected_calls:
         - target_check_drift
         - target_update
 
-  # n11 reports drift on both itself, and its relationship, and has all the update
-  # interfaces run.
+  # node_all_operations reports drift on both itself, and its relationship,
+  # and has all the update interfaces run.
   # This node just showcases _all_ the relevant operations.
-  n11:
+  node_all_operations:
     type: t1
     properties:
       expected_calls:
@@ -278,7 +379,7 @@ node_templates:
         update_apply: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
         update_postapply: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
     relationships:
-      - target: n11_rel_target
+      - target: node_all_operations_rel_target
         type: cloudify.relationships.depends_on
         source_interfaces:
           cloudify.interfaces.relationship_lifecycle:

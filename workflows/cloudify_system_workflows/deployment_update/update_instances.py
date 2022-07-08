@@ -217,6 +217,41 @@ def update_or_reinstall_instances(ctx, graph, dep_up, install_params):
     if instances_to_update:
         intact_nodes = set(workflow_ctx.node_instances) - instances_to_update
         clear_graph(graph)
+        if not install_params.skip_heal:
+            # TODO factor healing out, to make this function shorter
+            status_graph = workflows._make_check_status_graph(
+                ctx,
+                node_instance_ids=[ni.id for ni in instances_to_update],
+                name='check_status',
+                ignore_failure=True,
+            )
+            status_graph.execute()
+
+            ctx.refresh_node_instances()
+            healthy_instances = workflows._find_healthy_instances(
+                instances_to_update)
+            to_heal, to_reinstall = workflows._find_instances_to_heal(
+                instances_to_update,
+                healthy_instances,
+            )
+            must_reinstall |= to_reinstall
+            instances_to_update -= to_reinstall
+            lifecycle.heal_node_instances(
+                graph=graph,
+                node_instances=list(to_heal),
+                related_nodes=set(ctx.node_instances) - to_heal,
+                ignore_failure=True,
+            )
+
+            ctx.refresh_node_instances()
+            failed_heal = workflows._find_heal_failed_instances(
+                ctx,
+                {ctx.get_node_instance(ni.id) for ni in to_heal},
+            )
+            workflows._clean_healed_property(ctx, failed_heal)
+            must_reinstall |= failed_heal
+            instances_to_update -= failed_heal
+
         lifecycle.update_node_instances(
             graph=graph,
             node_instances=instances_to_update,

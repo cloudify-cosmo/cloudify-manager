@@ -123,6 +123,7 @@ class DeploymentUpdate(SecuredResource):
                 ('skip_install', False),
                 ('skip_drift_check', False),
                 ('force_reinstall', False),
+                ('skip_heal', False),
             ]:
                 execution_args[name] = verify_and_convert_bool(
                     name,

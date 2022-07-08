@@ -744,6 +744,7 @@ class InstallParameters:
     skip_reinstall: bool
     skip_drift_check: bool
     force_reinstall: bool
+    skip_heal: bool
 
     def __init__(self, ctx, update_params, dep_update):
         self._update_instances = dep_update['deployment_update_node_instances']
@@ -777,6 +778,7 @@ class InstallParameters:
             ('skip_reinstall', False),
             ('skip_drift_check', False),
             ('force_reinstall', False),
+            ('skip_heal', False),
         ]:
             setattr(self, param, update_params.get(param, default))
 
