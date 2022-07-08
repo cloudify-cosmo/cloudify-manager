@@ -170,16 +170,9 @@ def _clean_drift(ctx, instance):
         )
 
 
-def update_or_reinstall_instances(
-    ctx,
-    graph,
-    dep_up,
-    to_install,
-    to_uninstall,
-    ignore_failure=False,
-    skip_reinstall=False,
-):
-    to_skip = set(to_install) | set(to_uninstall)
+def update_or_reinstall_instances(ctx, graph, dep_up, install_params):
+    to_skip = set(install_params.added_instances) \
+              | set(install_params.removed_instances)
     consider_for_update = set(workflow_ctx.node_instances) - to_skip
     changed_instances = _find_changed_instances(dep_up.steps)
     instances_with_check_drift = {
@@ -229,13 +222,14 @@ def update_or_reinstall_instances(
         _clean_updated_property(ctx, failed_update)
         must_reinstall |= failed_update
 
-    if must_reinstall and not skip_reinstall:
+    must_reinstall -= set(install_params.skip_reinstall)
+    if must_reinstall:
         intact_nodes = (
             set(workflow_ctx.node_instances)
             - must_reinstall
-            - set(to_uninstall)
+            - set(install_params.removed_instances)
         )
-        uninstall_ids = {ni.id for ni in to_uninstall}
+        uninstall_ids = {ni.id for ni in install_params.removed_instances}
         for n in must_reinstall:
             for r in n._relationship_instances:
                 if r in uninstall_ids:
@@ -245,7 +239,7 @@ def update_or_reinstall_instances(
             graph=graph,
             node_instances=must_reinstall,
             related_nodes=intact_nodes,
-            ignore_failure=ignore_failure
+            ignore_failure=install_params.ignore_failure,
         )
         # no need to clear fake here, we'll clean them unconditionally
         for instance in must_reinstall - fake_drift_instances:

@@ -876,10 +876,7 @@ def _execute_deployment_update(ctx, update_id, install_params):
         ctx,
         graph,
         dep_up,
-        install_params.added_instances,
-        install_params.removed_instances,
-        ignore_failure=install_params.ignore_failure,
-        skip_reinstall=install_params.skip_reinstall,
+        install_params,
     )
 
 
