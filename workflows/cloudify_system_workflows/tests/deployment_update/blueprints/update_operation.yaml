@@ -326,6 +326,23 @@ node_templates:
         update: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
         create: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
 
+  # n15 doesn't define a check_status, so heal is not called
+  n15:
+    type: t1
+    properties:
+      expected_calls:
+        - check_drift
+        - update
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        check_drift:
+          implementation: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+          inputs:
+            return_value: {drift: true}
+        heal: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+        update: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+        create: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+
   node_all_operations_rel_target:
     type: t1
     properties:
