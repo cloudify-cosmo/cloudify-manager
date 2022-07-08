@@ -189,7 +189,7 @@ def update_or_reinstall_instances(ctx, graph, dep_up, install_params):
         }
         clear_graph(graph)
         instances_with_drift, failed_check = _do_check_drift(
-            ctx, set(ctx.node_instances) - to_skip)
+            ctx, consider_for_update - to_skip)
         for instance in failed_check:
             must_reinstall |= instance.get_contained_subgraph()
     else:
@@ -225,6 +225,7 @@ def update_or_reinstall_instances(ctx, graph, dep_up, install_params):
         _clean_updated_property(ctx, failed_update)
         must_reinstall |= failed_update
 
+    must_reinstall -= to_skip
     if must_reinstall and not install_params.skip_reinstall:
         intact_nodes = (
             set(workflow_ctx.node_instances)
