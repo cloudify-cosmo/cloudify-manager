@@ -1,0 +1,31 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - minimal_types.yaml
+
+inputs:
+  inp1: {}
+
+node_types:
+  t1:
+    properties:
+      expected_calls:
+        type: list
+      prop1:
+        default: prop1_default
+
+
+node_templates:
+  # n1 has update defined, but with force_reinstall, we'll run create anyway
+  n1:
+    type: t1
+    properties:
+      expected_calls:
+        - create
+      prop1: {get_input: inp1}
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        update:
+          implementation: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+        create:
+          implementation: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
