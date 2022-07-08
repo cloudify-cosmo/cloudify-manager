@@ -1,5 +1,7 @@
 import os
 
+import pytest
+
 from cloudify.constants import NODE_INSTANCE, RELATIONSHIP_INSTANCE
 from cloudify.exceptions import NonRecoverableError
 from cloudify.workflows import local
@@ -60,20 +62,27 @@ def test_change_property():
     assert node.properties['prop1'] == 'value2'
 
 
-def test_update_operation(subtests):
+@pytest.mark.parametrize('blueprint_filename,parameters', [
+    ('update_operation.yaml', {}),
+    ('skip_drift_check.yaml', {
+        'skip_drift_check': True,
+    }),
+])
+def test_update_operation(subtests, blueprint_filename, parameters):
     """Test the update instances flow.
 
     This function is essentially just the driver code, and the actual cases
     and expectations are encoded in the blueprint itself.
     """
-    storage = deploy('update_operation.yaml', resource_id='d1', inputs={
+    storage = deploy(blueprint_filename, resource_id='d1', inputs={
         'inp1': 'value1',
     })
     dep_env = local.load_env('d1', storage)
     storage.create_deployment_update('d1', 'update1', {
         'new_inputs': {'inp1': 'value2'}
     })
-    dep_env.execute('update', parameters={'update_id': 'update1'})
+    parameters['update_id'] = 'update1'
+    dep_env.execute('update', parameters=parameters)
 
     for ni in dep_env.storage.get_node_instances():
         # if ni.node_id != 'n2':

@@ -8,3 +8,6 @@ workflows:
     parameters:
       update_id:
         default: ''
+      skip_drift_check:
+        type: boolean
+        default: false
