@@ -742,6 +742,7 @@ class InstallParameters:
 
     ignore_failure: bool
     skip_reinstall: bool
+    skip_drift_check: bool
 
     def __init__(self, ctx, update_params, dep_update):
         self._update_instances = dep_update['deployment_update_node_instances']
@@ -773,6 +774,7 @@ class InstallParameters:
             ('skip_install', False),
             ('skip_uninstall', False),
             ('skip_reinstall', False),
+            ('skip_drift_check', False),
         ]:
             setattr(self, param, update_params.get(param, default))
 

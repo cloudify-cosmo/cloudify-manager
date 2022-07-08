@@ -175,22 +175,25 @@ def update_or_reinstall_instances(ctx, graph, dep_up, install_params):
               | set(install_params.removed_instances)
     consider_for_update = set(workflow_ctx.node_instances) - to_skip
     changed_instances = _find_changed_instances(dep_up.steps)
-    instances_with_check_drift = {
-        instance
-        for instance in consider_for_update
-        if instance.node.has_operation(
-            'cloudify.interfaces.lifecycle.check_drift'
-        )
-    }
 
     must_reinstall = set()
     instances_with_drift = set()
 
-    clear_graph(graph)
-    instances_with_drift, failed_check = _do_check_drift(
-        ctx, set(ctx.node_instances) - to_skip)
-    for instance in failed_check:
-        must_reinstall |= instance.get_contained_subgraph()
+    if not install_params.skip_drift_check:
+        instances_with_check_drift = {
+            instance
+            for instance in consider_for_update
+            if instance.node.has_operation(
+                'cloudify.interfaces.lifecycle.check_drift'
+            )
+        }
+        clear_graph(graph)
+        instances_with_drift, failed_check = _do_check_drift(
+            ctx, set(ctx.node_instances) - to_skip)
+        for instance in failed_check:
+            must_reinstall |= instance.get_contained_subgraph()
+    else:
+        instances_with_check_drift = set()
 
     # instances that we know have changed, but didn't declare check_drift:
     # mark them as drifted anyway, so that the update graph can run the update
@@ -241,8 +244,9 @@ def update_or_reinstall_instances(ctx, graph, dep_up, install_params):
             ignore_failure=install_params.ignore_failure,
         )
         # no need to clear fake here, we'll clean them unconditionally
-        for instance in must_reinstall - fake_drift_instances:
-            _clean_drift(ctx, instance)
+        if not install_params.skip_drift_check:
+            for instance in must_reinstall - fake_drift_instances:
+                _clean_drift(ctx, instance)
 
     # for those instances, we set a "fake" drift marker, so let's clean it up
     for instance in fake_drift_instances:
