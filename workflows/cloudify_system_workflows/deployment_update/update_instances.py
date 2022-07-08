@@ -222,8 +222,7 @@ def update_or_reinstall_instances(ctx, graph, dep_up, install_params):
         _clean_updated_property(ctx, failed_update)
         must_reinstall |= failed_update
 
-    must_reinstall -= set(install_params.skip_reinstall)
-    if must_reinstall:
+    if must_reinstall and not install_params.skip_reinstall:
         intact_nodes = (
             set(workflow_ctx.node_instances)
             - must_reinstall
