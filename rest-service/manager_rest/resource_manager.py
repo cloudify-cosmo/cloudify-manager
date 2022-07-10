@@ -581,7 +581,8 @@ class ResourceManager(object):
                         include_logs,
                         include_events,
                         bypass_maintenance,
-                        queue):
+                        queue,
+                        tempdir_path):
 
         self.create_snapshot_model(snapshot_id)
         try:
@@ -592,7 +593,8 @@ class ResourceManager(object):
                     'include_credentials': include_credentials,
                     'include_logs': include_logs,
                     'include_events': include_events,
-                    'config': self._get_conf_for_snapshots_wf()
+                    'config': self._get_conf_for_snapshots_wf(),
+                    'tempdir_path': tempdir_path,
                 },
                 is_system_workflow=True,
                 status=ExecutionState.PENDING,

@@ -20,18 +20,20 @@ class SnapshotCreate(object):
                  config,
                  include_credentials,
                  include_logs,
-                 include_events):
+                 include_events,
+                 tempdir_path=None):
         self._snapshot_id = snapshot_id
         self._config = utils.DictToAttributes(config)
         self._include_credentials = include_credentials
         self._include_logs = include_logs
         self._include_events = include_events
-
+        self._tempdir_path = tempdir_path
         self._tempdir = None
         self._client = get_rest_client()
 
     def create(self):
-        self._tempdir = tempfile.mkdtemp('-snapshot-data')
+        self._tempdir = tempfile.mkdtemp('-snapshot-data',
+                                         dir=self._tempdir_path)
         metadata = dict()
         try:
             manager_version = utils.get_manager_version(self._client)
