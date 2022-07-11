@@ -734,7 +734,8 @@ class UploadedPluginsManager(UploadedDataManager):
                                                       uploaded_at)
         filter_by_name = {'package_name': new_plugin.package_name}
         sm = get_resource_manager().sm
-        plugins = sm.list(Plugin, filters=filter_by_name)
+        plugins = sm.list(Plugin, filters=filter_by_name,
+                          include=['archive_name'], get_all_results=True)
         if creator:
             new_plugin.creator = creator
 
