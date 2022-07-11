@@ -260,7 +260,7 @@ class PluginsId(resources_v2_1.PluginsId):
         else:
             raise manager_exceptions.UnknownAction(action_dict.get('action'))
 
-    @authorize('plugin_upload')
+    @authorize('plugin_upload', allow_if_execution=True)
     def put(self, plugin_id, **kwargs):
         """Update the plugin, specifically the installation state.
 
