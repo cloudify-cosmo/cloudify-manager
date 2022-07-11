@@ -13,6 +13,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from flask_security import current_user
+
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
@@ -120,7 +122,11 @@ class SQLResourceBase(SQLModelBase):
         # foreign key)
         with db.session.no_autoflush:
             if not self.creator:
-                self.creator = parent_instance.creator
+                user = current_user._get_current_object()
+                if user.is_authenticated:
+                    self.creator = user
+                else:
+                    self.creator = parent_instance.creator
             self.tenant = parent_instance.tenant
             self.visibility = parent_instance.visibility
 
