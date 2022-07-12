@@ -13,6 +13,7 @@ from cloudify_rest_client.exceptions import (
 from manager_rest.manager_exceptions import SQLStorageException, ConflictError
 from manager_rest.storage import models, db
 from manager_rest.rest.resources_v3_1.deployments import DeploymentGroupsId
+from manager_rest import config
 
 from manager_rest.test import base_test
 
@@ -1021,6 +1022,76 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
         execution = self.client.executions.get(group.execution_ids[0])
         assert execution.workflow_id == 'install'
         assert execution.deployment_id == 'dep1'
+
+    def test_list_groups_count(self):
+        group1 = models.ExecutionGroup(
+            id='group1',
+            workflow_id='workflow',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        group2 = models.ExecutionGroup(
+            id='group2',
+            workflow_id='workflow',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        group3 = models.ExecutionGroup(
+            id='group3',
+            workflow_id='workflow',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        group1.executions = [
+            models.Execution(
+                id='exc1',
+                workflow_id='workflow',
+                creator=self.user,
+                tenant=self.tenant,
+            ),
+            models.Execution(
+                id='exc2',
+                workflow_id='workflow',
+                creator=self.user,
+                tenant=self.tenant,
+            ),
+        ]
+        group2.executions = [
+            models.Execution(
+                id=f'exc_group2_{i}',
+                workflow_id='workflow',
+                creator=self.user,
+                tenant=self.tenant,
+            ) for i in range(6)
+        ]
+        group3.executions = [
+            models.Execution(
+                id='trailing',
+                workflow_id='workflow',
+                creator=self.user,
+                tenant=self.tenant,
+            ),
+        ]
+
+        orig_page_size = config.instance.default_page_size
+        config.instance.default_page_size = 3
+
+        def fix_page_size():
+            config.instance.default_page_size = orig_page_size
+
+        groups = self.client.execution_groups.list(
+            _include=['id', 'execution_ids'],
+            _get_data=True,
+        )
+        # before RD-5334, this used to return 4 (because there's 4 executions)
+        assert groups.metadata.pagination.total == 3
+        assert groups.metadata.pagination.size == 3
+        assert len(groups) == 3
+        assert {group.id: set(group.execution_ids) for group in groups} == {
+            'group1': {'exc1', 'exc2'},
+            'group2': {f'exc_group2_{i}' for i in range(6)},
+            'group3': {'trailing'},
+        }
 
     def test_get_events(self):
         """Get events by group id.

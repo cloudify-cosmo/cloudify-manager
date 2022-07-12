@@ -899,7 +899,6 @@ class DeploymentGroup(CreatedAtMixin, SQLResourceBase):
         ondelete='SET NULL',
         nullable=True)
 
-    deployment_ids = association_proxy('deployments', 'id')
     default_blueprint_id = association_proxy('default_blueprint', 'id')
 
     @declared_attr
@@ -910,6 +909,10 @@ class DeploymentGroup(CreatedAtMixin, SQLResourceBase):
     @declared_attr
     def deployments(cls):
         return many_to_many_relationship(cls, Deployment, unique=True)
+
+    @property
+    def deployment_ids(self):
+        return [deployment.id for deployment in self.deployments]
 
     @classproperty
     def response_fields(cls):
@@ -1433,7 +1436,6 @@ class ExecutionGroup(CreatedAtMixin, SQLResourceBase):
                                     ondelete='SET NULL')
     _failed_group_fk = foreign_key(DeploymentGroup._storage_id, nullable=True,
                                    ondelete='SET NULL')
-    execution_ids = association_proxy('executions', 'id')
 
     @declared_attr
     def deployment_group(cls):
@@ -1460,6 +1462,10 @@ class ExecutionGroup(CreatedAtMixin, SQLResourceBase):
             cls, Execution,
             ondelete='CASCADE'
         )
+
+    @property
+    def execution_ids(self):
+        return [execution.id for execution in self.executions]
 
     def currently_running_executions(self):
         return [
