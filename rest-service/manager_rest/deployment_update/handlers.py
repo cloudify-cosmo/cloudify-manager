@@ -238,13 +238,13 @@ class OperationHandler(ModifiableEntityHandlerBase):
                 ExecutionState.CANCELLED,
                 ExecutionState.FAILED
             ]
-        })
+        }, get_all_results=True)
         if not executions:
             return
 
         graphs = self.sm.list(models.TasksGraph, filters={
             'execution_id': [e.id for e in executions]
-        })
+        }, get_all_results=True)
         if not graphs:
             return
 
@@ -254,7 +254,7 @@ class OperationHandler(ModifiableEntityHandlerBase):
             'state': [cloudify_tasks.TASK_RESCHEDULED,
                       cloudify_tasks.TASK_FAILED,
                       cloudify_tasks.TASK_PENDING]
-        })
+        }, get_all_results=True)
         new_op_inputs = new_operation['inputs']
         for op in resumable_ops:
             try:

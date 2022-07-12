@@ -786,7 +786,8 @@ def defines_component(sm, dep: models.DeploymentLabelsDependencies) -> bool:
     """
     idds = sm.list(models.InterDeploymentDependencies,
                    filters={'target_deployment': dep.source_deployment,
-                            'source_deployment': dep.target_deployment})
+                            'source_deployment': dep.target_deployment},
+                   get_all_results=True)
     return all(idd.dependency_creator.startswith('component.')
                for idd in idds) if idds else False
 
