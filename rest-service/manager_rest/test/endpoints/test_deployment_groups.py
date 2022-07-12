@@ -1051,24 +1051,31 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
         ]
         group2.executions = [
             models.Execution(
-                id='exc3',
+                id=f'exc_group2_{i}',
                 workflow_id='workflow',
                 creator=self.user,
                 tenant=self.tenant,
-            ),
+            ) for i in range(2000)
+        ]
+        group3.executions = [
             models.Execution(
-                id='exc4',
+                id='trailing',
                 workflow_id='workflow',
                 creator=self.user,
                 tenant=self.tenant,
             ),
         ]
+
         groups = self.client.execution_groups.list(
             _include=['id', 'execution_ids'],
             _get_data=True,
         )
         # before RD-5334, this used to return 4 (because there's 4 executions)
-        assert groups.metadata.pagination.total == 2
+        assert groups.metadata.pagination.total == 3
+        assert len(groups) == 3
+        assert len(groups[0].execution_ids) == 2
+        assert len(groups[1].execution_ids) == 2000
+        assert len(groups[2].execution_ids) == 1
 
     def test_get_events(self):
         """Get events by group id.
