@@ -139,7 +139,8 @@ class SQLStorageManager(object):
             if attrs:
                 query = query.options(db.load_only(*attrs))
             if rels:
-                query = query.options(db.joinedload(*rels))
+                for rel in rels:
+                    query = query.options(db.joinedload(rel))
 
         if load_relationships and not include:
             query = query.options(
