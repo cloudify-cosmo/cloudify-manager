@@ -134,6 +134,10 @@ class ExecutionGroups(SecuredResource):
     @rest_decorators.all_tenants
     def get(self, _include=None, filters=None, pagination=None, sort=None,
             all_tenants=None):
+        if 'execution_ids' in _include:
+            # If we don't do this, this include will result in lots of queries
+            _include.remove('execution_ids')
+            _include.append('executions')
         get_all_results = verify_and_convert_bool(
             '_get_all_results',
             request.args.get('_get_all_results', False)
