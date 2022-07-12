@@ -49,6 +49,12 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         db.session.add(dep)
         return dep
 
+    def test_dep_group_include_joinedload(self):
+        # RD-5363 Make sure we don't choke on joinedload again
+        self.client.deployment_groups.list(
+            _include=['deployment_ids', 'labels'],
+        )
+
     def test_get_empty(self):
         result = self.client.deployment_groups.list()
         assert len(result) == 0
