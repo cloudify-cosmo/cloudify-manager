@@ -1089,7 +1089,7 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
         assert len(groups) == 3
         assert {group.id: set(group.execution_ids) for group in groups} == {
             'group1': {'exc1', 'exc2'},
-            'group2': {f'exc_group2 {i}' for i in range(6)},
+            'group2': {f'exc_group2_{i}' for i in range(6)},
             'group3': {'trailing'},
         }
 
