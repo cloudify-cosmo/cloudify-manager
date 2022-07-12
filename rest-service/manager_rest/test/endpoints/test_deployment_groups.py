@@ -13,6 +13,7 @@ from cloudify_rest_client.exceptions import (
 from manager_rest.manager_exceptions import SQLStorageException, ConflictError
 from manager_rest.storage import models, db
 from manager_rest.rest.resources_v3_1.deployments import DeploymentGroupsId
+from manager_rest import config
 
 from manager_rest.test import base_test
 
@@ -1035,6 +1036,12 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
             creator=self.user,
             tenant=self.tenant,
         )
+        group3 = models.ExecutionGroup(
+            id='group3',
+            workflow_id='workflow',
+            creator=self.user,
+            tenant=self.tenant,
+        )
         group1.executions = [
             models.Execution(
                 id='exc1',
@@ -1055,7 +1062,7 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
                 workflow_id='workflow',
                 creator=self.user,
                 tenant=self.tenant,
-            ) for i in range(2000)
+            ) for i in range(6)
         ]
         group3.executions = [
             models.Execution(
@@ -1066,16 +1073,25 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
             ),
         ]
 
+        orig_page_size = config.instance.default_page_size
+        config.instance.default_page_size = 3
+
+        def fix_page_size():
+            config.instance.default_page_size = orig_page_size
+
         groups = self.client.execution_groups.list(
             _include=['id', 'execution_ids'],
             _get_data=True,
         )
         # before RD-5334, this used to return 4 (because there's 4 executions)
         assert groups.metadata.pagination.total == 3
+        assert groups.metadata.pagination.size == 3
         assert len(groups) == 3
-        assert len(groups[0].execution_ids) == 2
-        assert len(groups[1].execution_ids) == 2000
-        assert len(groups[2].execution_ids) == 1
+        assert {group.id: set(group.execution_ids) for group in groups} == {
+            'group1': {'exc1', 'exc2'},
+            'group2': {f'exc_group2 {i}' for i in range(6)},
+            'group3': {'trailing'},
+        }
 
     def test_get_events(self):
         """Get events by group id.
