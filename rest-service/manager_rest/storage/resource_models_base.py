@@ -123,7 +123,7 @@ class SQLResourceBase(SQLModelBase):
         with db.session.no_autoflush:
             if not self.creator:
                 user = current_user._get_current_object()
-                if user.is_authenticated:
+                if user is not None and user.is_authenticated:
                     self.creator = user
                 else:
                     self.creator = parent_instance.creator
