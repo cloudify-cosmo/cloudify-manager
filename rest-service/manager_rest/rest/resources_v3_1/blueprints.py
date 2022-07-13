@@ -212,6 +212,7 @@ class BlueprintsId(resources_v2.BlueprintsId):
             'labels': {'type': list, 'optional': True},
             'creator': {'type': text_type, 'optional': True},
             'created_at': {'type': text_type, 'optional': True},
+            'upload_execution': {'type': text_type, 'optional': True},
         }
         request_dict = rest_utils.get_json_and_verify_params(request_schema)
 
@@ -265,6 +266,9 @@ class BlueprintsId(resources_v2.BlueprintsId):
             blueprint.main_file_name = request_dict['main_file_name']
         if 'creator' in request_dict:
             blueprint.creator = creator
+        if 'upload_execution' in request_dict:
+            blueprint.upload_execution = sm.get(
+                models.Execution, request_dict['upload_execution'])
         provided_labels = request_dict.get('labels')
 
         if request_dict.get('plan'):
