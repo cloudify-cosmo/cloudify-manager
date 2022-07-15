@@ -61,24 +61,24 @@ class Events(v2_Events):
 
         exc_params = {}
         if eg_id:
-            eg = sm.get(models.ExecutionGroup, eg_id)
-            exc_params['_execution_group_fk'] = eg._storage_id
+            source = sm.get(models.ExecutionGroup, eg_id)
+            exc_params['_execution_group_fk'] = source._storage_id
         else:
             if exc_id:
-                exc = sm.get(models.Execution, exc_id)
+                source = sm.get(models.Execution, exc_id)
             else:
-                exc = current_execution._get_current_object()
+                source = current_execution._get_current_object()
 
-            if exc is None:
+            if source is None:
                 raise manager_exceptions.ConflictError(
                      'No execution passed, and not authenticated by '
                      'an execution token')
 
-            exc_params['_execution_fk'] = exc._storage_id
+            exc_params['_execution_fk'] = source._storage_id
         exc_params.update({
-            '_tenant_id': exc._tenant_id,
-            '_creator_id': exc._creator_id,
-            'visibility': exc.visibility,
+            '_tenant_id': source._tenant_id,
+            '_creator_id': source._creator_id,
+            'visibility': source.visibility,
             'manager_name': request_dict.get('manager_name'),
             'agent_name': request_dict.get('agent_name'),
         })
