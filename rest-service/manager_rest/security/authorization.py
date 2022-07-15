@@ -1,4 +1,3 @@
-
 from functools import wraps
 
 from flask import request
@@ -17,31 +16,27 @@ from manager_rest.rest.rest_utils import (get_json_and_verify_params,
 
 
 def authorize(action,
-              tenant_for_auth=None,
               get_tenant_from='header',
               allow_all_tenants=False,
               allow_if_execution=False):
     def authorize_dec(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
+            tenant_name = None
+            if get_tenant_from == 'header':
+                tenant_name = request.headers.get(CLOUDIFY_TENANT_HEADER)
+            elif get_tenant_from == 'param':
+                tenant_name = kwargs['tenant_name']
+            elif get_tenant_from == 'data':
+                tenant_name = get_json_and_verify_params(
+                    {'tenant_name': {'type': text_type}}).get('tenant_name')
+
             execution = execution_token.current_execution
             if execution and allow_if_execution:
-                utils.set_current_tenant(execution.tenant)
-                return func(*args, **kwargs)
+                if execution.tenant.name == tenant_name or not tenant_name:
+                    utils.set_current_tenant(execution.tenant)
+                    return func(*args, **kwargs)
 
-            # getting the tenant name
-            if get_tenant_from == 'header':
-                tenant_name = tenant_for_auth or request.headers.get(
-                    CLOUDIFY_TENANT_HEADER)
-            elif get_tenant_from == 'param':
-                tenant_name = tenant_for_auth or kwargs['tenant_name']
-            elif get_tenant_from == 'data':
-                tenant_name = tenant_for_auth or get_json_and_verify_params(
-                    {'tenant_name': {'type': text_type}}).get('tenant_name')
-            else:
-                tenant_name = tenant_for_auth
-
-            # finding tenant to add to the app config
             if tenant_name:
                 try:
                     tenant = get_storage_manager().get(
@@ -61,7 +56,6 @@ def authorize(action,
             if config.instance.test_mode:
                 return func(*args, **kwargs)
 
-            # checking if any of the user's roles is allowed to perform action
             check_user_action_allowed(action, tenant_name, allow_all_tenants)
 
             return func(*args, **kwargs)
