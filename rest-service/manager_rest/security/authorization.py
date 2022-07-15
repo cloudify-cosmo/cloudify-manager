@@ -5,7 +5,8 @@ from flask_security import current_user
 
 from cloudify._compat import text_type
 
-from manager_rest import config, utils, execution_token
+from manager_rest import config, utils
+from manager_rest.execution_token import current_execution
 from manager_rest.security import audit
 from manager_rest.storage.models import Tenant
 from manager_rest.storage import get_storage_manager
@@ -31,10 +32,12 @@ def authorize(action,
                 tenant_name = get_json_and_verify_params(
                     {'tenant_name': {'type': text_type}}).get('tenant_name')
 
-            execution = execution_token.current_execution
-            if execution and allow_if_execution:
-                if execution.tenant.name == tenant_name or not tenant_name:
-                    utils.set_current_tenant(execution.tenant)
+            if allow_if_execution:
+                if current_execution and (
+                        current_execution.tenant.name == tenant_name
+                        or not tenant_name
+                ):
+                    utils.set_current_tenant(current_execution.tenant)
                     return func(*args, **kwargs)
 
             if tenant_name:
