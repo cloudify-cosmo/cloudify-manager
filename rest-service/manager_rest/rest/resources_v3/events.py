@@ -37,6 +37,7 @@ class Events(v2_Events):
             'events': {'optional': True},
             'logs': {'optional': True},
             'execution_id': {'optional': True},
+            'execution_group_id': {'optional': True},
             'manager_name': {'optional': True},
             'agent_name': {'optional': True},
         })
@@ -50,22 +51,37 @@ class Events(v2_Events):
             check_user_action_allowed('set_timestamp')
 
         sm = get_storage_manager()
-        exc = current_execution._get_current_object()
-        if exc is None:
-            exc_id = request_dict.get('execution_id')
-            if exc_id is None:
+
+        exc_id = request_dict.get('execution_id')
+        eg_id = request_dict.get('execution_group_id')
+
+        if exc_id and eg_id:
+            raise manager_exceptions.ConflictError(
+                'Cannot provide both execution_id and execution_group_id.')
+
+        exc_params = {}
+        if eg_id:
+            source = sm.get(models.ExecutionGroup, eg_id)
+            exc_params['_execution_group_fk'] = source._storage_id
+        else:
+            if exc_id:
+                source = sm.get(models.Execution, exc_id)
+            else:
+                source = current_execution._get_current_object()
+
+            if source is None:
                 raise manager_exceptions.ConflictError(
-                    'No execution passed, and not authenticated by '
-                    'an execution token')
-            exc = sm.get(models.Execution, request_dict.get('execution_id'))
-        exc_params = {
-            '_execution_fk': exc._storage_id,
-            '_tenant_id': exc._tenant_id,
-            '_creator_id': exc._creator_id,
-            'visibility': exc.visibility,
+                     'No execution passed, and not authenticated by '
+                     'an execution token')
+
+            exc_params['_execution_fk'] = source._storage_id
+        exc_params.update({
+            '_tenant_id': source._tenant_id,
+            '_creator_id': source._creator_id,
+            'visibility': source.visibility,
             'manager_name': request_dict.get('manager_name'),
             'agent_name': request_dict.get('agent_name'),
-        }
+        })
         if not raw_events and not raw_logs:
             return None, 204
 
