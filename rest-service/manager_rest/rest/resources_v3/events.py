@@ -57,7 +57,7 @@ class Events(v2_Events):
 
         if exc_id and eg_id:
             raise manager_exceptions.ConflictError(
-                'Both execution_id and execution_group_id were provided.')
+                'Cannot provide both execution_id and execution_group_id.')
 
         exc_params = {}
         if eg_id:
