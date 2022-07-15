@@ -37,6 +37,7 @@ from manager_rest.storage.resource_models import (
     Log,
     Node,
     NodeInstance,
+    ExecutionGroup,
 )
 
 
@@ -974,6 +975,60 @@ class EventsTest(base_test.BaseServerTestCase):
         logs = Log.query.all()
         assert len(events) == 1
         assert len(logs) == 1
+
+    def test_create_event_with_execution_id(self):
+        exc = Execution(
+            id='exc1',
+            workflow_id='wf',
+            tenant=self.tenant,
+            creator=self.user,
+        )
+        self.client.events.create(
+            events=[{
+                'message': {'text': 'hello'},
+                'event_type': 'type1',
+                'context': {},
+            }], logs=[{
+                'message': {'text': 'log-hello'},
+                'logger': 'root',
+                'level': 'info',
+                'context': {},
+            }],
+            execution_id=exc.id,
+        )
+        events = Event.query.all()
+        logs = Log.query.all()
+        assert len(events) == 1
+        assert events[0].execution == exc
+        assert len(logs) == 1
+        assert logs[0].execution == exc
+
+    def test_create_event_with_group_id(self):
+        eg = ExecutionGroup(
+            id='eg1',
+            workflow_id='wf',
+            tenant=self.tenant,
+            creator=self.user,
+        )
+        self.client.events.create(
+            events=[{
+                'message': {'text': 'hello'},
+                'event_type': 'type1',
+                'context': {},
+            }], logs=[{
+                'message': {'text': 'log-hello'},
+                'logger': 'root',
+                'level': 'info',
+                'context': {},
+            }],
+            execution_group_id=eg.id,
+        )
+        events = Event.query.all()
+        logs = Log.query.all()
+        assert len(events) == 1
+        assert events[0].execution_group == eg
+        assert len(logs) == 1
+        assert logs[0].execution_group == eg
 
 
 class MapEventToDictTestV3(TestCase):
