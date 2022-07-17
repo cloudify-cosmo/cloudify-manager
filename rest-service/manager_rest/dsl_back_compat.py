@@ -40,6 +40,9 @@ def create_bc_plugin_yaml(yamls, archive_target_path, logger):
                 _remove_tree_node(
                     plugin_yaml, path + ('constraints', ))
                 modifications_required |= True
+            elif element.get('item_type'):
+                _remove_tree_node(plugin_yaml, path)
+                modifications_required |= True
 
     for selector in [
         ('workflows', '*', 'availability_rules'),
