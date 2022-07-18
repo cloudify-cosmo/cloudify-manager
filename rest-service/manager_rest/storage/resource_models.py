@@ -613,7 +613,11 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             if rule == 'all':
                 result |= (ni_states == set() or ni_states == {'started'})
             elif rule == 'partial':
-                result |= (len(ni_states) > 1 and 'started' in ni_states)
+                not_active_states = ['uninitialized', 'deleted']
+                result |= (
+                    ni_states != {'started'} and
+                    not all(st in not_active_states for st in ni_states)
+                )
             elif rule == 'none':
                 result |= ('started' not in ni_states)
             else:
