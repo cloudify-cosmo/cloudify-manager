@@ -67,11 +67,7 @@ class FileServerAuth(SecuredResource):
                 if FileServerAuth._is_global_blueprint(uri):
                     return
 
-                @authorize('file_server_auth', uri_tenant)
-                def _authorize():
-                    pass
-
-                _authorize()
+                check_user_action_allowed('file_server_auth', uri_tenant)
                 return
 
     @staticmethod
