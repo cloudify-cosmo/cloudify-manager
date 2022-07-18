@@ -493,13 +493,8 @@ workflows:
         mapping: file:///dev/null
         availability_rules:
             node_instances_active: [partial]
-    wf3:
-        mapping: file:///dev/null
-        availability_rules:
-            node_instances_active: [all]
 """
-        base_bp_path = \
-            self.make_yaml_file(bp_template.format(active='none'))
+        base_bp_path = self.make_yaml_file(bp_template)
         deployment, _ = self.deploy_application(base_bp_path)
         self.execute_workflow('wf1', deployment.id)
         with self.assertRaises(CloudifyClientError) as cm:
@@ -517,6 +512,54 @@ workflows:
             self.execute_workflow('wf1', deployment.id)
         assert cm.exception.error_code == 'unavailable_workflow_error'
         self.execute_workflow('wf2', deployment.id)
+
+    def test_workflows_availability_node_instances_state_partial(self):
+        bp_template = """
+    tosca_definitions_version: cloudify_dsl_1_4
+
+    imports:
+        - cloudify/types/types.yaml
+
+    node_templates:
+        node1:
+            type: cloudify.nodes.Root
+        node2:
+            type: cloudify.nodes.Root
+
+    workflows:
+        wf1:
+            mapping: file:///dev/null
+            availability_rules:
+                node_instances_active: [partial]
+    """
+        base_bp_path = self.make_yaml_file(bp_template)
+        deployment, _ = self.deploy_application(base_bp_path)
+        node_instances = self.client.node_instances.list(
+            deployment_id=deployment.id, _include=['id', 'state'])
+        active_node_instance_ids = [ni['id'] for ni in node_instances
+                                    if ni['state'] == 'started']
+
+        with self.assertRaises(CloudifyClientError) as cm:
+            self.execute_workflow('wf1', deployment.id)
+        assert cm.exception.error_code == 'unavailable_workflow_error'
+
+        self.client.node_instances.update(
+            active_node_instance_ids[0], state='stopped', force=True)
+        self.execute_workflow('wf1', deployment.id)
+
+        self.client.node_instances.update(
+            active_node_instance_ids[0], state='uninitialized', force=True)
+        self.execute_workflow('wf1', deployment.id)
+
+        self.client.node_instances.update(
+            active_node_instance_ids[1], state='stopped', force=True)
+        self.execute_workflow('wf1', deployment.id)
+
+        self.client.node_instances.update(
+            active_node_instance_ids[1], state='uninitialized', force=True)
+        with self.assertRaises(CloudifyClientError) as cm:
+            self.execute_workflow('wf1', deployment.id)
+        assert cm.exception.error_code == 'unavailable_workflow_error'
 
     def test_workflows_availability_node_types(self):
         bp_template = """
