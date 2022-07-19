@@ -472,6 +472,14 @@ def capabilities_diff(a, b):
             yield k
 
 
+def properties_diff(a, b):
+    a_dict = a if isinstance(a, dict) else {}
+    b_dict = b if isinstance(b, dict) else {}
+    for k in a_dict.keys() & b_dict.keys():
+        if a_dict.get(k) != b_dict.get(k):
+            yield k
+
+
 def validate_deployment_status(deployment):
     if deployment.installation_status != DeploymentState.ACTIVE:
         raise Exception(
