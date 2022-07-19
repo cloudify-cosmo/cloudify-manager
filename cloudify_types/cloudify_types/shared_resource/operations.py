@@ -24,6 +24,7 @@ from cloudify_types.utils import (errors_nonrecoverable,
                                   get_deployment_by_id,
                                   get_client, get_idd,
                                   capabilities_diff,
+                                  properties_diff,
                                   validate_deployment_status)
 
 from cloudify_types.component.utils import (
@@ -175,11 +176,13 @@ def refresh(**kwargs):
 
 @operation(resumable=True)
 def check_drift(**kwargs):
-    # Discover the drift by comparing the capabilities of a deployment to the
-    # runtime properties / capabilities of a node_instance
     config = get_desired_operation_input('resource_config', kwargs)
     deployment_id = config.get('deployment', {}).get('id')
     client, _ = get_client(kwargs)
+    drift = {}
+
+    # Discover the drift by comparing the capabilities of a deployment to the
+    # runtime properties / capabilities of a node_instance
     deployment_capabilities = client.deployments.capabilities\
         .get(deployment_id)\
         .get('capabilities')
@@ -187,12 +190,25 @@ def check_drift(**kwargs):
         .get(kwargs['ctx'].instance.id, _include=['id', 'runtime_properties'])\
         .get('runtime_properties', {})\
         .get('capabilities')
-
     modified_keys = list(capabilities_diff(
         deployment_capabilities,
         node_instance_capabilities
     ))
-    return {'capabilities': modified_keys} if modified_keys else None
+    if modified_keys:
+        drift['capabilities'] = modified_keys
+
+    # Discover the drift by comparing node properties of a deployment to the
+    # runtime_properties of a node_instance
+    node_properties = ctx.node.properties.get('resource_config')
+    node_instance_runtime_properties = ctx.instance.runtime_properties
+    modified_keys = list(properties_diff(
+        node_properties,
+        node_instance_runtime_properties,
+    ))
+    if modified_keys:
+        drift['properties'] = modified_keys
+
+    return drift or None
 
 
 @operation(resumable=True)

@@ -27,6 +27,7 @@ from cloudify_types.utils import (do_upload_blueprint,
                                   get_desired_operation_input,
                                   get_client, get_idd,
                                   capabilities_diff,
+                                  properties_diff,
                                   validate_deployment_status)
 from .polling import (
     poll_with_timeout,
@@ -339,10 +340,9 @@ def refresh(**kwargs):
 
 @operation(resumable=True)
 def check_drift(timeout=EXECUTIONS_TIMEOUT, **kwargs):
-    # Discover the drift by comparing the capabilities of a deployment to the
-    # runtime properties / capabilities of a node_instance
-    client, _ = get_client(kwargs)
     deployment_id = _current_deployment_id(**kwargs)
+    client, _ = get_client(kwargs)
+    drift = {}
 
     client.executions.start(
         deployment_id=deployment_id,
@@ -354,6 +354,8 @@ def check_drift(timeout=EXECUTIONS_TIMEOUT, **kwargs):
         expected_result=True
     )
 
+    # Discover the drift by comparing the capabilities of a deployment to the
+    # runtime properties / capabilities of a node_instance
     deployment_capabilities = client.deployments.capabilities \
         .get(deployment_id) \
         .get('capabilities')
@@ -361,12 +363,25 @@ def check_drift(timeout=EXECUTIONS_TIMEOUT, **kwargs):
         .get(kwargs['ctx'].instance.id, _include=['id', 'runtime_properties'])\
         .get('runtime_properties', {}) \
         .get('capabilities')
-
     modified_keys = list(capabilities_diff(
         deployment_capabilities,
         node_instance_capabilities
     ))
-    return {'capabilities': modified_keys} if modified_keys else None
+    if modified_keys:
+        drift['capabilities'] = modified_keys
+
+    # Discover the drift by comparing node properties of a deployment to the
+    # runtime_properties of a node_instance
+    node_properties = ctx.node.properties.get('resource_config')
+    node_instance_runtime_properties = ctx.instance.runtime_properties
+    modified_keys = list(properties_diff(
+        node_properties,
+        node_instance_runtime_properties,
+    ))
+    if modified_keys:
+        drift['properties'] = modified_keys
+
+    return drift or None
 
 
 @operation(resumable=True)
