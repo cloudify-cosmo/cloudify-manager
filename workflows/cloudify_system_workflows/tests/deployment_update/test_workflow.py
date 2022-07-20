@@ -52,6 +52,7 @@ def test_change_property():
         'inp1': 'value1',
     })
     dep_env = local.load_env('d1', storage)
+    dep_env.execute('install')
     storage.create_deployment_update('d1', 'update1', {
         'new_inputs': {'inp1': 'value2'}
     })
@@ -81,6 +82,7 @@ def test_update_operation(subtests, blueprint_filename, parameters):
         'inp1': 'value1',
     })
     dep_env = local.load_env('d1', storage)
+    dep_env.execute('install')
     storage.create_deployment_update('d1', 'update1', {
         'new_inputs': {'inp1': 'value2'}
     })
@@ -88,8 +90,6 @@ def test_update_operation(subtests, blueprint_filename, parameters):
     dep_env.execute('update', parameters=parameters)
 
     for ni in dep_env.storage.get_node_instances():
-        # if ni.node_id != 'n2':
-        #     continue
         with subtests.test(ni.node_id):
             node = dep_env.storage.get_node(ni.node_id)
             actual_calls = ni.runtime_properties.get('invocations', [])
@@ -102,6 +102,8 @@ def op(ctx, return_value=None, fail=False):
 
     Store the call in runtime-properties, and return the given value, or fail.
     """
+    if ctx.workflow_id != 'update':
+        return
     if ctx.type == RELATIONSHIP_INSTANCE:
         if ctx._context['related']['is_target']:
             prefix = 'target_'
