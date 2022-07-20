@@ -177,6 +177,11 @@ def _clean_drift(ctx, instance):
 def update_or_reinstall_instances(ctx, graph, dep_up, install_params):
     to_skip = set(install_params.added_instances) \
               | set(install_params.removed_instances)
+    # update must not touch instances that weren't installed previously
+    to_skip |= {
+        ni for ni in workflow_ctx.node_instances
+        if ni.state != 'started'
+    }
     consider_for_update = set(workflow_ctx.node_instances) - to_skip
     changed_instances = _find_changed_instances(dep_up.steps)
 
