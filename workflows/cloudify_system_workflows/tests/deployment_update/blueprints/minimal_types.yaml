@@ -3,6 +3,8 @@ plugins:
     install: false
     executor: central_deployment_agent
 workflows:
+  install:
+    mapping: builtin.cloudify.plugins.workflows.install
   update:
     mapping: builtin.cloudify_system_workflows.deployment_update.workflow.update_deployment
     parameters:

@@ -66,14 +66,18 @@ def _do_check_drift(ctx, instances):
     Returns a set of instances that do have drift, and a set of instances
     that failed the drift check (those will need to be reinstalled).
     """
+    instances_with_drift = set()
+    failed_check = set()
+    if not instances:
+        # avoid running _make_check_drift_graph with empty instances,
+        # because then it'll check all instances in the deployment
+        return instances_with_drift, failed_check
     graph = workflows._make_check_drift_graph(
         ctx, node_instance_ids={ni.id for ni in instances},
         name='update_check_drift',
         ignore_failure=True,
     )
     graph.execute()
-    instances_with_drift = set()
-    failed_check = set()
     for instance in instances:
         if _has_failed_drift_check(instance):
             failed_check.add(instance)
@@ -173,8 +177,13 @@ def _clean_drift(ctx, instance):
 def update_or_reinstall_instances(ctx, graph, dep_up, install_params):
     to_skip = set(install_params.added_instances) \
               | set(install_params.removed_instances)
+    # update must not touch instances that weren't installed previously
+    to_skip |= {
+        ni for ni in workflow_ctx.node_instances
+        if ni.state != 'started'
+    }
     consider_for_update = set(workflow_ctx.node_instances) - to_skip
-    changed_instances = _find_changed_instances(dep_up.steps)
+    changed_instances = _find_changed_instances(dep_up.steps) - to_skip
 
     must_reinstall = set()
     instances_with_drift = set()
@@ -189,7 +198,7 @@ def update_or_reinstall_instances(ctx, graph, dep_up, install_params):
         }
         clear_graph(graph)
         instances_with_drift, failed_check = _do_check_drift(
-            ctx, consider_for_update - to_skip)
+            ctx, consider_for_update)
         for instance in failed_check:
             must_reinstall |= instance.get_contained_subgraph()
     else:
