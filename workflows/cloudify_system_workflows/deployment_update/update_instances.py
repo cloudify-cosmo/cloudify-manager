@@ -183,7 +183,7 @@ def update_or_reinstall_instances(ctx, graph, dep_up, install_params):
         if ni.state != 'started'
     }
     consider_for_update = set(workflow_ctx.node_instances) - to_skip
-    changed_instances = _find_changed_instances(dep_up.steps)
+    changed_instances = _find_changed_instances(dep_up.steps) - to_skip
 
     must_reinstall = set()
     instances_with_drift = set()
@@ -198,7 +198,7 @@ def update_or_reinstall_instances(ctx, graph, dep_up, install_params):
         }
         clear_graph(graph)
         instances_with_drift, failed_check = _do_check_drift(
-            ctx, consider_for_update - to_skip)
+            ctx, consider_for_update)
         for instance in failed_check:
             must_reinstall |= instance.get_contained_subgraph()
     else:
