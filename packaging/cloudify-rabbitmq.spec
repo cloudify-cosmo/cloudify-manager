@@ -1,3 +1,5 @@
+# Prevent creation of the build ids in /usr/lib, so we can still keep our RPM
+# separate from the official RH supplied software (due to a change in RH8)
 %if "%{dist}" != ".el7"
 %define _build_id_links none
 %endif
