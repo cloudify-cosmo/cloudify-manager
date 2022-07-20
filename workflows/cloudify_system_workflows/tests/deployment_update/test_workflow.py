@@ -63,16 +63,17 @@ def test_change_property():
     assert node.properties['prop1'] == 'value2'
 
 
-@pytest.mark.parametrize('blueprint_filename,parameters', [
-    ('update_operation.yaml', {}),
+@pytest.mark.parametrize('blueprint_filename,parameters,install', [
+    ('update_operation.yaml', {}, True),
     ('skip_drift_check.yaml', {
         'skip_drift_check': True,
-    }),
+    }, True),
     ('force_reinstall.yaml', {
         'force_reinstall': True,
-    })
+    }, True),
+    ('without_install.yaml', {}, False),
 ])
-def test_update_operation(subtests, blueprint_filename, parameters):
+def test_update_operation(subtests, blueprint_filename, parameters, install):
     """Test the update instances flow.
 
     This function is essentially just the driver code, and the actual cases
@@ -82,7 +83,20 @@ def test_update_operation(subtests, blueprint_filename, parameters):
         'inp1': 'value1',
     })
     dep_env = local.load_env('d1', storage)
-    dep_env.execute('install')
+
+    if install:
+        dep_env.execute('install')
+    else:
+        # local deployments don't currently default status to uninitialized,
+        # but they leave it as none. Let's default it, so that the uninstall
+        # graph doesn't do anything
+        for ni in dep_env.storage.get_node_instances():
+            dep_env.storage.update_node_instance(
+                ni.id, state='uninitialized',
+                force=True,
+                version=0,
+            )
+
     storage.create_deployment_update('d1', 'update1', {
         'new_inputs': {'inp1': 'value2'}
     })
