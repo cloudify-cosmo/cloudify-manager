@@ -6,6 +6,15 @@
 %define __jar_repack %{nil}
 %global __requires_exclude LIBDBUS_1_3
 
+# Prevent mangling shebangs (RH8 build default), which fails
+#  with the test files of networkx<2 due to RH8 not having python2.
+%if "%{dist}" != ".el7"
+%undefine __brp_mangle_shebangs
+# Prevent creation of the build ids in /usr/lib, so we can still keep our RPM
+#  separate from the official RH supplied software (due to a change in RH8)
+%define _build_id_links none
+%endif
+
 Name:           cloudify-rest-service
 Version:        %{CLOUDIFY_VERSION}
 Release:        %{CLOUDIFY_PACKAGE_RELEASE}%{?dist}

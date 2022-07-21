@@ -7,6 +7,15 @@
 %define _source_payload w0.gzdio
 %define _binary_payload w0.gzdio
 
+# Prevent mangling shebangs (RH8 build default), which fails
+#  with the test files of networkx<2 due to RH8 not having python2.
+%if "%{dist}" != ".el7"
+%undefine __brp_mangle_shebangs
+# Prevent creation of the build ids in /usr/lib, so we can still keep our RPM
+#  separate from the official RH supplied software (due to a change in RH8)
+%define _build_id_links none
+%endif
+
 Name:           cloudify-agents
 Version:        %{CLOUDIFY_VERSION}
 Release:        %{CLOUDIFY_PACKAGE_RELEASE}%{?dist}
@@ -18,7 +27,7 @@ URL:            https://github.com/cloudify-cosmo/cloudify-agent
 Vendor:         Cloudify Platform Ltd.
 Packager:       Cloudify Platform Ltd.
 
-BuildRequires:  python >= 2.7
+BuildRequires:  python3 >= 3.6
 Requires(pre):  shadow-utils
 
 Source0:        https://cloudify-release-eu.s3.amazonaws.com/cloudify/%{CLOUDIFY_VERSION}/%{CLOUDIFY_PACKAGE_RELEASE}-release/Ubuntu-xenial-agent_%{CLOUDIFY_VERSION}-%{CLOUDIFY_PACKAGE_RELEASE}.tar.gz
