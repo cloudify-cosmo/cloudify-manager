@@ -446,6 +446,38 @@ def heal(timeout=EXECUTIONS_TIMEOUT, **kwargs):
     validate_deployment_status(deployment)
 
 
+@operation
+def update(timeout=EXECUTIONS_TIMEOUT, **kwargs):
+    """Run a `update` workflow on a deployment identified by `deployment_id`"""
+    client, _ = get_client(kwargs)
+    deployment_id = _current_deployment_id(**kwargs)
+    resource_config = ctx.node.properties.get('resource_config', {})
+
+    drift = ctx.instance.drift
+    update_kwargs = {}
+    if 'blueprint' in drift and 'id' in drift['blueprint']:
+        update_kwargs['blueprint_id'] = resource_config \
+            .get('blueprint', {}) \
+            .get('id')
+    if 'deployment' in drift and 'inputs' in drift['deployment']:
+        update_kwargs['inputs'] = resource_config \
+            .get('deployment', {}) \
+            .get('inputs')
+
+    client.deployment_updates.update_with_existing_blueprint(
+        deployment_id=deployment_id,
+        **update_kwargs
+    )
+    poll_with_timeout(
+        lambda: is_all_executions_finished(client, deployment_id),
+        timeout=timeout,
+        expected_result=True
+    )
+
+    deployment = client.deployments.get(deployment_id)
+    validate_deployment_status(deployment)
+
+
 def _current_deployment_id(**kwargs):
     config = get_desired_operation_input('resource_config', kwargs)
     runtime_deployment_prop = ctx.instance.runtime_properties.get(
