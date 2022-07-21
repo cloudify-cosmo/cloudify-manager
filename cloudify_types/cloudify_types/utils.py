@@ -476,10 +476,7 @@ def properties_diff(a, b):
     a_dict = a if isinstance(a, dict) else {}
     b_dict = b if isinstance(b, dict) else {}
     for k in a_dict.keys() & b_dict.keys():
-        if isinstance(a_dict[k], dict) and isinstance(b_dict[k], dict):
-            for j in properties_diff(a_dict[k], b_dict[k]):
-                yield j
-        elif a_dict[k] != b_dict[k]:
+        if a_dict[k] != b_dict[k]:
             yield k
 
 
