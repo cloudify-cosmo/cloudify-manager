@@ -216,6 +216,84 @@ node_templates:
         ]
 
 
+class DeploymentUpdateTest(AgentlessTestCase):
+    def setUp(self):
+        compoenent_blueprint = """
+tosca_definitions_version: cloudify_dsl_1_4
+
+imports:
+  - cloudify/types/types.yaml
+
+inputs:
+  foo:
+    description: A testing input
+    default: 255
+
+node_templates:
+  root_node:
+    type: cloudify.nodes.Root
+
+
+capabilities:
+  foo:
+    description: A testing capability
+    value: { get_input: foo }
+"""
+        self.client.blueprints.upload(
+            self.make_yaml_file(compoenent_blueprint),
+            entity_id='comp'
+        )
+
+    def test_components_update_inputs(self):
+        parent_blueprint = """
+tosca_definitions_version: cloudify_dsl_1_4
+
+imports:
+  - cloudify/types/types.yaml
+
+inputs:
+  foo:
+    description: A testing input
+    default: 255
+
+node_templates:
+  comp_node:
+    type: cloudify.nodes.Component
+    properties:
+      resource_config:
+        blueprint:
+          external_resource: true
+          id: comp
+        deployment:
+          id: comp
+          inputs:
+            foo: { get_input: foo }
+        """
+        test_blueprint_path = self.make_yaml_file(parent_blueprint)
+        deployment, _ = self.deploy_application(test_blueprint_path)
+        comp_capabilities = self.client.deployments.capabilities.get('comp')
+        assert comp_capabilities['capabilities'] == {'foo': 255}
+
+        self.client.deployment_updates.update_with_existing_blueprint(
+            deployment.id,
+            blueprint_id=deployment.blueprint_id,
+            inputs={'foo': 256}
+        )
+        self.wait_for_all_executions_to_end()
+
+        # Assert that the update was successful
+        comp_capabilities = self.client.deployments.capabilities.get('comp')
+        assert comp_capabilities['capabilities'] == {'foo': 256}
+
+        # Assert `comp` was updated not re-installed
+        comp_workflows = [
+            c.workflow_id
+            for c in self.client.executions.list(deployment_id='comp')
+        ]
+        assert 'uninstall' not in comp_workflows
+        assert 'update' in comp_workflows
+
+
 def _wait_until(fn,
                 timeout_seconds=10,
                 sleep_seconds=0.2):
