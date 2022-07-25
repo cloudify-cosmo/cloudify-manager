@@ -218,7 +218,7 @@ node_templates:
 
 class DeploymentUpdateTest(AgentlessTestCase):
     def setUp(self):
-        compoenent_blueprint = """
+        component_blueprint = """
 tosca_definitions_version: cloudify_dsl_1_4
 
 imports:
@@ -239,13 +239,7 @@ capabilities:
     description: A testing capability
     value: { get_input: foo }
 """
-        self.client.blueprints.upload(
-            self.make_yaml_file(compoenent_blueprint),
-            entity_id='comp'
-        )
-
-    def test_components_update_inputs(self):
-        parent_blueprint = """
+        self.parent_blueprint = """
 tosca_definitions_version: cloudify_dsl_1_4
 
 imports:
@@ -269,7 +263,13 @@ node_templates:
           inputs:
             foo: { get_input: foo }
         """
-        test_blueprint_path = self.make_yaml_file(parent_blueprint)
+        self.client.blueprints.upload(
+            self.make_yaml_file(component_blueprint),
+            entity_id='comp'
+        )
+
+    def test_components_update_inputs(self):
+        test_blueprint_path = self.make_yaml_file(self.parent_blueprint)
         deployment, _ = self.deploy_application(test_blueprint_path)
         comp_capabilities = self.client.deployments.capabilities.get('comp')
         assert comp_capabilities['capabilities'] == {'foo': 255}
@@ -292,6 +292,86 @@ node_templates:
         ]
         assert 'uninstall' not in comp_workflows
         assert 'update' in comp_workflows
+
+    def test_components_update_blueprint(self):
+        new_component_blueprint = """
+tosca_definitions_version: cloudify_dsl_1_4
+
+imports:
+  - cloudify/types/types.yaml
+
+inputs:
+  foo:
+    description: Another testing input
+    type: integer
+  bar:
+    description: Another testing input
+    type: integer
+
+node_templates:
+  root_node:
+    type: cloudify.nodes.Root
+
+capabilities:
+  bar:
+    description: Another testing capability
+    value: { get_input: bar }
+  foo:
+    description: Another testing capability
+    value: { get_input: foo }
+"""
+        new_parent_blueprint = """
+tosca_definitions_version: cloudify_dsl_1_4
+
+imports:
+  - cloudify/types/types.yaml
+
+inputs:
+  foo:
+    description: Another testing input
+    type: integer
+  bar:
+    description: Another testing input
+    type: integer
+
+node_templates:
+  comp_node:
+    type: cloudify.nodes.Component
+    properties:
+      resource_config:
+        blueprint:
+          external_resource: true
+          id: new_comp
+        deployment:
+          inputs:
+            foo: { get_input: foo }
+            bar: { get_input: bar }
+        """
+        test_blueprint_path = self.make_yaml_file(self.parent_blueprint)
+        deployment, _ = self.deploy_application(test_blueprint_path)
+        comp_capabilities = self.client.deployments.capabilities.get('comp')
+        assert comp_capabilities['capabilities'] == {'foo': 255}
+
+        self.client.blueprints.upload(
+            self.make_yaml_file(new_component_blueprint),
+            entity_id='new_comp'
+        )
+        self.client.blueprints.upload(
+            self.make_yaml_file(new_parent_blueprint),
+            entity_id='new_parent'
+        )
+        self.client.deployment_updates.update_with_existing_blueprint(
+            deployment.id,
+            blueprint_id='new_parent',
+            inputs={'foo': 127, 'bar': 511},
+        )
+        self.wait_for_all_executions_to_end()
+
+        # Assert that the update was successful
+        comp = self.client.deployments.get('comp')
+        assert comp.blueprint_id == 'new_comp'
+        comp_capabilities = self.client.deployments.capabilities.get('comp')
+        assert comp_capabilities['capabilities'] == {'foo': 127, 'bar': 511}
 
 
 def _wait_until(fn,
