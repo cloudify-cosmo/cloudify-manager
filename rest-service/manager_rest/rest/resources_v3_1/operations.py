@@ -263,24 +263,21 @@ class OperationsId(SecuredResource):
         if node_instance.system_properties is None:
             node_instance.system_properties = {}
         if state == 'configured':
-            node_instance.system_properties.setdefault(
-                'configuration_drift', {
+            node_instance.system_properties['configuration_drift'] = {
                     'ok': True,
                     'result': None,
                     'task': None,
                     'timestamp': datetime.utcnow().isoformat(),
-                })
+                }
             node_instance.update_configuration_drift()
         elif state == 'started':
-            node_instance.system_properties.setdefault(
-                'previous_status', None)
-            node_instance.system_properties.setdefault(
-                'status', {
+            node_instance.system_properties['previous_status'] = None
+            node_instance.system_properties['status'] = {
                     'ok': True,
                     'result': None,
                     'task': None,
                     'timestamp': datetime.utcnow().isoformat(),
-                })
+                }
             node_instance.update_status_check()
         node_instance.state = state
         sm.update(node_instance, modified_attrs=('state', 'system_properties'))
