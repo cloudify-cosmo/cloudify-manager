@@ -205,8 +205,8 @@ node_templates:
         # check that heal did call exactly the graphs we expected:
         # a check_status first (which failed), then a heal (which also failed),
         # and then a fallback to reinstall
-        # NOTE: this assert is VERY tighly coupled to the implementation. If it
-        # fails often when changing the heal workflow impl, we can make it
+        # NOTE: this assert is VERY tightly coupled to the implementation. If
+        # it fails often when changing the heal workflow impl, we can make it
         # more lenient
         assert heal_graphs == [
             'check_status',
@@ -217,29 +217,30 @@ node_templates:
 
 
 class DeploymentUpdateTest(AgentlessTestCase):
-    def setUp(self):
-        component_blueprint = """
+    COMP_BLUEPRINT = """
 tosca_definitions_version: cloudify_dsl_1_4
 
 imports:
   - cloudify/types/types.yaml
 
+blueprint_labels:
+  lorem:
+    values:
+      - ipsum
+
 inputs:
   foo:
-    description: A testing input
-    default: 255
+    type: integer
 
 node_templates:
   root_node:
     type: cloudify.nodes.Root
 
-
 capabilities:
   foo:
-    description: A testing capability
     value: { get_input: foo }
 """
-        self.parent_blueprint = """
+    PARENT_BLUEPRINT = """
 tosca_definitions_version: cloudify_dsl_1_4
 
 imports:
@@ -247,7 +248,6 @@ imports:
 
 inputs:
   foo:
-    description: A testing input
     default: 255
 
 node_templates:
@@ -263,13 +263,14 @@ node_templates:
           inputs:
             foo: { get_input: foo }
         """
-        self.client.blueprints.upload(
-            self.make_yaml_file(component_blueprint),
-            entity_id='comp'
-        )
 
     def test_components_update_inputs(self):
-        test_blueprint_path = self.make_yaml_file(self.parent_blueprint)
+        self.client.blueprints.upload(
+            self.make_yaml_file(DeploymentUpdateTest.COMP_BLUEPRINT),
+            entity_id='comp'
+        )
+        test_blueprint_path = self.make_yaml_file(
+            DeploymentUpdateTest.PARENT_BLUEPRINT)
         deployment, _ = self.deploy_application(test_blueprint_path)
         comp_capabilities = self.client.deployments.capabilities.get('comp')
         assert comp_capabilities['capabilities'] == {'foo': 255}
@@ -347,7 +348,12 @@ node_templates:
             foo: { get_input: foo }
             bar: { get_input: bar }
         """
-        test_blueprint_path = self.make_yaml_file(self.parent_blueprint)
+        self.client.blueprints.upload(
+            self.make_yaml_file(DeploymentUpdateTest.COMP_BLUEPRINT),
+            entity_id='comp'
+        )
+        test_blueprint_path = self.make_yaml_file(
+            DeploymentUpdateTest.PARENT_BLUEPRINT)
         deployment, _ = self.deploy_application(test_blueprint_path)
         comp_capabilities = self.client.deployments.capabilities.get('comp')
         assert comp_capabilities['capabilities'] == {'foo': 255}
