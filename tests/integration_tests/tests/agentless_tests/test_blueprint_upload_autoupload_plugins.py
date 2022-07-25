@@ -20,7 +20,7 @@ class BlueprintUploadAutouploadPluginsTest(AgentlessTestCase):
 
         plugins = {p.package_name: p.package_version
                    for p in self.client.plugins.list()}
-        self.assertEqual(plugins["cloudify-openstack-plugin"], "2.14.24")
+        self.assertEqual(plugins["cloudify-openstack-plugin"], "2.14.25")
         self.assertIn("cloudify-utilities-plugin", plugins)
         self.assertGreater(parse_version(plugins["cloudify-fabric-plugin"]),
                            parse_version("2"))
