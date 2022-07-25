@@ -431,6 +431,71 @@ node_templates:
         assert any(label['key'] == 'lorem' and label['value'] == 'ipsum'
                    for label in comp_deployment.labels)
 
+    def test_components_update_client(self):
+        new_parent_blueprint = """
+tosca_definitions_version: cloudify_dsl_1_4
+
+imports:
+  - cloudify/types/types.yaml
+
+inputs:
+  foo:
+    default: 255
+
+node_templates:
+  comp_node:
+    type: cloudify.nodes.Component
+    properties:
+      resource_config:
+        blueprint:
+          external_resource: true
+          id: comp
+        deployment:
+          id: comp
+          inputs:
+            foo: { get_input: foo }
+      client:
+        host: localhost
+        port: 443
+        protocol: https
+        trust_all: true
+        username: admin
+        password: admin
+        tenant: default_tenant
+        """
+        self.client.blueprints.upload(
+            self.make_yaml_file(DeploymentUpdateTest.COMP_BLUEPRINT),
+            entity_id='comp'
+        )
+        test_blueprint_path = self.make_yaml_file(
+            DeploymentUpdateTest.PARENT_BLUEPRINT)
+        deployment, _ = self.deploy_application(test_blueprint_path)
+        comp_deployment = self.client.deployments.get('comp')
+        assert all(label['key'] == 'csys-obj-parent'
+                   for label in comp_deployment.labels)
+
+        self.client.blueprints.upload(
+            self.make_yaml_file(new_parent_blueprint),
+            entity_id='new_parent'
+        )
+        self.client.deployment_updates.update_with_existing_blueprint(
+            deployment.id,
+            blueprint_id='new_parent',
+            inputs={'foo': 127}
+        )
+        self.wait_for_all_executions_to_end()
+
+        # Assert that the update was not executed
+        comp_workflows = [
+            c.workflow_id
+            for c in self.client.executions.list(deployment_id='comp')
+        ]
+        assert 'update' not in comp_workflows
+        assert 'install' in comp_workflows
+        # Assert that the re-install was successful
+        comp_capabilities = self.client.deployments.capabilities.get('comp')
+        assert comp_capabilities['capabilities'] == {'foo': 127}
+
 
 def _wait_until(fn,
                 timeout_seconds=10,
