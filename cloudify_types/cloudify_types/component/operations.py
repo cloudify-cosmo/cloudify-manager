@@ -372,9 +372,13 @@ def check_drift(timeout=EXECUTIONS_TIMEOUT, **kwargs):
     modified_keys = list(capabilities_diff(
         {
             'inputs': deployment.inputs,
+            'labels': [{label['key']: label['value']}
+                       for label in deployment.labels
+                       if not label['key'].startswith('csys-')],
         },
         {
             'inputs': node_properties.get('deployment', {}).get('inputs'),
+            'labels': node_properties.get('deployment', {}).get('labels', []),
         },
     ))
     if modified_keys:
@@ -455,6 +459,7 @@ def update(timeout=EXECUTIONS_TIMEOUT, **kwargs):
 
     drift = ctx.instance.drift
     update_kwargs = {}
+    update_labels = []
     if 'blueprint' in drift and 'id' in drift['blueprint']:
         update_kwargs['blueprint_id'] = resource_config \
             .get('blueprint', {}) \
@@ -463,11 +468,24 @@ def update(timeout=EXECUTIONS_TIMEOUT, **kwargs):
         update_kwargs['inputs'] = resource_config \
             .get('deployment', {}) \
             .get('inputs')
+    if 'deployment' in drift and 'labels' in drift['deployment']:
+        update_labels = resource_config \
+            .get('deployment', {}) \
+            .get('labels')
 
-    client.deployment_updates.update_with_existing_blueprint(
-        deployment_id=deployment_id,
-        **update_kwargs
-    )
+    if update_kwargs:
+        client.deployment_updates.update_with_existing_blueprint(
+            deployment_id=deployment_id,
+            **update_kwargs
+        )
+    if update_labels:
+        deployment = client.deployments.get(deployment_id)
+        deployment_labels = [
+            {label['key']: label['value']} for label in deployment.labels
+        ]
+        deployment_labels.extend(update_labels)
+        client.deployments.update_labels(deployment_id, deployment_labels)
+
     poll_with_timeout(
         lambda: is_all_executions_finished(client, deployment_id),
         timeout=timeout,

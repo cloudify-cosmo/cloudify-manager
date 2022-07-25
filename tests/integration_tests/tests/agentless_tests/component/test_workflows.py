@@ -223,11 +223,6 @@ tosca_definitions_version: cloudify_dsl_1_4
 imports:
   - cloudify/types/types.yaml
 
-blueprint_labels:
-  lorem:
-    values:
-      - ipsum
-
 inputs:
   foo:
     type: integer
@@ -378,6 +373,63 @@ node_templates:
         assert comp.blueprint_id == 'new_comp'
         comp_capabilities = self.client.deployments.capabilities.get('comp')
         assert comp_capabilities['capabilities'] == {'foo': 127, 'bar': 511}
+
+    def test_components_update_labels(self):
+        new_parent_blueprint = """
+tosca_definitions_version: cloudify_dsl_1_4
+
+imports:
+  - cloudify/types/types.yaml
+
+inputs:
+  foo:
+    default: 255
+
+node_templates:
+  comp_node:
+    type: cloudify.nodes.Component
+    properties:
+      resource_config:
+        blueprint:
+          external_resource: true
+          id: comp
+        deployment:
+          id: comp
+          inputs:
+            foo: { get_input: foo }
+          labels:
+            - lorem: ipsum
+        """
+        self.client.blueprints.upload(
+            self.make_yaml_file(DeploymentUpdateTest.COMP_BLUEPRINT),
+            entity_id='comp'
+        )
+        test_blueprint_path = self.make_yaml_file(
+            DeploymentUpdateTest.PARENT_BLUEPRINT)
+        deployment, _ = self.deploy_application(test_blueprint_path)
+        comp_deployment = self.client.deployments.get('comp')
+        assert all(label['key'] == 'csys-obj-parent'
+                   for label in comp_deployment.labels)
+
+        self.client.blueprints.upload(
+            self.make_yaml_file(new_parent_blueprint),
+            entity_id='new_parent'
+        )
+        self.client.deployment_updates.update_with_existing_blueprint(
+            deployment.id,
+            blueprint_id='new_parent',
+        )
+        self.wait_for_all_executions_to_end()
+
+        # Assert that the update was executed, not re-install
+        assert 'uninstall' not in [
+            c.workflow_id
+            for c in self.client.executions.list(deployment_id='comp')
+        ]
+        # Assert that the update was successful
+        comp_deployment = self.client.deployments.get('comp')
+        assert any(label['key'] == 'lorem' and label['value'] == 'ipsum'
+                   for label in comp_deployment.labels)
 
 
 def _wait_until(fn,
