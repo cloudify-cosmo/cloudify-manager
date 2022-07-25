@@ -360,6 +360,10 @@ def check_drift(timeout=EXECUTIONS_TIMEOUT, **kwargs):
     deployment = client.deployments.get(deployment_id)
     blueprint = client.blueprints.get(deployment.blueprint_id)
 
+    # Discover different client configuration
+    if get_desired_operation_input('client', kwargs):
+        drift['client'] = True
+
     # Discover the capabilities drift
     modified_keys = list(capabilities_diff(
         client.deployments.capabilities.get(deployment_id).get('capabilities'),
@@ -460,6 +464,11 @@ def update(timeout=EXECUTIONS_TIMEOUT, **kwargs):
     drift = ctx.instance.drift
     update_kwargs = {}
     update_labels = []
+    if 'client' in drift and drift['client']:
+        raise NonRecoverableError(
+            f'Update not available for "{deployment_id}" '
+            'because of client drift'
+        )
     if 'blueprint' in drift and 'id' in drift['blueprint']:
         update_kwargs['blueprint_id'] = resource_config \
             .get('blueprint', {}) \
