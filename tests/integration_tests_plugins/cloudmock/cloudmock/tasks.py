@@ -217,3 +217,16 @@ def limit_scale(ctx):
         raise NonRecoverableError(
             'instance {0} disallowed'.format(ctx.instance.index))
     ctx.logger.info('instance %d created', ctx.instance.index)
+
+
+@operation
+def clear_fail_flag(ctx, **kwargs):
+    """Clear the fail flag, so that the maybe_failing task doesn't fail"""
+    ctx.instance.runtime_properties['fail'] = False
+
+
+@operation
+def maybe_failing(ctx, **kwargs):
+    """Fail only if the fail flag is set"""
+    if ctx.instance.runtime_properties.get('fail'):
+        raise NonRecoverableError('Error')
