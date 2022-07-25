@@ -2518,7 +2518,8 @@ class ResourceManager(object):
                     ]),
                     models.Execution.workflow_id.in_([
                         'stop', 'uninstall', 'update',
-                        'csys_new_deployment_update'
+                        'csys_new_deployment_update',
+                        'heal',
                     ])
                 )
                 .exists()
@@ -2535,7 +2536,8 @@ class ResourceManager(object):
 
     def _verify_dependencies_not_affected(self, execution, force):
         if execution.workflow_id not in [
-            'stop', 'uninstall', 'update', 'csys_new_deployment_update'
+            'stop', 'uninstall', 'update', 'csys_new_deployment_update',
+            'heal',
         ]:
             return
         # if we're in the middle of an execution initiated by the component

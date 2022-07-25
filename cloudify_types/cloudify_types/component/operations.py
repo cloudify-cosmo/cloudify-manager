@@ -410,16 +410,24 @@ def heal(timeout=EXECUTIONS_TIMEOUT, **kwargs):
     client, _ = get_client(kwargs)
     deployment_id = _current_deployment_id(**kwargs)
 
-    client.executions.start(
+    heal_execution = client.executions.start(
         deployment_id=deployment_id,
         workflow_id='heal'
+    )
+    ctx.logger.info(
+        'Heal of component deployment: %s, heal execution: %s',
+        deployment_id, heal_execution.id
     )
     poll_with_timeout(
         lambda: is_all_executions_finished(client, deployment_id),
         timeout=timeout,
         expected_result=True
     )
-
+    heal_execution = client.executions.get(heal_execution.id)
+    ctx.logger.info(
+        'Heal of component deployment: %s finished, execution status: %s',
+        deployment_id, heal_execution.status
+    )
     deployment = client.deployments.get(deployment_id)
     validate_deployment_status(deployment)
 
