@@ -18,14 +18,14 @@ from setuptools import setup, find_packages
 
 setup(
     name='cloudify-types',
-    version='6.4.0.dev1',
+    version='6.4.0',
     author='Cloudify',
     author_email='cosmo-admin@cloudify.co',
     packages=find_packages(),
     license='LICENSE',
     description='Various special Cloudify types implementation.',
     install_requires=[
-        'cloudify-common==6.4.0.dev1',
+        'cloudify-common==6.4.0',
         'requests>=2.25.0,<3.0.0',
         'PyYAML==6.0',
     ]
