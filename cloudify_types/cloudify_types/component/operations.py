@@ -26,7 +26,8 @@ from cloudify_types.utils import (do_upload_blueprint,
                                   errors_nonrecoverable,
                                   get_desired_operation_input,
                                   get_client, get_idd,
-                                  capabilities_diff,
+                                  dict_sum_diff,
+                                  current_deployment_id,
                                   validate_deployment_status)
 from .polling import (
     poll_with_timeout,
@@ -339,7 +340,7 @@ def refresh(**kwargs):
 
 @operation(resumable=True)
 def check_drift(timeout=EXECUTIONS_TIMEOUT, **kwargs):
-    deployment_id = _current_deployment_id(**kwargs)
+    deployment_id = current_deployment_id(**kwargs)
     client, _ = get_client(kwargs)
     drift = {}
 
@@ -365,7 +366,7 @@ def check_drift(timeout=EXECUTIONS_TIMEOUT, **kwargs):
         drift['client'] = True
 
     # Discover the capabilities drift
-    modified_keys = list(capabilities_diff(
+    modified_keys = list(dict_sum_diff(
         client.deployments.capabilities.get(deployment_id).get('capabilities'),
         node_instance_runtime_properties.get('capabilities'),
     ))
@@ -373,16 +374,19 @@ def check_drift(timeout=EXECUTIONS_TIMEOUT, **kwargs):
         drift['capabilities'] = modified_keys
 
     # Discover the properties drift - the deployment
-    modified_keys = list(capabilities_diff(
+    new_deployment_properties = node_properties.get('deployment', {})
+    modified_keys = list(dict_sum_diff(
         {
+            'id': deployment_id,
             'inputs': deployment.inputs,
             'labels': [{label['key']: label['value']}
                        for label in deployment.labels
                        if not label['key'].startswith('csys-')],
         },
         {
-            'inputs': node_properties.get('deployment', {}).get('inputs'),
-            'labels': node_properties.get('deployment', {}).get('labels', []),
+            'id': new_deployment_properties.get('id', deployment_id),
+            'inputs': new_deployment_properties.get('inputs', {}),
+            'labels': new_deployment_properties.get('labels', []),
         },
     ))
     if modified_keys:
@@ -390,13 +394,13 @@ def check_drift(timeout=EXECUTIONS_TIMEOUT, **kwargs):
 
     # Discover the properties drift, starting with blueprint
     new_blueprint_properties = node_properties.get('blueprint', {})
-    modified_keys = list(capabilities_diff(
+    modified_keys = list(dict_sum_diff(
         {
             'id': blueprint.id,
             'labels': blueprint.labels,
         },
         {
-            'id': new_blueprint_properties.get('id'),
+            'id': new_blueprint_properties.get('id', blueprint.id),
             'labels': new_blueprint_properties.get('labels', []),
         },
     ))
@@ -410,7 +414,7 @@ def check_drift(timeout=EXECUTIONS_TIMEOUT, **kwargs):
 def check_status(timeout=EXECUTIONS_TIMEOUT, **kwargs):
     """Discover status of a deployment basing on its different attributes."""
     client, _ = get_client(kwargs)
-    deployment_id = _current_deployment_id(**kwargs)
+    deployment_id = current_deployment_id(**kwargs)
 
     client.executions.start(
         deployment_id=deployment_id,
@@ -430,7 +434,7 @@ def check_status(timeout=EXECUTIONS_TIMEOUT, **kwargs):
 def heal(timeout=EXECUTIONS_TIMEOUT, **kwargs):
     """Run a `heal` workflow on a deployment identified by `deployment_id`"""
     client, _ = get_client(kwargs)
-    deployment_id = _current_deployment_id(**kwargs)
+    deployment_id = current_deployment_id(**kwargs)
 
     heal_execution = client.executions.start(
         deployment_id=deployment_id,
@@ -458,7 +462,7 @@ def heal(timeout=EXECUTIONS_TIMEOUT, **kwargs):
 def update(timeout=EXECUTIONS_TIMEOUT, **kwargs):
     """Run a `update` workflow on a deployment identified by `deployment_id`"""
     client, _ = get_client(kwargs)
-    deployment_id = _current_deployment_id(**kwargs)
+    deployment_id = current_deployment_id(**kwargs)
     resource_config = ctx.node.properties.get('resource_config', {})
 
     drift = ctx.instance.drift
@@ -468,6 +472,11 @@ def update(timeout=EXECUTIONS_TIMEOUT, **kwargs):
         raise NonRecoverableError(
             f'Update not available for "{deployment_id}" '
             'because of client drift'
+        )
+    if 'deployment' in drift and 'id' in drift['deployment']:
+        raise NonRecoverableError(
+            f'Update not available for "{deployment_id}" '
+            'because of deployment_id change'
         )
     if 'blueprint' in drift and 'id' in drift['blueprint']:
         update_kwargs['blueprint_id'] = resource_config \
@@ -503,14 +512,3 @@ def update(timeout=EXECUTIONS_TIMEOUT, **kwargs):
 
     deployment = client.deployments.get(deployment_id)
     validate_deployment_status(deployment)
-
-
-def _current_deployment_id(**kwargs):
-    config = get_desired_operation_input('resource_config', kwargs)
-    runtime_deployment_prop = ctx.instance.runtime_properties.get(
-        'deployment', {})
-    runtime_deployment_id = runtime_deployment_prop.get('id')
-    deployment = config.get('deployment', {})
-    return runtime_deployment_id \
-        or deployment.get('id') \
-        or ctx.instance.id

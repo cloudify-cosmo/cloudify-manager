@@ -464,7 +464,7 @@ def _zipping(source, destination, include_folder=True):
     return destination
 
 
-def capabilities_diff(a, b):
+def dict_sum_diff(a, b):
     a_dict = a if isinstance(a, dict) else {}
     b_dict = b if isinstance(b, dict) else {}
     for k in a_dict.keys() | b_dict.keys():
@@ -472,12 +472,15 @@ def capabilities_diff(a, b):
             yield k
 
 
-def properties_diff(a, b):
-    a_dict = a if isinstance(a, dict) else {}
-    b_dict = b if isinstance(b, dict) else {}
-    for k in a_dict.keys() & b_dict.keys():
-        if a_dict[k] != b_dict[k]:
-            yield k
+def current_deployment_id(**kwargs):
+    config = get_desired_operation_input('resource_config', kwargs)
+    runtime_deployment_prop = ctx.instance.runtime_properties.get(
+        'deployment', {})
+    runtime_deployment_id = runtime_deployment_prop.get('id')
+    deployment = config.get('deployment', {})
+    return runtime_deployment_id \
+        or deployment.get('id') \
+        or ctx.instance.id
 
 
 def validate_deployment_status(deployment):
