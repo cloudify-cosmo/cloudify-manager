@@ -205,8 +205,8 @@ node_templates:
         # check that heal did call exactly the graphs we expected:
         # a check_status first (which failed), then a heal (which also failed),
         # and then a fallback to reinstall
-        # NOTE: this assert is VERY tighly coupled to the implementation. If it
-        # fails often when changing the heal workflow impl, we can make it
+        # NOTE: this assert is VERY tightly coupled to the implementation. If
+        # it fails often when changing the heal workflow impl, we can make it
         # more lenient
         assert heal_graphs == [
             'check_status',
@@ -214,6 +214,287 @@ node_templates:
             'reinstall-uninstall',
             'reinstall-install',
         ]
+
+
+class DeploymentUpdateTest(AgentlessTestCase):
+    COMP_BLUEPRINT = """
+tosca_definitions_version: cloudify_dsl_1_4
+
+imports:
+  - cloudify/types/types.yaml
+
+inputs:
+  foo:
+    type: integer
+
+node_templates:
+  root_node:
+    type: cloudify.nodes.Root
+
+capabilities:
+  foo:
+    value: { get_input: foo }
+"""
+    PARENT_BLUEPRINT = """
+tosca_definitions_version: cloudify_dsl_1_4
+
+imports:
+  - cloudify/types/types.yaml
+
+inputs:
+  foo:
+    default: 255
+
+node_templates:
+  comp_node:
+    type: cloudify.nodes.Component
+    properties:
+      resource_config:
+        blueprint:
+          external_resource: true
+          id: comp
+        deployment:
+          id: comp
+          inputs:
+            foo: { get_input: foo }
+        """
+
+    def test_components_update_inputs(self):
+        self.client.blueprints.upload(
+            self.make_yaml_file(DeploymentUpdateTest.COMP_BLUEPRINT),
+            entity_id='comp'
+        )
+        test_blueprint_path = self.make_yaml_file(
+            DeploymentUpdateTest.PARENT_BLUEPRINT)
+        deployment, _ = self.deploy_application(test_blueprint_path)
+        comp_capabilities = self.client.deployments.capabilities.get('comp')
+        assert comp_capabilities['capabilities'] == {'foo': 255}
+
+        self.client.deployment_updates.update_with_existing_blueprint(
+            deployment.id,
+            blueprint_id=deployment.blueprint_id,
+            inputs={'foo': 256}
+        )
+        self.wait_for_all_executions_to_end()
+
+        # Assert that the update was successful
+        comp_capabilities = self.client.deployments.capabilities.get('comp')
+        assert comp_capabilities['capabilities'] == {'foo': 256}
+
+        # Assert `comp` was updated not re-installed
+        comp_workflows = [
+            c.workflow_id
+            for c in self.client.executions.list(deployment_id='comp')
+        ]
+        assert 'uninstall' not in comp_workflows
+        assert 'update' in comp_workflows
+
+    def test_components_update_blueprint(self):
+        new_component_blueprint = """
+tosca_definitions_version: cloudify_dsl_1_4
+
+imports:
+  - cloudify/types/types.yaml
+
+inputs:
+  foo:
+    description: Another testing input
+    type: integer
+  bar:
+    description: Another testing input
+    type: integer
+
+node_templates:
+  root_node:
+    type: cloudify.nodes.Root
+
+capabilities:
+  bar:
+    description: Another testing capability
+    value: { get_input: bar }
+  foo:
+    description: Another testing capability
+    value: { get_input: foo }
+"""
+        new_parent_blueprint = """
+tosca_definitions_version: cloudify_dsl_1_4
+
+imports:
+  - cloudify/types/types.yaml
+
+inputs:
+  foo:
+    description: Another testing input
+    type: integer
+  bar:
+    description: Another testing input
+    type: integer
+
+node_templates:
+  comp_node:
+    type: cloudify.nodes.Component
+    properties:
+      resource_config:
+        blueprint:
+          external_resource: true
+          id: new_comp
+        deployment:
+          inputs:
+            foo: { get_input: foo }
+            bar: { get_input: bar }
+        """
+        self.client.blueprints.upload(
+            self.make_yaml_file(DeploymentUpdateTest.COMP_BLUEPRINT),
+            entity_id='comp'
+        )
+        test_blueprint_path = self.make_yaml_file(
+            DeploymentUpdateTest.PARENT_BLUEPRINT)
+        deployment, _ = self.deploy_application(test_blueprint_path)
+        comp_capabilities = self.client.deployments.capabilities.get('comp')
+        assert comp_capabilities['capabilities'] == {'foo': 255}
+
+        self.client.blueprints.upload(
+            self.make_yaml_file(new_component_blueprint),
+            entity_id='new_comp'
+        )
+        self.client.blueprints.upload(
+            self.make_yaml_file(new_parent_blueprint),
+            entity_id='new_parent'
+        )
+        self.client.deployment_updates.update_with_existing_blueprint(
+            deployment.id,
+            blueprint_id='new_parent',
+            inputs={'foo': 127, 'bar': 511},
+        )
+        self.wait_for_all_executions_to_end()
+
+        # Assert that the update was successful
+        comp = self.client.deployments.get('comp')
+        assert comp.blueprint_id == 'new_comp'
+        comp_capabilities = self.client.deployments.capabilities.get('comp')
+        assert comp_capabilities['capabilities'] == {'foo': 127, 'bar': 511}
+
+    def test_components_update_labels(self):
+        new_parent_blueprint = """
+tosca_definitions_version: cloudify_dsl_1_4
+
+imports:
+  - cloudify/types/types.yaml
+
+inputs:
+  foo:
+    default: 255
+
+node_templates:
+  comp_node:
+    type: cloudify.nodes.Component
+    properties:
+      resource_config:
+        blueprint:
+          external_resource: true
+          id: comp
+        deployment:
+          id: comp
+          inputs:
+            foo: { get_input: foo }
+          labels:
+            - lorem: ipsum
+        """
+        self.client.blueprints.upload(
+            self.make_yaml_file(DeploymentUpdateTest.COMP_BLUEPRINT),
+            entity_id='comp'
+        )
+        test_blueprint_path = self.make_yaml_file(
+            DeploymentUpdateTest.PARENT_BLUEPRINT)
+        deployment, _ = self.deploy_application(test_blueprint_path)
+        comp_deployment = self.client.deployments.get('comp')
+        assert all(label['key'] == 'csys-obj-parent'
+                   for label in comp_deployment.labels)
+
+        self.client.blueprints.upload(
+            self.make_yaml_file(new_parent_blueprint),
+            entity_id='new_parent'
+        )
+        self.client.deployment_updates.update_with_existing_blueprint(
+            deployment.id,
+            blueprint_id='new_parent',
+        )
+        self.wait_for_all_executions_to_end()
+
+        # Assert that the update was executed, not re-install
+        assert 'uninstall' not in [
+            c.workflow_id
+            for c in self.client.executions.list(deployment_id='comp')
+        ]
+        # Assert that the update was successful
+        comp_deployment = self.client.deployments.get('comp')
+        assert any(label['key'] == 'lorem' and label['value'] == 'ipsum'
+                   for label in comp_deployment.labels)
+
+    def test_components_update_client(self):
+        new_parent_blueprint = """
+tosca_definitions_version: cloudify_dsl_1_4
+
+imports:
+  - cloudify/types/types.yaml
+
+inputs:
+  foo:
+    default: 255
+
+node_templates:
+  comp_node:
+    type: cloudify.nodes.Component
+    properties:
+      resource_config:
+        blueprint:
+          external_resource: true
+          id: comp
+        deployment:
+          id: comp
+          inputs:
+            foo: { get_input: foo }
+      client:
+        host: localhost
+        port: 443
+        protocol: https
+        trust_all: true
+        username: admin
+        password: admin
+        tenant: default_tenant
+        """
+        self.client.blueprints.upload(
+            self.make_yaml_file(DeploymentUpdateTest.COMP_BLUEPRINT),
+            entity_id='comp'
+        )
+        test_blueprint_path = self.make_yaml_file(
+            DeploymentUpdateTest.PARENT_BLUEPRINT)
+        deployment, _ = self.deploy_application(test_blueprint_path)
+        comp_deployment = self.client.deployments.get('comp')
+        assert all(label['key'] == 'csys-obj-parent'
+                   for label in comp_deployment.labels)
+
+        self.client.blueprints.upload(
+            self.make_yaml_file(new_parent_blueprint),
+            entity_id='new_parent'
+        )
+        self.client.deployment_updates.update_with_existing_blueprint(
+            deployment.id,
+            blueprint_id='new_parent',
+            inputs={'foo': 127}
+        )
+        self.wait_for_all_executions_to_end()
+
+        # Assert that the update was not executed
+        comp_workflows = [
+            c.workflow_id
+            for c in self.client.executions.list(deployment_id='comp')
+        ]
+        assert 'update' not in comp_workflows
+        assert 'install' in comp_workflows
+        # Assert that the re-install was successful
+        comp_capabilities = self.client.deployments.capabilities.get('comp')
+        assert comp_capabilities['capabilities'] == {'foo': 127}
 
 
 def _wait_until(fn,
