@@ -13,8 +13,9 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import time
 import pytest
+import retrying
+
 from cloudify.models_states import PluginInstallationState
 
 from cloudify_rest_client.exceptions import CloudifyClientError
@@ -28,6 +29,35 @@ TEST_PACKAGE_NAME = 'cloudify-aria-plugin'
 TEST_PACKAGE_VERSION = '1.1'
 TEST_PACKAGE2_NAME = 'cloudify-diamond-plugin'
 TEST_PACKAGE2_VERSION = '1.3'
+
+
+@retrying.retry(
+    wait_fixed=500,
+    # plugins should install fairly quickly, on the order of seconds.
+    # Let's wait for up to a minute.
+    stop_max_delay=60000,
+)
+def _fetch_plugin(client, plugin_id):
+    """Wait until the plugin has finished installing, and return it.
+
+    This waits until the plugin installation state resolves, to either
+    an successful, or an error state.
+    """
+    plugin_retrieved = client.plugins.get(plugin_id)
+    # installation_state is a list of dicts that have at least the
+    # 'state' key, and 'manager' or 'agent' keys
+    assert 'installation_state' in plugin_retrieved
+    installation_state = plugin_retrieved['installation_state']
+    if any(
+        state_spec['state'] in {
+            PluginInstallationState.PENDING,
+            PluginInstallationState.INSTALLING,
+            PluginInstallationState.PENDING_UNINSTALL,
+            PluginInstallationState.UNINSTALLING,
+        } for state_spec in installation_state
+    ):
+        raise RuntimeError(f'Plugin still pending: {installation_state}')
+    return plugin_retrieved
 
 
 class TestPlugins(AgentlessTestCase):
@@ -98,16 +128,9 @@ class TestPlugins(AgentlessTestCase):
         self.client.plugins.install(
             plugins[0].id,
             managers=[m.hostname for m in self.client.manager.get_managers()])
-        deadline = time.time() + 30
-        while time.time() < deadline:
-            states = self.client.plugins.get(plugins[0].id).installation_state
-            if not states:
-                time.sleep(0.5)
-                continue
-            state = states[0]['state']
-            if state == PluginInstallationState.INSTALLED:
-                break
-            time.sleep(0.5)
+
+        plugin_retrieved = _fetch_plugin(self.client, plugins[0].id)
+        state = plugin_retrieved.installation_state[0]['state']
         assert state == PluginInstallationState.INSTALLED
 
     @pytest.mark.usefixtures('dsl_backcompat_plugin')
@@ -150,9 +173,7 @@ class TestPluginsSystemState(AgentlessTestCase):
             plugin.id,
             managers=[m.hostname for m in self.client.manager.get_managers()])
 
-        time.sleep(2)  # give time for log to refresh and plugin to install
-        plugin_retrieved = self.client.plugins.get(plugin.id)
-        assert 'installation_state' in plugin_retrieved
+        plugin_retrieved = _fetch_plugin(self.client, plugin.id)
 
         if corrupt_plugin:
             log_path = '/var/log/cloudify/mgmtworker/mgmtworker.log'
