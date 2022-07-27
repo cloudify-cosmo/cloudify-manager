@@ -23,8 +23,8 @@ from cloudify_types.utils import (errors_nonrecoverable,
                                   get_desired_operation_input,
                                   get_deployment_by_id,
                                   get_client, get_idd,
-                                  capabilities_diff,
-                                  properties_diff,
+                                  dict_sum_diff,
+                                  current_deployment_id,
                                   validate_deployment_status)
 
 from cloudify_types.component.utils import (
@@ -176,37 +176,62 @@ def refresh(**kwargs):
 
 @operation(resumable=True)
 def check_drift(**kwargs):
-    config = get_desired_operation_input('resource_config', kwargs)
-    deployment_id = config.get('deployment', {}).get('id')
+    deployment_id = current_deployment_id(**kwargs)
     client, _ = get_client(kwargs)
     drift = {}
 
-    # Discover the drift by comparing the capabilities of a deployment to the
-    # runtime properties / capabilities of a node_instance
-    deployment_capabilities = client.deployments.capabilities\
-        .get(deployment_id)\
-        .get('capabilities')
-    node_instance_capabilities = client.node_instances\
+    node_properties = ctx.node.properties.get('resource_config')
+    node_instance_runtime_properties = client.node_instances \
         .get(kwargs['ctx'].instance.id, _include=['id', 'runtime_properties'])\
-        .get('runtime_properties', {})\
-        .get('capabilities')
-    modified_keys = list(capabilities_diff(
-        deployment_capabilities,
-        node_instance_capabilities
+        .get('runtime_properties')
+    deployment = client.deployments.get(deployment_id)
+    blueprint = client.blueprints.get(deployment.blueprint_id)
+
+    # Discover different client configuration
+    if get_desired_operation_input('client', kwargs):
+        drift['client'] = True
+
+    # Discover the capabilities drift
+    modified_keys = list(dict_sum_diff(
+        client.deployments.capabilities.get(deployment_id).get('capabilities'),
+        node_instance_runtime_properties.get('capabilities'),
     ))
     if modified_keys:
         drift['capabilities'] = modified_keys
 
-    # Discover the drift by comparing node properties of a deployment to the
-    # runtime_properties of a node_instance
-    node_properties = ctx.node.properties.get('resource_config')
-    node_instance_runtime_properties = ctx.instance.runtime_properties
-    modified_keys = list(properties_diff(
-        node_properties,
-        node_instance_runtime_properties,
+    # Discover the properties drift - the deployment
+    new_deployment_properties = node_properties.get('deployment', {})
+    modified_keys = list(dict_sum_diff(
+        {
+            'id': deployment_id,
+            'inputs': deployment.inputs,
+            'labels': [{label['key']: label['value']}
+                       for label in deployment.labels
+                       if not label['key'].startswith('csys-')],
+        },
+        {
+            'id': new_deployment_properties.get('id', deployment_id),
+            'inputs': new_deployment_properties.get('inputs', {}),
+            'labels': new_deployment_properties.get('labels', []),
+        },
     ))
     if modified_keys:
-        drift['properties'] = modified_keys
+        drift['deployment'] = modified_keys
+
+    # Discover the properties drift, starting with blueprint
+    new_blueprint_properties = node_properties.get('blueprint', {})
+    modified_keys = list(dict_sum_diff(
+        {
+            'id': blueprint.id,
+            'labels': blueprint.labels,
+        },
+        {
+            'id': new_blueprint_properties.get('id', blueprint.id),
+            'labels': new_blueprint_properties.get('labels', []),
+        },
+    ))
+    if modified_keys:
+        drift['blueprint'] = modified_keys
 
     return drift or None
 
@@ -214,8 +239,7 @@ def check_drift(**kwargs):
 @operation(resumable=True)
 def check_status(**kwargs):
     """Discover status of a deployment basing on its different attributes."""
-    config = get_desired_operation_input('resource_config', kwargs)
-    deployment_id = config.get('deployment', {}).get('id')
+    deployment_id = current_deployment_id(**kwargs)
     client, _ = get_client(kwargs)
     deployment = client.deployments.get(deployment_id)
     validate_deployment_status(deployment)
