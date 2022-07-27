@@ -20,3 +20,4 @@ from .operations import refresh  # NOQA
 from .operations import check_drift  # NOQA
 from .operations import check_status  # NOQA
 from .operations import heal  # NOQA
+from .operations import update  # NOQA
