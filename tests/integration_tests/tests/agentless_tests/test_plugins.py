@@ -150,9 +150,27 @@ class TestPluginsSystemState(AgentlessTestCase):
             plugin.id,
             managers=[m.hostname for m in self.client.manager.get_managers()])
 
-        time.sleep(2)  # give time for log to refresh and plugin to install
-        plugin_retrieved = self.client.plugins.get(plugin.id)
-        assert 'installation_state' in plugin_retrieved
+        # plugins should install fairly quickly, on the order of seconds.
+        # Let's wait for up to a minute.
+        deadline = time.time() + 60
+        while time.time() < deadline:
+            # wait for the plugins installation state to resolve, we don't
+            # care about intermediary pending states
+            plugin_retrieved = self.client.plugins.get(plugin.id)
+            # installation_state is a list of dicts that have at least the
+            # 'state' key, and 'manager' or 'agent' keys
+            assert 'installation_state' in plugin_retrieved
+            is_pending_state = any(
+                state_spec['state'] in {
+                    PluginInstallationState.PENDING,
+                    PluginInstallationState.INSTALLING,
+                    PluginInstallationState.PENDING_UNINSTALL,
+                    PluginInstallationState.UNINSTALLING,
+                } for state_spec in plugin_retrieved['installation_state']
+            )
+            if not is_pending_state:
+                break
+            time.sleep(1)
 
         if corrupt_plugin:
             log_path = '/var/log/cloudify/mgmtworker/mgmtworker.log'
