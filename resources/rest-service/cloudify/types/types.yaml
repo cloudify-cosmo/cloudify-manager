@@ -1005,6 +1005,7 @@ workflows:
     is_cascading: false
     availability_rules:
       node_instances_active: [ 'all', 'partial' ]
+      node_types_required: [ 'cloudify.nodes.Compute' ]
     parameters:
       install_agent_timeout:
         default: 300
@@ -1042,6 +1043,7 @@ workflows:
     is_cascading: false
     availability_rules:
       node_instances_active: [ 'all', 'partial' ]
+      node_types_required: [ 'cloudify.nodes.Compute' ]
     parameters:
       node_ids:
         type: list
