@@ -609,3 +609,56 @@ workflows:
         with self.assertRaises(CloudifyClientError) as cm:
             self.execute_workflow('wf4', deployment.id)
         assert cm.exception.error_code == 'unavailable_workflow_error'
+
+    def test_workflows_availability_compute_nodes(self):
+        compute_bp = """
+tosca_definitions_version: cloudify_dsl_1_4
+
+imports:
+    - cloudify/types/types.yaml
+
+node_types:
+    test_type:
+        derived_from: cloudify.nodes.Compute
+
+node_templates:
+    node1:
+        type: cloudify.nodes.Root
+    node2:
+        type: test_type
+        properties:
+            ip: localhost
+            agent_config:
+                install_method: none
+"""
+        no_compute_bp = """
+tosca_definitions_version: cloudify_dsl_1_4
+
+imports:
+    - cloudify/types/types.yaml
+
+node_templates:
+    node1:
+        type: cloudify.nodes.Root
+"""
+        compute_dep, _ = self.deploy_application(
+            self.make_yaml_file(compute_bp)
+        )
+        workflows = [
+            w.name
+            for w in self.client.deployments.get(compute_dep.id).workflows
+            if w.is_available
+        ]
+        assert 'validate_agents' in workflows
+        assert 'install_new_agents' in workflows
+
+        no_compute_dep, _ = self.deploy_application(
+            self.make_yaml_file(no_compute_bp)
+        )
+        workflows = [
+            w.name
+            for w in self.client.deployments.get(no_compute_dep.id).workflows
+            if w.is_available
+        ]
+        assert 'validate_agents' not in workflows
+        assert 'install_new_agents' not in workflows
