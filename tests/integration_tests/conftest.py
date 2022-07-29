@@ -66,6 +66,7 @@ def pytest_addoption(parser):
         help='Run a "lightweight" manager, without UI and monitoring',
     )
 
+
 # items from tests-source-root to be mounted into the specified
 # on-manager virtualenvs
 # pairs of (source path, [list of target virtualenvs])
