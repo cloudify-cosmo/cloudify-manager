@@ -37,14 +37,6 @@ SERVICES = {
 class TestManagerStatus(AgentlessTestCase):
 
     def test_status_response(self):
-        # Force Prometheus to scrape the statuses
-        self.restart_service('blackbox_exporter')
-        self.restart_service('postgres_exporter')
-        self.restart_service('node_exporter')
-        time.sleep(1.5)
-        self.execute_on_manager('bash -c "pkill -SIGHUP prometheus"')
-        time.sleep(0.5)
-
         manager_status = self.client.manager.get_status()
         self.assertEqual(manager_status['status'], ServiceStatus.HEALTHY)
 
