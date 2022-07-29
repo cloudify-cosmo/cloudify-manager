@@ -62,9 +62,6 @@ class TestManagerStatus(AgentlessTestCase):
     def test_status_service_inactive(self):
         """One of the systemd services is down"""
         self._test_service_inactive('Management Worker')
-        self._test_service_inactive('Cloudify Console')
-        self._test_service_inactive('AMQP-Postgres')
-
 
     def test_status_rabbit_inactive(self):
         self._test_service_inactive('RabbitMQ')
