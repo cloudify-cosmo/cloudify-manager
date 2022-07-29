@@ -25,7 +25,8 @@ We add several commandline arguments for pytest:
 - `--container-id` - use a pre-spawned container (might be from a separate
   test run that provided --keep-container) for this test. Use this to
   greatly increase iteration speed when working with the tests.
-
+- `--lightweight` - run a container without optional services, making it
+  lighter and faster
 
 ## Source code mounting
 

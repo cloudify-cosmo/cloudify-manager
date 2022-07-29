@@ -59,7 +59,12 @@ def pytest_addoption(parser):
         help='Run integration tests using specific service management layer. '
              '`supervisord` or `systemd`',
     )
-
+    parser.addoption(
+        '--lightweight',
+        default=False,
+        action='store_true',
+        help='Run a "lightweight" manager, without UI and monitoring',
+    )
 
 # items from tests-source-root to be mounted into the specified
 # on-manager virtualenvs
@@ -166,12 +171,17 @@ def manager_container(request, resource_mapping):
     keep_container = request.config.getoption("--keep-container")
     container_id = request.config.getoption("--container-id")
     service_management = request.config.getoption("--service-management")
+    lightweight = request.config.getoption('--lightweight')
     if container_id:
         reset_storage(container_id)
         keep_container = True
     else:
         container_id = docker.run_manager(
-            image_name, service_management, resource_mapping=resource_mapping)
+            image_name,
+            service_management,
+            resource_mapping=resource_mapping,
+            lightweight=lightweight,
+        )
         docker.upload_mock_license(container_id)
     container_ip = docker.get_manager_ip(container_id)
     container = Env(container_id, container_ip, service_management)
