@@ -455,7 +455,7 @@ def heal(timeout=EXECUTIONS_TIMEOUT, **kwargs):
         deployment_id, heal_execution.status
     )
     deployment = client.deployments.get(deployment_id)
-    validate_deployment_status(deployment)
+    validate_deployment_status(deployment, validate_drifted=False)
 
 
 @operation
