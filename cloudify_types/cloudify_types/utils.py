@@ -485,21 +485,21 @@ def current_deployment_id(**kwargs):
 
 def validate_deployment_status(deployment, validate_drifted=True):
     if deployment.installation_status != DeploymentState.ACTIVE:
-        raise Exception(
+        raise NonRecoverableError(
             f"Expected deployment '{deployment.id}' to be installed, but got "
             f"installation status: '{deployment.installation_status}'")
     if deployment.deployment_status != DeploymentState.GOOD:
-        raise Exception(
+        raise NonRecoverableError(
             f"Expected deployment '{deployment.id}' to be in a good state, "
             f"but got deployment status: '{deployment.deployment_status}'")
     if deployment.latest_execution_status == ExecutionState.FAILED:
-        raise Exception(
+        raise NonRecoverableError(
             f"The latest execution for '{deployment.id}' failed")
     if deployment.unavailable_instances > 0:
-        raise Exception(
+        raise NonRecoverableError(
             f"There are {deployment.unavailable_instances} unavailable "
             f"instances in deployment '{deployment.id}'")
     if validate_drifted and deployment.drifted_instances > 0:
-        raise Exception(
+        raise NonRecoverableError(
             f"There are {deployment.drifted_instances} drifted "
             f"instances in deployment '{deployment.id}'")
