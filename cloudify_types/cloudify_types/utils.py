@@ -483,7 +483,7 @@ def current_deployment_id(**kwargs):
         or ctx.instance.id
 
 
-def validate_deployment_status(deployment):
+def validate_deployment_status(deployment, validate_drifted=True):
     if deployment.installation_status != DeploymentState.ACTIVE:
         raise Exception(
             f"Expected deployment '{deployment.id}' to be installed, but got "
@@ -499,7 +499,7 @@ def validate_deployment_status(deployment):
         raise Exception(
             f"There are {deployment.unavailable_instances} unavailable "
             f"instances in deployment '{deployment.id}'")
-    if deployment.drifted_instances > 0:
+    if validate_drifted and deployment.drifted_instances > 0:
         raise Exception(
             f"There are {deployment.drifted_instances} drifted "
             f"instances in deployment '{deployment.id}'")
