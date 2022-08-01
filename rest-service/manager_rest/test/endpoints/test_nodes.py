@@ -257,7 +257,7 @@ class NodesTest(_NodeSetupMixin, base_test.BaseServerTestCase):
         self.assertNotIn('key', response.runtime_properties)
 
     def test_patch_node_runtime_props_overwrite(self):
-        """Runtime properties update with a preexisting key keeps the new value.
+        """Runtime properties update with a preexisting key keeps the new value
 
         When the new runtime properties have a key that was already in
         runtime properties, the new value wins.

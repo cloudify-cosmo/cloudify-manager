@@ -116,7 +116,7 @@ class NodeHandler(FrozenEntitiesHandlerBase):
         """Handles removing a node
         :return: the removed node
         """
-        del(current_entities[ctx.storage_node.id])
+        del current_entities[ctx.storage_node.id]
         return ctx.storage_node.id
 
 
@@ -327,7 +327,7 @@ class OperationHandler(ModifiableEntityHandlerBase):
     @staticmethod
     def _remove_node_operation(ctx, current_entities):
         current_node = current_entities[ctx.raw_node_id]
-        del(current_node[ctx.OPERATIONS][ctx.operation_id])
+        del current_node[ctx.OPERATIONS][ctx.operation_id]
         return ctx.entity_id
 
     @staticmethod
@@ -335,7 +335,7 @@ class OperationHandler(ModifiableEntityHandlerBase):
         current_node = current_entities[ctx.raw_node_id]
         modified_relationship = \
             current_node[ctx.RELATIONSHIPS][ctx.relationship_index]
-        del(modified_relationship[ctx.operations_key][ctx.operation_id])
+        del modified_relationship[ctx.operations_key][ctx.operation_id]
         return ctx.entity_id
 
     def add(self, ctx, current_entities):
@@ -384,7 +384,7 @@ class PropertyHandler(ModifiableEntityHandlerBase):
 
     def remove(self, ctx, current_entities):
         node_id = ctx.raw_node_id
-        del(current_entities[node_id][ctx.PROPERTIES][ctx.property_id])
+        del current_entities[node_id][ctx.PROPERTIES][ctx.property_id]
         return ctx.entity_id
 
     def add(self, ctx, current_entities):
@@ -408,7 +408,7 @@ class WorkflowHandler(ModifiableEntityHandlerBase):
         deployment = self.sm.get(models.Deployment, ctx.deployment_id)
         new_workflows = deployment.workflows.copy()
 
-        del(current_entities[ctx.WORKFLOWS][ctx.workflow_id])
+        del current_entities[ctx.WORKFLOWS][ctx.workflow_id]
         del new_workflows[ctx.workflow_id]
 
         deployment.workflows = new_workflows
@@ -435,7 +435,7 @@ class OutputHandler(ModifiableEntityHandlerBase):
         deployment = self.sm.get(models.Deployment, ctx.deployment_id)
         deployment.outputs = deepcopy(deployment.outputs)
 
-        del(current_entities[ctx.OUTPUTS][ctx.output_id])
+        del current_entities[ctx.OUTPUTS][ctx.output_id]
         del deployment.outputs[ctx.output_id]
 
         self.sm.update(deployment)
@@ -794,7 +794,7 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
     def _clean_relationship_index_field(relationships):
         for relationship in relationships:
             if 'rel_index' in relationship:
-                del(relationship['rel_index'])
+                del relationship['rel_index']
         return relationships
 
     def _reorder_relationships(self, deployment_id, rel_order_instances):
