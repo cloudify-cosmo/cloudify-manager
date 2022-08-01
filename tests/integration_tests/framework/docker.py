@@ -6,9 +6,13 @@ import subprocess
 from integration_tests.framework.constants import INSERT_MOCK_LICENSE_QUERY
 
 
-def run_manager(image, service_management, resource_mapping=None,):
-    with tempfile.NamedTemporaryFile(delete=False, mode='w') as conf:
-        conf.write("""
+def run_manager(
+    image,
+    service_management,
+    resource_mapping=None,
+    lightweight=False,
+):
+    manager_config = """
 manager:
     security:
         admin_password: admin
@@ -21,7 +25,22 @@ restservice:
     gunicorn:
         max_worker_count: 4
 service_management: {0}
-""".format(service_management))
+    """.format(service_management)
+    if lightweight:
+        manager_config += """
+stage:
+    skip_installation: true
+composer:
+    skip_installation: true
+
+# no monitoring
+services_to_install:
+- database_service
+- queue_service
+- manager_service
+"""
+    with tempfile.NamedTemporaryFile(delete=False, mode='w') as conf:
+        conf.write(manager_config)
     command = [
         'docker', 'run', '-d',
         '-v', '/sys/fs/cgroup:/sys/fs/cgroup:ro',

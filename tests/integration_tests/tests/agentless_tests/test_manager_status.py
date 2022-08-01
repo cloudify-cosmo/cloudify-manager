@@ -37,26 +37,17 @@ SERVICES = {
 class TestManagerStatus(AgentlessTestCase):
 
     def test_status_response(self):
-        # Force Prometheus to scrape the statuses
-        self.restart_service('blackbox_exporter')
-        self.restart_service('postgres_exporter')
-        self.restart_service('node_exporter')
-        time.sleep(1.5)
-        self.execute_on_manager('bash -c "pkill -SIGHUP prometheus"')
-        time.sleep(0.5)
-
         manager_status = self.client.manager.get_status()
         self.assertEqual(manager_status['status'], ServiceStatus.HEALTHY)
 
         # Services for all-in-one premium manager
-        services = ['Webserver', 'Cloudify Console', 'AMQP-Postgres',
-                    'Management Worker', 'Manager Rest-Service',
-                    'Cloudify API', 'Cloudify Execution Scheduler',
-                    'PostgreSQL', 'RabbitMQ', 'Cloudify Composer',
-                    'Monitoring Service']
-        self.assertEqual(
-            len(manager_status['services']),
-            len(services))
+        services = [
+            'Webserver', 'AMQP-Postgres',
+            'Management Worker', 'Manager Rest-Service',
+            'Cloudify API', 'Cloudify Execution Scheduler',
+            'PostgreSQL', 'RabbitMQ',
+        ]
+
         statuses = [manager_status['services'][service]['status']
                     for service in services]
         self.assertNotIn(NodeServiceStatus.INACTIVE, statuses)
@@ -71,12 +62,6 @@ class TestManagerStatus(AgentlessTestCase):
     def test_status_service_inactive(self):
         """One of the systemd services is down"""
         self._test_service_inactive('Management Worker')
-        self._test_service_inactive('Cloudify Console')
-        self._test_service_inactive('AMQP-Postgres')
-
-    def test_status_optional_service_inactive(self):
-        """One of the optional systemd services is down"""
-        self._test_service_inactive('Cloudify Composer')
 
     def test_status_rabbit_inactive(self):
         self._test_service_inactive('RabbitMQ')
