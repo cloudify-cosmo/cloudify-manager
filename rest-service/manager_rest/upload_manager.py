@@ -915,11 +915,15 @@ class UploadedCaravanManager(UploadedPluginsManager):
             return self._metadata
 
         def __iter__(self):
+            if self._metadata is None or self._cvn_dir is None:
+                return iter([])
             for wgn_path, yaml_path in self._metadata.items():
                 yield os.path.join(self._cvn_dir, wgn_path), \
                     os.path.join(self._cvn_dir, yaml_path)
 
         def __getitem__(self, item):
+            if self._cvn_dir is None or self._metadata is None:
+                return None
             return os.path.join(self._cvn_dir, self._metadata[item])
 
         @staticmethod

@@ -32,7 +32,11 @@ class ListResponse(object):
         self.items = kwargs.get('items')
 
     def __len__(self):
+        if self.items is None:
+            return 0
         return len(self.items)
 
     def __iter__(self):
+        if self.items is None:
+            return iter([])
         return iter(self.items)

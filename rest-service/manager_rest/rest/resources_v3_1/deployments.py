@@ -1385,7 +1385,7 @@ def _create_inter_deployment_dependency(
     else:
         target_deployment = None
 
-    if target_deployment:
+    if target_deployment and source_deployment:
         if target_deployment in source_deployment.get_ancestors(locking=False)\
                 or target_deployment == source_deployment:
             raise manager_exceptions.ConflictError(
