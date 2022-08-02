@@ -13,7 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from yaml import load
 from flask_security.utils import hash_password
 
 from manager_rest import constants
@@ -104,15 +103,6 @@ def create_status_reporter_user_and_assign_role(username,
     user.tenant_associations.append(user_tenant_association)
     user_datastore.commit()
     return user
-
-
-def _create_roles(authorization_file_path):
-    with open(authorization_file_path) as f:
-        roles = load(f)['roles']
-    for role in roles:
-        user_datastore.find_or_create_role(name=role['name'])
-    # return the first role, which is the strongest
-    return user_datastore.find_role(roles[0]['name'])
 
 
 def _create_default_tenant():
