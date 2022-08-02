@@ -16,11 +16,11 @@
 import collections
 import logging
 import sys
-import typing
 from functools import lru_cache
 from os import chmod
 from os.path import basename, exists, join
 from shutil import move
+from typing import Dict, List, Union, BinaryIO
 
 import click
 import yaml
@@ -179,7 +179,7 @@ CLOUDIFY_PLUGINS: Dict[str, PluginSpec] = {
 }
 
 
-def load_imports(blueprint: models.Blueprint) -> typing.List[str]:
+def load_imports(blueprint: models.Blueprint) -> List[str]:
     file_name = common.blueprint_file_name(blueprint)
     try:
         with open(file_name, 'rb') as blueprint_file:
@@ -197,7 +197,7 @@ def load_imports(blueprint: models.Blueprint) -> typing.List[str]:
     return []
 
 
-def load_mappings(file_name: str) -> list:
+def load_mappings(file_name: str) -> Dict:
     try:
         with open(file_name, 'r') as mapping_file:
             try:
@@ -337,21 +337,23 @@ def scan_blueprint(resolver: ResolverWithCatalogSupport,
                      current_is_pinned: bool = None,
                      suggested_is_pinned: bool = None):
         if current_import_from is not None:
-            stats[CURRENT_IMPORT_FROM][current_import_from] += 1
+            current_import_from_stats[current_import_from] += 1
         if suggested_import_from is not None:
-            stats[SUGGESTED_IMPORT_FROM][suggested_import_from] += 1
+            suggested_import_from_stats[suggested_import_from] += 1
         if current_is_pinned:
-            stats[CURRENT_IS_PINNED] += 1
+            pinned_stats[CURRENT_IS_PINNED] += 1
         if suggested_is_pinned:
-            stats[SUGGESTED_IS_PINNED] += 1
+            pinned_stats[SUGGESTED_IS_PINNED] += 1
 
     imports = load_imports(blueprint)
-    mappings: typing.Dict[str, typing.List] = {}
+    mappings: Dict[str, List] = {}
     plugins_install_suggestions = {}
-    stats: typing.Dict[str, typing.Union[typing.Dict[str, int], int]] = {
-        CURRENT_IMPORT_FROM: collections.defaultdict(lambda: 0),
+    current_import_from_stats: Dict[str, int] = \
+        collections.defaultdict(lambda: 0)
+    suggested_import_from_stats: Dict[str, int] = \
+        collections.defaultdict(lambda: 0)
+    pinned_stats = {
         CURRENT_IS_PINNED: 0,
-        SUGGESTED_IMPORT_FROM: collections.defaultdict(lambda: 0),
         SUGGESTED_IS_PINNED: 0,
     }
 
@@ -398,10 +400,16 @@ def scan_blueprint(resolver: ResolverWithCatalogSupport,
         })
         update_stats(suggested_import_from=IMPORT_FROM_MANAGED,
                      suggested_is_pinned=False)
+    stats: Dict[str, Union[Dict[str, int], int]] = {
+        CURRENT_IMPORT_FROM: current_import_from_stats,
+        CURRENT_IS_PINNED: pinned_stats[CURRENT_IS_PINNED],
+        SUGGESTED_IMPORT_FROM: suggested_import_from_stats,
+        SUGGESTED_IS_PINNED: pinned_stats[SUGGESTED_IS_PINNED],
+    }
     return mappings, stats, plugins_install_suggestions
 
 
-def get_imports(blueprint_file: typing.BinaryIO) -> dict:
+def get_imports(blueprint_file: BinaryIO) -> dict:
     level = 0
     imports_token = None
     import_lines = {}
@@ -459,8 +467,8 @@ def write_updated_blueprint(input_file_name: str, output_file_name: str,
 
 def correct_blueprint(blueprint: models.Blueprint,
                       plugin_names: tuple,
-                      mappings: typing.Dict[str, typing.List]) -> str:
-    def line_replacement(mapping_spec: typing.Dict[str, str]) -> str:
+                      mappings: Dict[str, List]) -> str:
+    def line_replacement(mapping_spec: Dict[str, str]) -> str:
         suggested_version = mapping_spec.get(SUGGESTED_VERSION, '')
         next_major_version = int(suggested_version.split('.')[0]) + 1
         return 'plugin:{0}?version=>={1},<{2}'.format(
@@ -621,7 +629,9 @@ def main(tenant_names, all_tenants, plugin_names, blueprint_ids,
     if blueprint_ids:
         blueprint_filter['id'] = blueprint_ids
     mappings = load_mappings(mapping_file) if correct else {}
-    stats, install_suggestions, blueprints_processed = {}, {}, 0
+    stats = {}
+    install_suggestions: Dict[str, List[str]] = {}
+    blueprints_processed = 0
 
     for tenant in tenants:
         set_tenant_in_app(get_tenant_by_name(tenant.name))
