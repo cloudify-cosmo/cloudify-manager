@@ -13,6 +13,7 @@
 #  * limitations under the License.
 
 import pytest
+from typing import List, Dict
 
 from collections import namedtuple
 from copy import deepcopy
@@ -259,7 +260,7 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
     DEFAULT_SORT = {
         'timestamp': 'asc'
     }
-    DEFAULT_RANGE_FILTERS = {}
+    DEFAULT_RANGE_FILTERS: Dict[str, str] = {}
     DEFAULT_PAGINATION = {
         'limit': 100,
         'offset': 0,
@@ -399,7 +400,7 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
         events = query.params(**self.DEFAULT_PAGINATION).all()
 
         # logs don't have event_type, so query should return no results
-        expected_events = []
+        expected_events: List[Dict] = []
         self.assertListEqual(events, expected_events)
         self.assertEqual(event_count, len(expected_events))
 
@@ -446,7 +447,7 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
         events = query.params(**self.DEFAULT_PAGINATION).all()
 
         # events don't have level, so query should return no results
-        expected_events = []
+        expected_events: List[Dict] = []
         self.assertListEqual(events, expected_events)
         self.assertEqual(event_count, len(expected_events))
 
@@ -506,7 +507,7 @@ class SelectEventsFilterTypeTest(SelectEventsBaseTest):
     DEFAULT_SORT = {
         'timestamp': 'asc'
     }
-    DEFAULT_RANGE_FILTERS = {}
+    DEFAULT_RANGE_FILTERS: Dict[str, str] = {}
     DEFAULT_PAGINATION = {
         'limit': 100,
         'offset': 0,
@@ -555,7 +556,7 @@ class SelectEventsFilterTypeTest(SelectEventsBaseTest):
 
     def test_get_events_and_logs_implicit(self):
         """Get both events and logs implicitly without passing any filter."""
-        filters = {}
+        filters: Dict[str, str] = {}
 
         query, event_count = EventsV1._build_select_query(
             filters,
@@ -587,7 +588,7 @@ class SelectEventsSortTest(SelectEventsBaseTest):
     DEFAULT_FILTERS = {
         'type': ['cloudify_event', 'cloudify_log']
     }
-    DEFAULT_RANGE_FILTERS = {}
+    DEFAULT_RANGE_FILTERS: Dict[str, str] = {}
     DEFAULT_PAGINATION = {
         'limit': 100,
         'offset': 0,
@@ -757,7 +758,7 @@ class SelectEventTenantTest(SelectEventsBaseTest):
         'limit': 100,
         'offset': 0,
     }
-    DEFAULT_RANGE_FILTERS = {}
+    DEFAULT_RANGE_FILTERS: Dict[str, str] = {}
 
     def test_different_tenant(self):
         """A new tenant sees none of the events of other tenants"""
@@ -920,7 +921,7 @@ class EventsTest(base_test.BaseServerTestCase):
 
         # TBD: Add events to the database to check results
         total = 0
-        hits = []
+        hits: List[Dict] = []
         self.assertEqual(total, response.metadata.pagination.total)
         self.assertEqual(len(hits), len(response.items))
 

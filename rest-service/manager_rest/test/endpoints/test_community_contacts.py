@@ -1,5 +1,6 @@
 import mock
 from json import JSONDecodeError
+from typing import Dict, Any
 
 from manager_rest.test import base_test
 from cloudify_rest_client.exceptions import CloudifyClientError
@@ -35,7 +36,7 @@ class TestCommunityContacts(base_test.BaseServerTestCase):
         assert response == {'customer_id': 'COM-cmp1-123456'}
 
     def test_create_contact_missing_data(self):
-        data = {}
+        data: Dict[str, Any] = {}
         with self.assertRaises(CloudifyClientError) as cm:
             self._mock_post_contact(data, {})
         assert cm.exception.status_code == 400

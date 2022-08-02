@@ -5,6 +5,8 @@ import requests
 import time
 import yaml
 
+from typing import Dict, Any, Optional
+
 from json import dump
 from datetime import datetime
 from flask_security import current_user
@@ -59,7 +61,7 @@ class Config(object):
     can_load_from_db = True
 
     # when was the config last changed? it will be reloaded when this increases
-    last_updated = None
+    last_updated: Optional[datetime] = None
 
     service_management = Setting('service_management', default='systemd')
 
@@ -480,7 +482,7 @@ def reset(configuration=None, write=False):
     if not write:
         return
 
-    configs = {}
+    configs: Dict[str, Any] = {}
     config = vars(instance)
     for key in config:
         conf_type = ''

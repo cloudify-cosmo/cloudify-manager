@@ -7,6 +7,7 @@ from collections import (
 )
 from datetime import timedelta, datetime
 from dateutil import parser as date_parser
+from typing import Dict, Set, List, Optional
 
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
@@ -362,7 +363,7 @@ class User(SQLModelBase, UserMixin):
 
         Note: both tenants and roles are returned by their names, not objects
         """
-        group_tenants = defaultdict(dict)
+        group_tenants: Dict[str, Dict[str, Set[str]]] = defaultdict(dict)
         for group in self.groups:
             for tenant_association in group.tenant_associations:
                 # tenant maps to a dict, within it role maps to groups
@@ -448,7 +449,7 @@ class User(SQLModelBase, UserMixin):
 
     @property
     def group_system_roles(self):
-        group_system_roles = {}
+        group_system_roles: Dict[str, List[str]] = {}
         for group in self.groups:
             group_system_roles.setdefault(group.role, []).append(group.name)
         return group_system_roles
@@ -526,7 +527,7 @@ class Token(CreatedAtMixin, SQLModelBase):
     user = db.relationship('User')
     _execution_fk = foreign_key('executions._storage_id', nullable=True)
     execution = db.relationship('Execution')
-    _secret = None
+    _secret: Optional[str] = None
 
     @property
     def value(self):

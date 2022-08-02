@@ -3,11 +3,11 @@ import uuid
 import yaml
 import json
 import shutil
-import typing
 import itertools
+from collections import defaultdict, namedtuple
 from copy import deepcopy
 from datetime import datetime
-from collections import defaultdict, namedtuple
+from typing import Dict, List, Tuple
 
 from flask import current_app
 from flask_security import current_user
@@ -264,7 +264,8 @@ class ResourceManager(object):
                     break
         workflow_executor.execute_workflow(to_run)
 
-    def _refresh_execution(self, execution: models.Execution) -> (bool, list):
+    def _refresh_execution(
+            self, execution: models.Execution) -> Tuple[bool, list]:
         """Prepare the execution to be started.
 
         Re-evaluate parameters, and return if the execution can run.
@@ -1555,7 +1556,7 @@ class ResourceManager(object):
             get_all_results=True
         )
         # We build a dictionary in order to track the current index.
-        current_node_index = defaultdict(int)
+        current_node_index: Dict[str, int] = defaultdict(int)
         for ni in all_deployment_node_instances:
             if ni.index > current_node_index[ni.node_id]:
                 current_node_index[ni.node_id] = ni.index
@@ -2469,7 +2470,7 @@ class ResourceManager(object):
             self,
             deployment: models.Deployment,
             skip_component_children: bool,
-            limit=3) -> typing.List[models.BaseDeploymentDependencies]:
+            limit=3) -> List[models.BaseDeploymentDependencies]:
         """Get dependencies that would block destructive actions on deployment
 
         This returns dependencies that cause deployment to not be able to

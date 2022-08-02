@@ -1,9 +1,11 @@
+from typing import Dict
+
 from flask_restful import fields
 from flask_restful_swagger import swagger
 
 
 class BaseResponse(object):
-    resource_fields = {}
+    resource_fields: Dict[str, fields.Raw] = {}
 
     def __init__(self, **kwargs):
         for name in self.resource_fields:

@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Dict, List
+
 from copy import deepcopy
 from sqlalchemy import and_, cast
 from sqlalchemy.dialects.postgresql import JSON
@@ -493,7 +495,7 @@ class PluginHandler(ModifiableEntityHandlerBase):
         return plugins
 
     def _mutate_plugins_list(self, ctx, current_entities, mutate_func):
-        return_dict = {}
+        return_dict: Dict = {}
         node = get_node(ctx.deployment_id, ctx.raw_node_id)
 
         # Can be either node.plugins or node.plugins_to_install
@@ -617,10 +619,10 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
         modification type
         """
         # create node instance relationship ordering
-        modified_instances = {k: {} for k in self._handlers_mapper}
+        modified_instances: Dict = {k: {} for k in self._handlers_mapper}
         for change_type, handler in self._handlers_mapper.items():
             if updated_instances[change_type]:
-                modified_instances[change_type] = handler(
+                modified_instances[change_type] = handler(  # type: ignore
                     updated_instances[change_type], dep_update)
         return modified_instances
 
@@ -841,7 +843,7 @@ class DeploymentUpdateDeploymentHandler(UpdateHandler):
 
     def handle(self, dep_update):
         deployment = dep_update.deployment.to_dict()
-        modified_entities = {
+        modified_entities: Dict[str, List] = {
             ENTITY_TYPES.WORKFLOW: [],
             ENTITY_TYPES.OUTPUT: [],
             ENTITY_TYPES.DESCRIPTION: []

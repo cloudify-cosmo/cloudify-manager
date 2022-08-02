@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import Dict
 
 from flask import request
 from sqlalchemy.dialects.postgresql import insert
@@ -66,7 +67,7 @@ class Executions(resources_v2.Executions):
                              filters=filters,
                              all_tenants=all_tenants,
                              get_all_results=True)
-        dep_creation_execs = {}
+        dep_creation_execs: Dict[str, int] = {}
         for execution in executions:
             if execution.workflow_id == 'create_deployment_environment' and \
                     execution.status == 'terminated':

@@ -2,6 +2,7 @@ import os
 import json
 import tarfile
 import uuid
+from typing import Dict, Optional
 
 import wagon
 import yaml
@@ -881,8 +882,8 @@ class UploadedCaravanManager(UploadedPluginsManager):
         def __init__(self, caravan_path):
             self._caravan_path = caravan_path
             self._tempdir = tempfile.mkdtemp()
-            self._cvn_dir = None
-            self._metadata = None
+            self._cvn_dir: Optional[str] = None
+            self._metadata: Optional[Dict[str, str]] = None
 
         def __enter__(self):
             return self

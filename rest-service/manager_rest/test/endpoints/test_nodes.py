@@ -29,6 +29,9 @@ class _NodeSetupMixin(object):
     Creating nodes otherwise is a pain because of how many arguments
     they require
     """
+    user: models.User
+    tenant: models.Tenant
+
     def setUp(self):
         super().setUp()
         self.bp1 = models.Blueprint(
@@ -563,11 +566,11 @@ class NodesCreateTest(base_test.BaseServerTestCase):
             }
         ])
         nodes = self.sm.list(models.Node)
-        node1 = [n for n in nodes if n.id == 'test_node1']
-        node2 = [n for n in nodes if n.id == 'test_node2']
-        assert len(node1) == 1
-        node1 = node1[0]
-        assert len(node2) == 1
+        nodes_node1 = [n for n in nodes if n.id == 'test_node1']
+        nodes_node2 = [n for n in nodes if n.id == 'test_node2']
+        assert len(nodes_node1) == 1
+        node1 = nodes_node1[0]
+        assert len(nodes_node2) == 1
         assert node1.deployment_id == 'dep1'
 
     def test_create_parameters(self):

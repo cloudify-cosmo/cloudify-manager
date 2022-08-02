@@ -2,6 +2,7 @@ import pytz
 
 from functools import wraps
 from collections import OrderedDict
+from typing import Dict
 
 from dateutil.parser import parse as parse_datetime
 from flask_restful import fields, marshal
@@ -304,7 +305,7 @@ def rangeable(func):
             schema(range_arg.split(','))
             for range_arg in range_args
         ]
-        range_filters = {}
+        range_filters: Dict[str, Dict[str, str]] = {}
         for key, range_from, range_to in range_params:
             range_filters[key] = {}
             if range_from:
@@ -409,13 +410,12 @@ def search_multiple_parameters(parameters_dict):
     def search_dec(func):
         @wraps(func)
         def wrapper(*args, **kw):
-            search_dict = {}
+            search_dict: Dict[str, str] = {}
             for param, attribute in parameters_dict.items():
                 pattern = _get_search_pattern(param)
                 if pattern:
                     search_dict[attribute] = pattern
-            search_dict = search_dict or None
-            return func(search=search_dict, *args, **kw)
+            return func(search=search_dict or None, *args, **kw)
         return wrapper
     return search_dec
 

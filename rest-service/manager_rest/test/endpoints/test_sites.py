@@ -118,12 +118,10 @@ class SitesTestCase(base_test.BaseServerTestCase):
 
     def test_list_sites_filter(self):
         self._create_sites(sites_number=3)
-        filter_fields = {'name': 'my_site'}
-        sites = self.client.sites.list(**filter_fields)
+        sites = self.client.sites.list(name='my_site')
         self.assertEqual(len(sites), 0)
 
-        filter_fields = {'name': ['test_site_1', 'test_site_3']}
-        sites = self.client.sites.list(**filter_fields)
+        sites = self.client.sites.list(name=['test_site_1', 'test_site_3'])
         self.assertEqual(len(sites), 2)
 
     def test_list_sites_include(self):

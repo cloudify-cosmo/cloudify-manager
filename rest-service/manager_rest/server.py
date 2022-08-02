@@ -216,6 +216,7 @@ class CloudifyFlaskApp(Flask):
         yield
         self.handle_exception = orig_handle_exc
         self.handle_user_exception = orig_handle_user_exc
+app: CloudifyFlaskApp
 
 
 def reset_app(configuration=None):

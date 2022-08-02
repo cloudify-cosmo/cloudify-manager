@@ -1,4 +1,5 @@
 from collections import defaultdict
+from typing import Dict
 
 from ..resources_v3 import (
     Nodes as v3_Nodes,
@@ -49,7 +50,7 @@ class Nodes(v3_Nodes):
                         'operations', 'type', 'type_hierarchy', 'visibility',
                         '_tenant_id', '_deployment_fk', '_creator_id'}
 
-        user_lookup_cache = {}
+        user_lookup_cache: Dict[str, models.User] = {}
 
         for raw_node in raw_nodes:
             raw_node['_tenant_id'] = deployment._tenant_id
@@ -189,7 +190,7 @@ class NodeInstances(v2_NodeInstances):
             filters={'deployment_id': deployment.id},
             include=['index', 'node_id'],
             get_all_results=True)
-        current_node_index = defaultdict(int)
+        current_node_index: Dict[str, int] = defaultdict(int)
         for ni in existing_instances:
             if ni.index > current_node_index[ni.node_id]:
                 current_node_index[ni.node_id] = ni.index
@@ -201,7 +202,7 @@ class NodeInstances(v2_NodeInstances):
                         'index', 'visibility',
                         '_tenant_id', '_node_fk', '_creator_id'}
 
-        user_lookup_cache = {}
+        user_lookup_cache: Dict[str, models.User] = {}
 
         for raw_instance in raw_instances:
             node_id = raw_instance.pop('node_id')

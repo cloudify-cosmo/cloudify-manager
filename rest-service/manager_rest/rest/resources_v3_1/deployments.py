@@ -3,6 +3,7 @@ from builtins import staticmethod
 import os
 from shutil import rmtree
 from tempfile import mkdtemp
+from typing import Optional
 import uuid
 import zipfile
 
@@ -1370,7 +1371,7 @@ class DeploymentGroupsId(SecuredResource):
 
 
 def _create_inter_deployment_dependency(
-        source_deployment: models.Deployment,
+        source_deployment: Optional[models.Deployment],
         dependency: models.InterDeploymentDependencies,
         sm) -> models.InterDeploymentDependencies:
     now = utils.get_formatted_timestamp()

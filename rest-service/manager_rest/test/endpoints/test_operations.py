@@ -14,6 +14,9 @@ OPERATIONS_MODULE = 'manager_rest.rest.resources_v3_1.operations'
 
 
 class OperationsTestBase(object):
+    user: models.User
+    tenant: models.Tenant
+
     def setUp(self):
         super(OperationsTestBase, self).setUp()
         self.execution = self._execution()

@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 #
+from typing import Optional, Sequence
 
 from flask_restful import fields
 from flask_restful_swagger import swagger
@@ -23,6 +24,8 @@ class ListResponse(object):
     resource_fields = {
         'metadata': fields.Raw,
         'items': fields.List(fields.Raw)}
+
+    items: Optional[Sequence]
 
     def __init__(self, **kwargs):
         self.metadata = kwargs.get('metadata')

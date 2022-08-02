@@ -1,4 +1,4 @@
-import typing
+from typing import Iterable, List
 
 from flask_restful_swagger import swagger
 
@@ -8,11 +8,8 @@ from manager_rest.security.authorization import authorize
 from manager_rest.storage import (get_storage_manager,
                                   models)
 
-from ..responses_v2 import ListResponse
-
-if typing.TYPE_CHECKING:
-    from typing import List, Iterable
-    from manager_rest.rest.responses import Workflow
+from manager_rest.rest.responses import Workflow
+from manager_rest.rest.responses_v2 import ListResponse
 
 
 class Workflows(SecuredResource):
@@ -49,7 +46,9 @@ class Workflows(SecuredResource):
         return workflows_list_response(result)
 
 
-def workflows_list_response(deployments: 'Iterable') -> ListResponse:
+def workflows_list_response(
+        deployments: Iterable[models.Deployment]
+) -> ListResponse:
     workflows = _extract_workflows(deployments)
     pagination = {
         'total': len(workflows),
@@ -61,15 +60,15 @@ def workflows_list_response(deployments: 'Iterable') -> ListResponse:
 
 
 def _extract_workflows(
-        deployments: 'List[models.Deployment]') -> 'List[Workflow]':
+        deployments: Iterable[models.Deployment]
+) -> List[Workflow]:
     workflows = set()
     for dep in deployments:
         workflows |= set(dep._list_workflows())
     return list(workflows)
 
 
-def _merge_workflows(w1: 'List[Workflow]',
-                     w2: 'List[Workflow]') -> 'List[Workflow]':
+def _merge_workflows(w1: List[Workflow], w2: List[Workflow]) -> List[Workflow]:
     workflows = {}
     for w in w1 + w2:
         workflows[w.name] = w

@@ -13,6 +13,9 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from typing import Dict, List
+
+from flask_restful import fields
 from flask_security import current_user
 
 from sqlalchemy.ext.hybrid import hybrid_property
@@ -40,10 +43,10 @@ class SQLResourceBase(SQLModelBase):
     # table models (users, tenants, etc.)
     is_resource = True
 
-    _extra_fields = {}
+    _extra_fields: Dict[str, fields.Raw] = {}
 
     # Lists of fields to skip when using older versions of the client
-    skipped_fields = {'v1': [], 'v2': [], 'v2.1': []}
+    skipped_fields: Dict[str, List[str]] = {'v1': [], 'v2': [], 'v2.1': []}
 
     @classproperty
     def response_fields(cls):

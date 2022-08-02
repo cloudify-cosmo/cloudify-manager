@@ -53,11 +53,11 @@ class ResourceListSearchTestCase(BaseListTest):
             self.assertEqual('test0_{0}'.format(resource), r)
 
         # test nodes and node_instances
-        for resource in [self.client.nodes, self.client.node_instances]:
-            list_ = resource.list(_search='')
-            list_v = resource.list(_search='v')
-            list_server = resource.list(_search='server')
-            list_server_bla = resource.list(_search='server-bla')
+        for client in [self.client.nodes, self.client.node_instances]:
+            list_ = client.list(_search='')
+            list_v = client.list(_search='v')
+            list_server = client.list(_search='server')
+            list_server_bla = client.list(_search='server-bla')
             # validate lists sizes
             self.assertEqual(2 * NUM_OF_RESOURCES, len(list_))
             self.assertEqual(2 * NUM_OF_RESOURCES, len(list_v))

@@ -13,6 +13,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from typing import Dict
+
 from flask_restful.reqparse import Argument
 
 from cloudify._compat import text_type
@@ -39,7 +41,7 @@ class ManagerConfig(SecuredResource):
             Argument('scope', type=text_type, required=False)
         ])
         scope = args.get('scope')
-        result = {'metadata': {}}
+        result: Dict = {'metadata': {}}
         if scope:
             result['items'] = self._get_items(scope)
         else:

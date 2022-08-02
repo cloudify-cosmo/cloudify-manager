@@ -16,6 +16,7 @@
 import copy
 import uuid
 from datetime import datetime
+from typing import List
 
 from flask import current_app
 
@@ -657,7 +658,8 @@ class DeploymentUpdateManager(object):
         old_plugins = {p[constants.PLUGIN_NAME_KEY]: p
                        for p in plugins_to_install_old}
 
-        central_plugins_to_install, central_plugins_to_uninstall = [], []
+        central_plugins_to_install: List = []
+        central_plugins_to_uninstall: List = []
         extend_list_from_dict(source_dict=new_plugins,
                               filter_out_dict=old_plugins,
                               target_list=central_plugins_to_install)

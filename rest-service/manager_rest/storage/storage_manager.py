@@ -577,6 +577,8 @@ class SQLStorageManager(object):
             result = query.one()
         except (NoResultFound, MultipleResultsFound) as e:
             id_message, filters_message = self._get_err_msg_elements(filters)
+
+            exc_class: Type[manager_exceptions.ManagerException]
             if isinstance(e, NoResultFound):
                 prefix = 'was not found'
                 exc_class = manager_exceptions.NotFoundError

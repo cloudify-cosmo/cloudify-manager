@@ -4,7 +4,7 @@ import flask
 from manager_rest.storage.models_base import db
 
 
-def set_audit_method(method: str):
+def set_audit_method(method: typing.Optional[str]):
     flask.g.audit_auth_method = method
 
 

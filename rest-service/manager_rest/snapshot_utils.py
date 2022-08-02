@@ -4,6 +4,8 @@ Functions that are called from snapshot-(usually restore), which are always
 ran from the restservice virtualenv, put here for easy testing.
 """
 
+from typing import Dict, List
+
 from cloudify.models_states import DeploymentState
 from sqlalchemy import select, exists, and_, or_
 from manager_rest.storage import models, db
@@ -13,7 +15,7 @@ dep_table = models.Deployment.__table__
 exc_table = models.Execution.__table__
 ni_table = models.NodeInstance.__table__
 nodes_table = models.Node.__table__
-execution_states = {}
+execution_states: Dict[str, List[str]] = {}
 for exc_state, dep_state in DeploymentState.EXECUTION_STATES_SUMMARY.items():
     execution_states.setdefault(dep_state, []).append(exc_state)
 

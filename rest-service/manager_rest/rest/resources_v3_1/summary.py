@@ -13,14 +13,16 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from typing import List, Optional, Type, Dict, Tuple
+
 from .. import rest_utils
 from flask import request
 from dateutil import rrule
 from manager_rest.rest import rest_decorators
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
-from manager_rest.storage import (get_storage_manager,
-                                  models)
+from manager_rest.storage import get_storage_manager, models
+from manager_rest.storage.models_base import SQLModelBase
 from manager_rest import manager_exceptions
 
 from cloudify_rest_client.responses import ListResponse
@@ -29,9 +31,9 @@ from functools import wraps
 
 
 class BaseSummary(SecuredResource):
-    summary_fields = []
-    auth_req = None
-    model = None
+    summary_fields: List[str] = []
+    auth_req: Optional[str] = None
+    model: Optional[Type[SQLModelBase]] = None
 
     def get(self, pagination=None, all_tenants=None, filters=None):
         target_field = request.args.get('_target_field')
@@ -238,7 +240,7 @@ class SummarizeExecutionSchedules(BaseSummary):
             get_all_results=get_all_results,
             filters=kwargs.get('filters'),
         )
-        summary_dict = {}
+        summary_dict: Dict[Tuple, int] = {}
         for schedule in schedules_list:
             recurring = self.is_recurring(schedule.rule)
             key = (getattr(schedule, target_field),

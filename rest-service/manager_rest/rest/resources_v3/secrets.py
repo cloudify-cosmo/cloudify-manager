@@ -1,3 +1,5 @@
+from typing import Dict, List, Any, Iterable
+
 from flask import request
 from flask_security import current_user
 from cryptography.fernet import InvalidToken
@@ -312,7 +314,7 @@ class SecretsImport(SecuredResource):
     @authorize('secret_import')
     def post(self):
         response = {}
-        colliding_secrets = {}
+        colliding_secrets: Dict[str, str] = {}
         request_dict = self._validate_import_secrets_params()
         tenant_map = request_dict.get('tenant_map')
         passphrase = request_dict.get('passphrase')
@@ -345,8 +347,8 @@ class SecretsImport(SecuredResource):
         encryption_key = (generate_key_using_password(passphrase) if
                           passphrase else None)
         for i, secret in enumerate(secrets_list):
-            secret_errors = {}
-            missing_fields = []
+            secret_errors: Dict[str, Any] = {}
+            missing_fields: List[str] = []
             self._is_missing_field(secret, 'key', missing_fields)
             self._validate_is_hidden_field(secret, missing_fields,
                                            secret_errors)
@@ -500,7 +502,8 @@ class SecretsImport(SecuredResource):
         if not tenant_map:
             return
         destination_tenants = set(tenant_map.values())
-        missing_tenants = destination_tenants.difference(existing_tenants)
+        missing_tenants: Iterable[str] = \
+            destination_tenants.difference(existing_tenants)
         if missing_tenants:
             missing_tenants = [str(tenant) for tenant in missing_tenants]
             raise manager_exceptions.BadParametersError(

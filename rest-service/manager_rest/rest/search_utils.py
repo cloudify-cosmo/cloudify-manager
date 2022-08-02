@@ -1,5 +1,6 @@
 from collections import defaultdict
 from copy import copy
+from typing import List, Dict, Any
 
 from dsl_parser.constants import TYPES_WHICH_REQUIRE_DEPLOYMENT_ID_CONSTRAINT
 from dsl_parser.utils import get_function
@@ -52,7 +53,7 @@ class GetValuesWithStorageManager:
                        labels=None,
                        tenants=None,
                        id_specs=None):
-        filter_rules = []
+        filter_rules: List[Dict[str, Any]] = []
         if labels:
             filter_rules.extend(
                 {"key": list(label.keys())[0],
@@ -93,7 +94,7 @@ class GetValuesWithStorageManager:
                         labels=None,
                         tenants=None,
                         display_name_specs=None):
-        filter_rules = []
+        filter_rules: List[Dict[str, Any]] = []
         if labels:
             filter_rules.extend(
                 {"key": list(label.keys())[0],
@@ -451,7 +452,7 @@ def constraints_for_model(resource_field, dsl_constraints):
 
 def parse_constraints(dsl_constraints):
     filter_id = dsl_constraints.get('filter_id')
-    filter_rules = []
+    filter_rules: List[Dict[str, Any]] = []
     labels = dsl_constraints.get('labels')
     if labels:
         filter_rules.extend(
