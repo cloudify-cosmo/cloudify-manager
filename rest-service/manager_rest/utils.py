@@ -53,7 +53,7 @@ def check_allowed_endpoint(allowed_endpoints):
 
 def _endpoint_strip_version(endpoint: str) -> str:
     """Strip the leading /v3.1 from the endpoint"""
-    endpoint_parts = request.endpoint.split('/')
+    endpoint_parts = endpoint.split('/')
     return endpoint_parts[1] if len(endpoint_parts) > 1 else endpoint_parts[0]
 
 
