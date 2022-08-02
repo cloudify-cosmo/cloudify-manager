@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Dict, Any
 
 from manager_rest.utils import get_rrule
 from manager_rest.test.base_test import BaseServerTestCase
@@ -206,7 +207,7 @@ class SchedulingRulesTest(BaseServerTestCase):
     def test_parse_rule_empty_invalid():
         since = '2018-1-1T08:00:00.000Z'
         until = '2018-2-1T08:00:00.000Z'
-        rule = {}
+        rule: Dict[str, Any] = {}
         assert not get_rrule(rule, since, until)
 
     @staticmethod

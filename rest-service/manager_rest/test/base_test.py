@@ -25,6 +25,7 @@ import unittest
 import tempfile
 import sqlalchemy.exc
 from sqlalchemy.orm.session import close_all_sessions
+from typing import List
 
 import yaml
 import wagon
@@ -91,31 +92,29 @@ MIGRATION_DIR = os.path.normpath(os.path.join(
 ))
 
 permitted_roles = ['sys_admin', 'manager', 'user', 'operations', 'viewer']
-auth_dict = {
-    'roles': [
-        {'name': 'sys_admin', 'description': ''},
-        {'name': MANAGER_STATUS_REPORTER, 'description': ''},
-        {'name': BROKER_STATUS_REPORTER, 'description': ''},
-        {'name': DB_STATUS_REPORTER, 'description': ''},
-        {'name': 'manager', 'description': ''},
-        {'name': 'user', 'description': ''},
-        {'name': 'viewer', 'description': ''},
-        {'name': 'default', 'description': ''}
-    ],
-    'permissions': {
-        'all_tenants': ['sys_admin', 'manager'],
-        'administrators': ['sys_admin', 'manager'],
-        'tenant_rabbitmq_credentials': ['sys_admin', 'manager'],
-        'create_global_resource': ['sys_admin'],
-        'execute_global_workflow': ['sys_admin', 'manager'],
-        'broker_credentials': ['sys_admin', 'manager'],
-        'execution_list': permitted_roles,
-        'deployment_list': permitted_roles,
-        'blueprint_list': permitted_roles,
-        'secret_create': ['sys_admin', 'manager', 'user'],
-        'maintenance_mode_set': ['sys_admin'],
-        'manage_others_tokens': ['sys_admin'],
-    }
+auth_roles = [
+    {'name': 'sys_admin', 'description': ''},
+    {'name': MANAGER_STATUS_REPORTER, 'description': ''},
+    {'name': BROKER_STATUS_REPORTER, 'description': ''},
+    {'name': DB_STATUS_REPORTER, 'description': ''},
+    {'name': 'manager', 'description': ''},
+    {'name': 'user', 'description': ''},
+    {'name': 'viewer', 'description': ''},
+    {'name': 'default', 'description': ''}
+]
+auth_permissions = {
+    'all_tenants': ['sys_admin', 'manager'],
+    'administrators': ['sys_admin', 'manager'],
+    'tenant_rabbitmq_credentials': ['sys_admin', 'manager'],
+    'create_global_resource': ['sys_admin'],
+    'execute_global_workflow': ['sys_admin', 'manager'],
+    'broker_credentials': ['sys_admin', 'manager'],
+    'execution_list': permitted_roles,
+    'deployment_list': permitted_roles,
+    'blueprint_list': permitted_roles,
+    'secret_create': ['sys_admin', 'manager', 'user'],
+    'maintenance_mode_set': ['sys_admin'],
+    'manage_others_tokens': ['sys_admin'],
 }
 
 
@@ -147,6 +146,15 @@ class TestClient(FlaskClient):
 
 
 class BaseServerTestCase(unittest.TestCase):
+    client: CloudifyClient
+    app: server.CloudifyFlaskApp
+    tmpdir: str
+    server_configuration: config.Config
+    _patchers: List
+    rest_service_log: str
+    maintenance_mode_dir: str
+    tmp_conf_file: str
+
     LABELS = [{'env': 'aws'}, {'arch': 'k8s'}]
     LABELS_2 = [{'env': 'gcp'}, {'arch': 'k8s'}]
     FILTER_ID = 'filter'
@@ -436,15 +444,15 @@ class BaseServerTestCase(unittest.TestCase):
     @classmethod
     def _set_flask_app_context(cls):
         flask_app_context = server.app.test_request_context()
-        flask_app_context.push()
+        flask_app_context.push()  # type: ignore
 
     @staticmethod
     def _insert_default_permissions():
         sess = server.db.session
-        for role in auth_dict['roles']:
+        for role in auth_roles:
             sess.add(models.Role(type='system_role', **role))
         roles = {r.name: r.id for r in sess.query(models.Role)}
-        for perm, perm_roles in auth_dict['permissions'].items():
+        for perm, perm_roles in auth_permissions.items():
             for role_name in perm_roles:
                 if role_name not in roles:
                     continue
@@ -622,7 +630,7 @@ class BaseServerTestCase(unittest.TestCase):
             'L7SMZ4XebsuIK8F6aVUBYGQtW0P12Rn'
         test_config.security_encoding_block_size = 24
         test_config.security_encoding_min_length = 5
-        test_config.authorization_permissions = auth_dict['permissions']
+        test_config.authorization_permissions = auth_permissions
         test_config.authorization_roles = []
         test_config.security_encryption_key = (
             'lF88UP5SJKluylJIkPDYrw5UMKOgv9w8TikS0Ds8m2UmM'

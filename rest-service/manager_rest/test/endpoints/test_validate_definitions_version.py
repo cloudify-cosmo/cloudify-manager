@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from typing import Any, Dict
 from manager_rest.test import base_test
 
 from dsl_parser.exceptions import DSLParsingException
@@ -37,7 +38,7 @@ class ValidateVersionTestCase(base_test.BaseServerTestCase):
         assert validation_passed == self._upload_blueprint()
 
     def _create_context(self, validate_version):
-        context = {'cloudify': {}}
+        context: Dict[str, Any] = {'cloudify': {}}
         if validate_version is not None:
             context['cloudify'][
                 'validate_definitions_version'] = validate_version

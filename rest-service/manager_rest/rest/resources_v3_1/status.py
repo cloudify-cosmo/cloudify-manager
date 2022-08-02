@@ -1,4 +1,5 @@
 import socket
+from typing import Dict
 
 from flask import request
 from flask import current_app
@@ -117,7 +118,7 @@ class Status(SecuredResource):
 
 
 def _get_status_and_services():
-    services = {}
+    services: Dict[str, Dict] = {}
     if config.instance.service_management == 'supervisord':
         service_statuses = _check_supervisord_services(services)
     else:

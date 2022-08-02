@@ -1,6 +1,6 @@
 from datetime import datetime
 import string
-import typing
+from typing import Optional
 
 from flask import current_app, Response, abort, Request
 from flask_security.utils import verify_password
@@ -29,7 +29,7 @@ from manager_rest.utils import (
 )
 
 
-def user_loader(request: Request) -> typing.Optional[User]:
+def user_loader(request: Request) -> Optional[User]:
     """Load a user object based on the request.
 
     This function is passed as a flask-login request_loader, and will be
@@ -43,7 +43,7 @@ def user_loader(request: Request) -> typing.Optional[User]:
     if check_unauthenticated_endpoint():
         # the selected endpoint doesn't require auth, let's not even bother
         # loading the user
-        return
+        return None
     for getter, method_label in [
         (_get_user_from_execution_token, 'execution_token'),
         (_get_user_from_auth, 'http_basic'),
@@ -59,6 +59,7 @@ def user_loader(request: Request) -> typing.Optional[User]:
             return user
         if isinstance(user, Response):
             abort(user)
+    return None
 
 
 def _get_user_from_execution_token(request):

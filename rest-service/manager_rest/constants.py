@@ -15,6 +15,7 @@
 
 
 from enum import Enum
+from typing import List, Union, Tuple
 
 
 CONVENTION_APPLICATION_BLUEPRINT_FILE = 'blueprint.yaml'
@@ -57,7 +58,11 @@ TEMP_SNAPSHOT_FOLDER_SUFFIX = 'snapshot-data'
 SECURITY_FILE_LOCATION = '/opt/manager/rest-security.conf'
 
 LOCAL_ADDRESS = '127.0.0.1'
-ALLOWED_ENDPOINTS = [
+
+# endpoints can be the endpoint name, or a tuple of (endpoint name, method)
+EndpointSpec = Union[Tuple[str, str], str]
+
+ALLOWED_ENDPOINTS: List[EndpointSpec] = [
     'brokers', 'managers', 'db-nodes', 'cluster', 'config',
     'status', 'version', 'license', 'maintenance',
     'cluster-status', 'file-server-auth', 'ok',
@@ -66,9 +71,11 @@ ALLOWED_MAINTENANCE_ENDPOINTS = ALLOWED_ENDPOINTS + [
     'snapshots',
     'snapshot-status',
 ]
-ALLOWED_LICENSE_ENDPOINTS = ALLOWED_ENDPOINTS + [
+NON_LICENSED_ENDPOINTS: List[EndpointSpec] = [
     'tokens', 'tenants', ('users', 'get'), 'user',
 ]
+ALLOWED_LICENSE_ENDPOINTS = ALLOWED_ENDPOINTS + NON_LICENSED_ENDPOINTS
+
 CLOUDIFY_AUTH_HEADER = 'Authorization'
 CLOUDIFY_AUTH_TOKEN_HEADER = 'Authentication-Token'
 BASIC_AUTH_PREFIX = 'Basic '

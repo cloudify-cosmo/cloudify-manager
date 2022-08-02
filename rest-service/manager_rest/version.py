@@ -20,7 +20,7 @@ import pkg_resources
 from manager_rest import premium_enabled
 
 
-def get_version():
+def get_version() -> str:
     return pkg_resources.get_distribution('cloudify-rest-service').version
 
 
@@ -38,12 +38,14 @@ def get_version_data():
     version = get_version()
     distro, distro_release = get_distribution()
     if not premium_enabled:
+        package_name = 'cloudify-rest-service'
         try:
-            rpm_info = subprocess.check_output(['rpm', '-q', 'cloudify'])
+            rpm_info = \
+                subprocess.check_output(['rpm', '-q', package_name]).decode()
         except (subprocess.CalledProcessError, OSError):
             pass
         else:
-            version = rpm_info.split('-')[1]
+            version = rpm_info.replace(package_name, '').split('-')[1]
 
     return {
         'version': version,

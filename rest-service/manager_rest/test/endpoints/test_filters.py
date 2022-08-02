@@ -108,7 +108,9 @@ class FiltersFunctionalityBaseCase(base_test.BaseServerTestCase):
 
     def test_filter_rule_not_dictionary_fails(self):
         with self.assertRaisesRegex(BadFilterRule, 'not a dictionary'):
-            create_filter_rules_list(['a'], self.resource_model)
+            # calling with the wrong type on purpose
+            create_filter_rules_list(
+                ['a'], self.resource_model)  # type: ignore
 
     def test_filter_rule_missing_entry_fails(self):
         with self.assertRaisesRegex(BadFilterRule, 'missing'):

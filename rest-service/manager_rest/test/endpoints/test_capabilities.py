@@ -13,6 +13,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from typing import Dict, Any
+
 from manager_rest.test import base_test
 
 from cloudify_rest_client.exceptions import CloudifyClientError
@@ -20,7 +22,7 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 
 class CapabilitiesTestCase(base_test.BaseServerTestCase):
 
-    complex_capability = {
+    complex_capability: Dict[str, Any] = {
         'level_1': {
             'level_2': {
                 'key_1': 'value_3',

@@ -15,6 +15,7 @@
 
 import uuid
 from datetime import datetime
+from typing import Dict
 
 from flask import request
 from flask_restful_swagger import swagger
@@ -309,8 +310,8 @@ class DeploymentUpdates(SecuredResource):
             raw_steps.extend(raw_update.pop('steps', []))
         if not raw_updates:
             return None, 204
-        user_cache = {}
-        tenant_cache = {}
+        user_cache: Dict[str, models.User] = {}
+        tenant_cache: Dict[str, models.Tenant] = {}
         with sm.transaction():
             self._prepare_raw_updates(sm, raw_updates, user_cache,
                                       tenant_cache)
@@ -344,8 +345,8 @@ class DeploymentUpdates(SecuredResource):
                         '_new_blueprint_fk', '_tenant_id', '_creator_id',
                         'steps'}
 
-        bp_cache = {}
-        dep_cache = {}
+        bp_cache: Dict[str, models.Blueprint] = {}
+        dep_cache: Dict[str, models.Deployment] = {}
         for raw_update in raw_updates:
             creator = lookup_and_validate_user(raw_update.get('creator'),
                                                user_cache)
@@ -376,7 +377,7 @@ class DeploymentUpdates(SecuredResource):
                         '_deployment_update_fk', '_tenant_id',
                         '_creator_id'}
 
-        dep_update_cache = {}
+        dep_update_cache: Dict[str, models.DeploymentUpdate] = {}
         for raw_step in raw_steps:
             creator = lookup_and_validate_user(raw_step.get('creator'),
                                                user_cache)

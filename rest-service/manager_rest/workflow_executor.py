@@ -1,3 +1,5 @@
+from typing import Dict, List
+
 from flask import current_app
 from flask_security import current_user
 
@@ -159,7 +161,7 @@ def install_plugin(plugin):
         '_plugin_fk': plugin._storage_id,
         'state': PluginInstallationState.PENDING
     }, get_all_results=True)
-    agents_per_tenant = {}
+    agents_per_tenant: Dict[models.Tenant, List[models.Agent]] = {}
     managers = []
     for pstate in pstates:
         if pstate.manager:
@@ -197,7 +199,7 @@ def uninstall_plugin(plugin):
             PluginInstallationState.ERROR
         ]
     }, get_all_results=True)
-    agents_per_tenant = {}
+    agents_per_tenant: Dict[models.Tenant, List[models.Agent]] = {}
     managers = []
     for pstate in pstates:
         if pstate.manager:

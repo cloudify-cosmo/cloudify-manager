@@ -1,16 +1,15 @@
 import hashlib
 import itertools
-import typing
 import uuid
 
 from os import path
 from datetime import datetime
 from collections import namedtuple
+from typing import TYPE_CHECKING, Optional, Type, List
 
 from flask_restful import fields as flask_fields
 
 from sqlalchemy import case
-from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy import func, select, table, column, exists
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
@@ -56,11 +55,12 @@ from .relationships import (
 )
 from manager_rest.storage.storage_manager import get_storage_manager
 
-
-if typing.TYPE_CHECKING:
+if TYPE_CHECKING:
     from manager_rest.resource_manager import ResourceManager
     from manager_rest.storage.storage_manager import SQLStorageManager
-
+    hybrid_property = property
+else:
+    from sqlalchemy.ext.hybrid import hybrid_property
 
 RELATIONSHIP = 'relationship'
 NODE = 'node'
@@ -635,8 +635,8 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
 
     @classmethod
     def compare_statuses(
-                cls, *statuses: typing.Optional[str]
-            ) -> typing.Optional[str]:
+                cls, *statuses: Optional[str]
+            ) -> Optional[str]:
         """Unify multiple DeploymentStates into a single state.
 
         Choose the "worst" possible outcome based on the given states,
@@ -945,7 +945,7 @@ class LabelBase(CreatedAtMixin, SQLModelBase):
     key = db.Column(db.Text, nullable=False, index=True)
     value = db.Column(db.Text, nullable=False, index=True)
 
-    labeled_model = None
+    labeled_model: Optional[Type[SQLModelBase]] = None
 
     @declared_attr
     def _creator_id(cls):
@@ -1605,8 +1605,9 @@ class ExecutionSchedule(CreatedAtMixin, SQLResourceBase):
                          self.until).after(datetime.utcnow())
 
     @property
-    def all_next_occurrences(self, pagination_size=1000):
-        next_occurrences = []
+    def all_next_occurrences(self):
+        pagination_size = 1000
+        next_occurrences: List[str] = []
         search_limit = 100000
         for i, d in enumerate(get_rrule(self.rule, self.since, self.until)):
             if i >= search_limit or len(next_occurrences) >= pagination_size:
@@ -2303,8 +2304,8 @@ class BaseDeploymentDependencies(CreatedAtMixin, SQLResourceBase):
     _source_deployment = None
     _target_deployment = None
 
-    _source_backref_name = None
-    _target_backref_name = None
+    _source_backref_name: Optional[str] = None
+    _target_backref_name: Optional[str] = None
 
     _source_cascade = 'all'
     _target_cascade = 'all'
@@ -2353,6 +2354,8 @@ class BaseDeploymentDependencies(CreatedAtMixin, SQLResourceBase):
         :param dependents: if set, return dependents, ie. children; otherwise,
             return dependencies, ie. parents
         """
+        if cls._target_deployment is None or cls._source_deployment is None:
+            raise RuntimeError(f'{cls} source/target deployment not set')
         base_cols = db.session.query(
             cls._storage_id,
             cls._source_deployment,

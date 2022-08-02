@@ -53,7 +53,7 @@ def check_allowed_endpoint(allowed_endpoints):
 
 def _endpoint_strip_version(endpoint: str) -> str:
     """Strip the leading /v3.1 from the endpoint"""
-    endpoint_parts = request.endpoint.split('/')
+    endpoint_parts = endpoint.split('/')
     return endpoint_parts[1] if len(endpoint_parts) > 1 else endpoint_parts[0]
 
 
@@ -329,8 +329,10 @@ def get_rrule(rule, since, until):
 
     if rule.get('rrule'):
         parsed_rule = rrule.rrulestr(rule['rrule'], dtstart=since, cache=True)
-        if not parsed_rule._until:
-            parsed_rule._until = until
+
+        # unfortunately using a private attribute here
+        if not parsed_rule._until:  # type: ignore
+            parsed_rule._until = until  # type: ignore
         return parsed_rule
 
     if not rule.get('recurrence'):

@@ -14,8 +14,12 @@ OPERATIONS_MODULE = 'manager_rest.rest.resources_v3_1.operations'
 
 
 class OperationsTestBase(object):
+    user: models.User
+    tenant: models.Tenant
+
     def setUp(self):
-        super(OperationsTestBase, self).setUp()
+        # mypy thinks the superclass doesn't have a setUp, but this is a mixin
+        super().setUp()  # type: ignore
         self.execution = self._execution()
         self.bp1 = models.Blueprint(
             id='bp1',

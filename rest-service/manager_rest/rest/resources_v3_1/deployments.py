@@ -3,6 +3,7 @@ from builtins import staticmethod
 import os
 from shutil import rmtree
 from tempfile import mkdtemp
+from typing import Optional
 import uuid
 import zipfile
 
@@ -1370,7 +1371,7 @@ class DeploymentGroupsId(SecuredResource):
 
 
 def _create_inter_deployment_dependency(
-        source_deployment: models.Deployment,
+        source_deployment: Optional[models.Deployment],
         dependency: models.InterDeploymentDependencies,
         sm) -> models.InterDeploymentDependencies:
     now = utils.get_formatted_timestamp()
@@ -1384,7 +1385,7 @@ def _create_inter_deployment_dependency(
     else:
         target_deployment = None
 
-    if target_deployment:
+    if target_deployment and source_deployment:
         if target_deployment in source_deployment.get_ancestors(locking=False)\
                 or target_deployment == source_deployment:
             raise manager_exceptions.ConflictError(

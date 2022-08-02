@@ -12,8 +12,12 @@ from manager_rest.test.base_test import BaseServerTestCase
 
 
 class _DependencyTestUtils(object):
+    user: models.User
+    tenant: models.Tenant
+
     def setUp(self):
-        super().setUp()
+        # mypy thinks the superclass doesn't have a setUp, but this is a mixin
+        super().setUp()  # type: ignore
         self.bp1 = models.Blueprint(tenant=self.tenant, creator=self.user)
 
     def _deployment(self, **kwargs):

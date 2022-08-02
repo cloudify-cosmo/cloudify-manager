@@ -1,11 +1,13 @@
 from datetime import datetime
 import json
+from typing import Any
 
 from collections import OrderedDict
 
 from alembic.util.sqla_compat import _literal_bindparam
 from dateutil import parser as date_parser
-from flask_sqlalchemy import SQLAlchemy, inspect, BaseQuery
+from sqlalchemy import inspect
+from flask_sqlalchemy import SQLAlchemy, BaseQuery
 from flask_restful import fields as flask_fields
 from sqlalchemy import MetaData
 from sqlalchemy.ext.associationproxy import (ASSOCIATION_PROXY,
@@ -32,7 +34,7 @@ class DBQuery(BaseQuery):
                 f'Can only apply a tenant filter to resources or labels, '
                 f'but got {model}')
         if not tenants:
-            tenants = [current_tenant._get_current_object()]
+            tenants = (current_tenant._get_current_object(), )
         return self.filter(
             db.or_(
                 model.visibility == VisibilityState.GLOBAL,
@@ -52,8 +54,14 @@ db = SQLAlchemy(query_class=DBQuery, metadata=MetaData(naming_convention={
     'pk': '%(table_name)s_pkey',
 }))
 
+# mypy gets really upset about subclassing those directly, but it's fine if
+# we give them module-level names. Unfortunate.
+TypeDecorator: Any = db.TypeDecorator
+Model: Any = db.Model
+Column: Any = db.Column
 
-class UTCDateTime(db.TypeDecorator):
+
+class UTCDateTime(TypeDecorator):
     cache_ok = True
     impl = db.DateTime
 
@@ -78,7 +86,7 @@ class UTCDateTime(db.TypeDecorator):
             return value.replace(tzinfo=None)
 
 
-class JSONString(db.TypeDecorator):
+class JSONString(TypeDecorator):
 
     """A json object stored as a string.
 
@@ -108,7 +116,7 @@ class JSONString(db.TypeDecorator):
         return json.loads(value)
 
 
-class CIColumn(db.Column):
+class CIColumn(Column):
     """A column for case insensitive string fields
     """
     is_ci = True
@@ -131,7 +139,7 @@ def _get_extension_type(desc):
     return extension_type
 
 
-class SQLModelBase(db.Model):
+class SQLModelBase(Model):
     """Abstract base class for all SQL models that allows [de]serialization
     """
     # SQLAlchemy syntax

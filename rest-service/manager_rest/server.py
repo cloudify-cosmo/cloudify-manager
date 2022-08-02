@@ -214,8 +214,12 @@ class CloudifyFlaskApp(Flask):
         orig_handle_exc = self.handle_exception
         orig_handle_user_exc = self.handle_user_exception
         yield
-        self.handle_exception = orig_handle_exc
-        self.handle_user_exception = orig_handle_user_exc
+        # mypy says you cant assign to method, but yes you can!
+        self.handle_exception = orig_handle_exc  # type: ignore
+        self.handle_user_exception = orig_handle_user_exc  # type: ignore
+
+
+app: CloudifyFlaskApp
 
 
 def reset_app(configuration=None):

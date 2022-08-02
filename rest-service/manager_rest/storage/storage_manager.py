@@ -13,6 +13,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from typing import Type
+
 import psutil
 from functools import wraps
 from collections import OrderedDict
@@ -20,8 +22,12 @@ from contextlib import contextmanager
 from flask_security import current_user
 from sqlalchemy import or_ as sql_or, inspect, func
 from sqlalchemy.orm import RelationshipProperty, aliased
-from sqlalchemy.exc import SQLAlchemyError, IntegrityError
-from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
+from sqlalchemy.exc import (
+    SQLAlchemyError,
+    IntegrityError,
+    NoResultFound,
+    MultipleResultsFound,
+)
 from flask import current_app, has_request_context
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -57,10 +63,6 @@ class SQLStorageManager(object):
         self._tenant = tenant
         self._in_transaction = False
 
-    @staticmethod
-    def _is_unique_constraint_violation(e):
-        return isinstance(e, IntegrityError) and e.orig.pgcode == '23505'
-
     def _safe_commit(self):
         """Try to commit changes in the session. Roll back if exception raised
         Excepts SQLAlchemy errors and rollbacks if they're caught
@@ -70,23 +72,20 @@ class SQLStorageManager(object):
         try:
             db.session.commit()
         except sql_errors as e:
-            exception_to_raise = manager_exceptions.SQLStorageException(
-                'SQL Storage error: {0}'.format(str(e))
-            )
             db.session.rollback()
-            if SQLStorageManager._is_unique_constraint_violation(e):
+
+            # if is a unique constraint violation...
+            if isinstance(e, IntegrityError) and e.orig.pgcode == '23505':
                 problematic_instance_id = e.params['id']
                 # Session has been rolled back at this point
                 self.refresh(self.current_tenant)
-                exception_to_raise = manager_exceptions.ConflictError(
-                    'Instance with ID {0} cannot be added on {1} or with '
-                    'global visibility'
-                    ''.format(
-                        problematic_instance_id,
-                        self.current_tenant
-                    )
+                raise manager_exceptions.ConflictError(
+                    f'Instance with ID {problematic_instance_id} cannot be '
+                    f'added on {self.current_tenant} or with global visibility'
                 )
-            raise exception_to_raise
+            raise manager_exceptions.SQLStorageException(
+                f'SQL Storage error: {e}'
+            )
 
     @contextmanager
     def transaction(self):
@@ -577,6 +576,8 @@ class SQLStorageManager(object):
             result = query.one()
         except (NoResultFound, MultipleResultsFound) as e:
             id_message, filters_message = self._get_err_msg_elements(filters)
+
+            exc_class: Type[manager_exceptions.ManagerException]
             if isinstance(e, NoResultFound):
                 prefix = 'was not found'
                 exc_class = manager_exceptions.NotFoundError

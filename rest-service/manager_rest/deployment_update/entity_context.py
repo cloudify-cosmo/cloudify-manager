@@ -1,10 +1,12 @@
+from typing import Dict, Callable, Type
+
 from . import utils
 from .constants import ENTITY_TYPES
 from manager_rest.storage import get_storage_manager, models, get_node
 
 
 def get_entity_context(plan, deployment_id, entity_type, entity_id):
-    entity_context_by_type = {
+    entity_context_by_type: Dict[str, Callable] = {
         ENTITY_TYPES.NODE: NodeContext,
         ENTITY_TYPES.RELATIONSHIP: RelationshipContext,
         ENTITY_TYPES.PROPERTY: PropertyContext,
@@ -19,6 +21,7 @@ def get_entity_context(plan, deployment_id, entity_type, entity_id):
 
 
 def _operation_context(plan, deployment_id, *entity_keys):
+    entity_context: Type[NodeContextBase]
     if entity_keys[2] == utils.pluralize(ENTITY_TYPES.RELATIONSHIP):
         entity_context = RelationshipInterfaceOperationContext
     else:
@@ -467,11 +470,7 @@ class DeploymentContextBase(EntityContextBase):
         return top_level_entity[self._top_level_entity_id]
 
     def _get_entity_value(self, source_entity):
-        if self._modification_breadcrumbs:
-            return utils.traverse_object(source_entity,
-                                         self.modification_breadcrumbs)
-        else:
-            return source_entity
+        return source_entity
 
 
 class WorkflowContext(DeploymentContextBase):

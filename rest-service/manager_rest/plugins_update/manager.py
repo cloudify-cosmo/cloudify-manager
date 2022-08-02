@@ -446,3 +446,4 @@ def _map_execution_to_plugins_update_status(execution_status: str) -> str:
                             ExecutionState.FORCE_CANCELLING,
                             ExecutionState.KILL_CANCELLING]:
         return STATES.FAILED
+    return STATES.UPDATING

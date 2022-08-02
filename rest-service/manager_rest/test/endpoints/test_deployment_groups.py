@@ -1,6 +1,7 @@
 import mock
 import pytest
 import unittest
+from typing import Dict, Any
 
 from datetime import datetime
 
@@ -1629,7 +1630,7 @@ class TestGenerateID(unittest.TestCase):
         group.default_blueprint = self._mock_blueprint()
         group.default_blueprint.plan['deployment_settings']['display_name'] =\
             'display-name-{uuid}'
-        dep_spec = {}
+        dep_spec: Dict[str, Any] = {}
         new_id, _ = self._generate_id(group, dep_spec)
         assert dep_spec['display_name'].startswith('display-name')
         assert len(dep_spec['display_name']) > 36
@@ -1639,6 +1640,6 @@ class TestGenerateID(unittest.TestCase):
         group.default_blueprint = self._mock_blueprint()
         group.default_blueprint.plan['deployment_settings']['display_name'] =\
             {'concat': ['display', 'name']}
-        dep_spec = {}
+        dep_spec: Dict[str, Any] = {}
         new_id, _ = self._generate_id(group, dep_spec)
         assert not dep_spec.get('display_name')

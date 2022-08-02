@@ -17,6 +17,7 @@ import errno
 import os
 import uuid
 from datetime import datetime
+from typing import Optional, Dict
 
 from cloudify.models_states import (VisibilityState,
                                     ExecutionState,
@@ -695,9 +696,14 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         resource_path = '/deployments/{0}'.format(deployment_id)
         workflows = self.get(resource_path).json['workflows']
         self.assertEqual(15, len(workflows))
-        workflow = next((workflow for workflow in workflows if
-                        workflow['name'] == 'mock_workflow'), None)
-        self.assertIsNotNone(workflow)
+        workflow: Optional[Dict] = next(
+            (
+                workflow for workflow in workflows
+                if workflow['name'] == 'mock_workflow'
+            ),
+            None,
+        )
+        assert workflow is not None
         parameters = {
             'optional_param': {'default': 'test_default_value'},
             'mandatory_param': {},

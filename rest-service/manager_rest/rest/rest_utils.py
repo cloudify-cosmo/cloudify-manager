@@ -55,7 +55,7 @@ class BadLabelsList(manager_exceptions.BadParametersError):
 
 @contextmanager
 def skip_nested_marshalling():
-    request.__skip_marshalling = True
+    request.__skip_marshalling = True  # type: ignore
     yield
     delattr(request, '__skip_marshalling')
 
