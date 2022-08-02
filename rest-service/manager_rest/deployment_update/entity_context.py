@@ -470,11 +470,7 @@ class DeploymentContextBase(EntityContextBase):
         return top_level_entity[self._top_level_entity_id]
 
     def _get_entity_value(self, source_entity):
-        if self._modification_breadcrumbs:
-            return utils.traverse_object(source_entity,
-                                         self.modification_breadcrumbs)
-        else:
-            return source_entity
+        return source_entity
 
 
 class WorkflowContext(DeploymentContextBase):
