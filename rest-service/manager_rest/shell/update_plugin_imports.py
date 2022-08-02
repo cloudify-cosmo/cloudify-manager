@@ -84,109 +84,98 @@ logging.basicConfig(
 logger = logging.getLogger(basename(sys.argv[0]))
 
 
-CLOUDIFY_PLUGINS: typing.Dict[
-    str, typing.Dict[
-        str, typing.Union[typing.List[str], str, None]
-    ]] = {
-    'cloudify-aws-plugin': {
-        VERSIONS: sorted(['3.0.5', '2.14.0', '2.13.0', '2.12.14', '2.11.1',
-                          '2.10.0', '2.9.2', '2.8.0', '2.6.0', '2.5.14',
-                          '2.4.4', '2.3.5', '2.2.1', '2.1.0', '2.0.2',
-                          '1.5.1.2'],
-                         key=parse_version, reverse=True),
-        EXACT_VERSION: None,
-    },
-    'cloudify-azure-plugin': {
-        VERSIONS: sorted(['3.7.1', '3.6.1', '3.5.6', '3.4.1', '3.3.1', '3.2.1',
+class PluginSpec:
+    def __init__(self, versions: List[str], exact=None, at_least=None):
+        self.versions = sorted(
+            versions,
+            key=parse_version,
+            reverse=True,
+        )
+        self.exact = exact
+        self.at_least = at_least
+
+
+CLOUDIFY_PLUGINS: Dict[str, PluginSpec] = {
+    'cloudify-aws-plugin': PluginSpec([
+        '3.0.5', '2.14.0', '2.13.0', '2.12.14', '2.11.1',
+        '2.10.0', '2.9.2', '2.8.0', '2.6.0', '2.5.14',
+        '2.4.4', '2.3.5', '2.2.1', '2.1.0', '2.0.2',
+        '1.5.1.2'
+    ]),
+    'cloudify-azure-plugin': PluginSpec(
+        ['3.7.1', '3.6.1', '3.5.6', '3.4.1', '3.3.1', '3.2.1',
                           '3.1.0', '3.0.11', '2.1.10', '2.0.0', '1.8.0',
                           '1.7.3', '1.6.2', '1.5.1.1', '1.4.3'],
-                         key=parse_version, reverse=True),
-    },
-    'cloudify-gcp-plugin': {
-        VERSIONS: sorted(['1.8.1', '1.7.0', '1.6.9', '1.5.1', '1.4.5',
-                          '1.3.0.1', '1.2.0', '1.1.0', '1.0.1'],
-                         key=parse_version, reverse=True),
-    },
-    'cloudify-openstack-plugin': {
-        VERSIONS: sorted(['3.3.3', '2.14.24', '3.2.21', '3.1.1', '3.0.0',
+    ),
+    'cloudify-gcp-plugin': PluginSpec(
+        ['1.8.1', '1.7.0', '1.6.9', '1.5.1', '1.4.5',
+                          '1.3.0.1', '1.2.0', '1.1.0', '1.0.1']
+    ),
+    'cloudify-openstack-plugin': PluginSpec(
+        ['3.3.3', '2.14.24', '3.2.21', '3.1.1', '3.0.0',
                           '2.13.1', '2.12.0', '2.11.1', '2.10.0', '2.9.8',
                           '2.8.2', '2.7.6', '2.6.0', '2.5.3', '2.4.1.1',
-                          '2.3.0', '2.2.0'],
-                         key=parse_version, reverse=True),
-    },
-    'cloudify-vsphere-plugin': {
-        VERSIONS: sorted(['2.19.10', '2.18.13', '2.17.0', '2.16.2', '2.15.1',
+                          '2.3.0', '2.2.0']
+    ),
+    'cloudify-vsphere-plugin': PluginSpec(
+        ['2.19.10', '2.18.13', '2.17.0', '2.16.2', '2.15.1',
                           '2.14.0', '2.13.1', '2.12.0', '2.11.0', '2.10.0',
                           '2.9.3', '2.8.0', '2.7.0', '2.6.1', '2.5.0', '2.4.1',
                           '2.3.0', '2.2.2'],
-                         key=parse_version, reverse=True),
-    },
-    'cloudify-terraform-plugin': {
-        VERSIONS: sorted(['0.18.17', '0.17.7', '0.16.5', '0.15.5', '0.14.4',
+    ),
+    'cloudify-terraform-plugin': PluginSpec(
+        ['0.18.17', '0.17.7', '0.16.5', '0.15.5', '0.14.4',
                           '0.13.4', '0.12.0', '0.11.0', '0.10', '0.9', '0.7'],
-                         key=parse_version, reverse=True),
-    },
-    'cloudify-ansible-plugin': {
-        VERSIONS: sorted(['2.13.7', '2.12.1', '2.11.1', '2.10.1', '2.9.4',
+    ),
+    'cloudify-ansible-plugin': PluginSpec(
+        ['2.13.7', '2.12.1', '2.11.1', '2.10.1', '2.9.4',
                           '2.8.2', '2.7.1', '2.6.0', '2.5.0', '2.4.0', '2.3.0',
                           '2.2.0', '2.1.1', '2.0.4'],
-                         key=parse_version, reverse=True),
-    },
-    'cloudify-kubernetes-plugin': {
-        VERSIONS: sorted(['2.13.9', '2.12.1', '2.11.2', '2.10.0', '2.9.4',
+    ),
+    'cloudify-kubernetes-plugin': PluginSpec(
+        ['2.13.9', '2.12.1', '2.11.2', '2.10.0', '2.9.4',
                           '2.8.3', '2.7.2', '2.6.5', '2.5.0', '2.4.1', '2.3.2',
                           '2.2.2', '2.1.0', '2.0.0.1', '1.4.0', '1.3.1.1',
                           '1.2.2', '1.1.0', '1.0.0'],
-                         key=parse_version, reverse=True),
-    },
-    'cloudify-docker-plugin': {
-        VERSIONS: sorted(['2.0.5', '1.3.2', '1.2', '1.1'],
-                         key=parse_version, reverse=True),
-    },
-    'cloudify-netconf-plugin': {
-        VERSIONS: sorted(['0.4.4', '0.3.1', '0.2.1', '0.1.0'],
-                         key=parse_version, reverse=True),
-    },
-    'cloudify-fabric-plugin': {
-        VERSIONS: sorted(['2.0.13', '1.7.0', '1.6.0', '1.5.3', '1.4.3',
+    ),
+    'cloudify-docker-plugin': PluginSpec(
+        ['2.0.5', '1.3.2', '1.2', '1.1'],
+    ),
+    'cloudify-netconf-plugin': PluginSpec(
+        ['0.4.4', '0.3.1', '0.2.1', '0.1.0'],
+    ),
+    'cloudify-fabric-plugin': PluginSpec(
+        ['2.0.13', '1.7.0', '1.6.0', '1.5.3', '1.4.3',
                           '1.3.1', '1.2.1', '1.1'],
-                         key=parse_version, reverse=True),
-        AT_LEAST: '2.0.6',
-    },
-    'cloudify-libvirt-plugin': {
-        VERSIONS: sorted(['0.9.0', '0.8.1', '0.7.0', '0.6.0', '0.5.0', '0.4.1',
+        at_least='2.0.6',
+    ),
+    'cloudify-libvirt-plugin': PluginSpec(
+        ['0.9.0', '0.8.1', '0.7.0', '0.6.0', '0.5.0', '0.4.1',
                           '0.3', '0.2', '0.1'],
-                         key=parse_version, reverse=True),
-    },
-    'cloudify-utilities-plugin': {
-        VERSIONS: sorted(['1.25.7', '1.24.4', '1.23.12', '1.22.1', '1.21.0',
+    ),
+    'cloudify-utilities-plugin': PluginSpec(
+        ['1.25.7', '1.24.4', '1.23.12', '1.22.1', '1.21.0',
                           '1.20.0', '1.19.0', '1.18.0', '1.17.0', '1.16.1',
                           '1.15.3', '1.14.0', '1.13.0', '1.12.5', '1.11.2',
                           '1.10.2', '1.9.8', '1.8.3', '1.7.3', '1.6.1',
                           '1.5.4', '1.4.5', '1.3.1', '1.2.5', '1.1.1',
                           '1.0.0'],
-                         key=parse_version, reverse=True),
-    },
-    'cloudify-host-pool-plugin': {
-        VERSIONS: sorted(['1.5.3', '1.4', '1.2', ],
-                         key=parse_version, reverse=True),
-    },
-    'cloudify-diamond-plugin': {
-        VERSIONS: sorted(['1.3.19', '1.2.1', '1.2', '1.1'],
-                         key=parse_version, reverse=True),
-    },
-    'tosca-vcloud-plugin': {
-        VERSIONS: sorted(['1.6.1', '1.5.1', '1.4.1'],
-                         key=parse_version, reverse=True),
-    },
-    'cloudify-vcloud-plugin': {
-        VERSIONS: sorted(['2.0.1'],
-                         key=parse_version, reverse=True),
-    },
-    'cloudify-helm-plugin': {
-        VERSIONS: sorted(['0.2.7', '0.1.1', '0.0.8'],
-                         key=parse_version, reverse=True),
-    },
+    ),
+    'cloudify-host-pool-plugin': PluginSpec(
+        ['1.5.3', '1.4', '1.2'],
+    ),
+    'cloudify-diamond-plugin': PluginSpec(
+        ['1.3.19', '1.2.1', '1.2', '1.1'],
+    ),
+    'tosca-vcloud-plugin': PluginSpec(
+        ['1.6.1', '1.5.1', '1.4.1'],
+    ),
+    'cloudify-vcloud-plugin': PluginSpec(
+        ['2.0.1'],
+    ),
+    'cloudify-helm-plugin': PluginSpec(
+        ['0.2.7', '0.1.1', '0.0.8'],
+    ),
 }
 
 
@@ -320,16 +309,16 @@ def find_plugin_in_a_plan(plan: Plan, plugin_name: str) -> dict:
 def suggest_version(plugin_name: str, plugin_version: str) -> str:
     if plugin_name not in CLOUDIFY_PLUGINS:
         return plugin_version
-    if CLOUDIFY_PLUGINS[plugin_name].get(EXACT_VERSION) is not None:
-        return CLOUDIFY_PLUGINS[plugin_name].get(EXACT_VERSION)
-    if CLOUDIFY_PLUGINS[plugin_name].get(AT_LEAST) and \
-            (parse_version(CLOUDIFY_PLUGINS[plugin_name][AT_LEAST]) >
+    if CLOUDIFY_PLUGINS[plugin_name].exact is not None:
+        return CLOUDIFY_PLUGINS[plugin_name].exact
+    if CLOUDIFY_PLUGINS[plugin_name].at_least and \
+            (parse_version(CLOUDIFY_PLUGINS[plugin_name].at_least) >
              parse_version(plugin_version)):
-        base_version = CLOUDIFY_PLUGINS[plugin_name][AT_LEAST]
+        base_version = CLOUDIFY_PLUGINS[plugin_name].at_least
     else:
         base_version = plugin_version
     plugin_major_version = base_version.split('.')[0]
-    for available_version in CLOUDIFY_PLUGINS[plugin_name][VERSIONS]:
+    for available_version in CLOUDIFY_PLUGINS[plugin_name].versions:
         if available_version.split('.')[0] == plugin_major_version:
             return available_version
     return base_version
