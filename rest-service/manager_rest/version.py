@@ -43,7 +43,7 @@ def get_version_data():
         except (subprocess.CalledProcessError, OSError):
             pass
         else:
-            version = rpm_info.split('-')[1]
+            version = rpm_info.split(b'-')[1]
 
     return {
         'version': version,
