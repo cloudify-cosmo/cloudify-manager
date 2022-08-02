@@ -1,4 +1,4 @@
-from typing import List, Union, NewType
+from typing import List, Union
 
 from cloudify._compat import text_type
 
@@ -29,8 +29,7 @@ class FilterRule(dict):
         return hash(self._key())
 
 
-FilteredModels = NewType('FilteredModels',
-                         Union[models.Deployment, models.Blueprint])
+FilteredModels = Union[models.Deployment, models.Blueprint]
 
 
 def get_filter_rules_from_filter_id(sm, filter_id, filters_model):

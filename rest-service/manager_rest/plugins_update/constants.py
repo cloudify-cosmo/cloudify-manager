@@ -15,7 +15,7 @@
 
 from collections import namedtuple
 
-PluginsUpdatePhases = namedtuple('PluginUpdatePhases', ['INITIAL', 'FINAL'])
+PluginsUpdatePhases = namedtuple('PluginsUpdatePhases', ['INITIAL', 'FINAL'])
 PHASES = PluginsUpdatePhases(INITIAL='initiate', FINAL='finalize')
 
 PluginsUpdateStates = namedtuple('PluginsUpdateStates',

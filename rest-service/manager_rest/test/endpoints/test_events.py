@@ -43,7 +43,7 @@ from manager_rest.storage.resource_models import (
 
 
 EventResultTuple = namedtuple(
-    'EventResult',
+    'EventResultTuple',
     [
         'timestamp',
         'reported_timestamp',

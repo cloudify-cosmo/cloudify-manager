@@ -33,7 +33,7 @@ from manager_rest.manager_exceptions import (
     DeploymentCapabilitiesEvaluationError,
 )
 
-SecretType = namedtuple('Secret', 'key value')
+SecretType = namedtuple('SecretType', 'key value')
 
 
 def evaluate_node(node):
