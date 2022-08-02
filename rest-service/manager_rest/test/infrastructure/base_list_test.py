@@ -66,7 +66,7 @@ class BaseListTest(BaseServerTestCase):
                 archive_name='',
                 package_name='cloudify-script-plugin',
                 wheels=[],
-                uploaded_at=datetime.now(),
+                uploaded_at=datetime.utcnow(),
                 creator=self.user,
                 tenant=self.tenant,
             )
