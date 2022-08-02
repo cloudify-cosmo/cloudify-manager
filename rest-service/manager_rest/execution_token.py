@@ -17,7 +17,7 @@ import hashlib
 
 from flask import g
 from werkzeug.local import LocalProxy
-from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
+from sqlalchemy.exc import MultipleResultsFound, NoResultFound
 
 from cloudify import constants
 from manager_rest.storage import models, db
