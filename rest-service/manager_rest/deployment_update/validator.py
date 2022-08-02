@@ -43,7 +43,7 @@ class EntityValidatorBase(object):
             entity_identifier_msg = \
                 "Entity type {0} with entity id {1}".format(step.entity_type,
                                                             step.entity_id)
-            err_msg = "{0}: {1}".format(entity_identifier_msg, e.message)
+            err_msg = "{0}: {1}".format(entity_identifier_msg, e)
             raise UnknownModificationStageError(err_msg)
 
     def _validate_entity(self, dep_update, step):
