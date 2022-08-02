@@ -16,7 +16,8 @@ class _DependencyTestUtils(object):
     tenant: models.Tenant
 
     def setUp(self):
-        super().setUp()
+        # mypy thinks the superclass doesn't have a setUp, but this is a mixin
+        super().setUp()  # type: ignore
         self.bp1 = models.Blueprint(tenant=self.tenant, creator=self.user)
 
     def _deployment(self, **kwargs):

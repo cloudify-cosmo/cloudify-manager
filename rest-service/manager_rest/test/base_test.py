@@ -444,7 +444,7 @@ class BaseServerTestCase(unittest.TestCase):
     @classmethod
     def _set_flask_app_context(cls):
         flask_app_context = server.app.test_request_context()
-        flask_app_context.push()
+        flask_app_context.push()  # type: ignore
 
     @staticmethod
     def _insert_default_permissions():

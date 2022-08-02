@@ -33,7 +33,8 @@ class _NodeSetupMixin(object):
     tenant: models.Tenant
 
     def setUp(self):
-        super().setUp()
+        # mypy thinks the superclass doesn't have a setUp, but this is a mixin
+        super().setUp()  # type: ignore
         self.bp1 = models.Blueprint(
             id='bp1',
             creator=self.user,

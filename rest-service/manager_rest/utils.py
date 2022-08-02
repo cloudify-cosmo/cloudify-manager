@@ -329,8 +329,10 @@ def get_rrule(rule, since, until):
 
     if rule.get('rrule'):
         parsed_rule = rrule.rrulestr(rule['rrule'], dtstart=since, cache=True)
-        if not parsed_rule._until:
-            parsed_rule._until = until
+
+        # unfortunately using a private attribute here
+        if not parsed_rule._until:  # type: ignore
+            parsed_rule._until = until  # type: ignore
         return parsed_rule
 
     if not rule.get('recurrence'):
