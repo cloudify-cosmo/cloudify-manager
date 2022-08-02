@@ -14,6 +14,7 @@
 #  * limitations under the License.
 
 import os
+from typing import Any
 
 from flask import request
 from flask_restful.reqparse import Argument
@@ -96,6 +97,11 @@ class _CommunityBrokersId(SecuredResource):
         raise NotImplementedError('Premium implementation only')
 
 
+managers_base: Any
+brokers_base: Any
+dbnodes_base: Any
+ManagersId: Any
+RabbitMQBrokersId: Any
 if manager_premium:
     managers_base = manager_premium.ManagersBase
     brokers_base = manager_premium.RabbitMQBrokersBase

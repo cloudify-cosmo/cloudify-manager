@@ -1,3 +1,5 @@
+from typing import Any
+
 from flask import request
 
 from manager_rest import constants
@@ -17,6 +19,7 @@ from ..responses_v3 import TenantResponse, TenantDetailsResponse
 from cloudify._compat import text_type
 from cloudify.cryptography_utils import decrypt
 
+TenantsListResource: Any
 try:
     from cloudify_premium.multi_tenancy.secured_tenant_resource \
         import SecuredMultiTenancyResource

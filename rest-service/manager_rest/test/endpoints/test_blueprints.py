@@ -34,7 +34,7 @@ from .test_utils import generate_progress_func
 try:
     import bz2
 except ImportError:
-    bz2 = None
+    bz2 = None  # type: ignore
 
 
 def mocked_requests_get(*args, **kwargs):
