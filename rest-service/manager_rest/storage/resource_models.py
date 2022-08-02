@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING, Optional, Type, List
 from flask_restful import fields as flask_fields
 
 from sqlalchemy import case
-from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy import func, select, table, column, exists
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
@@ -59,7 +58,9 @@ from manager_rest.storage.storage_manager import get_storage_manager
 if TYPE_CHECKING:
     from manager_rest.resource_manager import ResourceManager
     from manager_rest.storage.storage_manager import SQLStorageManager
-
+    hybrid_property = property
+else:
+    from sqlalchemy.ext.hybrid import hybrid_property
 
 RELATIONSHIP = 'relationship'
 NODE = 'node'
