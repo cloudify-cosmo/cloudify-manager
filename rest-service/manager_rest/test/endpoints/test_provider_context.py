@@ -15,7 +15,7 @@
 
 from manager_rest.test import base_test
 from cloudify_rest_client import exceptions
-from manager_rest.manager_exceptions import SQLStorageException
+from manager_rest import manager_exceptions
 
 
 class ProviderContextTestCase(base_test.BaseServerTestCase):
@@ -40,10 +40,10 @@ class ProviderContextTestCase(base_test.BaseServerTestCase):
         self.test_post_provider_context()
         with self.assertRaises(exceptions.CloudifyClientError) as cm:
             self.test_post_provider_context()
-            self.assertEqual(
-                cm.exception.error_status,
-                SQLStorageException.STORAGE_ERROR_CODE
-            )
+        self.assertEqual(
+            cm.exception.error_code,
+            manager_exceptions.ConflictError.error_code,
+        )
 
     def test_update_provider_context(self):
         self.test_post_provider_context()
