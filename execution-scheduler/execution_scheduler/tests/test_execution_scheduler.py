@@ -53,7 +53,7 @@ def _get_mock_schedule(schedule_id='default', next_occurrence=None,
 @mock.patch('manager_rest.resource_manager.ResourceManager.execute_workflow')
 def test_try_run_schedule(mock_execute_workflow, mock_get_sm, mock_db):
     sm = mock_get_sm()
-    next_occurrence = datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S')
+    next_occurrence = datetime.strftime(datetime.utcnow(), '%Y-%m-%d %H:%M:%S')
     schedule = _get_mock_schedule(next_occurrence=next_occurrence)
     with setup_flask_app().app_context():
         try_run(schedule, sm)
@@ -75,7 +75,7 @@ def test_try_run_schedule(mock_execute_workflow, mock_get_sm, mock_db):
 def test_try_run_schedule_locked(mock_should_run, mock_get_sm, mock_lock):
     mock_lock.return_value = False
     sm = mock_get_sm()
-    next_occurrence = datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S')
+    next_occurrence = datetime.strftime(datetime.utcnow(), '%Y-%m-%d %H:%M:%S')
     schedule = _get_mock_schedule(next_occurrence=next_occurrence)
     with setup_flask_app().app_context():
         try_run(schedule, sm)
@@ -111,14 +111,14 @@ def test_should_run_slip_longer_than_downtime():
     # Note: should_run gives a 1 minute "grace" on top of what's set slip by
     # the user, to account for check_schedules() running every 1 minute
     next_occurrence = datetime.strftime(
-        datetime.utcnow()-timedelta(minutes=3), '%Y-%m-%d %H:%M:%S')
+        datetime.utcnow() - timedelta(minutes=3), '%Y-%m-%d %H:%M:%S')
     schedule = _get_mock_schedule(next_occurrence=next_occurrence, slip=3)
     assert should_run(schedule)
 
 
 def test_should_run_slip_shorter_than_downtime():
     next_occurrence = datetime.strftime(
-        datetime.utcnow()-timedelta(minutes=3), '%Y-%m-%d %H:%M:%S')
+        datetime.utcnow() - timedelta(minutes=3), '%Y-%m-%d %H:%M:%S')
     schedule = _get_mock_schedule(next_occurrence=next_occurrence, slip=2)
     assert not should_run(schedule)
 
