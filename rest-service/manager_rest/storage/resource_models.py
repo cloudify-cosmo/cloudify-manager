@@ -35,10 +35,13 @@ from manager_rest.rest.responses import Workflow, Label
 from manager_rest.utils import (get_rrule,
                                 classproperty,
                                 files_in_folder)
-from manager_rest.deployment_update.constants import ACTION_TYPES, ENTITY_TYPES
-from manager_rest.constants import (FILE_SERVER_PLUGINS_FOLDER,
-                                    FILE_SERVER_RESOURCES_FOLDER,
-                                    AUDIT_OPERATIONS)
+from manager_rest.constants import (
+    FILE_SERVER_PLUGINS_FOLDER,
+    FILE_SERVER_RESOURCES_FOLDER,
+    AUDIT_OPERATIONS,
+    DEPLOYMENT_UPDATE_ENTITY_TYPES,
+    DEPLOYMENT_UPDATE_ACTION_TYPES,
+)
 
 from .models_base import (
     CreatedAtMixin,
@@ -1920,9 +1923,11 @@ class DeploymentUpdate(CreatedAtMixin, SQLResourceBase):
 class DeploymentUpdateStep(SQLResourceBase):
     __tablename__ = 'deployment_update_steps'
 
-    action = db.Column(db.Enum(*ACTION_TYPES, name='action_type'))
+    action = db.Column(
+        db.Enum(*DEPLOYMENT_UPDATE_ACTION_TYPES, name='action_type'))
     entity_id = db.Column(db.ARRAY(db.Text), nullable=False)
-    entity_type = db.Column(db.Enum(*ENTITY_TYPES, name='entity_type'))
+    entity_type = db.Column(
+        db.Enum(*DEPLOYMENT_UPDATE_ENTITY_TYPES, name='entity_type'))
     topology_order = db.Column(db.Integer, nullable=False)
 
     _deployment_update_fk = foreign_key(DeploymentUpdate._storage_id)
