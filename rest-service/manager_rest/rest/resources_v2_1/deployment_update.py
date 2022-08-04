@@ -29,8 +29,6 @@ from manager_rest.security.authorization import (authorize,
                                                  check_user_action_allowed)
 from manager_rest.execution_token import current_execution
 from manager_rest.storage import models, get_storage_manager, db
-from manager_rest.deployment_update.manager import \
-    get_deployment_updates_manager
 from manager_rest.utils import (create_filter_params_list_description,
                                 current_tenant)
 
@@ -189,9 +187,11 @@ class DeploymentUpdateId(SecuredResource):
     @rest_decorators.marshal_with(models.DeploymentUpdate)
     def get(self, update_id, _include=None):
         """Get a deployment update by id"""
-        return get_deployment_updates_manager().get_deployment_update(
+        return get_storage_manager().get(
+            models.DeploymentUpdate,
             update_id,
-            include=_include)
+            include=_include,
+        )
 
     @authorize('deployment_update_create')
     @rest_decorators.marshal_with(models.DeploymentUpdate)
