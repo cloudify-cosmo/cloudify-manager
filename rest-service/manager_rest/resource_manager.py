@@ -34,10 +34,13 @@ from dsl_parser import constants, tasks
 
 from manager_rest import premium_enabled
 from manager_rest.maintenance import get_maintenance_state
-from manager_rest.constants import (DEFAULT_TENANT_NAME,
-                                    FILE_SERVER_BLUEPRINTS_FOLDER,
-                                    FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
-                                    FILE_SERVER_DEPLOYMENTS_FOLDER)
+from manager_rest.constants import (
+    DEFAULT_TENANT_NAME,
+    FILE_SERVER_BLUEPRINTS_FOLDER,
+    FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
+    FILE_SERVER_DEPLOYMENTS_FOLDER,
+    DEPLOYMENT_UPDATE_STATES as UpdateStates,
+)
 from manager_rest.utils import (get_formatted_timestamp,
                                 is_create_global_permitted,
                                 validate_global_modification,
@@ -48,7 +51,6 @@ from manager_rest.rest.rest_utils import (
     verify_blueprint_uploaded_state,
     compute_rule_from_scheduling_params,
 )
-from manager_rest.deployment_update.constants import STATES as UpdateStates
 from manager_rest.plugins_update.constants import STATES as PluginsUpdateStates
 
 from manager_rest.storage import (db,

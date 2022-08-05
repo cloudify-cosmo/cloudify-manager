@@ -13,7 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-
+from collections import namedtuple
 from enum import Enum
 from typing import List, Union, Tuple
 
@@ -141,3 +141,65 @@ AUDIT_OPERATIONS = [AUDIT_OPERATION_CREATE,
 
 
 BLUEPRINT_ICON_FILENAME = 'icon.png'
+
+DeploymentUpdateStates = namedtuple(
+    'DeploymentUpdateStates',
+    [
+        'UPDATING',
+        'EXECUTING_WORKFLOW',
+        'FINALIZING',
+        'SUCCESSFUL',
+        'FAILED',
+        'PREVIEW'
+    ],
+)
+
+DEPLOYMENT_UPDATE_STATES = STATES = DeploymentUpdateStates(
+    SUCCESSFUL='successful',
+    UPDATING='updating',
+    FINALIZING='finalizing',
+    EXECUTING_WORKFLOW='executing_workflow',
+    FAILED='failed',
+    PREVIEW='preview',
+)
+DeploymentUpdateEntityTypes = namedtuple(
+    'DeploymentUpdateEntityTypes',
+    [
+        'NODE',
+        'RELATIONSHIP',
+        'PROPERTY',
+        'OPERATION',
+        'WORKFLOW',
+        'OUTPUT',
+        'DESCRIPTION',
+        'GROUP',
+        'POLICY_TYPE',
+        'POLICY_TRIGGER',
+        'PLUGIN'
+    ],
+)
+
+
+DEPLOYMENT_UPDATE_ENTITY_TYPES = DeploymentUpdateEntityTypes(
+    NODE='node',
+    RELATIONSHIP='relationship',
+    PROPERTY='property',
+    OPERATION='operation',
+    WORKFLOW='workflow',
+    OUTPUT='output',
+    DESCRIPTION='description',
+    GROUP='group',
+    POLICY_TYPE='policy_type',
+    POLICY_TRIGGER='policy_trigger',
+    PLUGIN='plugin',
+)
+
+DeploymentUpdateActionTypes = namedtuple(
+    'DeploymentUpdateActionTypes', ['ADD', 'REMOVE', 'MODIFY'],
+)
+
+DEPLOYMENT_UPDATE_ACTION_TYPES = DeploymentUpdateActionTypes(
+    ADD='add',
+    REMOVE='remove',
+    MODIFY='modify',
+)

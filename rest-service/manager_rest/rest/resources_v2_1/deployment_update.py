@@ -22,18 +22,13 @@ from flask_restful_swagger import swagger
 
 from cloudify._compat import text_type
 
-from manager_rest.security import SecuredResource
 from manager_rest import manager_exceptions, workflow_executor
+from manager_rest.constants import DEPLOYMENT_UPDATE_STATES as STATES
+from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import (authorize,
                                                  check_user_action_allowed)
-from manager_rest.deployment_update.constants import (
-    PHASES,
-    STATES
-)
 from manager_rest.execution_token import current_execution
 from manager_rest.storage import models, get_storage_manager, db
-from manager_rest.deployment_update.manager import \
-    get_deployment_updates_manager
 from manager_rest.utils import (create_filter_params_list_description,
                                 current_tenant)
 
@@ -58,7 +53,7 @@ class DeploymentUpdate(SecuredResource):
         starts a dep-update; and POST /finalize, which currently does nothing,
         and only exists for backwards compatibility.
         """
-        if phase == PHASES.INITIAL:
+        if phase == 'initiate':
             return self._initiate(id)
         else:
             sm = get_storage_manager()
@@ -192,9 +187,11 @@ class DeploymentUpdateId(SecuredResource):
     @rest_decorators.marshal_with(models.DeploymentUpdate)
     def get(self, update_id, _include=None):
         """Get a deployment update by id"""
-        return get_deployment_updates_manager().get_deployment_update(
+        return get_storage_manager().get(
+            models.DeploymentUpdate,
             update_id,
-            include=_include)
+            include=_include,
+        )
 
     @authorize('deployment_update_create')
     @rest_decorators.marshal_with(models.DeploymentUpdate)
