@@ -48,7 +48,7 @@ OPTIONAL_SERVICES = {
     'cloudify-stage': 'Cloudify Console',
     'haproxy': 'Haproxy for DB HA',
     'patroni': 'Patroni HA Postgres',
-    'postgresql-9.5': 'PostgreSQL',
+    'postgresql-14': 'PostgreSQL',
     'cloudify-rabbitmq': 'RabbitMQ',
     'cloudify-composer': 'Cloudify Composer',
     'cloudify-syncthing': 'File Sync Service',

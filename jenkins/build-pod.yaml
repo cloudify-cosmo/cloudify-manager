@@ -23,7 +23,7 @@ spec:
       runAsUser: 0
       privileged: true
   - name: postgres
-    image: circleci/postgres:9.5-alpine
+    image: postgres:14.4-alpine
     ports:
       - containerPort: 5432
     args:

@@ -60,9 +60,9 @@ SERVICE_DESCRIPTIONS = {
     'patroni': {
         'name': 'Patroni HA Template',
         'description': 'Patroni HA Template service'},
-    'postgresql-9.5': {
-        'name': 'PostgreSQL 9.5 database server',
-        'description': 'PostgreSQL 9.5 database server'},
+    'postgresql-14': {
+        'name': 'PostgreSQL 14 database server',
+        'description': 'PostgreSQL 14 database server'},
     'postgres_exporter': {
         'name': 'Prometheus exporter for PostgreSQL',
         'description': 'Prometheus exporter for PostgreSQL service'},
@@ -77,7 +77,7 @@ SERVICE_ASSIGNMENTS = {
         'node_exporter',
         'patroni',
         'postgres_exporter',
-        'postgresql-9.5',
+        'postgresql-14',
         'prometheus',
     ],
     CloudifyNodeType.BROKER: [
@@ -411,7 +411,7 @@ def _get_cluster_service_state(cluster_nodes: typing.Dict[str, dict],
     node_count = len(nodes)
 
     if service_type == CloudifyNodeType.DB:
-        postgresql_name = SERVICE_DESCRIPTIONS['postgresql-9.5']['name']
+        postgresql_name = SERVICE_DESCRIPTIONS['postgresql-14']['name']
         if node_count > 1:
             # This is a cluster, remove the postgresql service if present, as
             # patroni will manage it and it will just cause incorrect errors
