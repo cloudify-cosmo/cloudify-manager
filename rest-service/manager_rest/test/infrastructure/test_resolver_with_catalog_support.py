@@ -150,8 +150,6 @@ class TestPluginParseWithResolver(BaseServerTestCase):
             package_yamls=['mock_blueprint/plugin_1_3.yaml',
                            'mock_blueprint/plugin_1_4.yaml'])
         import_url = PLUGIN_IMPORT_FORMAT.format(TEST_PACKAGE_NAME, '')
-        plugin_str = self.resolver.fetch_import(import_url)
-        assert plugin_str.startswith('# this_is_plugin_1')
         plugin_str = self.resolver.fetch_import(import_url, '1_3')
         assert plugin_str.startswith('# this_is_plugin_1, DSL version 1_3')
         plugin_str = self.resolver.fetch_import(import_url, '1_4')
