@@ -1,6 +1,6 @@
 [Unit]
 Description=Cloudify AMQP PostgreSQL Broker Service
-After=postgresql-9.5.service cloudify-rabbitmq.service
+After=postgresql-14.service cloudify-rabbitmq.service
 
 [Service]
 TimeoutStartSec=0

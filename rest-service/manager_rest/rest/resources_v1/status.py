@@ -34,7 +34,7 @@ BASE_SERVICES = {
     'cloudify-rabbitmq.service': 'RabbitMQ',
     'cloudify-amqp-postgres.service': 'AMQP-Postgres',
     'nginx.service': 'Webserver',
-    'postgresql-9.5.service': 'PostgreSQL'
+    'postgresql-14.service': 'PostgreSQL'
 }
 OPTIONAL_SERVICES = {
     'cloudify-stage.service': 'Cloudify Console',

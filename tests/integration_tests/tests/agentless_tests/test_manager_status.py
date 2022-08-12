@@ -26,7 +26,7 @@ pytestmark = pytest.mark.group_general
 
 SERVICES = {
     'Management Worker': 'cloudify-mgmtworker',
-    'PostgreSQL': 'postgresql-9.5',
+    'PostgreSQL': 'postgresql-14',
     'RabbitMQ': 'cloudify-rabbitmq',
     'Cloudify Composer': 'cloudify-composer',
     'Cloudify Console': 'cloudify-stage',
