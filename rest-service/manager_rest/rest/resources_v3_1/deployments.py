@@ -236,17 +236,20 @@ class DeploymentsId(resources_v1.DeploymentsId):
         with sm.transaction():
             if not skip_plugins_validation:
                 rm.check_blueprint_plugins_installed(blueprint.plan)
-            deployment = rm.create_deployment(
-                blueprint,
-                deployment_id,
-                private_resource=args.private_resource,
-                visibility=visibility,
-                site=site,
-                runtime_only_evaluation=request_dict.get(
+            dep_args = {
+                "private_resource": args.private_resource,
+                "visibility": visibility,
+                "site": site,
+                "runtime_only_evaluation": request_dict.get(
                     'runtime_only_evaluation', False),
-                created_at=created_at,
-                created_by=owner,
-            )
+                "created_at": created_at,
+                "created_by": owner,
+            }
+            workflows = request_dict.get('workflows')
+            if workflows:
+                dep_args['workflows'] = workflows
+            deployment = rm.create_deployment(blueprint, deployment_id,
+                                              **dep_args)
             if request_dict.get('workdir_zip'):
                 tmpdir_path = mkdtemp()
                 try:

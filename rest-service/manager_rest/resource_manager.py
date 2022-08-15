@@ -1654,7 +1654,8 @@ class ResourceManager(object):
                           runtime_only_evaluation=False,
                           display_name=None,
                           created_at=None,
-                          created_by=None):
+                          created_by=None,
+                          workflows=None):
         verify_blueprint_uploaded_state(blueprint)
         visibility = self.get_resource_visibility(models.Deployment,
                                                   deployment_id,
@@ -1677,6 +1678,8 @@ class ResourceManager(object):
         )
         if created_by:
             new_deployment.creator = created_by
+        if workflows:
+            new_deployment.workflows = workflows
         new_deployment.runtime_only_evaluation = runtime_only_evaluation
         new_deployment.blueprint = blueprint
         new_deployment.visibility = visibility
