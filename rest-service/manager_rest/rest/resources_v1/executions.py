@@ -85,6 +85,7 @@ class Executions(SecuredResource):
             'ended_at': {'optional': True},
             'status': {'optional': True},
             'id': {'optional': True},
+            'error': {'optional': True},
         })
 
         allow_custom_parameters = verify_and_convert_bool(
@@ -111,6 +112,7 @@ class Executions(SecuredResource):
         started_at = request_dict.get('started_at')
         ended_at = request_dict.get('ended_at')
         execution_id = request_dict.get('id')
+        error = request_dict.get('error')
 
         if creator:
             check_user_action_allowed('set_owner', None, True)
@@ -125,7 +127,7 @@ class Executions(SecuredResource):
             if ended_at:
                 ended_at = parse_datetime_string(ended_at)
 
-        if force_status or execution_id or not deployment_id:
+        if error or force_status or execution_id or not deployment_id:
             check_user_action_allowed('set_execution_details', None, True)
 
         if force_status and scheduled_time:
@@ -180,6 +182,7 @@ class Executions(SecuredResource):
                 'status': force_status or ExecutionState.PENDING,
                 'allow_custom_parameters': allow_custom_parameters,
                 'force': force,
+                'error': error,
             }
             if deployment_id:
                 deployment = sm.get(models.Deployment, deployment_id)
