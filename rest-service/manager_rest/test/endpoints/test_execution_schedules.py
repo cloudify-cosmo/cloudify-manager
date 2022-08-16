@@ -115,8 +115,8 @@ class ExecutionSchedulesTestCase(BaseServerTestCase):
 
     def test_schedule_create_invalid_time_format(self):
         self.assertRaisesRegex(
-            AttributeError,
-            "'str' object has no attribute 'isoformat'",
+            CloudifyClientError,
+            "is not a legal time format",
             self.client.execution_schedules.create,
             'some_id', self.deployment_id, 'install',
             since='long ago', recurrence='1 minutes', count=5
