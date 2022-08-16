@@ -108,6 +108,7 @@ class ExecutionSchedulesId(SecuredResource):
             parameters=parameters,
             execution_arguments=execution_arguments,
             stop_on_fail=stop_on_fail,
+            enabled=request_dict.get('enabled', True),
         )
         if creator:
             schedule.creator = creator

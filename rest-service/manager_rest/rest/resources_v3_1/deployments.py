@@ -246,6 +246,7 @@ class DeploymentsId(resources_v1.DeploymentsId):
                     'runtime_only_evaluation', False),
                 created_at=created_at,
                 created_by=owner,
+                workflows=request_dict.get('workflows'),
             )
             if request_dict.get('workdir_zip'):
                 tmpdir_path = mkdtemp()
