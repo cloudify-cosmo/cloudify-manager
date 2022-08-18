@@ -25,7 +25,6 @@ from manager_rest import archiving
 from manager_rest.test import base_test
 from manager_rest.storage.resource_models import Blueprint, db
 
-from cloudify._compat import text_type
 from cloudify_rest_client import exceptions
 from cloudify.exceptions import WorkflowFailed, InvalidBlueprintImport
 
@@ -444,7 +443,7 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         self.assertRaisesRegex(
             exceptions.CloudifyClientError,
             'visibility parameter is expected to be of type {}'.format(
-                text_type.__name__),
+                str.__name__),
             self.client.blueprints.update,
             blueprint_id,
             {'visibility': 123}

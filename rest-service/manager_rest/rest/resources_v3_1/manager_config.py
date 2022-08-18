@@ -17,7 +17,6 @@ from typing import Dict
 
 from flask_restful.reqparse import Argument
 
-from cloudify._compat import text_type
 from manager_rest.rest import rest_utils
 from manager_rest.rest.rest_decorators import (
     marshal_with
@@ -38,7 +37,7 @@ class ManagerConfig(SecuredResource):
         settings only for a single Manager component.
         """
         args = rest_utils.get_args_and_verify_arguments([
-            Argument('scope', type=text_type, required=False)
+            Argument('scope', type=str, required=False)
         ])
         scope = args.get('scope')
         result: Dict = {'metadata': {}}

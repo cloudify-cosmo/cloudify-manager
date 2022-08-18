@@ -1,4 +1,6 @@
 import socket
+import http.client
+import xmlrpc.client
 from typing import Dict
 
 from flask import request
@@ -7,7 +9,6 @@ from flask_restful import Resource
 from flask_restful_swagger import swagger
 
 from cloudify.cluster_status import ServiceStatus, NodeServiceStatus
-from cloudify._compat import httplib, xmlrpclib
 
 from manager_rest import config
 from manager_rest.rest import responses
@@ -56,13 +57,13 @@ OPTIONAL_SERVICES = {
 }
 
 
-class UnixSocketHTTPConnection(httplib.HTTPConnection):
+class UnixSocketHTTPConnection(http.client.HTTPConnection):
     def connect(self):
         self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self.sock.connect(self.host)
 
 
-class UnixSocketTransport(xmlrpclib.Transport, object):
+class UnixSocketTransport(xmlrpc.client.Transport, object):
     def __init__(self, path):
         super(UnixSocketTransport, self).__init__()
         self._path = path
@@ -210,12 +211,12 @@ def _lookup_systemd_service_status(service, optional_services):
 def _lookup_supervisor_service_status(service_name):
     service_status = None
     is_optional = True if service_name in OPTIONAL_SERVICES else False
-    server = xmlrpclib.Server(
+    server = xmlrpc.client.Server(
         'http://',
         transport=UnixSocketTransport("/var/run/supervisord.sock"))
     try:
         status_response = server.supervisor.getProcessInfo(service_name)
-    except xmlrpclib.Fault as e:
+    except xmlrpc.client.Fault as e:
         # If the error is raised that means one of the two options:
         # 1. The service is optional and not installed (faultCode=10)
         # ignore the error

@@ -1,7 +1,5 @@
 from typing import List, Union
 
-from cloudify._compat import text_type
-
 from manager_rest.storage import models
 from manager_rest.rest.rest_utils import validate_inputs, parse_label
 from manager_rest.manager_exceptions import BadFilterRule, BadParametersError
@@ -65,7 +63,7 @@ def create_filter_rules_list(raw_filter_rules: List[dict],
         filter_rule_type = filter_rule['type']
         filter_rule_operator = filter_rule['operator']
 
-        if not isinstance(filter_rule_key, text_type):
+        if not isinstance(filter_rule_key, str):
             raise BadFilterRule(filter_rule,
                                 'The filter rule key must be a string')
         if not isinstance(filter_rule_values, list):

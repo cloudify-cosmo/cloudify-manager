@@ -1,8 +1,9 @@
 import traceback
 import os
+import time
 import yaml
 from contextlib import contextmanager
-import time
+from io import StringIO
 
 from flask_restful import Api
 from flask import Flask, jsonify, Blueprint, current_app
@@ -13,7 +14,6 @@ from sqlalchemy.orm.session import close_all_sessions
 from sqlalchemy.pool import Pool
 from werkzeug.exceptions import InternalServerError
 
-from cloudify._compat import StringIO
 
 from manager_rest import config, premium_enabled, manager_exceptions
 from manager_rest.storage import db, user_datastore, models
@@ -214,7 +214,7 @@ class CloudifyFlaskApp(Flask):
         orig_handle_exc = self.handle_exception
         orig_handle_user_exc = self.handle_user_exception
         yield
-        # mypy says you cant assign to method, but yes you can!
+        # mypy says you cannot assign to method, but yes you can!
         self.handle_exception = orig_handle_exc  # type: ignore
         self.handle_user_exception = orig_handle_user_exc  # type: ignore
 

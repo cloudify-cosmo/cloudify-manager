@@ -2,7 +2,6 @@ from requests import post
 from flask import current_app
 from json import JSONDecodeError
 
-from cloudify._compat import text_type
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest import premium_enabled, manager_exceptions
@@ -17,10 +16,10 @@ class CommunityContacts(SecuredResource):
         if premium_enabled:
             raise manager_exceptions.CommunityOnly()
         request_dict = get_json_and_verify_params({
-            'first_name': {'type': text_type},
-            'last_name': {'type': text_type},
-            'email': {'type': text_type},
-            'phone': {'type': text_type, 'optional': True},
+            'first_name': {'type': str},
+            'last_name': {'type': str},
+            'email': {'type': str},
+            'phone': {'type': str, 'optional': True},
             'is_eula': {'type': bool},
         })
         if not request_dict['is_eula']:

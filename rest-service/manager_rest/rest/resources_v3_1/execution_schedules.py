@@ -2,8 +2,6 @@ from flask import request
 from flask_restful_swagger import swagger
 from flask_restful.reqparse import Argument
 
-from cloudify._compat import text_type
-
 from manager_rest import manager_exceptions
 from manager_rest.rest import rest_decorators
 from manager_rest.rest.rest_utils import (
@@ -58,7 +56,7 @@ class ExecutionSchedulesId(SecuredResource):
 
         validate_inputs({'schedule_id': schedule_id})
         deployment_id = get_args_and_verify_arguments([
-            Argument('deployment_id', type=text_type, required=True),
+            Argument('deployment_id', type=str, required=True),
         ])['deployment_id']
         request_dict = get_json_and_verify_params({'workflow_id',
                                                    'since'})
@@ -121,7 +119,7 @@ class ExecutionSchedulesId(SecuredResource):
         """Updates scheduling parameters of an existing execution schedule"""
 
         deployment_id = get_args_and_verify_arguments([
-            Argument('deployment_id', type=text_type, required=True)
+            Argument('deployment_id', type=str, required=True)
         ])['deployment_id']
         sm = get_storage_manager()
         schedule = sm.get(
@@ -167,7 +165,7 @@ class ExecutionSchedulesId(SecuredResource):
         Get execution schedule by id
         """
         deployment_id = get_args_and_verify_arguments([
-            Argument('deployment_id', type=text_type, required=True)
+            Argument('deployment_id', type=str, required=True)
         ])['deployment_id']
         return get_storage_manager().get(
             models.ExecutionSchedule,
@@ -179,7 +177,7 @@ class ExecutionSchedulesId(SecuredResource):
     @authorize('execution_schedule_create')
     def delete(self, schedule_id):
         deployment_id = get_args_and_verify_arguments([
-            Argument('deployment_id', type=text_type, required=True)
+            Argument('deployment_id', type=str, required=True)
         ])['deployment_id']
         sm = get_storage_manager()
         schedule = sm.get(

@@ -20,11 +20,11 @@ import requests
 import shutil
 from retrying import retry
 from contextlib import closing
+from urllib.parse import parse_qs
 
 from packaging.specifiers import SpecifierSet, InvalidSpecifier
 from packaging.version import parse as parse_version
 
-from cloudify._compat import parse_qs
 from cloudify.exceptions import InvalidBlueprintImport
 from cloudify_rest_client.exceptions import CloudifyClientError
 

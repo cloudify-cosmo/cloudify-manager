@@ -16,7 +16,6 @@ from manager_rest.security import (MissingPremiumFeatureResource,
 from .. import rest_decorators, rest_utils
 from ..responses_v3 import TenantResponse, TenantDetailsResponse
 
-from cloudify._compat import text_type
 from cloudify.cryptography_utils import decrypt
 
 TenantsListResource: Any
@@ -78,7 +77,7 @@ class TenantsId(SecuredMultiTenancyResource):
         rest_utils.validate_inputs({'tenant_name': tenant_name})
         if request.content_length:
             request_dict = rest_utils.get_json_and_verify_params({
-                'rabbitmq_password': {'type': text_type, 'optional': True},
+                'rabbitmq_password': {'type': str, 'optional': True},
             })
         else:
             request_dict = {}
@@ -141,13 +140,13 @@ class TenantUsers(SecuredMultiTenancyResource):
         request_dict = rest_utils.get_json_and_verify_params(
             {
                 'tenant_name': {
-                    'type': text_type
+                    'type': str
                 },
                 'username': {
-                    'type': text_type
+                    'type': str
                 },
                 'role': {
-                    'type': text_type
+                    'type': str
                 },
             },
         )
@@ -172,13 +171,13 @@ class TenantUsers(SecuredMultiTenancyResource):
         request_dict = rest_utils.get_json_and_verify_params(
             {
                 'tenant_name': {
-                    'type': text_type,
+                    'type': str,
                 },
                 'username': {
-                    'type': text_type,
+                    'type': str,
                 },
                 'role': {
-                    'type': text_type,
+                    'type': str,
                 },
             },
         )
@@ -217,13 +216,13 @@ class TenantGroups(SecuredMultiTenancyResource):
         request_dict = rest_utils.get_json_and_verify_params(
             {
                 'tenant_name': {
-                    'type': text_type
+                    'type': str
                 },
                 'group_name': {
-                    'type': text_type
+                    'type': str
                 },
                 'role': {
-                    'type': text_type
+                    'type': str
                 },
             })
         rest_utils.validate_inputs(request_dict)
@@ -246,13 +245,13 @@ class TenantGroups(SecuredMultiTenancyResource):
         request_dict = rest_utils.get_json_and_verify_params(
             {
                 'tenant_name': {
-                    'type': text_type,
+                    'type': str,
                 },
                 'group_name': {
-                    'type': text_type,
+                    'type': str,
                 },
                 'role': {
-                    'type': text_type,
+                    'type': str,
                 },
             },
         )

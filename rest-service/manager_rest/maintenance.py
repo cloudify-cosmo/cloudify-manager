@@ -14,12 +14,11 @@
 #  * limitations under the License.
 #
 
-from datetime import datetime
 import traceback
-
+from datetime import datetime
 from flask import jsonify, request
+from io import StringIO
 
-from cloudify._compat import StringIO
 from cloudify.models_states import ExecutionState
 
 from manager_rest import utils

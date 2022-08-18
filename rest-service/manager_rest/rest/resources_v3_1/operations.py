@@ -2,7 +2,6 @@ from datetime import datetime
 from flask import request
 from flask_restful.reqparse import Argument
 
-from cloudify._compat import text_type
 from cloudify import constants as common_constants
 from cloudify.workflows import events as common_events, tasks
 from cloudify.models_states import ExecutionState
@@ -37,9 +36,9 @@ class Operations(SecuredResource):
     @paginate
     def get(self, _include=None, pagination=None, **kwargs):
         args = get_args_and_verify_arguments([
-            Argument('graph_id', type=text_type, required=False),
-            Argument('execution_id', type=text_type, required=False),
-            Argument('state', type=text_type, required=False),
+            Argument('graph_id', type=str, required=False),
+            Argument('execution_id', type=str, required=False),
+            Argument('state', type=str, required=False),
             Argument('skip_internal', type=bool, required=False),
         ])
         sm = get_storage_manager()
@@ -190,11 +189,11 @@ class OperationsId(SecuredResource):
     @marshal_with(models.Operation)
     def put(self, operation_id, **kwargs):
         params = get_json_and_verify_params({
-            'name': {'type': text_type, 'required': True},
-            'graph_id': {'type': text_type, 'required': True},
+            'name': {'type': str, 'required': True},
+            'graph_id': {'type': str, 'required': True},
             'dependencies': {'type': list, 'required': True},
             'parameters': {'type': dict},
-            'type': {'type': text_type}
+            'type': {'type': str}
         })
         operation = get_resource_manager().create_operation(
             operation_id,
@@ -210,7 +209,7 @@ class OperationsId(SecuredResource):
     @detach_globals
     def patch(self, operation_id, **kwargs):
         request_dict = get_json_and_verify_params({
-            'state': {'type': text_type},
+            'state': {'type': str},
             'result': {'optional': True},
             'exception': {'optional': True},
             'exception_causes': {'optional': True},
@@ -404,8 +403,8 @@ class TasksGraphs(SecuredResource):
     @paginate
     def get(self, _include=None, pagination=None, **kwargs):
         args = get_args_and_verify_arguments([
-            Argument('execution_id', type=text_type, required=True),
-            Argument('name', type=text_type, required=False)
+            Argument('execution_id', type=str, required=True),
+            Argument('name', type=str, required=False)
         ])
         sm = get_storage_manager()
         execution_id = args.get('execution_id')
@@ -427,8 +426,8 @@ class TasksGraphsId(SecuredResource):
     @marshal_with(models.TasksGraph)
     def post(self, **kwargs):
         params = get_json_and_verify_params({
-            'name': {'type': text_type},
-            'execution_id': {'type': text_type},
+            'name': {'type': str},
+            'execution_id': {'type': str},
             'operations': {'optional': True},
             'created_at': {'optional': True},
             'graph_id': {'optional': True},
@@ -458,7 +457,7 @@ class TasksGraphsId(SecuredResource):
     @marshal_with(models.TasksGraph)
     def patch(self, tasks_graph_id, **kwargs):
         request_dict = get_json_and_verify_params(
-            {'state': {'type': text_type}}
+            {'state': {'type': str}}
         )
         sm = get_storage_manager()
         instance = sm.get(models.TasksGraph, tasks_graph_id, locking=True)

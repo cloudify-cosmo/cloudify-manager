@@ -6,7 +6,6 @@ from flask_restful.inputs import boolean
 from flask_restful.reqparse import Argument
 from flask_restful_swagger import swagger
 
-from cloudify._compat import text_type
 from cloudify.models_states import VisibilityState, BlueprintUploadState
 
 from dsl_parser import constants
@@ -203,16 +202,16 @@ class BlueprintsId(resources_v2.BlueprintsId):
 
         request_schema = {
             'plan': {'type': dict, 'optional': True},
-            'description': {'type': text_type, 'optional': True},
-            'main_file_name': {'type': text_type, 'optional': True},
-            'visibility': {'type': text_type, 'optional': True},
-            'state': {'type': text_type, 'optional': True},
-            'error': {'type': text_type, 'optional': True},
-            'error_traceback': {'type': text_type, 'optional': True},
+            'description': {'type': str, 'optional': True},
+            'main_file_name': {'type': str, 'optional': True},
+            'visibility': {'type': str, 'optional': True},
+            'state': {'type': str, 'optional': True},
+            'error': {'type': str, 'optional': True},
+            'error_traceback': {'type': str, 'optional': True},
             'labels': {'type': list, 'optional': True},
-            'creator': {'type': text_type, 'optional': True},
-            'created_at': {'type': text_type, 'optional': True},
-            'upload_execution': {'type': text_type, 'optional': True},
+            'creator': {'type': str, 'optional': True},
+            'created_at': {'type': str, 'optional': True},
+            'upload_execution': {'type': str, 'optional': True},
         }
         request_dict = rest_utils.get_json_and_verify_params(request_schema)
 

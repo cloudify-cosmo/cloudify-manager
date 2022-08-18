@@ -20,12 +20,12 @@ import zipfile
 import tempfile
 import functools
 from shutil import copy
+from urllib.parse import urlparse
 
 import yaml
 import requests
 
 from cloudify import manager, ctx
-from cloudify._compat import urlparse
 from cloudify.utils import exception_to_error_cause
 from cloudify_rest_client.client import CloudifyClient
 from cloudify_rest_client.exceptions import (CloudifyClientError,

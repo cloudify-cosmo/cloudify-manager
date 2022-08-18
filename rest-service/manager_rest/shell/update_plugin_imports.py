@@ -21,11 +21,11 @@ from os import chmod
 from os.path import basename, exists, join
 from shutil import move
 from typing import Dict, List, Union, BinaryIO
+from urllib.parse import parse_qs
 
 import click
 import yaml
 
-from cloudify._compat import parse_qs, parse_version
 from dsl_parser import exceptions as dsl_parser_exceptions
 from dsl_parser.constants import (
     WORKFLOW_PLUGINS_TO_INSTALL,
@@ -43,6 +43,10 @@ from manager_rest.resolver_with_catalog_support import (
 from manager_rest.shell import common
 from manager_rest.storage import models, get_storage_manager
 
+try:
+    from packaging.version import parse as parse_version
+except ImportError:
+    from distutils.version import LooseVersion as parse_version
 
 REST_AUTHORIZATION_CONFIG_PATH = join(
     common.REST_HOME_DIR, "authorization.conf"

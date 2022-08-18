@@ -13,16 +13,16 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import types
 import numbers
+import types
 from datetime import datetime
-
 from functools import wraps
+from urllib.parse import urlencode
 
-from cloudify._compat import urlencode
-from manager_rest import utils
 from cloudify_rest_client.client import HTTPClient
 from cloudify_rest_client.executions import Execution
+
+from manager_rest import utils
 from manager_rest.storage import get_storage_manager, models
 from manager_rest.storage.models import License
 

@@ -13,7 +13,6 @@ from flask_security import current_user
 from flask import current_app
 from sqlalchemy import create_engine, orm
 
-from cloudify._compat import text_type
 from cloudify.utils import ipv6_url_compat
 
 from manager_rest.manager_exceptions import (
@@ -317,7 +316,7 @@ class Config(object):
                             f'Error validating {name}: {value} is not '
                             f'an integer')
                 elif entry.schema['type'] == 'boolean'\
-                        and isinstance(value, text_type):
+                        and isinstance(value, str):
                     if value.lower() == 'true':
                         value = True
                     elif value.lower() == 'false':

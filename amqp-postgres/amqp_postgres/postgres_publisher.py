@@ -1,5 +1,6 @@
 import json
 import logging
+import queue
 from time import time
 from threading import Thread, Lock
 
@@ -8,7 +9,6 @@ import psycopg2.errorcodes
 from psycopg2.extras import execute_values, DictCursor
 from collections import OrderedDict
 
-from cloudify._compat import queue
 from cloudify.constants import EVENTS_EXCHANGE_NAME, LOGS_EXCHANGE_NAME
 from manager_rest.flask_utils import setup_flask_app
 
@@ -261,7 +261,7 @@ class DBLogEventPublisher(object):
 
         This is to be used in the anomalous cases where inserting the whole
         batch throws an IntegrityError - we fall back to inserting the items
-        one by one, so that only the errorneous message is dropped.
+        one by one, so that only the erroneous message is dropped.
         """
         for message, exchange, ack in items:
             item = self._get_db_item(conn, message, exchange)

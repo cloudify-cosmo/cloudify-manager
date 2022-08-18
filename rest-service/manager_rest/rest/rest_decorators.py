@@ -20,7 +20,6 @@ from voluptuous import (
     Range,
     Schema,
 )
-from cloudify._compat import text_type
 from cloudify.models_states import ExecutionState
 from manager_rest import config, manager_exceptions
 from manager_rest.utils import current_tenant
@@ -221,10 +220,10 @@ def rangeable(func):
     """Decorator for enabling filtering by a range of values.
 
     Range filtering is expected to be passed in the `_range` header as a list
-    of triplets with the following values separated by commmas:
+    of triplets with the following values separated by commas:
         - Field: The name of the field to filter by
         - From: The minimum value to include in the results
-        - To: The maxium value to include in the results
+        - To: The maximum value to include in the results
 
     The range filters are mapped to a dictionary where the keys are the names
     of the fields to filter and the values are dictionaries that have
@@ -269,7 +268,7 @@ def rangeable(func):
     def from_or_to_present(range_param):
         """Make sure that at least one of from or to are present.
 
-        :param range_param: Range parameter splitted at the commas
+        :param range_param: Range parameter split at the commas
         :type range_param: tuple(str, str, str)
         :return: The same value that was passed
         :rtype: tuple(str, str, str)
@@ -283,7 +282,7 @@ def rangeable(func):
     schema = Schema(
         All(
             ExactSequence([
-                text_type,
+                str,
                 Any(valid_datetime, ''),
                 Any(valid_datetime, ''),
             ]),

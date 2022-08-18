@@ -1,7 +1,6 @@
 from flask_restful_swagger import swagger
 from werkzeug.exceptions import BadRequest
 
-from cloudify._compat import text_type
 from cloudify.models_states import VisibilityState
 
 from manager_rest import manager_exceptions
@@ -102,13 +101,13 @@ class PluginsUpdate(SecuredResource):
                 AUTO_CORRECT_TYPES: {'type': bool, 'optional': True},
                 REEVALUATE_ACTIVE_STATUSES: {'type': bool, 'optional': True},
                 'all_tenants': {'type': bool, 'optional': True},
-                'created_by': {'type': text_type, 'optional': True},
-                'created_at': {'type': text_type, 'optional': True},
-                'update_id': {'type': text_type, 'optional': True},
-                'execution_id': {'type': text_type, 'optional': True},
-                'state': {'type': text_type, 'optional': True},
+                'created_by': {'type': str, 'optional': True},
+                'created_at': {'type': str, 'optional': True},
+                'update_id': {'type': str, 'optional': True},
+                'execution_id': {'type': str, 'optional': True},
+                'state': {'type': str, 'optional': True},
                 'affected_deployments': {'type': list, 'optional': True},
-                'temp_blueprint_id': {'type': text_type, 'optional': True},
+                'temp_blueprint_id': {'type': str, 'optional': True},
             })
         except BadRequest:
             args = {}
@@ -243,7 +242,7 @@ class PluginsId(resources_v2_1.PluginsId):
         """
         sm = get_storage_manager()
         action_dict = rest_utils.get_json_and_verify_params({
-            'action': {'type': text_type},
+            'action': {'type': str},
         })
         plugin = sm.get(models.Plugin, plugin_id)
         if action_dict.get('action') == 'install':
@@ -268,10 +267,10 @@ class PluginsId(resources_v2_1.PluginsId):
         This method is for internal use only.
         """
         request_dict = rest_utils.get_json_and_verify_params({
-            'agent': {'type': text_type, 'optional': True},
-            'manager': {'type': text_type, 'optional': True},
-            'state': {'type': text_type},
-            'error': {'type': text_type, 'optional': True},
+            'agent': {'type': str, 'optional': True},
+            'manager': {'type': str, 'optional': True},
+            'state': {'type': str},
+            'error': {'type': str, 'optional': True},
         })
         agent_name = request_dict.get('agent')
         manager_name = request_dict.get('manager')
@@ -317,7 +316,7 @@ class PluginsId(resources_v2_1.PluginsId):
         Only updating the ownership is supported right now.
         """
         request_dict = rest_utils.get_json_and_verify_params({
-            'creator': {'type': text_type, 'optional': True},
+            'creator': {'type': str, 'optional': True},
             'blueprint_labels': {'type': dict, 'optional': True},
             'labels': {'type': dict, 'optional': True},
         })
