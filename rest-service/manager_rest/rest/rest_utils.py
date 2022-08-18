@@ -16,13 +16,13 @@ from retrying import retry
 from flask_security import current_user
 from flask import request, make_response, current_app
 from flask_restful.reqparse import Argument, RequestParser
+from urllib.parse import quote as urlquote
 
 from dsl_parser import tasks
 from dsl_parser import exceptions as parser_exceptions
 from dsl_parser.utils import get_function
 from dsl_parser.constants import INTER_DEPLOYMENT_FUNCTIONS
 
-from cloudify._compat import urlquote, text_type
 from cloudify.snapshots import SNAPSHOT_RESTORE_FLAG_FILE
 from cloudify.models_states import (
     VisibilityState,
@@ -142,7 +142,7 @@ def get_args_and_verify_arguments(arguments):
 def verify_and_convert_bool(attribute_name, str_bool):
     if isinstance(str_bool, bool):
         return str_bool
-    if isinstance(str_bool, text_type):
+    if isinstance(str_bool, str):
         if str_bool.lower() == 'true':
             return True
         if str_bool.lower() == 'false':
@@ -277,7 +277,7 @@ def get_visibility_parameter(optional=False,
         visibility = args.visibility
     else:
         request_dict = get_json_and_verify_params({
-            'visibility': {'optional': optional, 'type': text_type}
+            'visibility': {'optional': optional, 'type': str}
         })
         visibility = request_dict.get('visibility', None)
 
@@ -589,8 +589,8 @@ def get_labels_list(raw_labels_list):
 
 
 def parse_label(label_key, label_value):
-    if ((not isinstance(label_key, text_type)) or
-            (not isinstance(label_value, text_type))):
+    if ((not isinstance(label_key, str)) or
+            (not isinstance(label_value, str))):
         raise BadLabelsList()
 
     if len(label_key) > 256 or len(label_value) > 256:

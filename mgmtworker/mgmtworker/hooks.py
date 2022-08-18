@@ -18,7 +18,6 @@ import os
 import yaml
 import logging
 
-from cloudify._compat import parse_version
 from cloudify.manager import get_rest_client
 from cloudify.constants import EVENTS_EXCHANGE_NAME
 from cloudify_rest_client.exceptions import CloudifyClientError
@@ -26,6 +25,12 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 from cloudify_agent.worker import (
     CloudifyOperationConsumer,
 )
+
+try:
+    from packaging.version import parse as parse_version
+except ImportError:
+    from distutils.version import LooseVersion as parse_version
+
 
 logger = logging.getLogger('mgmtworker')
 

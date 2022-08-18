@@ -37,11 +37,11 @@ from flask_migrate import Migrate, upgrade
 from mock import Mock, patch
 from flask.testing import FlaskClient
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+from urllib.parse import quote as urlquote
 
 from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.exceptions import CloudifyClientError
 
-from cloudify._compat import urlquote
 from cloudify.models_states import (ExecutionState,
                                     VisibilityState,
                                     BlueprintUploadState)

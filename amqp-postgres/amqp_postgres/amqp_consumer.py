@@ -16,8 +16,8 @@
 
 import json
 import logging
+import queue
 
-from cloudify._compat import queue
 from cloudify.amqp_client import AMQPConnection
 from cloudify.constants import EVENTS_EXCHANGE_NAME, LOGS_EXCHANGE_NAME
 

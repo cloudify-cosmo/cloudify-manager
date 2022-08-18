@@ -3,8 +3,6 @@ from functools import wraps
 from flask import request
 from flask_security import current_user
 
-from cloudify._compat import text_type
-
 from manager_rest import config, utils
 from manager_rest.execution_token import current_execution
 from manager_rest.security import audit
@@ -30,7 +28,7 @@ def authorize(action,
                 tenant_name = kwargs['tenant_name']
             elif get_tenant_from == 'data':
                 tenant_name = get_json_and_verify_params(
-                    {'tenant_name': {'type': text_type}}).get('tenant_name')
+                    {'tenant_name': {'type': str}}).get('tenant_name')
 
             if allow_if_execution:
                 if current_execution and (

@@ -31,7 +31,6 @@ from sqlalchemy.exc import (
 from flask import current_app, has_request_context
 from sqlalchemy.orm.attributes import flag_modified
 
-from cloudify._compat import text_type
 from cloudify.models_states import VisibilityState
 
 from manager_rest.storage.models_base import db
@@ -242,7 +241,7 @@ class SQLStorageManager(object):
         substr_conditions = []
         for column, value in filters.items():
             column, value = self._update_case_insensitive(column, value, True)
-            if isinstance(value, text_type):
+            if isinstance(value, str):
                 substr_conditions.append(column.contains(value))
             else:
                 raise manager_exceptions.BadParametersError(

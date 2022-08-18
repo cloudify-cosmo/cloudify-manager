@@ -12,7 +12,6 @@ from manager_rest.manager_exceptions import BadParametersError
 from .. import rest_decorators, rest_utils
 from ..responses_v3 import UserResponse
 
-from cloudify._compat import text_type
 try:
     from cloudify_premium.multi_tenancy.secured_tenant_resource \
         import SecuredMultiTenancyResource
@@ -62,16 +61,16 @@ class Users(SecuredMultiTenancyResource):
         request_dict = rest_utils.get_json_and_verify_params(
             {
                 'username': {
-                    'type': text_type,
+                    'type': str,
                 },
                 'password': {
-                    'type': text_type,
+                    'type': str,
                 },
                 'role': {
-                    'type': text_type,
+                    'type': str,
                     'optional': True,
                 },
-                'created_at': {'type': text_type, 'optional': True},
+                'created_at': {'type': str, 'optional': True},
             }
         )
         is_prehashed = rest_utils.verify_and_convert_bool(

@@ -16,8 +16,8 @@ from setuptools import archive_util
 from flask import request, current_app
 from flask_restful.reqparse import Argument
 from flask_restful.inputs import boolean
+from urllib.parse import quote as unquote
 
-from cloudify._compat import unquote
 from cloudify.models_states import SnapshotState, BlueprintUploadState
 from manager_rest.manager_exceptions import ArchiveTypeError
 from manager_rest.constants import (FILE_SERVER_PLUGINS_FOLDER,

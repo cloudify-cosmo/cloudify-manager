@@ -20,7 +20,6 @@ import shutil
 import string
 import itertools
 
-from cloudify._compat import text_type
 from cloudify.manager import get_rest_client
 from cloudify.workflows import ctx
 
@@ -55,7 +54,7 @@ class Credentials(object):
             agent_config = get_agent_config(node.properties)
             agent_key = agent_config.get('key')
             # Don't do anything with empty or {get_secret} agent keys
-            if agent_key and isinstance(agent_key, text_type):
+            if agent_key and isinstance(agent_key, str):
                 agent_dirname = _get_agent_dirname(
                     version, tenant, dep_id, node.id
                 )
@@ -184,7 +183,7 @@ def restore(tempdir, postgres, version):
                                           deployment_id,
                                           node_id)
 
-            if not isinstance(agent_key, text_type):
+            if not isinstance(agent_key, str):
                 ctx.logger.info('key for {} is not a path'.format(dir_name))
                 continue
             if re.search('BEGIN .* PRIVATE KEY', agent_key):

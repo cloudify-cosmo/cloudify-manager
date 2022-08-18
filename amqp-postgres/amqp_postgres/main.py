@@ -1,7 +1,7 @@
 import logging
 import argparse
+import queue
 
-from cloudify._compat import queue
 from cloudify.amqp_client import get_client
 from manager_rest import config
 from manager_rest.flask_utils import setup_flask_app

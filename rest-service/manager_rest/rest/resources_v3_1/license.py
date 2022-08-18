@@ -1,6 +1,5 @@
 from flask import request
 
-from cloudify._compat import text_type
 from manager_rest.rest import responses_v3
 from manager_rest.security.authorization import authorize
 from manager_rest.security import (
@@ -60,7 +59,7 @@ class LicenseCommunity(SecuredResource):
         Store the Customer ID received from Hubspot in the Manager.
         """
         request_dict = get_json_and_verify_params({
-            'customer_id': {'type': text_type},
+            'customer_id': {'type': str},
         })
         sm = get_storage_manager()
         licenses = sm.list(models.License, get_all_results=True)

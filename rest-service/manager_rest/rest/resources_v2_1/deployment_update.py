@@ -20,8 +20,6 @@ from typing import Dict
 from flask import request
 from flask_restful_swagger import swagger
 
-from cloudify._compat import text_type
-
 from manager_rest import manager_exceptions, workflow_executor
 from manager_rest.constants import DEPLOYMENT_UPDATE_STATES as STATES
 from manager_rest.security import SecuredResource
@@ -197,7 +195,7 @@ class DeploymentUpdateId(SecuredResource):
     @rest_decorators.marshal_with(models.DeploymentUpdate)
     def put(self, update_id):
         params = get_json_and_verify_params({
-            'deployment_id': {'type': text_type, 'required': True},
+            'deployment_id': {'type': str, 'required': True},
             'state': {'optional': True},
             'inputs': {'optional': True},
             'blueprint_id': {'optional': True}

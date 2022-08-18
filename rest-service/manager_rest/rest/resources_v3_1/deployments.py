@@ -14,7 +14,6 @@ from flask_restful.reqparse import Argument
 from sqlalchemy import and_ as sql_and
 
 
-from cloudify._compat import text_type
 from cloudify.manager import _get_workdir_path
 from cloudify.models_states import (VisibilityState,
                                     ExecutionState,
@@ -65,11 +64,11 @@ class DeploymentsId(resources_v1.DeploymentsId):
         request_schema = super(DeploymentsId, self).create_request_schema()
         request_schema['skip_plugins_validation'] = {
             'optional': True, 'type': bool}
-        request_schema['site_name'] = {'optional': True, 'type': text_type}
+        request_schema['site_name'] = {'optional': True, 'type': str}
         request_schema['runtime_only_evaluation'] = {
             'optional': True, 'type': bool
         }
-        request_schema['display_name'] = {'optional': True, 'type': text_type}
+        request_schema['display_name'] = {'optional': True, 'type': str}
         return request_schema
 
     def get_skip_plugin_validation_flag(self, request_dict):
@@ -618,9 +617,9 @@ class InterDeploymentDependencies(SecuredResource):
     @staticmethod
     def _verify_dependency_params():
         return rest_utils.get_json_and_verify_params({
-            DEPENDENCY_CREATOR: {'type': text_type},
-            SOURCE_DEPLOYMENT: {'type': text_type},
-            TARGET_DEPLOYMENT: {'optional': True, 'type': text_type},
+            DEPENDENCY_CREATOR: {'type': str},
+            SOURCE_DEPLOYMENT: {'type': str},
+            TARGET_DEPLOYMENT: {'optional': True, 'type': str},
             TARGET_DEPLOYMENT_FUNC: {'optional': True, 'type': dict},
             EXTERNAL_SOURCE: {'optional': True, 'type': dict},
             EXTERNAL_TARGET: {'optional': True, 'type': dict},

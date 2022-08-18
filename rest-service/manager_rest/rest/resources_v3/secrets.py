@@ -4,7 +4,6 @@ from flask import request
 from flask_security import current_user
 from cryptography.fernet import InvalidToken
 
-from cloudify._compat import text_type
 from cloudify.models_states import VisibilityState
 from cloudify.cryptography_utils import (encrypt,
                                          decrypt,
@@ -108,7 +107,7 @@ class SecretsKey(SecuredResource):
     def _get_secret_params(key):
         rest_utils.validate_inputs({'key': key})
         request_dict = rest_utils.get_json_and_verify_params({
-            'value': {'type': text_type}
+            'value': {'type': str}
         })
         update_if_exists = rest_utils.verify_and_convert_bool(
             'update_if_exists',
@@ -175,7 +174,7 @@ class SecretsKey(SecuredResource):
 
     def _update_value(self, secret):
         request_dict = rest_utils.get_json_and_verify_params({
-            'value': {'type': text_type, 'optional': True}
+            'value': {'type': str, 'optional': True}
         })
         value = request_dict.get('value')
         if value:
@@ -183,7 +182,7 @@ class SecretsKey(SecuredResource):
 
     def _update_owner(self, secret):
         request_dict = rest_utils.get_json_and_verify_params({
-            'creator': {'type': text_type, 'optional': True}
+            'creator': {'type': str, 'optional': True}
         })
         creator_username = request_dict.get('creator')
         if not creator_username:
@@ -336,7 +335,7 @@ class SecretsImport(SecuredResource):
         request_dict = rest_utils.get_json_and_verify_params({
             'secrets_list': {'type': list, 'optional': False},
             'tenant_map': {'type': dict, 'optional': True},
-            'passphrase': {'type': text_type, 'optional': True},
+            'passphrase': {'type': str, 'optional': True},
             'override_collisions': {'type': bool, 'optional': False}
         })
         return request_dict
@@ -483,7 +482,7 @@ class SecretsImport(SecuredResource):
     @staticmethod
     def _is_missing_field(secret, field, missing_fields):
         value = secret[field] if field in secret else None
-        empty_string = isinstance(value, text_type) and not value.strip()
+        empty_string = isinstance(value, str) and not value.strip()
         if value is None or empty_string:
             missing_fields.append(field)
             return True

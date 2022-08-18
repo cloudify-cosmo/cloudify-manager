@@ -19,7 +19,6 @@ from typing import Any
 from flask import request
 from flask_restful.reqparse import Argument
 
-from cloudify._compat import text_type
 from cloudify.constants import MANAGER_RESOURCES_PATH
 from manager_rest.security import SecuredResource, premium_only
 from manager_rest.rest import rest_utils
@@ -127,7 +126,7 @@ class Managers(managers_base):
         :param _include: optional, what columns to include in the response
         """
         args = rest_utils.get_args_and_verify_arguments([
-            Argument('hostname', type=text_type, required=False)
+            Argument('hostname', type=str, required=False)
         ])
         hostname = args.get('hostname')
         if hostname:
