@@ -870,6 +870,7 @@ class DeploymentGroupsId(SecuredResource):
             'deployments_from_group': {'optional': True},
             'created_by': {'optional': True},
             'created_at': {'optional': True},
+            'creation_counter': {'optional': True}
         })
 
         created_at = creator = None
@@ -889,6 +890,8 @@ class DeploymentGroupsId(SecuredResource):
             except manager_exceptions.NotFoundError:
                 group = models.DeploymentGroup(id=group_id)
                 sm.put(group)
+            if 'creation_counter' in request_dict:
+                group.creation_counter = request_dict['creation_counter']
             if creator:
                 group.creator = creator
             if created_at:
