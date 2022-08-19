@@ -17,8 +17,6 @@ import shutil
 import pytest
 import tempfile
 
-from pytest import mark
-
 from integration_tests.tests.utils import (tar_blueprint,
                                            wait_for_blueprint_upload)
 from . import DeploymentUpdateBase, BLUEPRINT_ID
