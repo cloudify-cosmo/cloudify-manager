@@ -199,7 +199,8 @@ class NodeInstances(v2_NodeInstances):
 
         valid_params = {'id', 'runtime_properties', 'state', 'version',
                         'relationships', 'scaling_groups', 'host_id',
-                        'index', 'visibility',
+                        'index', 'visibility', 'is_status_check_ok',
+                        'system_properties',
                         '_tenant_id', '_node_fk', '_creator_id'}
 
         user_lookup_cache: Dict[str, models.User] = {}
