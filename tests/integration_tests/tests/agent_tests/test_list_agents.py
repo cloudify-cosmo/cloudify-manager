@@ -13,14 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from importlib.util import find_spec
-
 import pytest
 
 from integration_tests import AgentTestCase
 from integration_tests.tests.utils import get_resource as resource
-
-premium_enabled = find_spec('cloudify_premium') is not None
 
 pytestmark = pytest.mark.group_agents
 
@@ -58,39 +54,3 @@ class TestListAgents(AgentTestCase):
         self.assertEqual(agent_list.metadata['pagination']['total'], 1)
         self.undeploy_application(deployment1.id)
         self.delete_deployment(deployment2.id, validate=True)
-
-    @pytest.mark.skipif(not premium_enabled,
-                        reason='Cloudify Community version does not support'
-                               ' multi-tenancy')
-    def test_list_agents_all_tenants(self):
-        self.client.tenants.create('mike')
-        mike_client = self.create_rest_client(tenant='mike')
-        deployment1, _ = self.deploy_application(resource(
-            "dsl/agent_tests/with_agent.yaml"), deployment_id='at1')
-        deployment2 = self.deploy(resource("dsl/agent_tests/with_agent.yaml"),
-                                  deployment_id='at2', client=mike_client)
-        execution2 = mike_client.executions.start(deployment2.id, 'install')
-        self.wait_for_execution_to_end(execution2, client=mike_client)
-
-        # all_tenants is false by default
-        agent_list = self.client.agents.list()
-        self.assertEqual(len(agent_list.items), 1)
-        self.assertEqual(agent_list.metadata['pagination']['total'], 1)
-        self.assertEqual(agent_list.items[0]['deployment'], 'at1')
-        self.assertEqual(agent_list.items[0]['tenant_name'], 'default_tenant')
-
-        # all_tenants is true
-        agent_list = self.client.agents.list(_all_tenants=True)
-        self.assertEqual(len(agent_list.items), 2)
-        self.assertEqual(agent_list.metadata['pagination']['total'], 2)
-        self.assertEqual({agent['deployment']
-                          for agent in agent_list.items}, {'at1', 'at2'})
-        self.assertEqual({agent['tenant_name'] for agent in agent_list.items},
-                         {'default_tenant', 'mike'})
-
-        self.undeploy_application(deployment1.id)
-        uninstall2 = mike_client.executions.start(deployment2.id, 'uninstall')
-        self.wait_for_execution_to_end(uninstall2, client=mike_client)
-        self.delete_deployment(deployment2.id,
-                               validate=True,
-                               client=mike_client)

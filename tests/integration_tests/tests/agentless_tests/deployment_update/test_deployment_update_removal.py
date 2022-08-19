@@ -392,7 +392,6 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         deployment = self.client.deployments.get(deployment.id)
         self.assertNotIn('custom_output', deployment.outputs)
 
-    @mark.skip
     def test_remove_description(self):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('remove_description')
