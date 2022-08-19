@@ -548,7 +548,6 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         self._assertDictContainsSubset({'custom_output': {'value': 0}},
                                        deployment.outputs)
 
-    @mark.skip
     def test_add_description(self):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('add_description')
@@ -558,4 +557,4 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         self._do_update(deployment.id, BLUEPRINT_ID)
 
         deployment = self.client.deployments.get(deployment.id)
-        self.assertRegexpMatches(deployment['description'], 'new description')
+        self.assertRegex(deployment['description'], 'new description')
