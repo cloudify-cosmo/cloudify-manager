@@ -59,12 +59,6 @@ def sh_bake(command):
         _err=lambda line: _write(sys.stderr, line))
 
 
-def get_profile_context(container_id):
-    profile_context_cmd =\
-        'cat /root/.cloudify/profiles/manager-local/context.json'
-    return json.loads(docker.execute(container_id, profile_context_cmd))
-
-
 def set_cfy_paths(new_workdir):
     cli_env.CLOUDIFY_WORKDIR = os.path.join(
         new_workdir,
