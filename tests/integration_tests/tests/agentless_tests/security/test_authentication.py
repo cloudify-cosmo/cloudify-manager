@@ -14,7 +14,6 @@
 #    * limitations under the License.
 import pytest
 
-from integration_tests.framework import utils
 from .security_base import TestAuthenticationBase
 
 pytestmark = pytest.mark.group_premium
