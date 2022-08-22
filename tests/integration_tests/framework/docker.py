@@ -54,7 +54,11 @@ services_to_install:
     logging.info('Starting container: %s', ' '.join(command))
     manager_id = subprocess.check_output(command).decode('utf-8').strip()
     logging.info('Started container %s', manager_id)
-    execute(manager_id, ['cfy_manager', 'wait-for-starter'])
+    execute(
+        manager_id,
+        ['cfy_manager', 'wait-for-starter'],
+        redirect_logs=True,
+    )
     return manager_id
 
 
@@ -79,7 +83,7 @@ def read_file(container_id, file_path, no_strip=False):
     return result
 
 
-def execute(container_id, command, env=None):
+def execute(container_id, command, env=None, redirect_logs=False):
     if not isinstance(command, list):
         command = shlex.split(command)
     args = ['docker', 'exec']
@@ -91,6 +95,8 @@ def execute(container_id, command, env=None):
     for k, v in env.items():
         args += ['-e', '{0}={1}'.format(k, v)]
     args.append(container_id)
+    if redirect_logs:
+        return subprocess.run(args + command)
     return subprocess.check_output(args + command).decode('utf-8')
 
 
