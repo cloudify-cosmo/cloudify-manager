@@ -194,21 +194,6 @@ def do_retries(func,
             time.sleep(0.5)
 
 
-def do_retries_boolean(func, timeout_seconds=10, **kwargs):
-    deadline = time.time() + timeout_seconds
-    while True:
-        return_value = func(**kwargs)
-        if return_value:
-            break
-        else:
-            if time.time() > deadline:
-                raise RuntimeError(
-                    'function {0} did not return True in {1} seconds'
-                    .format(func.__name__, timeout_seconds)
-                )
-            time.sleep(0.5)
-
-
 def tar_blueprint(blueprint_path, dest_dir):
     """
     creates a tar archive out of a blueprint dir.
