@@ -1,7 +1,6 @@
 import os
 import sys
 import time
-import json
 import shutil
 import zipfile
 import tempfile
@@ -18,8 +17,6 @@ from cloudify_rest_client import CloudifyClient
 
 from cloudify_cli import env as cli_env
 from cloudify_cli.constants import CLOUDIFY_BASE_DIRECTORY_NAME
-
-from . import docker
 
 
 logger = setup_logger('testenv.utils')
@@ -57,12 +54,6 @@ def sh_bake(command):
     return command.bake(
         _out=lambda line: _write(sys.stdout, line),
         _err=lambda line: _write(sys.stderr, line))
-
-
-def get_profile_context(container_id):
-    profile_context_cmd =\
-        'cat /root/.cloudify/profiles/manager-local/context.json'
-    return json.loads(docker.execute(container_id, profile_context_cmd))
 
 
 def set_cfy_paths(new_workdir):

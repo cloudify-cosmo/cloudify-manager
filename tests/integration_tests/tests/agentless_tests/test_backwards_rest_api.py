@@ -19,7 +19,6 @@ import os
 import subprocess
 from functools import wraps
 
-from integration_tests.framework import utils
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 
@@ -53,16 +52,15 @@ class RestApiBackwardsCompatibilityTest(AgentlessTestCase):
         shell_script_path = resource('scripts/test_old_rest_client.sh')
         python_script_path = resource('scripts/test_old_rest_client.py')
         result_path = str(self.workdir / 'result.json')
-        profile_context = utils.get_profile_context(self.env.container_id)
 
         env = os.environ.copy()
         env.update({
             'python_script_path': python_script_path,
             'client_version': client_version,
             'manager_ip': self.get_manager_ip(),
-            'manager_user': profile_context['manager_username'],
-            'manager_password': profile_context['manager_password'],
-            'manager_tenant': profile_context['manager_tenant'],
+            'manager_user': 'admin',
+            'manager_password': 'admin',
+            'manager_tenant': 'default_tenant',
             'url_version_postfix': url_version_postfix,
             'result_path': result_path
         })

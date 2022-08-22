@@ -14,7 +14,6 @@
 #    * limitations under the License.
 import pytest
 
-from integration_tests.framework import utils
 from .security_base import TestAuthenticationBase
 
 pytestmark = pytest.mark.group_premium
@@ -22,9 +21,7 @@ pytestmark = pytest.mark.group_premium
 
 class AuthenticationTest(TestAuthenticationBase):
     def test_valid_credentials_authenticate(self):
-        profile_context = utils.get_profile_context(self.env.container_id)
-        self._assert_authorized(username=profile_context['manager_username'],
-                                password=profile_context['manager_password'])
+        self._assert_authorized(username='admin', password='admin')
 
     def test_invalid_credentials_fails(self):
         self._assert_unauthorized(username='wrong_username',
