@@ -60,7 +60,7 @@ class TestManagerStatus(AgentlessTestCase):
         self.assertTrue(all(existing_key))
 
     def test_status_service_inactive(self):
-        """One of the systemd services is down"""
+        """One of the manager services is down"""
         self._test_service_inactive('Management Worker')
 
     def test_status_rabbit_inactive(self):

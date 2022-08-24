@@ -8,7 +8,6 @@ from integration_tests.framework.constants import INSERT_MOCK_LICENSE_QUERY
 
 def run_manager(
     image,
-    service_management,
     resource_mapping=None,
     lightweight=False,
 ):
@@ -24,8 +23,7 @@ sanity:
 restservice:
     gunicorn:
         max_worker_count: 4
-service_management: {0}
-    """.format(service_management)
+"""
     if lightweight:
         manager_config += """
 stage:
@@ -43,9 +41,7 @@ services_to_install:
         conf.write(manager_config)
     command = [
         'docker', 'run', '-d',
-        '-v', '/sys/fs/cgroup:/sys/fs/cgroup:ro',
         '-v', '{0}:/etc/cloudify/config.yaml:Z'.format(conf.name),
-        '--tmpfs', '/run', '--tmpfs', '/run/lock',
     ]
     if resource_mapping:
         for src, dst in resource_mapping:
