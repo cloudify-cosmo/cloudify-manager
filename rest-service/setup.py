@@ -24,7 +24,6 @@ install_requires = [
     'flask-migrate==3.1.0',
     'cloudify-common==7.0.0.dev1',
     'requests>=2.27.1,<3',
-    'gunicorn',
     'pyyaml',
     'psutil>=5.7,<5.8',
     'virtualenv>=15.1.0,<16',
