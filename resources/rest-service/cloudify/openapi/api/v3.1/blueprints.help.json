@@ -1,0 +1,169 @@
+{
+    "description": "Represents an abstract RESTful resource. Concrete resources should",
+    "notes": "extend from this class and expose methods for each supported HTTP<br/>method. If a resource is invoked with an unsupported HTTP method,<br/>the API will return a response with status 405 Method Not Allowed.<br/>Otherwise the appropriate method is called and passed all arguments<br/>from the url rule used when adding the resource to an Api instance. See<br/>:meth:`~flask_restful.Api.add_resource` for details.",
+    "operations": [
+        {
+            "method": "get",
+            "nickname": "list",
+            "notes": "Returns a list of submitted blueprints for the optionally provided filter parameters <class 'manager_rest.storage.resource_models.Blueprint'>",
+            "parameters": [
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List blueprints matching the 'created_at' filter value",
+                    "name": "created_at",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List blueprints matching the 'id' filter value",
+                    "name": "id",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List blueprints matching the 'visibility' filter value",
+                    "name": "visibility",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List blueprints matching the 'main_file_name' filter value",
+                    "name": "main_file_name",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List blueprints matching the 'plan' filter value",
+                    "name": "plan",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List blueprints matching the 'updated_at' filter value",
+                    "name": "updated_at",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List blueprints matching the 'description' filter value",
+                    "name": "description",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List blueprints matching the 'is_hidden' filter value",
+                    "name": "is_hidden",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List blueprints matching the 'state' filter value",
+                    "name": "state",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List blueprints matching the 'error' filter value",
+                    "name": "error",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List blueprints matching the 'error_traceback' filter value",
+                    "name": "error_traceback",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List blueprints matching the 'tenant_name' filter value",
+                    "name": "tenant_name",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List blueprints matching the 'created_by' filter value",
+                    "name": "created_by",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List blueprints matching the 'resource_availability' filter value",
+                    "name": "resource_availability",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List blueprints matching the 'private_resource' filter value",
+                    "name": "private_resource",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List blueprints matching the 'labels' filter value",
+                    "name": "labels",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List blueprints matching the 'upload_execution' filter value",
+                    "name": "upload_execution",
+                    "paramType": "query",
+                    "required": false
+                }
+            ],
+            "responseClass": "List[Blueprint]",
+            "summary": "List uploaded blueprints"
+        }
+    ],
+    "path": "/api/v3.1/blueprints"
+}

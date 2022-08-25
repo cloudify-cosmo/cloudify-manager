@@ -1,0 +1,394 @@
+{
+    "description": "Represents an abstract RESTful resource. Concrete resources should",
+    "notes": "extend from this class and expose methods for each supported HTTP<br/>method. If a resource is invoked with an unsupported HTTP method,<br/>the API will return a response with status 405 Method Not Allowed.<br/>Otherwise the appropriate method is called and passed all arguments<br/>from the url rule used when adding the resource to an Api instance. See<br/>:meth:`~flask_restful.Api.add_resource` for details.",
+    "operations": [
+        {
+            "method": "get",
+            "nickname": "list",
+            "notes": "Returns a list existing deployments for the optionally provided filter parameters: <class 'manager_rest.storage.resource_models.Deployment'>",
+            "parameters": [
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'created_at' filter value",
+                    "name": "created_at",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'id' filter value",
+                    "name": "id",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'visibility' filter value",
+                    "name": "visibility",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'description' filter value",
+                    "name": "description",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'inputs' filter value",
+                    "name": "inputs",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'groups' filter value",
+                    "name": "groups",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'permalink' filter value",
+                    "name": "permalink",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'policy_triggers' filter value",
+                    "name": "policy_triggers",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'policy_types' filter value",
+                    "name": "policy_types",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'outputs' filter value",
+                    "name": "outputs",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'capabilities' filter value",
+                    "name": "capabilities",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'scaling_groups' filter value",
+                    "name": "scaling_groups",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'updated_at' filter value",
+                    "name": "updated_at",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'workflows' filter value",
+                    "name": "workflows",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'runtime_only_evaluation' filter value",
+                    "name": "runtime_only_evaluation",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'installation_status' filter value",
+                    "name": "installation_status",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'deployment_status' filter value",
+                    "name": "deployment_status",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'sub_services_status' filter value",
+                    "name": "sub_services_status",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'sub_environments_status' filter value",
+                    "name": "sub_environments_status",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'sub_services_count' filter value",
+                    "name": "sub_services_count",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'sub_environments_count' filter value",
+                    "name": "sub_environments_count",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'display_name' filter value",
+                    "name": "display_name",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'resource_tags' filter value",
+                    "name": "resource_tags",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'drifted_instances' filter value",
+                    "name": "drifted_instances",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'unavailable_instances' filter value",
+                    "name": "unavailable_instances",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'latest_execution_finished_operations' filter value",
+                    "name": "latest_execution_finished_operations",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'latest_execution_total_operations' filter value",
+                    "name": "latest_execution_total_operations",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'blueprint_id' filter value",
+                    "name": "blueprint_id",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'site_name' filter value",
+                    "name": "site_name",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'latest_execution_status' filter value",
+                    "name": "latest_execution_status",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'environment_type' filter value",
+                    "name": "environment_type",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'has_sub_deployments' filter value",
+                    "name": "has_sub_deployments",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'tenant_name' filter value",
+                    "name": "tenant_name",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'created_by' filter value",
+                    "name": "created_by",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'resource_availability' filter value",
+                    "name": "resource_availability",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'private_resource' filter value",
+                    "name": "private_resource",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'workdir_zip' filter value",
+                    "name": "workdir_zip",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'labels' filter value",
+                    "name": "labels",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'schedules' filter value",
+                    "name": "schedules",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'deployment_groups' filter value",
+                    "name": "deployment_groups",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'create_execution' filter value",
+                    "name": "create_execution",
+                    "paramType": "query",
+                    "required": false
+                },
+                {
+                    "allowMultiple": false,
+                    "dataType": "string",
+                    "defaultValue": null,
+                    "description": "List deployments matching the 'latest_execution' filter value",
+                    "name": "latest_execution",
+                    "paramType": "query",
+                    "required": false
+                }
+            ],
+            "responseClass": "List[Deployment]",
+            "summary": "List deployments"
+        }
+    ],
+    "path": "/api/v3.1/deployments"
+}

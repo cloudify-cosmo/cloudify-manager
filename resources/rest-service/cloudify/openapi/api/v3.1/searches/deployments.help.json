@@ -1,0 +1,87 @@
+{
+    "description": "Represents an abstract RESTful resource. Concrete resources should",
+    "notes": "extend from this class and expose methods for each supported HTTP<br/>method. If a resource is invoked with an unsupported HTTP method,<br/>the API will return a response with status 405 Method Not Allowed.<br/>Otherwise the appropriate method is called and passed all arguments<br/>from the url rule used when adding the resource to an Api instance. See<br/>:meth:`~flask_restful.Api.add_resource` for details.",
+    "operations": [
+        {
+            "allowed_filter_rules_attrs": [
+                "blueprint_id",
+                "created_by",
+                "site_name",
+                "schedules",
+                "tenant_name",
+                "display_name",
+                "installation_status"
+            ],
+            "filter_rules_attributes_operators": [
+                "any_of",
+                "not_any_of",
+                "contains",
+                "not_contains",
+                "starts_with",
+                "ends_with",
+                "is_not_empty"
+            ],
+            "filter_rules_labels_operators": [
+                "any_of",
+                "not_any_of",
+                "is_null",
+                "is_not_null",
+                "is_not"
+            ],
+            "filter_rules_types": [
+                "label",
+                "attribute"
+            ],
+            "method": "post",
+            "nickname": "list",
+            "notes": "Returns a filtered list of existing deployments, based on the provided filter rules.",
+            "parameters": [
+                {
+                    "in": "query",
+                    "name": "_include",
+                    "required": "false",
+                    "type": "string"
+                },
+                {
+                    "in": "query",
+                    "name": "_size",
+                    "required": "false",
+                    "type": "integer"
+                },
+                {
+                    "in": "query",
+                    "name": "_offset",
+                    "required": "false",
+                    "type": "integer"
+                },
+                {
+                    "in": "query",
+                    "name": "_sort",
+                    "required": "false",
+                    "type": "string"
+                },
+                {
+                    "in": "query",
+                    "name": "_all_tenants",
+                    "required": "false",
+                    "type": "boolean"
+                },
+                {
+                    "in": "query",
+                    "name": "_get_all_results",
+                    "required": "false",
+                    "type": "boolean"
+                },
+                {
+                    "in": "query",
+                    "name": "_filter_id",
+                    "required": "false",
+                    "type": "string"
+                }
+            ],
+            "responseClass": "List[Deployment]",
+            "summary": "List deployments using filter rules or DSL constraints"
+        }
+    ],
+    "path": "/api/v3.1/searches/deployments"
+}
