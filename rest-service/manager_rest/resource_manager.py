@@ -1654,19 +1654,7 @@ class ResourceManager(object):
                           runtime_only_evaluation=False,
                           display_name=None,
                           created_at=None,
-                          created_by=None,
-                          workflows=None,
-                          policy_types=None,
-                          policy_triggers=None,
-                          groups=None,
-                          scaling_groups=None,
-                          inputs=None,
-                          outputs=None,
-                          resource_tags=None,
-                          capabilities=None,
-                          description=None,
-                          deployment_status=None,
-                          installation_status=None):
+                          **kwargs):
         verify_blueprint_uploaded_state(blueprint)
         visibility = self.get_resource_visibility(models.Deployment,
                                                   deployment_id,
@@ -1687,37 +1675,26 @@ class ResourceManager(object):
             updated_at=now,
             deployment_status=DeploymentState.REQUIRE_ATTENTION,
         )
-        with open('/tmp/ilikecake', 'a') as fh:
-            fh.write('%s: %s\n ' % (deployment_id, deployment_status))
-        if created_by is not None:
-            new_deployment.creator = created_by
-        if workflows is not None:
-            new_deployment.workflows = workflows
-        if policy_types is not None:
-            new_deployment.policy_types = policy_types
-        if policy_triggers is not None:
-            new_deployment.policy_triggers = policy_triggers
-        if groups is not None:
-            new_deployment.groups = groups
-        if scaling_groups is not None:
-            new_deployment.scaling_groups = scaling_groups
-        if inputs is not None:
-            new_deployment.inputs = inputs
-        if outputs is not None:
-            new_deployment.outputs = outputs
-        if resource_tags is not None:
-            new_deployment.resource_tags = resource_tags
-        if capabilities is not None:
-            new_deployment.capabilities = capabilities
-        if description is not None:
-            new_deployment.description = description
-        if deployment_status is not None:
-            new_deployment.deployment_status = deployment_status
-        if installation_status is not None:
-            new_deployment.installation_status = installation_status
         new_deployment.runtime_only_evaluation = runtime_only_evaluation
         new_deployment.blueprint = blueprint
         new_deployment.visibility = visibility
+
+        allowed_overrides = {
+            'created_by', 'workflows', 'policy_types', 'policy_triggers',
+            'groups', 'scaling_groups', 'inputs', 'outputs', 'resource_tags',
+            'capabilities', 'description', 'deployment_status',
+            'installation_status',
+        }
+        bad_overrides = kwargs.keys() - allowed_overrides
+        if bad_overrides:
+            raise ValueError(
+                'Unknown keys for overriding deployment creation: '
+                f'{bad_overrides}'
+            )
+        for attr, value in kwargs.items():
+            if attr is None:
+                continue
+            setattr(new_deployment, attr, value)
 
         if site:
             validate_deployment_and_site_visibility(new_deployment, site)
