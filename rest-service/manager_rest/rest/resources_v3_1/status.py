@@ -6,12 +6,11 @@ from typing import Dict
 from flask import request
 from flask import current_app
 from flask_restful import Resource
-from flask_restful_swagger import swagger
 
 from cloudify.cluster_status import ServiceStatus, NodeServiceStatus
 
 from manager_rest import config
-from manager_rest.rest import responses
+from manager_rest.rest import responses, swagger
 from manager_rest.utils import get_amqp_client
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize

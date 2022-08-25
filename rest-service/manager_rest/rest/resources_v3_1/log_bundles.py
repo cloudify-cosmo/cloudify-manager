@@ -1,13 +1,11 @@
 import os
 
-from flask_restful_swagger import swagger
-
 from cloudify.models_states import LogBundleState, ExecutionState
 
 from manager_rest import config, manager_exceptions, workflow_executor
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
-from manager_rest.rest import rest_decorators, rest_utils
+from manager_rest.rest import rest_decorators, rest_utils, swagger
 from manager_rest.storage import get_storage_manager, models
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.constants import (FILE_SERVER_LOG_BUNDLES_FOLDER,

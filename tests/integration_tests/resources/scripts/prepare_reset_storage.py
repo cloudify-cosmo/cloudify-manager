@@ -26,6 +26,8 @@ if __name__ == '__main__':
     parser.add_argument('--config', dest='config')
     args = parser.parse_args()
     config.instance.load_from_file('/opt/manager/cloudify-rest.conf')
+    config.instance.load_from_file('/opt/manager/rest-security.conf',
+                                   namespace='security')
 
     script_config = {
         'manager_config': MANAGER_CONFIG,

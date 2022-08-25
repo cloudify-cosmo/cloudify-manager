@@ -15,7 +15,7 @@ from integration_tests.framework.flask_utils import \
 
 
 logger = logging.getLogger('TESTENV')
-Env = namedtuple('Env', ['container_id', 'container_ip', 'service_management'])
+Env = namedtuple('Env', ['container_id', 'container_ip'])
 
 test_groups = [
     'group_deployments', 'group_service_composition', 'group_scale',
@@ -52,12 +52,6 @@ def pytest_addoption(parser):
     parser.addoption(
         '--container-id',
         help='Run integration tests on this container',
-    )
-    parser.addoption(
-        '--service-management',
-        default='supervisord',
-        help='Run integration tests using specific service management layer. '
-             '`supervisord` or `systemd`',
     )
     parser.addoption(
         '--lightweight',
@@ -171,7 +165,6 @@ def manager_container(request, resource_mapping):
     image_name = request.config.getoption("--image-name")
     keep_container = request.config.getoption("--keep-container")
     container_id = request.config.getoption("--container-id")
-    service_management = request.config.getoption("--service-management")
     lightweight = request.config.getoption('--lightweight')
     if container_id:
         reset_storage(container_id)
@@ -179,13 +172,12 @@ def manager_container(request, resource_mapping):
     else:
         container_id = docker.run_manager(
             image_name,
-            service_management,
             resource_mapping=resource_mapping,
             lightweight=lightweight,
         )
         docker.upload_mock_license(container_id)
     container_ip = docker.get_manager_ip(container_id)
-    container = Env(container_id, container_ip, service_management)
+    container = Env(container_id, container_ip)
     prepare_reset_storage_script(container_id)
     prepare_events_follower(container_id)
     _disable_cron_jobs(container_id)

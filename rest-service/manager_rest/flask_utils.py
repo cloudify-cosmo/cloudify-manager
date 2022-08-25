@@ -87,6 +87,7 @@ def set_admin_current_user(app):
     # request context to the flask stack
     app.test_request_context().push()
 
-    # And then load the admin as the currently active user
-    app.extensions['security'].login_manager.reload_user(admin)
+    # TODO RD-5685: stop using the private method
+    app.extensions['security'].login_manager._update_request_context_with_user(
+        admin)
     return admin

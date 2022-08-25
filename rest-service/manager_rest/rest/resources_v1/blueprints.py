@@ -16,9 +16,8 @@
 
 import os
 
-from flask_restful_swagger import swagger
-
 from manager_rest import config, manager_exceptions
+from manager_rest.rest import swagger
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.resource_manager import get_resource_manager

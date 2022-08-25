@@ -4,7 +4,6 @@ from flask import request
 
 from flask_restful.inputs import boolean
 from flask_restful.reqparse import Argument
-from flask_restful_swagger import swagger
 
 from cloudify.models_states import VisibilityState, BlueprintUploadState
 
@@ -18,10 +17,13 @@ from manager_rest.security.authorization import (
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.upload_manager import (UploadedBlueprintsManager,
                                          UploadedBlueprintsValidator)
-from manager_rest.rest import (rest_utils,
-                               resources_v1,
-                               resources_v2,
-                               rest_decorators)
+from manager_rest.rest import (
+    rest_utils,
+    resources_v1,
+    resources_v2,
+    rest_decorators,
+    swagger,
+)
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.utils import get_formatted_timestamp, remove
 from manager_rest.rest.rest_utils import (get_labels_from_plan,

@@ -37,12 +37,6 @@ def start(ctx, **_):
     # daemonize the script, so that we're not a child of the mgmtworker,
     # so the agent is not killed when the mgmtworker dies
     if os.fork() == 0:
-        if not os.path.exists('/var/run/supervisord.sock'):
-            # under systemd, also escape the mgmtworker's cgroup
-            subprocess.check_call([
-                'sudo', '/usr/bin/bash', '-c',
-                'echo {0} > /sys/fs/cgroup/systemd/tasks'.format(os.getpid())
-            ])
         os.chdir('/')
         os.setsid()
         os.umask(0)

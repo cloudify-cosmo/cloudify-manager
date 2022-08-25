@@ -18,9 +18,9 @@ from datetime import datetime
 from typing import Dict
 
 from flask import request
-from flask_restful_swagger import swagger
 
 from manager_rest import manager_exceptions, workflow_executor
+from manager_rest.rest import swagger
 from manager_rest.constants import DEPLOYMENT_UPDATE_STATES as STATES
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import (authorize,

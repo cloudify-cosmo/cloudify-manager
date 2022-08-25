@@ -15,10 +15,9 @@
 #
 
 from flask import current_app
-from flask_restful_swagger import swagger
 
 from manager_rest import config
-from manager_rest.rest import responses
+from manager_rest.rest import responses, swagger
 from manager_rest.utils import get_amqp_client
 from manager_rest.security import SecuredResource
 from manager_rest.rest.rest_decorators import marshal_with

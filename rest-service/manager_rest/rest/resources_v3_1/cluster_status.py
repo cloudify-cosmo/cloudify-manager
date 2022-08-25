@@ -15,21 +15,20 @@
 
 
 from flask import request
-from flask_restful_swagger import swagger
 
 from cloudify.cluster_status import ServiceStatus
 
-from manager_rest.rest import responses
+from manager_rest.rest import responses, swagger
 from manager_rest.security.authorization import authorize
 from manager_rest.rest.rest_decorators import marshal_with
-from manager_rest.security import SecuredResourceBannedSnapshotRestore
+from manager_rest.security import SecuredResource
 from manager_rest.cluster_status_manager import (STATUS,
                                                  get_cluster_status)
 from manager_rest.rest.rest_utils import (verify_and_convert_bool,
                                           get_json_and_verify_params)
 
 
-class ClusterStatus(SecuredResourceBannedSnapshotRestore):
+class ClusterStatus(SecuredResource):
     @staticmethod
     def _get_request_dict():
         request_dict = get_json_and_verify_params({

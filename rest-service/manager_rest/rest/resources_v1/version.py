@@ -14,10 +14,8 @@
 #  * limitations under the License.
 #
 
-from flask_restful_swagger import swagger
-
 from manager_rest import version
-from manager_rest.rest import responses
+from manager_rest.rest import responses, swagger
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.rest.rest_decorators import marshal_with

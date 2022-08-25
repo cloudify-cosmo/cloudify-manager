@@ -14,8 +14,6 @@ pytest -vxs integration_tests/tests/agentless_tests/test_workflow.py::BasicWorkf
 
 We add several commandline arguments for pytest:
 
-- `--service-management`: The service management layer to use to
- run Cloudify. it can be either "supervisord" or "systemd". Default is "supervisord"
 - `--tests-source-root` - points to a directory that contains repositories
   with Cloudify code (or symlinks to them). Those repositories will be
   mounted into the container and used for the tests.

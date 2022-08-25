@@ -2,12 +2,11 @@ from uuid import uuid4
 
 from flask import request
 
-from flask_restful_swagger import swagger
-
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.rest import (
     rest_decorators,
     rest_utils,
+    swagger,
 )
 from manager_rest.rest.responses_v2 import ListResponse
 from manager_rest.security import SecuredResource

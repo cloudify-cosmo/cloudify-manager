@@ -14,11 +14,12 @@
 #  * limitations under the License.
 
 
+import urllib.parse
 from unittest import TestCase
 
-
 from dateutil.parser import parse as parse_datetime
-from mock import Mock, patch, MagicMock
+from flask import Flask
+from mock import Mock
 from voluptuous import Invalid
 
 from manager_rest.rest.rest_decorators import (
@@ -29,8 +30,11 @@ from manager_rest.rest.rest_decorators import (
 
 
 class PaginateTest(TestCase):
-
     """Paginate decorator test cases."""
+
+    def setUp(self):
+        super().setUp()
+        self.app = Flask(__name__)
 
     def test_defaults(self):
         """Size and offset set to zero by default."""
@@ -38,8 +42,7 @@ class PaginateTest(TestCase):
             self.assertDictEqual(pagination, {})
             return Mock()
 
-        with patch('manager_rest.rest.rest_decorators.request') as request:
-            request.args = {}
+        with self.app.test_request_context('/'):
             paginate(verify)()
 
     def test_coercion(self):
@@ -49,11 +52,7 @@ class PaginateTest(TestCase):
             self.assertEqual(pagination['offset'], 2)
             return Mock()
 
-        with patch('manager_rest.rest.rest_decorators.request') as request:
-            request.args = {
-                '_size': '1',
-                '_offset': '2',
-            }
+        with self.app.test_request_context('/?_size=1&_offset=2'):
             paginate(verify)()
 
     def test_negative(self):
@@ -61,16 +60,17 @@ class PaginateTest(TestCase):
         def verify(pagination):
             return Mock()
 
-        with patch('manager_rest.rest.rest_decorators.request') as request:
-            for args in [{'_size': '-1', '_offset': '-1'}]:
-                request.args = args
-                with self.assertRaises(Invalid):
-                    paginate(verify)()
+        with self.app.test_request_context('/?_size=-1&_offset=-1'):
+            with self.assertRaises(Invalid):
+                paginate(verify)()
 
 
 class RangeableTest(TestCase):
-
     """Rangeable decorator test cases."""
+
+    def setUp(self):
+        super().setUp()
+        self.app = Flask(__name__)
 
     def verify(self, expected_value):
         """Verify range_filters arguments matches expected value."""
@@ -81,21 +81,21 @@ class RangeableTest(TestCase):
 
     def test_empty(self):
         """No range arguments mapped to an empty dictionary."""
-        with patch('manager_rest.rest.rest_decorators.request') as request:
-            request.args.getlist.return_value = []
+        with self.app.test_request_context('/'):
             rangeable(self.verify({}))()
 
     def test_invalid(self):
         """Exception is raised for invalid values."""
-        with patch('manager_rest.rest.rest_decorators.request') as request:
-            invalid_values = [
-                'invalid',
-                ',,',  # parameter must be a string
-                'field,,',  # one of from or to must be present
-                'field,from,to',  # from and to should be datetimes
-            ]
-            for invalid_value in invalid_values:
-                request.args.getlist.return_value = [invalid_value]
+        invalid_values = [
+            'invalid',
+            ',,',  # parameter must be a string
+            'field,,',  # one of from or to must be present
+            'field,from,to',  # from and to should be datetimes
+        ]
+        for invalid_value in invalid_values:
+            with self.app.test_request_context(
+                f'/?_range={urllib.parse.quote(invalid_value)}'
+            ):
                 with self.assertRaises(Invalid):
                     rangeable(Mock)()
 
@@ -107,10 +107,11 @@ class RangeableTest(TestCase):
             '2017-03-16T12:33:01Z',
             '20170316T123301Z',
         )
-
-        with patch('manager_rest.rest.rest_decorators.request') as request:
-            for valid_datetime_str in valid_datetime_strs:
-                valid_value = 'field,{0},{0}'.format(valid_datetime_str)
+        for valid_datetime_str in valid_datetime_strs:
+            valid_value = 'field,{0},{0}'.format(valid_datetime_str)
+            with self.app.test_request_context(
+                f'/?_range={urllib.parse.quote(valid_value)}'
+            ):
                 valid_datetime = (
                     parse_datetime(valid_datetime_str).replace(tzinfo=None)
                 )
@@ -120,8 +121,6 @@ class RangeableTest(TestCase):
                         'to': valid_datetime,
                     }
                 }
-
-                request.args.getlist.return_value = [valid_value]
                 rangeable(self.verify(expected_value))()
 
     def test_from_to_optional(self):
@@ -132,24 +131,24 @@ class RangeableTest(TestCase):
             parse_datetime(valid_datetime_str).replace(tzinfo=None)
         )
 
-        with patch('manager_rest.rest.rest_decorators.request') as request:
-            data = [
-                (
-                    'field,{0},{0}'.format(valid_datetime_str),
-                    {'field': {'from': valid_datetime, 'to': valid_datetime}},
-                ),
-                (
-                    'field,,{0}'.format(valid_datetime_str),
-                    {'field': {'to': valid_datetime}},
-                ),
-                (
-                    'field,{0},'.format(valid_datetime_str),
-                    {'field': {'from': valid_datetime}},
-                ),
-            ]
-
-            for (valid_value, expected_value) in data:
-                request.args.getlist.return_value = [valid_value]
+        data = [
+            (
+                'field,{0},{0}'.format(valid_datetime_str),
+                {'field': {'from': valid_datetime, 'to': valid_datetime}},
+            ),
+            (
+                'field,,{0}'.format(valid_datetime_str),
+                {'field': {'to': valid_datetime}},
+            ),
+            (
+                'field,{0},'.format(valid_datetime_str),
+                {'field': {'from': valid_datetime}},
+            ),
+        ]
+        for valid_value, expected_value in data:
+            with self.app.test_request_context(
+                f'/?_range={urllib.parse.quote(valid_value)}'
+            ):
                 rangeable(self.verify(expected_value))()
 
     def test_unicode(self):
@@ -160,30 +159,34 @@ class RangeableTest(TestCase):
             parse_datetime(valid_datetime_str).replace(tzinfo=None)
         )
 
-        with patch('manager_rest.rest.rest_decorators.request') as request:
-            data = [
-                (
-                    u'field,{0},{0}'.format(valid_datetime_str),
-                    {'field': {'from': valid_datetime, 'to': valid_datetime}},
-                ),
-                (
-                    u'field,{0},'.format(valid_datetime_str),
-                    {'field': {'from': valid_datetime}},
-                ),
-                (
-                    u'field,,{0}'.format(valid_datetime_str),
-                    {'field': {'to': valid_datetime}},
-                ),
-            ]
+        data = [
+            (
+                u'field,{0},{0}'.format(valid_datetime_str),
+                {'field': {'from': valid_datetime, 'to': valid_datetime}},
+            ),
+            (
+                u'field,{0},'.format(valid_datetime_str),
+                {'field': {'from': valid_datetime}},
+            ),
+            (
+                u'field,,{0}'.format(valid_datetime_str),
+                {'field': {'to': valid_datetime}},
+            ),
+        ]
 
-            for (valid_value, expected_value) in data:
-                request.args.getlist.return_value = [valid_value]
+        for valid_value, expected_value in data:
+            with self.app.test_request_context(
+                f'/?_range={urllib.parse.quote(valid_value)}'
+            ):
                 rangeable(self.verify(expected_value))()
 
 
 class SortableTest(TestCase):
-
     """Sortable decorator test cases."""
+
+    def setUp(self):
+        super().setUp()
+        self.app = Flask(__name__)
 
     def test_defaults(self):
         """Sort is an empty dictionary by default."""
@@ -191,8 +194,7 @@ class SortableTest(TestCase):
             self.assertDictEqual(sort, {})
             return Mock()
 
-        with patch('manager_rest.rest.rest_decorators.request') as request:
-            request.args.getlist.return_value = []
+        with self.app.test_request_context('/'):
             sortable()(verify)()
 
     def test_sort_order(self):
@@ -208,17 +210,16 @@ class SortableTest(TestCase):
             )
             return Mock()
 
-        sort_mock = MagicMock()
+        sort_mock = Mock()
         sort_mock.resource_fields = ['a', 'b', 'c']
-
-        with patch('manager_rest.rest.rest_decorators.request') as request:
-            request.args.getlist.return_value = ['a', '+b', '-c']
+        with self.app.test_request_context(
+            f'/?_sort=a&_sort={urllib.parse.quote("+b")}&_sort=-c'
+        ):
             sortable(sort_mock)(verify)()
 
     def test_invalid(self):
         """Exception raised when invalid value is passed."""
 
-        with patch('manager_rest.rest.rest_decorators.request') as request:
-            request.args.getlist.return_value = [None]
+        with self.app.test_request_context('/?_sort=%20abcd'):
             with self.assertRaises(Invalid):
                 sortable()(Mock)()

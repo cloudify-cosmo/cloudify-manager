@@ -9,7 +9,6 @@ import zipfile
 
 from flask import request
 from flask_restful.inputs import boolean
-from flask_restful_swagger import swagger
 from flask_restful.reqparse import Argument
 from sqlalchemy import and_ as sql_and
 
@@ -47,7 +46,8 @@ from manager_rest.rest import (
     rest_utils,
     resources_v1,
     rest_decorators,
-    responses_v3
+    responses_v3,
+    swagger,
 )
 from ..responses_v2 import ListResponse
 

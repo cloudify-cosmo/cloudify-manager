@@ -31,8 +31,7 @@ from manager_rest.rest.rest_utils import (
     normalize_value,
     verify_and_convert_bool,
     request_use_all_tenants,
-    is_system_in_snapshot_restore_process,
-    is_deployment_update
+    is_deployment_update,
 )
 
 from .responses_v2 import ListResponse
@@ -531,16 +530,6 @@ def no_external_authenticator(action):
 # endregion
 
 # region V3_1 decorators
-
-
-def prevent_running_in_snapshot_restore(endpoint_func):
-    @wraps(endpoint_func)
-    def wrapper(*args, **kwargs):
-        if is_system_in_snapshot_restore_process():
-            raise manager_exceptions.SystemInSnapshotRestoreError()
-        return endpoint_func(*args, **kwargs)
-
-    return wrapper
 
 
 def filter_id(func):

@@ -2,7 +2,6 @@ import uuid
 from datetime import datetime
 
 from flask_restful.reqparse import Argument
-from flask_restful_swagger import swagger
 from flask_restful.inputs import boolean
 
 from cloudify.models_states import ExecutionState
@@ -12,7 +11,7 @@ from manager_rest.resource_manager import (
     ResourceManager,
     get_resource_manager,
 )
-from manager_rest.rest import requests_schema
+from manager_rest.rest import requests_schema, swagger
 from manager_rest.rest.rest_decorators import (
     marshal_with,
     not_while_cancelling
