@@ -231,6 +231,11 @@ class DeploymentsId(resources_v1.DeploymentsId):
         site_name = _get_site_name(request_dict)
         site = sm.get(models.Site, site_name) if site_name else None
 
+        run_create_dep_env = bool(request_dict.get('workdir_zip'))
+        if not run_create_dep_env:
+            # Don't pre-populate inputs when creating deployments normally
+            request_dict.pop('inputs')
+
         rm.cleanup_failed_deployment(deployment_id)
         with sm.transaction():
             if not skip_plugins_validation:
@@ -258,7 +263,7 @@ class DeploymentsId(resources_v1.DeploymentsId):
                 deployment_status=request_dict.get('deployment_status'),
                 installation_status=request_dict.get('installation_status'),
             )
-            if request_dict.get('workdir_zip'):
+            if run_create_dep_env:
                 tmpdir_path = mkdtemp()
                 try:
                     workdir_path = _get_workdir_path(deployment_id,
