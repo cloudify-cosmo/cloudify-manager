@@ -22,9 +22,6 @@ from flask import request, Response, jsonify
 
 from manager_rest import premium_enabled
 from manager_rest.manager_exceptions import MissingPremiumPackage
-from manager_rest.rest.rest_decorators import (
-    prevent_running_in_snapshot_restore)
-
 from .authentication import authenticate as auth_user
 
 
@@ -113,15 +110,6 @@ def allow_on_community(func):
 
 class SecuredResource(Resource):
     method_decorators = [authenticate]
-
-
-class SecuredResourceBannedSnapshotRestore(Resource):
-    """
-    In case of a need to prevent a secured resource accessing the DB
-    during snapshot restore, which could cause a DB migration failure.
-    So we will block access to that resource.
-    """
-    method_decorators = [prevent_running_in_snapshot_restore, authenticate]
 
 
 class MissingPremiumFeatureResource(Resource):
