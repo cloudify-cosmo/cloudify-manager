@@ -18,10 +18,10 @@ import collections
 
 from flask import request
 from flask_restful.reqparse import Argument
-from flask_restful_swagger import swagger
 
 from manager_rest import manager_exceptions
 from manager_rest.resource_manager import ResourceManager
+from manager_rest.rest import swagger
 from manager_rest.rest.rest_decorators import marshal_with
 from manager_rest.rest.rest_utils import (
     get_args_and_verify_arguments,

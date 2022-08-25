@@ -15,12 +15,12 @@
 #
 
 from flask import request
-from flask_restful_swagger import swagger
 
 from manager_rest.rest import (
     resources_v1,
     rest_decorators,
-    rest_utils
+    rest_utils,
+    swagger,
 )
 from manager_rest.storage import (
     get_storage_manager,

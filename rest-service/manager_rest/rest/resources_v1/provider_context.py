@@ -15,17 +15,13 @@
 #
 
 from flask_restful.reqparse import Argument
-from flask_restful_swagger import swagger
 from flask_restful.inputs import boolean
 
 from dsl_parser import utils as dsl_parser_utils
 from manager_rest import manager_exceptions
 from manager_rest.constants import PROVIDER_CONTEXT_ID
 from manager_rest.resource_manager import get_resource_manager
-from manager_rest.rest import (
-    requests_schema,
-    responses,
-)
+from manager_rest.rest import requests_schema, responses, swagger
 from manager_rest.rest.rest_decorators import marshal_with
 from manager_rest.rest.rest_utils import (
     get_args_and_verify_arguments,

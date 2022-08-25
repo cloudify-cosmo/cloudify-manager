@@ -13,12 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from flask_restful_swagger import swagger
-
-from manager_rest.rest import (
-    requests_schema,
-    responses,
-)
+from manager_rest.rest import requests_schema, responses, swagger
 from manager_rest.rest.rest_decorators import marshal_with
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize

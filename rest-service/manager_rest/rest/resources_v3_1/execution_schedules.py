@@ -1,9 +1,8 @@
 from flask import request
-from flask_restful_swagger import swagger
 from flask_restful.reqparse import Argument
 
 from manager_rest import manager_exceptions
-from manager_rest.rest import rest_decorators
+from manager_rest.rest import rest_decorators, swagger
 from manager_rest.rest.rest_utils import (
     get_json_and_verify_params,
     verify_and_convert_bool,

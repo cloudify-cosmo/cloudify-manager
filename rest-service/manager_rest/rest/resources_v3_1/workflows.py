@@ -1,8 +1,11 @@
 from typing import Iterable, List
 
-from flask_restful_swagger import swagger
-
-from manager_rest.rest import filters_utils, rest_decorators, rest_utils
+from manager_rest.rest import (
+    filters_utils,
+    rest_decorators,
+    rest_utils,
+    swagger,
+)
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import (get_storage_manager,

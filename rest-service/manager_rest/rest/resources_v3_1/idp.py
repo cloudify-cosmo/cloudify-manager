@@ -1,6 +1,6 @@
 from flask import current_app
-from flask_restful_swagger import swagger
 
+from manager_rest.rest import swagger
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 

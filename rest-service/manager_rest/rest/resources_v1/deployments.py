@@ -14,7 +14,6 @@
 #  * limitations under the License.
 #
 
-from flask_restful_swagger import swagger
 from flask_restful.reqparse import Argument
 from flask_restful.inputs import boolean
 
@@ -25,8 +24,7 @@ from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.maintenance import is_bypass_maintenance_mode
 from manager_rest.dsl_functions import evaluate_deployment_outputs
-from manager_rest.rest import (requests_schema,
-                               responses)
+from manager_rest.rest import requests_schema, responses, swagger
 from manager_rest.storage import (get_storage_manager,
                                   models)
 from manager_rest.resource_manager import (ResourceManager,

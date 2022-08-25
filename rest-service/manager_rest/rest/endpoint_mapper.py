@@ -1,4 +1,4 @@
-from . import (swagger, resources_v1, resources_v2,
+from . import (resources_v1, resources_v2,
                resources_v2_1, resources_v3, resources_v3_1)
 
 SUPPORTED_API_VERSIONS = [('v1', resources_v1),
@@ -173,5 +173,3 @@ def _set_versioned_urls(api, resource_name, endpoint_suffix):
             endpoint = '{0}/{1}'.format(version_name, endpoint_suffix)
             url = '/api/{0}'.format(endpoint)
             api.add_resource(resource, url, endpoint=endpoint)
-
-            swagger.add_swagger_resource(api, version_name, resource, url)

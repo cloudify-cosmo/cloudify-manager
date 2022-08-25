@@ -2,11 +2,11 @@ from collections import defaultdict
 
 from flask import request
 from flask_restful.reqparse import Argument
-from flask_restful_swagger import swagger
 
 from dsl_parser.utils import get_function
 
 from manager_rest import manager_exceptions
+from manager_rest.rest import swagger
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager

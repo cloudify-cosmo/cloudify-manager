@@ -1,9 +1,9 @@
-from flask_restful_swagger import swagger
 from werkzeug.exceptions import BadRequest
 
 from cloudify.models_states import VisibilityState
 
 from manager_rest import manager_exceptions
+from manager_rest.rest import swagger
 from manager_rest.security import SecuredResource
 from manager_rest.plugins_update.constants import PHASES
 from manager_rest.security.authorization import (authorize,

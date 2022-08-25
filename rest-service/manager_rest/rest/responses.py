@@ -1,5 +1,5 @@
 from flask_restful import fields
-from flask_restful_swagger import swagger
+from manager_rest.rest import swagger
 
 
 @swagger.model

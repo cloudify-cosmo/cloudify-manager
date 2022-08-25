@@ -15,11 +15,10 @@
 
 
 from flask import request
-from flask_restful_swagger import swagger
 
 from cloudify.cluster_status import ServiceStatus
 
-from manager_rest.rest import responses
+from manager_rest.rest import responses, swagger
 from manager_rest.security.authorization import authorize
 from manager_rest.rest.rest_decorators import marshal_with
 from manager_rest.security import SecuredResourceBannedSnapshotRestore

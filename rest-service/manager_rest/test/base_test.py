@@ -294,7 +294,6 @@ class BaseServerTestCase(unittest.TestCase):
 
         cls._patchers = []
         cls._mock_amqp_modules()
-        cls._mock_swagger()
         cls._mock_external_auth()
         cls._mock_get_encryption_key()
         cls._mock_verify_role()
@@ -368,15 +367,6 @@ class BaseServerTestCase(unittest.TestCase):
                 'manager_rest.server.configure_auth',
                 return_value=None)
             cls._patchers.append(auth_path)
-
-    @classmethod
-    def _mock_swagger(cls):
-        """ We don't need swagger for tests, so might as well mock it """
-
-        swagger_patcher = patch(
-            'manager_rest.rest.swagger.add_swagger_resource'
-        )
-        cls._patchers.append(swagger_patcher)
 
     @classmethod
     def _mock_amqp_modules(cls):

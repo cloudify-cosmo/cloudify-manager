@@ -14,7 +14,6 @@
 #  * limitations under the License.
 #
 
-from flask_restful_swagger import swagger
 from sqlalchemy import bindparam
 from datetime import datetime
 import errno
@@ -24,6 +23,7 @@ from manager_rest import manager_exceptions
 from manager_rest.rest import (
     resources_v1,
     rest_decorators,
+    swagger,
 )
 from manager_rest.storage.models_base import db
 from manager_rest.storage.resource_models import (
