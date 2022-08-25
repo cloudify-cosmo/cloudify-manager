@@ -6,6 +6,7 @@ functions keeping the same interface allow us to keep using it meanwhile.
 RD-5683 is about finding an actual implementation for this module.
 """
 
+
 def operation(**kwargs):
     def _deco(f):
         return f
