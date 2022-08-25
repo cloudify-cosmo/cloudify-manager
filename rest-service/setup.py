@@ -17,16 +17,14 @@ from setuptools import setup, find_packages
 
 install_requires = [
     'Flask>2,<3',
-    'flask-restful>0.3.5,<0.4.0',
+    'flask-restful',
     'flask-sqlalchemy>=2.5,<2.6',
     'flask-security',
-    'flask-login==0.4.1',
-    'flask-migrate==3.1.0',
+    'flask-migrate>3',
     'cloudify-common==7.0.0.dev1',
     'requests>=2.27.1,<3',
     'pyyaml',
-    'psutil>=5.7,<5.8',
-    'virtualenv>=15.1.0,<16',
+    'psutil>5,<6',
     'wagon>=0.9.1',
     'python-dateutil>=2.8.1,<3',
     'voluptuous>=0.9.3,<0.10',
@@ -40,8 +38,6 @@ install_requires = [
     'SQLAlchemy>=1.4,<2',
     'cachetools>=3,<4',
     'email-validator>1,<2',
-    'werkzeug>1,<2',
-    'itsdangerous>1,<2',
 ]
 
 
