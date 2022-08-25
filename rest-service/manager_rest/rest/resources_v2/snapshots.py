@@ -17,6 +17,10 @@
 import os
 import shutil
 
+import pydantic
+from flask import request
+from typing import Optional
+
 from cloudify.models_states import SnapshotState, ExecutionState
 
 from manager_rest import config, manager_exceptions, workflow_executor
@@ -65,6 +69,19 @@ class Snapshots(SecuredResource):
         )
 
 
+class _SnapshotCreateArgs(pydantic.BaseModel):
+    include_credentials: Optional[bool] = True
+    include_logs: Optional[bool] = True
+    include_events: Optional[bool] = True
+    queue: Optional[bool] = False
+    tempdir_path: Optional[str] = None
+
+
+class _SnapshotStatusUpdateArgs(pydantic.BaseModel):
+    status: str
+    error: Optional[str] = ''
+
+
 class SnapshotsId(SecuredResource):
 
     @swagger.operation(
@@ -93,24 +110,8 @@ class SnapshotsId(SecuredResource):
     @rest_decorators.marshal_with(models.Execution)
     def put(self, snapshot_id):
         rest_utils.validate_inputs({'snapshot_id': snapshot_id})
-        request_dict = rest_utils.get_json_and_verify_params()
-        include_credentials = rest_utils.verify_and_convert_bool(
-            'include_credentials',
-            request_dict.get('include_credentials', True)
-        )
-        include_logs = rest_utils.verify_and_convert_bool(
-            'include_logs',
-            request_dict.get('include_logs', True)
-        )
-        include_events = rest_utils.verify_and_convert_bool(
-            'include_events',
-            request_dict.get('include_events', True)
-        )
-        queue = rest_utils.verify_and_convert_bool(
-            'queue',
-            request_dict.get('queue', False)
-        )
-        tempdir_path = request_dict.get('tempdir_path')
+        args = _SnapshotCreateArgs.parse_obj(request.json)
+        tempdir_path = args.tempdir_path
         if tempdir_path and not os.access(tempdir_path, os.W_OK):
             raise manager_exceptions.ForbiddenError(
                 f'Temp dir cannot be created inside unwriteable location '
@@ -119,11 +120,11 @@ class SnapshotsId(SecuredResource):
 
         execution, messages = get_resource_manager().create_snapshot(
             snapshot_id,
-            include_credentials,
-            include_logs,
-            include_events,
+            args.include_credentials,
+            args.include_logs,
+            args.include_events,
             True,
-            queue,
+            args.queue,
             tempdir_path,
         )
         workflow_executor.execute_workflow(messages)
@@ -161,11 +162,11 @@ class SnapshotsId(SecuredResource):
     def patch(self, snapshot_id):
         """Update snapshot status by id
         """
-        request_dict = rest_utils.get_json_and_verify_params({'status'})
+        args = _SnapshotStatusUpdateArgs.parse_obj(request.json)
         snapshot = get_storage_manager().get(models.Snapshot, snapshot_id)
 
-        snapshot.status = request_dict['status']
-        snapshot.error = request_dict.get('error', '')
+        snapshot.status = args.status
+        snapshot.error = args.error
         get_storage_manager().update(snapshot)
 
 
@@ -223,6 +224,13 @@ class SnapshotsIdArchive(SecuredResource):
         return get_storage_handler().proxy(snapshot_uri)
 
 
+class _SnapshotRestoreArgs(pydantic.BaseModel):
+    force: Optional[bool] = False
+    restore_certificates: Optional[bool] = False
+    no_reboot: Optional[bool] = False
+    timeout: Optional[int] = 300
+
+
 class SnapshotsIdRestore(SecuredResource):
 
     @swagger.operation(
@@ -233,33 +241,20 @@ class SnapshotsIdRestore(SecuredResource):
     @authorize('snapshot_restore')
     @rest_decorators.marshal_with(models.Snapshot)
     def post(self, snapshot_id):
-        request_dict = rest_utils.get_json_and_verify_params()
-        force = rest_utils.verify_and_convert_bool(
-            'force',
-            request_dict['force']
-        )
-        restore_certificates = rest_utils.verify_and_convert_bool(
-            'restore_certificates',
-            request_dict.get('restore_certificates', False)
-        )
-        no_reboot = rest_utils.verify_and_convert_bool(
-            'no_reboot',
-            request_dict.get('no_reboot', False)
-        )
-        if no_reboot and not restore_certificates:
+        args = _SnapshotCreateArgs.parse_obj(request.json)
+        if args.no_reboot and not args.restore_certificates:
             raise manager_exceptions.BadParametersError(
                 '`no_reboot` is only relevant when `restore_certificates` is '
                 'activated')
-        default_timeout_sec = 300
-        request_timeout = request_dict.get('timeout', default_timeout_sec)
+        request_timeout = args.timeout
         timeout = rest_utils.convert_to_int(request_timeout)
         execution, messages = get_resource_manager().restore_snapshot(
             snapshot_id,
-            force,
+            args.force,
             True,
             timeout,
-            restore_certificates,
-            no_reboot
+            args.restore_certificates,
+            args.no_reboot,
         )
         workflow_executor.execute_workflow(messages)
         return execution, 200

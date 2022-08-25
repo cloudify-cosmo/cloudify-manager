@@ -1,4 +1,5 @@
-from typing import Any
+import pydantic
+from typing import Any, Optional
 
 from flask import request
 
@@ -30,6 +31,10 @@ except ImportError:
     TenantsListResource = SecuredResource
 
 
+class _TenantsListQuery(rest_utils.ListQuery):
+    _get_data: Optional[bool] = False
+
+
 class Tenants(TenantsListResource):
     @authorize('tenant_list')
     @rest_decorators.marshal_with(TenantResponse)
@@ -46,21 +51,17 @@ class Tenants(TenantsListResource):
         def _authorize_with_get_data():
             pass
 
-        if rest_utils.verify_and_convert_bool(
-                'get_data', request.args.get('_get_data', False)):
+        args = _TenantsListQuery.parse_obj(request.args)
+        if args._get_data:
             _authorize_with_get_data()
 
-        get_all_results = rest_utils.verify_and_convert_bool(
-            '_get_all_results',
-            request.args.get('_get_all_results', False)
-        )
         if multi_tenancy:
             tenants = multi_tenancy.list_tenants(_include,
                                                  filters,
                                                  pagination,
                                                  sort,
                                                  search,
-                                                 get_all_results)
+                                                 args.get_all_results)
         else:
             # In community edition we have only the `default_tenant`, so it
             # should be safe to return it like this
@@ -91,6 +92,10 @@ def _clear_tenant_rabbit_creds(tenant):
     tenant.rabbitmq_vhost = None
 
 
+class _TenantCreateArgs(pydantic.BaseModel):
+    rabbitmq_password: Optional[str] = None
+
+
 class TenantsId(SecuredMultiTenancyResource):
     @authorize('tenant_create')
     @rest_decorators.marshal_with(TenantResponse)
@@ -100,11 +105,10 @@ class TenantsId(SecuredMultiTenancyResource):
         """
         rest_utils.validate_inputs({'tenant_name': tenant_name})
         if request.content_length:
-            request_dict = rest_utils.get_json_and_verify_params({
-                'rabbitmq_password': {'type': str, 'optional': True},
-            })
+            args = _TenantCreateArgs.parse_obj(request.json)
+            rabbitmq_password = args.rabbitmq_password
         else:
-            request_dict = {}
+            rabbitmq_password = None
         if tenant_name in ('users', 'user-groups'):
             raise BadParametersError(
                 '{0!r} is not allowed as a tenant name '
@@ -114,7 +118,8 @@ class TenantsId(SecuredMultiTenancyResource):
             )
         return multi_tenancy.create_tenant(
             tenant_name,
-            request_dict.get('rabbitmq_password'))
+            rabbitmq_password,
+        )
 
     @authorize('tenant_get', get_tenant_from='param')
     @rest_decorators.marshal_with(TenantResponse)
@@ -145,7 +150,13 @@ class TenantsId(SecuredMultiTenancyResource):
         """
         rest_utils.validate_inputs({'tenant_name': tenant_name})
         multi_tenancy.delete_tenant(tenant_name)
-        return None, 204
+        return "", 204
+
+
+class _UserTenantArgs(pydantic.BaseModel):
+    tenant_name: str
+    username: str
+    role: Optional[str] = constants.DEFAULT_TENANT_ROLE
 
 
 class TenantUsers(SecuredMultiTenancyResource):
@@ -156,25 +167,10 @@ class TenantUsers(SecuredMultiTenancyResource):
         """
         Add a user to a tenant
         """
-        request_dict = rest_utils.get_json_and_verify_params(
-            {
-                'tenant_name': {
-                    'type': str
-                },
-                'username': {
-                    'type': str
-                },
-                'role': {
-                    'type': str
-                },
-            },
-        )
+        request_dict = _UserTenantArgs.parse_obj(request.json).dict()
         rest_utils.validate_inputs(request_dict)
         role_name = request_dict.get('role')
-        if role_name:
-            rest_utils.verify_role(role_name)
-        else:
-            role_name = constants.DEFAULT_TENANT_ROLE
+        rest_utils.verify_role(role_name)
 
         return multi_tenancy.add_user_to_tenant(
             request_dict['username'],
@@ -187,19 +183,7 @@ class TenantUsers(SecuredMultiTenancyResource):
     @rest_decorators.check_external_authenticator('update user in tenant')
     def patch(self, multi_tenancy):
         """Update role in user tenant association."""
-        request_dict = rest_utils.get_json_and_verify_params(
-            {
-                'tenant_name': {
-                    'type': str,
-                },
-                'username': {
-                    'type': str,
-                },
-                'role': {
-                    'type': str,
-                },
-            },
-        )
+        request_dict = _UserTenantArgs.parse_obj(request.json).dict()
         rest_utils.validate_inputs(request_dict)
         role_name = request_dict['role']
         rest_utils.verify_role(role_name)
@@ -215,14 +199,19 @@ class TenantUsers(SecuredMultiTenancyResource):
         """
         Remove a user from a tenant
         """
-        request_dict = rest_utils.get_json_and_verify_params({'tenant_name',
-                                                              'username'})
+        request_dict = _UserTenantArgs.parse_obj(request.json).dict()
         rest_utils.validate_inputs(request_dict)
         multi_tenancy.remove_user_from_tenant(
             request_dict['username'],
             request_dict['tenant_name']
         )
-        return None, 204
+        return "", 204
+
+
+class _GroupTenantArgs(pydantic.BaseModel):
+    tenant_name: str
+    group_name: str
+    role: Optional[str] = constants.DEFAULT_TENANT_ROLE
 
 
 class TenantGroups(SecuredMultiTenancyResource):
@@ -232,24 +221,10 @@ class TenantGroups(SecuredMultiTenancyResource):
         """
         Add a group to a tenant
         """
-        request_dict = rest_utils.get_json_and_verify_params(
-            {
-                'tenant_name': {
-                    'type': str
-                },
-                'group_name': {
-                    'type': str
-                },
-                'role': {
-                    'type': str
-                },
-            })
+        request_dict = _GroupTenantArgs.parse_obj(request.json).dict()
         rest_utils.validate_inputs(request_dict)
         role_name = request_dict.get('role')
-        if role_name:
-            rest_utils.verify_role(role_name)
-        else:
-            role_name = constants.DEFAULT_TENANT_ROLE
+        rest_utils.verify_role(role_name)
 
         return multi_tenancy.add_group_to_tenant(
             request_dict['group_name'],
@@ -261,19 +236,7 @@ class TenantGroups(SecuredMultiTenancyResource):
     @rest_decorators.marshal_with(TenantResponse)
     def patch(self, multi_tenancy):
         """Update role in group tenant association."""
-        request_dict = rest_utils.get_json_and_verify_params(
-            {
-                'tenant_name': {
-                    'type': str,
-                },
-                'group_name': {
-                    'type': str,
-                },
-                'role': {
-                    'type': str,
-                },
-            },
-        )
+        request_dict = _GroupTenantArgs.parse_obj(request.json).dict()
         rest_utils.validate_inputs(request_dict)
         role_name = request_dict['role']
         rest_utils.verify_role(role_name)
@@ -288,11 +251,10 @@ class TenantGroups(SecuredMultiTenancyResource):
         """
         Remove a group from a tenant
         """
-        request_dict = rest_utils.get_json_and_verify_params({'tenant_name',
-                                                              'group_name'})
+        request_dict = _GroupTenantArgs.parse_obj(request.json).dict()
         rest_utils.validate_inputs(request_dict)
         multi_tenancy.remove_group_from_tenant(
             request_dict['group_name'],
             request_dict['tenant_name']
         )
-        return None, 204
+        return "", 204

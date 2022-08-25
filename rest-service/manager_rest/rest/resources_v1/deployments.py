@@ -14,8 +14,10 @@
 #  * limitations under the License.
 #
 
-from flask_restful.reqparse import Argument
-from flask_restful.inputs import boolean
+import pydantic
+from typing import Optional, Dict, Any
+
+from flask import request
 
 from cloudify.models_states import DeploymentState
 
@@ -30,13 +32,10 @@ from manager_rest.storage import (get_storage_manager,
 from manager_rest.resource_manager import (ResourceManager,
                                            get_resource_manager)
 from manager_rest.rest.rest_decorators import marshal_with
-from manager_rest.rest.rest_utils import (get_args_and_verify_arguments,
-                                          get_json_and_verify_params,
-                                          validate_inputs)
+from manager_rest.rest.rest_utils import validate_inputs
 
 
 class Deployments(SecuredResource):
-
     @swagger.operation(
         responseClass='List[{0}]'.format(models.Deployment.__name__),
         nickname="list",
@@ -50,6 +49,20 @@ class Deployments(SecuredResource):
         """
         return get_storage_manager().list(
             models.Deployment, include=_include).items
+
+
+class _DeploymentCreateArgs(pydantic.BaseModel):
+    blueprint_id: str
+    inputs: Optional[Dict[str, Any]] = {}
+
+
+class _DeploymentDeleteQuery(pydantic.BaseModel):
+    force: Optional[bool] = False
+    delete_logs: Optional[bool] = False
+
+
+class _PrivateResourceArgs(pydantic.BaseModel):
+    private_resource: Optional[bool] = False
 
 
 class DeploymentsId(SecuredResource):
@@ -86,14 +99,10 @@ class DeploymentsId(SecuredResource):
         Create a deployment
         """
         validate_inputs({'deployment_id': deployment_id})
-        request_schema = self.create_request_schema()
-        request_dict = get_json_and_verify_params(request_schema)
+        request_dict = _DeploymentCreateArgs.parse_obj(request.json).dict()
         blueprint_id = request_dict['blueprint_id']
         bypass_maintenance = is_bypass_maintenance_mode()
-        args = get_args_and_verify_arguments(
-            [Argument('private_resource', type=boolean,
-                      default=False)]
-        )
+        args = _PrivateResourceArgs.parse_obj(request.args)
         skip_plugins_validation = self.get_skip_plugin_validation_flag(
             request_dict)
         rm = get_resource_manager()
@@ -119,13 +128,6 @@ class DeploymentsId(SecuredResource):
             raise
         return deployment, 201
 
-    def create_request_schema(self):
-        request_schema = {
-            'blueprint_id': {},
-            'inputs': {'optional': True, 'type': dict}
-        }
-        return request_schema
-
     def get_skip_plugin_validation_flag(self, request_dict):
         return True
 
@@ -146,11 +148,7 @@ class DeploymentsId(SecuredResource):
     @authorize('deployment_delete')
     def delete(self, deployment_id, **kwargs):
         """Delete deployment by id"""
-        args = get_args_and_verify_arguments([
-            Argument('force', type=boolean, default=False),
-            Argument('delete_logs', type=boolean, default=False)
-        ])
-
+        args = _DeploymentDeleteQuery.parse_obj(request.args)
         bypass_maintenance = is_bypass_maintenance_mode()
         sm = get_storage_manager()
         dep = sm.get(models.Deployment, deployment_id)
@@ -166,11 +164,20 @@ class DeploymentsId(SecuredResource):
             [delete_execution], bypass_maintenance=bypass_maintenance)
         workflow_executor.execute_workflow(messages)
         workflow_executor.delete_source_plugins(dep.id)
-        return None, 204
+        return "", 204
+
+
+class _DeploymentModificationArgs(pydantic.BaseModel):
+    deployment_id: str
+    context: Optional[Dict[str, Any]] = {}
+    nodes: Optional[Dict[str, Any]] = {}
+
+
+class _DeploymentIDArgs(pydantic.BaseModel):
+    deployment_id: Optional[str] = None
 
 
 class DeploymentModifications(SecuredResource):
-
     @swagger.operation(
         responseClass=models.DeploymentModification,
         nickname="modifyDeployment",
@@ -189,16 +196,12 @@ class DeploymentModifications(SecuredResource):
     @authorize('deployment_modify')
     @marshal_with(models.DeploymentModification)
     def post(self, **kwargs):
-        request_dict = get_json_and_verify_params({
-            'deployment_id': {},
-            'context': {'optional': True, 'type': dict},
-            'nodes': {'optional': True, 'type': dict}
-        })
-        deployment_id = request_dict['deployment_id']
-        context = request_dict.get('context', {})
-        nodes = request_dict.get('nodes', {})
-        modification = get_resource_manager(). \
-            start_deployment_modification(deployment_id, nodes, context)
+        args = _DeploymentModificationArgs.parse_obj(request.json)
+        modification = get_resource_manager().start_deployment_modification(
+            args.deployment_id,
+            args.nodes,
+            args.context,
+        )
         return modification, 201
 
     @swagger.operation(
@@ -216,9 +219,7 @@ class DeploymentModifications(SecuredResource):
     @authorize('deployment_modification_list')
     @marshal_with(models.DeploymentModification)
     def get(self, _include=None, **kwargs):
-        args = get_args_and_verify_arguments(
-            [Argument('deployment_id', required=False)]
-        )
+        args = _DeploymentIDArgs.parse_obj(request.args)
         deployment_id_filter = ResourceManager.create_filters_dict(
             deployment_id=args.deployment_id)
         return get_storage_manager().list(

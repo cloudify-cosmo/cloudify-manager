@@ -1,5 +1,8 @@
+import pydantic
 from collections import defaultdict
-from typing import Dict
+from typing import Any, List, Dict, Optional
+
+from flask import request
 
 from ..resources_v3 import (
     Nodes as v3_Nodes,
@@ -16,27 +19,29 @@ from manager_rest.storage.models_base import db
 from manager_rest.security import SecuredResource
 
 
+class _CreateNodesArgs(pydantic.BaseModel):
+    deployment_id: str
+    nodes: List[Dict[str, Any]]
+
+
 class Nodes(v3_Nodes):
     @authorize('node_list')
     def post(self):
-        request_dict = rest_utils.get_json_and_verify_params({
-            'deployment_id': {'type': str},
-            'nodes': {'type': list},
-        })
+        args = _CreateNodesArgs.parse_obj(request.json)
         sm = get_storage_manager()
-        raw_nodes = request_dict['nodes']
+        raw_nodes = args.nodes
 
         if not raw_nodes:
-            return None, 204
+            return "", 204
         with sm.transaction():
-            deployment_id = request_dict['deployment_id']
+            deployment_id = args.deployment_id
             deployment = sm.get(models.Deployment, deployment_id)
             self._prepare_raw_nodes(deployment, raw_nodes)
             db.session.execute(
                 models.Node.__table__.insert(),
                 raw_nodes,
             )
-        return None, 201
+        return "[]", 201
 
     def _prepare_raw_nodes(self, deployment, raw_nodes):
         if any(item.get('creator') for item in raw_nodes):
@@ -106,17 +111,19 @@ class Nodes(v3_Nodes):
         return prepared_relationships
 
 
+class _UpdateNodeArgs(pydantic.BaseModel):
+    plugins: Optional[Dict[str, Any]] = None
+    operations: Optional[Dict[str, Any]] = None
+    properties: Optional[Dict[str, Any]] = None
+    capabilities: Optional[Dict[str, Any]] = None
+    relationships: Optional[Any] = None
+
+
 class NodesId(SecuredResource):
     @authorize('node_update')
     @only_deployment_update
     def patch(self, deployment_id, node_id):
-        request_dict = rest_utils.get_json_and_verify_params({
-            'plugins': {'optional': True},
-            'operations': {'optional': True},
-            'relationships': {'optional': True},
-            'properties': {'optional': True},
-            'capabilities': {'optional': True},
-        })
+        request_dict = _UpdateNodeArgs.parse_obj(request.json).dict()
         sm = get_storage_manager()
         with sm.transaction():
             deployment = sm.get(models.Deployment, deployment_id)
@@ -146,7 +153,7 @@ class NodesId(SecuredResource):
                     node.planned_number_of_instances = \
                         scalable['planned_instances']
             sm.update(node)
-        return None, 204
+        return "", 204
 
     @authorize('node_delete')
     @only_deployment_update
@@ -157,29 +164,31 @@ class NodesId(SecuredResource):
             node = sm.get(models.Node, None,
                           filters={'id': node_id, 'deployment': deployment})
             sm.delete(node)
-        return None, 204
+        return "", 204
+
+
+class _CreateNodeInstancesArgs(pydantic.BaseModel):
+    deployment_id: str
+    node_instances: List[Dict[str, Any]]
 
 
 class NodeInstances(v2_NodeInstances):
     @authorize('node_list')
     def post(self):
-        request_dict = rest_utils.get_json_and_verify_params({
-            'deployment_id': {'type': str},
-            'node_instances': {'type': list},
-        })
+        args = _CreateNodeInstancesArgs.parse_obj(request.json)
         sm = get_storage_manager()
-        raw_instances = request_dict['node_instances']
+        raw_instances = args.node_instances
         if not raw_instances:
-            return None, 204
+            return "", 204
         with sm.transaction():
-            deployment_id = request_dict['deployment_id']
+            deployment_id = args.deployment_id
             deployment = sm.get(models.Deployment, deployment_id)
             self._prepare_raw_instances(sm, deployment, raw_instances)
             db.session.execute(
                 models.NodeInstance.__table__.insert(),
                 raw_instances,
             )
-        return None, 201
+        return "[]", 201
 
     def _prepare_raw_instances(self, sm, deployment, raw_instances):
         if any(item.get('creator') for item in raw_instances):
@@ -236,4 +245,4 @@ class NodeInstancesId(v3_NodeInstancesId):
         with sm.transaction():
             instance = sm.get(models.NodeInstance, node_instance_id)
             sm.delete(instance)
-        return None, 204
+        return "", 204

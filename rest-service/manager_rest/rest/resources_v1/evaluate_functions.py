@@ -13,16 +13,24 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import pydantic
+from flask import request
+from typing import Any, Dict, Optional
+
 from manager_rest.rest import requests_schema, responses, swagger
 from manager_rest.rest.rest_decorators import marshal_with
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.dsl_functions import evaluate_intrinsic_functions
-from manager_rest.rest.rest_utils import get_json_and_verify_params
+
+
+class _EvaluateFunctionsArgs(pydantic.BaseModel):
+    deployment_id: str
+    context: Optional[Dict[str, Any]] = {}
+    payload: Dict[str, Any]
 
 
 class EvaluateFunctions(SecuredResource):
-
     @swagger.operation(
         responseClass=responses.EvaluatedFunctions,
         nickname='evaluateFunctions',
@@ -41,20 +49,14 @@ class EvaluateFunctions(SecuredResource):
     @authorize('functions_evaluate')
     @marshal_with(responses.EvaluatedFunctions)
     def post(self, **kwargs):
-        """
-        Evaluate intrinsic in payload
-        """
-        request_dict = get_json_and_verify_params({
-            'deployment_id': {},
-            'context': {'optional': True, 'type': dict},
-            'payload': {'type': dict}
-        })
-
-        deployment_id = request_dict['deployment_id']
-        context = request_dict.get('context', {})
-        payload = request_dict.get('payload')
+        """Evaluate intrinsic in payload"""
+        args = _EvaluateFunctionsArgs.parse_obj(request.json)
         processed_payload = evaluate_intrinsic_functions(
-            deployment_id=deployment_id,
-            context=context,
-            payload=payload)
-        return dict(deployment_id=deployment_id, payload=processed_payload)
+            deployment_id=args.deployment_id,
+            context=args.context,
+            payload=args.payload,
+        )
+        return dict(
+            deployment_id=args.deployment_id,
+            payload=processed_payload,
+        )

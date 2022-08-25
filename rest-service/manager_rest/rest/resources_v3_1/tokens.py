@@ -1,7 +1,10 @@
+import pydantic
 from datetime import datetime
+from typing import Optional
 
 from cloudify.utils import parse_utc_datetime
 
+from flask import request
 from flask_security import current_user
 
 from manager_rest.manager_exceptions import NotFoundError
@@ -13,11 +16,14 @@ from manager_rest.storage import models, get_storage_manager
 from manager_rest.storage.models_base import db
 from manager_rest.rest.rest_decorators import (
     create_filters, marshal_with, paginate, sortable)
-from manager_rest.rest.rest_utils import get_json_and_verify_params
+
+
+class _TokenCreateArgs(pydantic.BaseModel):
+    description: Optional[str] = None
+    expiration_date: Optional[str] = None
 
 
 class Tokens(SecuredResource):
-
     @authorize('token_get')
     @marshal_with(responses.Tokens)
     @create_filters(models.Token)
@@ -44,17 +50,13 @@ class Tokens(SecuredResource):
         """Create a new token."""
         _purge_expired_user_tokens()
 
-        request_dict = get_json_and_verify_params({
-            'description': {'type': str, 'optional': True},
-            'expiration_date': {'optional': True},
-        })
-
-        expiration_date = request_dict.get('expiration_date')
+        params = _TokenCreateArgs.parse_obj(request.json)
+        expiration_date = params.expiration_date
         if expiration_date:
             expiration_date = parse_utc_datetime(
                 expiration_date, timezone="UTC")
 
-        return current_user.create_auth_token(request_dict.get('description'),
+        return current_user.create_auth_token(params.description,
                                               expiration_date)
 
 
@@ -66,7 +68,7 @@ class TokensId(SecuredResource):
         token = sm.get(models.Token, token_id, fail_silently=True)
         if token and _can_manage_token(token):
             sm.delete(token)
-            return None, 204
+            return "", 204
         else:
             raise NotFoundError(f'Could not find token {token_id}')
 

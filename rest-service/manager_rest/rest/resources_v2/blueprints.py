@@ -45,18 +45,12 @@ class Blueprints(resources_v1.Blueprints):
     @rest_decorators.create_filters(models.Blueprint)
     @rest_decorators.paginate
     @rest_decorators.sortable(models.Blueprint)
-    @rest_decorators.all_tenants
     @rest_decorators.search('id')
     @rest_decorators.filter_id
     def get(self, _include=None, filters=None, pagination=None, sort=None,
-            all_tenants=None, search=None, filter_id=None, **kwargs):
-        """
-        List uploaded blueprints
-        """
-        get_all_results = rest_utils.verify_and_convert_bool(
-            '_get_all_results',
-            request.args.get('_get_all_results', False)
-        )
+            search=None, filter_id=None, **kwargs):
+        """List uploaded blueprints"""
+        args = rest_utils.ListQuery.parse_obj(request.args)
         filters = filters or {}
         filters.setdefault('is_hidden', False)
         sm = get_storage_manager()
@@ -69,8 +63,8 @@ class Blueprints(resources_v1.Blueprints):
             substr_filters=search,
             pagination=pagination,
             sort=sort,
-            all_tenants=all_tenants,
-            get_all_results=get_all_results,
+            all_tenants=args.all_tenants,
+            get_all_results=args.get_all_results,
             filter_rules=filter_rules
         )
 

@@ -1,5 +1,7 @@
+import pydantic
 import re
 import unicodedata
+from typing import Optional
 
 from contextlib import contextmanager
 from dateutil import rrule
@@ -9,13 +11,11 @@ import copy
 import dateutil.parser
 import os
 import pytz
-import string
 import uuid
 
 from retrying import retry
 from flask_security import current_user
-from flask import request, make_response, current_app
-from flask_restful.reqparse import Argument, RequestParser
+from flask import request, make_response
 from urllib.parse import quote as urlquote
 
 from dsl_parser import tasks
@@ -61,95 +61,14 @@ def skip_nested_marshalling():
     delattr(request, '__skip_marshalling')
 
 
-def get_json_and_verify_params(params=None):
-    params = params or []
-    if request.content_type != 'application/json':
-        raise manager_exceptions.UnsupportedContentTypeError(
-            'Content type must be application/json')
-
-    request_dict = request.json
-    is_params_dict = isinstance(params, dict)
-
-    def is_optional(param_name):
-        return is_params_dict and params[param_name].get('optional', False)
-
-    def check_type(param_name):
-        return is_params_dict and params[param_name].get('type', None)
-
-    for param in params:
-        if param not in request_dict:
-            if is_optional(param):
-                continue
-            raise manager_exceptions.BadParametersError(
-                'Missing {0} in json request body'.format(param))
-
-        param_type = check_type(param)
-        if param_type and not isinstance(request_dict[param], param_type):
-            raise manager_exceptions.BadParametersError(
-                '{0} parameter is expected to be of type {1} but is of type '
-                '{2}'.format(param,
-                             param_type.__name__,
-                             type(request_dict[param]).__name__))
-
-        if is_params_dict:
-            _validate_allowed_substitutions(
-                param_name=param,
-                param_value=request_dict[param],
-                allowed=params[param].get('allowed_substitutions', None),
-            )
-    return request_dict
-
-
-def _validate_allowed_substitutions(param_name, param_value, allowed):
-    if allowed is None or param_value is None:
-        current_app.logger.debug(
-            'Empty value or no allowed substitutions '
-            'defined for %s, skipping.', param_name)
-        return
-    f = string.Formatter()
-    invalid = []
-    current_app.logger.debug('Checking allowed substitutions for %s (%s)',
-                             param_name, ','.join(allowed))
-    current_app.logger.debug('Value is: %s', param_value)
-    for _, field, _, _ in f.parse(param_value):
-        if field is None:
-            # This will occur at the end of a string unless the string ends at
-            # the end of a field
-            continue
-        current_app.logger.debug('Found %s', field)
-        if field not in allowed:
-            current_app.logger.debug('Field not valid.')
-            invalid.append(field)
-    if invalid:
-        raise manager_exceptions.BadParametersError(
-            '{candidate_name} has invalid parameters.\n'
-            'Invalid parameters found: {invalid}.\n'
-            'Allowed: {allowed}'.format(
-                candidate_name=param_name,
-                invalid=', '.join(invalid),
-                allowed=', '.join(allowed),
-            )
-        )
-
-
-def get_args_and_verify_arguments(arguments):
-    request_parser = RequestParser()
-    for argument in arguments:
-        argument.location = 'args'
-        request_parser.args.append(argument)
-    return request_parser.parse_args()
-
-
-def verify_and_convert_bool(attribute_name, str_bool):
-    if isinstance(str_bool, bool):
-        return str_bool
-    if isinstance(str_bool, str):
-        if str_bool.lower() == 'true':
-            return True
-        if str_bool.lower() == 'false':
-            return False
-    raise manager_exceptions.BadParametersError(
-        '{0} must be <true/false>, got {1}'.format(attribute_name, str_bool))
+def verify_and_convert_bool(value):
+    if isinstance(value, str):
+        value = value.lower()
+    if value in {0, '0', 'off', 'f', 'false', 'n', 'no'}:
+        return False
+    if value in {1, '1', 'on', 't', 'true', 'y', 'yes'}:
+        return True
+    raise manager_exceptions.BadParametersError(f'invalid boolean: {value}')
 
 
 def convert_to_int(value):
@@ -264,26 +183,7 @@ def verify_role(role_name, is_system_role=False):
 
 
 def request_use_all_tenants():
-    return verify_and_convert_bool('all_tenants',
-                                   request.args.get('_all_tenants', False))
-
-
-def get_visibility_parameter(optional=False,
-                             is_argument=False,
-                             valid_values=VISIBILITY_EXCEPT_PRIVATE):
-    if is_argument:
-        args = get_args_and_verify_arguments(
-            [Argument('visibility', default=None)]
-        )
-        visibility = args.visibility
-    else:
-        request_dict = get_json_and_verify_params({
-            'visibility': {'optional': optional, 'type': str}
-        })
-        visibility = request_dict.get('visibility', None)
-
-    validate_visibility(visibility, valid_values)
-    return visibility
+    return verify_and_convert_bool(request.args.get('_all_tenants', False))
 
 
 def validate_visibility(visibility, valid_values):
@@ -704,11 +604,11 @@ def test_unique_labels(labels_list):
             'You cannot define the same label twice')
 
 
-def compute_rule_from_scheduling_params(request_dict, existing_rule=None):
-    rrule_string = request_dict.get('rrule')
-    recurrence = request_dict.get('recurrence')
-    weekdays = request_dict.get('weekdays')
-    count = request_dict.get('count')
+def compute_rule_from_scheduling_params(args, existing_rule=None):
+    rrule_string = args.rrule
+    recurrence = args.recurrence
+    weekdays = args.weekdays
+    count = args.count
 
     # we need to have at least: rrule; or count=1; or recurrence
     if rrule_string:
@@ -723,11 +623,8 @@ def compute_rule_from_scheduling_params(request_dict, existing_rule=None):
                 "invalid RRULE string provided: {}".format(e))
         return {'rrule': rrule_string}
     else:
-        if count:
-            count = convert_to_int(request_dict.get('count'))
-        recurrence = _verify_schedule_recurrence(
-            request_dict.get('recurrence'))
-        weekdays = _verify_weekdays(request_dict.get('weekdays'), recurrence)
+        recurrence = _verify_schedule_recurrence(recurrence)
+        weekdays = _verify_weekdays(weekdays, recurrence)
         if existing_rule:
             count = count or existing_rule.get('count')
             recurrence = recurrence or existing_rule.get('recurrence')
@@ -867,3 +764,15 @@ def remove_invalid_keys(input_dict, valid_params):
     clear = input_dict.keys() - valid_params
     for param in clear:
         input_dict.pop(param)
+
+
+class SetVisibilityArgs(pydantic.BaseModel):
+    visibility: VisibilityState
+
+
+class ListQuery(pydantic.BaseModel):
+    all_tenants: Optional[bool] = False
+    get_all_results: Optional[bool] = pydantic.Field(
+        default=False,
+        alias='_get_all_results',
+    )

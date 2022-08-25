@@ -13,11 +13,11 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from typing import Dict
+import pydantic
+from typing import Any, Dict, Optional
 
-from flask_restful.reqparse import Argument
+from flask import request
 
-from manager_rest.rest import rest_utils
 from manager_rest.rest.rest_decorators import (
     marshal_with
 )
@@ -28,6 +28,10 @@ from manager_rest.security.authorization import authorize
 from manager_rest.storage import get_storage_manager, models
 
 
+class _ConfigListQuery(pydantic.BaseModel):
+    scope: Optional[str] = None
+
+
 class ManagerConfig(SecuredResource):
     @authorize('manager_config_get')
     def get(self):
@@ -36,10 +40,7 @@ class ManagerConfig(SecuredResource):
         Scope can be eg. "rest" or "mgmtworker", for filtering out the
         settings only for a single Manager component.
         """
-        args = rest_utils.get_args_and_verify_arguments([
-            Argument('scope', type=str, required=False)
-        ])
-        scope = args.get('scope')
+        scope = _ConfigListQuery.parse_obj(request.args).scope
         result: Dict = {'metadata': {}}
         if scope:
             result['items'] = self._get_items(scope)
@@ -74,6 +75,11 @@ class ManagerConfig(SecuredResource):
         }
 
 
+class _UpdateConfigArgs(pydantic.BaseModel):
+    value: Any
+    force: Optional[bool] = False
+
+
 class ManagerConfigId(SecuredResource):
     @marshal_with(models.Config)
     @authorize('manager_config_get')
@@ -97,12 +103,9 @@ class ManagerConfigId(SecuredResource):
         must validate.
         Names can be prefixed with scope, using the same semantics as GET.
         """
-        data = rest_utils.get_json_and_verify_params({
-            'value': {},
-            'force': {'type': bool, 'optional': True}
-        })
-        value = data['value']
-        force = data.get('force', False)
+        data = _UpdateConfigArgs.parse_obj(request.json)
+        value = data.value
+        force = data.force
         config.instance.update_db({name: value}, force)
 
         return self._get_config(name)

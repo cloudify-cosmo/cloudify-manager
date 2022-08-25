@@ -1,7 +1,8 @@
 import json
 import jsonschema
 
-from typing import Dict, List, Any, Iterable
+import pydantic
+from typing import Dict, List, Any, Iterable, Optional
 
 from flask import request
 from flask_security import current_user
@@ -35,6 +36,18 @@ from manager_rest.resource_manager import (create_secret,
                                            update_secret,
                                            get_resource_manager,
                                            update_imported_secret)
+
+
+class _SecretArgs(pydantic.BaseModel):
+    value: Optional[str] = None
+    provider: Optional[str] = None
+    provider_options: Optional[dict] = None
+    secret_schema: Optional[dict] = pydantic.Field(
+        alias='schema', default=None)
+    update_if_exists: Optional[bool] = False
+    is_hidden_value: Optional[bool] = False
+    visibility: Optional[VisibilityState] = None
+    creator: Optional[str] = None
 
 
 class SecretsKey(SecuredResource):
@@ -117,12 +130,7 @@ class SecretsKey(SecuredResource):
                 'least one parameter to update')
         secret = get_storage_manager().get(models.Secret, key)
         self._validate_secret_modification_permitted(secret)
-        self._update_is_hidden_value(secret)
-        self._update_visibility(secret)
-        self._update_value(secret)
-        self._update_owner(secret)
-        self._update_provider(secret)
-        self._update_provider_options(secret)
+        self._update_secret(secret)
         secret.updated_at = utils.get_formatted_timestamp()
         return get_storage_manager().update(secret, validate_global=True)
 
@@ -136,63 +144,32 @@ class SecretsKey(SecuredResource):
         secret = storage_manager.get(models.Secret, key)
         self._validate_secret_modification_permitted(secret)
         storage_manager.delete(secret, validate_global=True)
-        return None, 204
+        return "", 204
 
     @staticmethod
     def _get_secret_params(key):
         rest_utils.validate_inputs({'key': key})
-        request_dict = rest_utils.get_json_and_verify_params(
-            {
-                'value': {},
-                'schema': {
-                    'type': dict,
-                    'optional': True,
-                },
-                'provider': {
-                    'type': str,
-                    'optional': True,
-                },
-                'provider_options': {
-                    'type': dict,
-                    'optional': True,
-                },
-            },
-        )
-        value = request_dict['value']
-        schema = request_dict.get('schema') or None
+        params = _SecretArgs.parse_obj(request.json)
 
-        if schema:
+        value = params.value
+        if params.secret_schema:
             try:
-                jsonschema.validate(value, schema)
+                jsonschema.validate(value, params.secret_schema)
             except jsonschema.ValidationError as e:
                 raise manager_exceptions.ConflictError(
                     f'Error validating secret value: {e}')
             except jsonschema.SchemaError as e:
                 raise manager_exceptions.BadParametersError(
-                    f'Invalid secret JSON schema {schema}: {e}')
+                    f'Invalid secret JSON schema {params.secret_schema}: {e}')
             value = json.dumps(value)
 
-        update_if_exists = rest_utils.verify_and_convert_bool(
-            'update_if_exists',
-            request_dict.get('update_if_exists', False),
-        )
-        is_hidden_value = rest_utils.verify_and_convert_bool(
-            'is_hidden_value',
-            request_dict.get('is_hidden_value', False),
-        )
-        visibility_param = rest_utils.get_visibility_parameter(
-            optional=True,
-            valid_values=VisibilityState.STATES,
-        )
         visibility = get_resource_manager().get_resource_visibility(
             models.Secret,
             key,
-            visibility_param
+            params.visibility,
         )
-
         provider = None
-
-        if provider_name := request_dict.get('provider'):
+        if provider_name := params.provider:
             storage_manager = get_storage_manager()
 
             provider = storage_manager.get(
@@ -200,16 +177,14 @@ class SecretsKey(SecuredResource):
                 provider_name,
             )
 
-        provider_options = request_dict.get('provider_options') or None
-
         secret_params = {
-            'value': value,
-            'schema': schema,
-            'update_if_exists': update_if_exists,
+            'value': params.value,
+            'update_if_exists': params.update_if_exists,
             'visibility': visibility,
-            'is_hidden_value': is_hidden_value,
+            'is_hidden_value': params.is_hidden_value,
             'provider': provider,
-            'provider_options': provider_options,
+            'provider_options': params.provider_options,
+            'schema': params.secret_schema,
         }
         return secret_params
 
@@ -221,79 +196,52 @@ class SecretsKey(SecuredResource):
                 'secret `{1}`'.format(current_user.username, secret.key)
             )
 
-    def _update_is_hidden_value(self, secret):
-        is_hidden_value = request.json.get('is_hidden_value')
-        if is_hidden_value is None:
-            return
-        is_hidden_value = rest_utils.verify_and_convert_bool(
-            'is_hidden_value',
-            is_hidden_value
-        )
-        # Only the creator of the secret and the admins can change a secret
-        # to be hidden value
-        if not rest_utils.is_hidden_value_permitted(secret):
-            raise manager_exceptions.ForbiddenError(
-                'User `{0}` is not permitted to modify the secret `{1}` '
-                'to be hidden value'.format(current_user.username, secret.key)
-            )
-        secret.is_hidden_value = is_hidden_value
+    def _update_secret(self, secret):
+        args = _SecretArgs.parse_obj(request.json)
+        if args.is_hidden_value is not None:
+            if not rest_utils.is_hidden_value_permitted(secret):
+                raise manager_exceptions.ForbiddenError(
+                    f'User `{current_user.username}` is not permitted to '
+                    f'modify the secret `{secret.key}` to be hidden value'
+                )
+            secret.is_hidden_value = args.is_hidden_value
 
-    def _update_visibility(self, secret):
-        visibility = rest_utils.get_visibility_parameter(
-            optional=True,
-            valid_values=VisibilityState.STATES,
-        )
-        if visibility:
+        if args.visibility:
             get_resource_manager().validate_visibility_value(
                 secret,
-                visibility
+                args.visibility
             )
-            secret.visibility = visibility
+            secret.visibility = args.visibility
 
-    def _update_value(self, secret):
-        request_dict = rest_utils.get_json_and_verify_params({
-            'value': {'optional': True}
-        })
-        value = request_dict.get('value')
-        if not value:
-            return
-        if secret.schema:
-            try:
-                jsonschema.validate(value, secret.schema)
-            except jsonschema.ValidationError as e:
-                raise manager_exceptions.ConflictError(
-                    f'Error validating secret value: {e}')
-        secret.value = encrypt(value)
+        if args.value:
+            if secret.schema:
+                try:
+                    jsonschema.validate(args.value, secret.schema)
+                except jsonschema.ValidationError as e:
+                    raise manager_exceptions.ConflictError(
+                        f'Error validating secret value: {e}')
+            secret.value = encrypt(args.value)
 
-    def _update_owner(self, secret):
-        request_dict = rest_utils.get_json_and_verify_params({
-            'creator': {'type': str, 'optional': True}
-        })
-        creator_username = request_dict.get('creator')
-        if not creator_username:
-            return
-        check_user_action_allowed('set_owner', None, True)
-        creator = rest_utils.valid_user(request_dict.get('creator'))
-        if creator:
-            secret.creator = creator
+        if args.creator:
+            check_user_action_allowed('set_owner', None, True)
+            creator = rest_utils.valid_user(args.creator)
+            if creator:
+                secret.creator = creator
 
-    @staticmethod
-    def _update_provider(secret):
-        request_dict = rest_utils.get_json_and_verify_params({
-            'provider': {'type': str, 'optional': True}
-        })
-        provider_name = request_dict.get('provider')
-        if not provider_name:
-            return
+        if args.provider:
+            storage_manager = get_storage_manager()
 
-        storage_manager = get_storage_manager()
+            secret.provider = storage_manager.get(
+                models.SecretsProvider,
+                args.provider,
+            )
 
-        provider = storage_manager.get(
-            models.SecretsProvider,
-            provider_name,
-        )
-
-        secret.provider = provider
+        if args.provider_options:
+            secret.provider_options = encrypt(
+                json.dumps(
+                    args.provider_options,
+                ),
+            )
 
     @staticmethod
     def _update_provider_options(secret):
@@ -325,17 +273,11 @@ class Secrets(SecuredResource):
     @rest_decorators.create_filters(models.Secret)
     @rest_decorators.paginate
     @rest_decorators.sortable(models.Secret)
-    @rest_decorators.all_tenants
     @rest_decorators.search('id')
     def get(self, _include=None, filters=None, pagination=None, sort=None,
-            all_tenants=None, search=None, **kwargs):
-        """
-        List secrets
-        """
-        get_all_results = rest_utils.verify_and_convert_bool(
-            '_get_all_results',
-            request.args.get('_get_all_results', False)
-        )
+            search=None, **kwargs):
+        """List secrets"""
+        args = rest_utils.ListQuery.parse_obj(request.args)
         return get_storage_manager().list(
             models.Secret,
             include=_include,
@@ -343,22 +285,21 @@ class Secrets(SecuredResource):
             substr_filters=search,
             pagination=pagination,
             sort=sort,
-            all_tenants=all_tenants,
-            get_all_results=get_all_results,
+            all_tenants=args.all_tenants,
+            get_all_results=args.get_all_results
         )
 
 
 class SecretsSetVisibility(SecuredResource):
-
     @authorize('secret_update')
     @rest_decorators.marshal_with(models.Secret)
     def patch(self, key):
         """
         Set the secret's visibility
         """
-        visibility = rest_utils.get_visibility_parameter()
+        args = rest_utils.SetVisibilityArgs.parse_obj(request.json)
         secret = get_storage_manager().get(models.Secret, key)
-        return get_resource_manager().set_visibility(secret, visibility)
+        return get_resource_manager().set_visibility(secret, args.visibility)
 
 
 class SecretsExport(SecuredResource):
@@ -420,6 +361,13 @@ class SecretsExport(SecuredResource):
             secret['encrypted'] = True
 
 
+class _SecretsImportArgs(pydantic.BaseModel):
+    secrets_list: List[Any]
+    tenant_map: Optional[Dict[str, Any]] = None
+    passphrase: Optional[str] = None
+    override_collisions: bool = False
+
+
 class SecretsImport(SecuredResource):
     @authorize('secret_import')
     def post(self):
@@ -443,13 +391,7 @@ class SecretsImport(SecuredResource):
 
     @staticmethod
     def _validate_import_secrets_params():
-        request_dict = rest_utils.get_json_and_verify_params({
-            'secrets_list': {'type': list, 'optional': False},
-            'tenant_map': {'type': dict, 'optional': True},
-            'passphrase': {'type': str, 'optional': True},
-            'override_collisions': {'type': bool, 'optional': False}
-        })
-        return request_dict
+        return _SecretsImportArgs.parse_obj(request.json).dict()
 
     def _import_secrets(self, secrets_list, tenant_map, passphrase,
                         existing_tenants, colliding_secrets, override):
@@ -499,7 +441,8 @@ class SecretsImport(SecuredResource):
     def _validate_is_hidden_field(self, secret, missing_fields, secret_errors):
         if self._is_missing_field(secret, 'is_hidden_value', missing_fields):
             return
-        is_hidden_value = self._validate_boolean(secret, 'is_hidden_value')
+        is_hidden_value = rest_utils.verify_and_convert_bool(
+            secret['is_hidden_value'])
         if is_hidden_value is None:
             secret_errors['is_hidden_value'] = 'Not boolean'
         else:
@@ -556,7 +499,7 @@ class SecretsImport(SecuredResource):
         invalid_value = self._is_missing_field(secret, 'value', missing_fields)
         if self._is_missing_field(secret, 'encrypted', missing_fields):
             return
-        is_encrypted = self._validate_boolean(secret, 'encrypted')
+        is_encrypted = rest_utils.verify_and_convert_bool(secret['encrypted'])
         if is_encrypted is None:
             secret_errors['encrypted'] = 'Not boolean'
         elif is_encrypted and not invalid_value:
@@ -598,14 +541,6 @@ class SecretsImport(SecuredResource):
             missing_fields.append(field)
             return True
         return False
-
-    @staticmethod
-    def _validate_boolean(secret, field):
-        try:
-            field = rest_utils.verify_and_convert_bool('', secret[field])
-        except manager_exceptions.BadParametersError:
-            return None
-        return field
 
     @staticmethod
     def _validate_tenant_map(tenant_map, existing_tenants):

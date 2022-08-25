@@ -1,3 +1,7 @@
+import pydantic
+from typing import Optional
+
+from flask import request
 from flask_security import current_user
 from flask_security.utils import hash_password
 
@@ -31,6 +35,16 @@ class User(SecuredResource):
         return user_datastore.get_user(current_user.username)
 
 
+class _UserCreateArgs(pydantic.BaseModel):
+    username: str
+    password: Optional[str] = None
+    role: Optional[str] = constants.DEFAULT_SYSTEM_ROLE
+    created_at: Optional[str] = None
+    first_login_at: Optional[str] = None
+    last_login_at: Optional[str] = None
+    is_prehashed: Optional[bool] = False
+
+
 class Users(SecuredMultiTenancyResource):
     @authorize('user_list')
     @rest_decorators.marshal_with(UserResponse)
@@ -55,28 +69,7 @@ class Users(SecuredMultiTenancyResource):
     @rest_decorators.marshal_with(UserResponse)
     @rest_decorators.check_external_authenticator('create user')
     def put(self, multi_tenancy):
-        """
-        Create a user
-        """
-        request_dict = rest_utils.get_json_and_verify_params(
-            {
-                'username': {
-                    'type': str,
-                },
-                'password': {
-                    'type': str,
-                },
-                'role': {
-                    'type': str,
-                    'optional': True,
-                },
-                'created_at': {'type': str, 'optional': True},
-                'last_login_at': {'type': str, 'optional': True},
-                'first_login_at': {'type': str, 'optional': True},
-            }
-        )
-        is_prehashed = rest_utils.verify_and_convert_bool(
-            'is_prehashed', request_dict.pop('is_prehashed', False))
+        request_dict = _UserCreateArgs.parse_obj(request.json).dict()
 
         timestamps = {}
         set_timestamp_checked = False
@@ -88,22 +81,31 @@ class Users(SecuredMultiTenancyResource):
                 timestamps[timestamp] = rest_utils.parse_datetime_string(
                     request_dict.pop(timestamp))
 
-        # The password shouldn't be validated here
         password = request_dict.pop('password')
         password = rest_utils.validate_and_decode_password(password)
         rest_utils.validate_inputs(request_dict)
-        role = request_dict.get('role', constants.DEFAULT_SYSTEM_ROLE)
+        role = request_dict['role']
         rest_utils.verify_role(role, is_system_role=True)
 
         return multi_tenancy.create_user(
             request_dict['username'],
             password,
             role,
-            is_prehashed=is_prehashed,
             created_at=timestamps.get('created_at'),
             first_login_at=timestamps.get('first_login_at'),
             last_login_at=timestamps.get('last_login_at'),
+            is_prehashed=request_dict['is_prehashed'],
         )
+
+
+class _UpdateUserArgs(pydantic.BaseModel):
+    password: Optional[str] = None
+    role: Optional[str] = None
+    show_getting_started: Optional[bool] = None
+
+
+class _HasShowGettingStarted(pydantic.BaseModel):
+    show_getting_started: Optional[bool] = None
 
 
 class UsersIdPremium(SecuredMultiTenancyResource):
@@ -112,10 +114,11 @@ class UsersIdPremium(SecuredMultiTenancyResource):
         """
         Alter settings (e.g. password/role) for a certain user
         """
-        request_dict = rest_utils.get_json_and_verify_params()
+        request_dict = _UpdateUserArgs.parse_obj(request.json).dict()
+        query = _HasShowGettingStarted.parse_obj(request.args)
         password = request_dict.get('password')
         role_name = request_dict.get('role')
-        show_getting_started = request_dict.get('show_getting_started')
+        show_getting_started = query.show_getting_started
 
         if password:
             if role_name:
@@ -130,9 +133,6 @@ class UsersIdPremium(SecuredMultiTenancyResource):
             rest_utils.verify_role(role_name, is_system_role=True)
             return multi_tenancy.set_user_role(username, role_name)
         if show_getting_started is not None:
-            show_getting_started = \
-                rest_utils.verify_and_convert_bool('show_getting_started',
-                                                   show_getting_started)
             return multi_tenancy.set_show_getting_started(
                 username, show_getting_started)
         raise BadParametersError(
@@ -153,7 +153,7 @@ class UsersIdPremium(SecuredMultiTenancyResource):
         Delete a user
         """
         multi_tenancy.delete_user(username)
-        return None, 204
+        return "", 204
 
     def authorize_update(self):
         # when running unittests, there is no authorization
@@ -180,9 +180,10 @@ class UsersIdCommunity(SecuredResource):
         """
         Change user's password or getting started flag
         """
-        request_dict = rest_utils.get_json_and_verify_params()
+        request_dict = _UpdateUserArgs.parse_obj(request.json).dict()
+        query = _HasShowGettingStarted.parse_obj(request.args)
         password = request_dict.get('password')
-        show_getting_started = request_dict.get('show_getting_started')
+        show_getting_started = query.show_getting_started
 
         if username != current_user.username:
             raise BadParametersError('Cannot change settings for '
@@ -195,10 +196,7 @@ class UsersIdCommunity(SecuredResource):
             user_datastore.commit()
             return user
         if show_getting_started is not None:
-            set_show_getting_started = \
-                rest_utils.verify_and_convert_bool('show_getting_started',
-                                                   show_getting_started)
-            user.show_getting_started = set_show_getting_started
+            user.show_getting_started = show_getting_started
             user_datastore.commit()
             return user
         raise BadParametersError(
@@ -209,15 +207,17 @@ class UsersIdCommunity(SecuredResource):
 UsersId = UsersIdPremium if _PREMIUM else UsersIdCommunity
 
 
+class _UserActivateArgs(pydantic.BaseModel):
+    action: str
+
+
 class UsersActive(SecuredMultiTenancyResource):
     @authorize('user_set_activated')
     @rest_decorators.marshal_with(UserResponse)
     def post(self, username, multi_tenancy):
-        """
-        Activate a user
-        """
-        request_dict = rest_utils.get_json_and_verify_params({'action'})
-        if request_dict['action'] == 'activate':
+        """Activate a user"""
+        args = _UserActivateArgs.parse_obj(request.json)
+        if args.action == 'activate':
             return multi_tenancy.activate_user(username)
         else:
             return multi_tenancy.deactivate_user(username)

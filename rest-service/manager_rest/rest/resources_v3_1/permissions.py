@@ -88,4 +88,4 @@ class PermissionsRoleId(SecuredResource):
                 sm.delete(perm)
             role.updated_at = datetime.utcnow()
             sm.put(role)
-        return None, 204
+        return "", 204

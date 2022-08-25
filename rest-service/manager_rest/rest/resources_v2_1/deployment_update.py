@@ -13,9 +13,10 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import pydantic
 import uuid
 from datetime import datetime
-from typing import Dict
+from typing import Any, Dict, List, Optional
 
 from flask import request
 
@@ -33,14 +34,34 @@ from manager_rest.utils import (create_filter_params_list_description,
 from manager_rest.resource_manager import get_resource_manager
 from .. import rest_decorators
 from ..rest_utils import (
-    get_json_and_verify_params,
     lookup_and_validate_user,
     parse_datetime_string,
     remove_invalid_keys,
     valid_user,
-    verify_and_convert_bool,
     wait_for_execution,
 )
+
+
+class _DeploymentUpdateStartArgs(pydantic.BaseModel):
+    blueprint_id: Optional[str] = None
+    preview: Optional[bool] = False
+    runtime_only_evaluation: Optional[bool] = None
+    force: Optional[bool] = False
+    inputs: Optional[Dict[str, Any]] = {}
+    reinstall_list: Optional[List[str]] = []
+    blueprint: Optional[str] = None
+    reevaluate_active_statuses: Optional[bool] = False
+    auto_correct_types: Optional[bool] = False
+    update_plugins: Optional[bool] = True
+    install_first: Optional[bool] = False
+    ignore_failure: Optional[bool] = False
+    skip_reinstall: Optional[bool] = False
+    skip_install: Optional[bool] = False
+    skip_uninstall: Optional[bool] = False
+    skip_drift_check: Optional[bool] = False
+    force_reinstall: Optional[bool] = False
+    skip_heal: Optional[bool] = False
+    workflow_id: Optional[str] = None
 
 
 class DeploymentUpdate(SecuredResource):
@@ -72,17 +93,17 @@ class DeploymentUpdate(SecuredResource):
     def _initiate(self, deployment_id):
         sm = get_storage_manager()
         rm = get_resource_manager()
-        preview = verify_and_convert_bool(
-            'preview', request.json.get('preview', False))
-        runtime_eval = request.json.get('runtime_only_evaluation')
-        force = verify_and_convert_bool(
-            'force', request.json.get('force', False))
+
+        args = _DeploymentUpdateStartArgs.parse_obj(request.json)
+        runtime_eval = args.runtime_only_evaluation
 
         with sm.transaction() as tx:
-            blueprint, inputs, reinstall_list = \
-                self._get_and_validate_blueprint_and_inputs(deployment_id,
-                                                            request.json)
             deployment = sm.get(models.Deployment, deployment_id)
+            if args.blueprint_id:
+                blueprint = sm.get(models.Blueprint, args.blueprint_id)
+            else:
+                blueprint = deployment.blueprint
+            inputs = args.inputs
             if runtime_eval is None:
                 runtime_eval = deployment.runtime_only_evaluation
             new_inputs = deployment.inputs.copy()
@@ -93,7 +114,7 @@ class DeploymentUpdate(SecuredResource):
                 new_blueprint=blueprint or deployment.blueprint,
                 old_inputs=deployment.inputs,
                 new_inputs=new_inputs,
-                preview=preview,
+                preview=args.preview,
                 runtime_only_evaluation=runtime_eval,
                 state=STATES.UPDATING,
             )
@@ -101,30 +122,23 @@ class DeploymentUpdate(SecuredResource):
                 'update_id': dep_up.id,
                 'blueprint_id': blueprint.id,
                 'inputs': inputs,
-                'preview': preview,
+                'preview': args.preview,
                 'runtime_only_evaluation': runtime_eval,
-                'force': force,
-                'workflow_id': request.json.get('workflow_id', None),
-                'reinstall_list': reinstall_list,
+                'force': args.force,
+                'workflow_id': args.workflow_id,
+                'reevaluate_active_statuses': args.reevaluate_active_statuses,
+                'auto_correct_types': args.auto_correct_types,
+                'update_plugins': args.update_plugins,
+                'install_first': args.install_first,
+                'ignore_failure': args.ignore_failure,
+                'skip_reinstall': args.skip_reinstall,
+                'skip_uninstall': args.skip_uninstall,
+                'reinstall_list': args.reinstall_list,
+                'skip_install': args.skip_install,
+                'skip_drift_check': args.skip_drift_check,
+                'force_reinstall': args.force_reinstall,
+                'skip_heal': args.skip_heal,
             }
-            # boolean params
-            for name, default in [
-                ('reevaluate_active_statuses', False),
-                ('auto_correct_types', False),
-                ('update_plugins', True),
-                ('install_first', False),
-                ('ignore_failure', False),
-                ('skip_reinstall', False),
-                ('skip_uninstall', False),
-                ('skip_install', False),
-                ('skip_drift_check', False),
-                ('force_reinstall', False),
-                ('skip_heal', False),
-            ]:
-                execution_args[name] = verify_and_convert_bool(
-                    name,
-                    request.json.get(name, default),
-                )
 
             update_exec = models.Execution(
                 deployment=deployment,
@@ -133,6 +147,7 @@ class DeploymentUpdate(SecuredResource):
                 allow_custom_parameters=True,
             )
             sm.put(update_exec)
+
             if current_execution and \
                     current_execution.workflow_id == 'csys_update_deployment':
                 # if we're created from a update_deployment workflow, join its
@@ -146,7 +161,7 @@ class DeploymentUpdate(SecuredResource):
                 messages = rm.prepare_executions(
                     [update_exec],
                     allow_overlapping_running_wf=True,
-                    force=force,
+                    force=args.force,
                 )
             except manager_exceptions.DependentExistsError:
                 dep_up.state = STATES.FAILED
@@ -155,30 +170,28 @@ class DeploymentUpdate(SecuredResource):
                 raise
 
         workflow_executor.execute_workflow(messages)
-        if preview:
+        if args.preview:
             wait_for_execution(sm, dep_up.execution.id)
             sm.refresh(dep_up)
         return dep_up
 
-    @staticmethod
-    def _get_and_validate_blueprint_and_inputs(deployment_id, request_json):
-        inputs = request_json.get('inputs', {})
-        reinstall_list = request_json.get('reinstall_list', [])
-        blueprint_id = request_json.get('blueprint_id')
-        if not isinstance(inputs, dict):
-            raise manager_exceptions.BadParametersError(
-                'parameter `inputs` must be of type `dict`')
-        if not isinstance(reinstall_list, list):
-            raise manager_exceptions.BadParametersError(
-                'parameter `reinstall_list` must be of type `list`')
-        if blueprint_id is None:
-            deployment = get_storage_manager().get(models.Deployment,
-                                                   deployment_id)
-            blueprint = deployment.blueprint
-        else:
-            blueprint = get_storage_manager().get(models.Blueprint,
-                                                  blueprint_id)
-        return blueprint, inputs, reinstall_list
+
+class _CreateDeploymentUpdateArgs(_DeploymentUpdateStartArgs):
+    deployment_id: str
+    state: Optional[str] = None
+    inputs: Optional[Dict[str, Any]] = None
+    old_blueprint_id: Optional[str] = None
+    execution_id: Optional[str] = None
+    created_at: Optional[str] = None
+    created_by: Optional[str] = None
+
+
+class _UpdateDeploymentUpdateArgs(pydantic.BaseModel):
+    state: Optional[str] = None
+    plan: Optional[Dict[str, Any]] = None
+    steps: Optional[List[Any]] = None
+    nodes: Optional[Any] = None
+    node_instances: Optional[Any] = None
 
 
 class DeploymentUpdateId(SecuredResource):
@@ -202,17 +215,9 @@ class DeploymentUpdateId(SecuredResource):
     @authorize('deployment_update_create')
     @rest_decorators.marshal_with(models.DeploymentUpdate)
     def put(self, update_id):
-        params = get_json_and_verify_params({
-            'deployment_id': {'type': str, 'required': True},
-            'state': {'optional': True},
-            'inputs': {'optional': True},
-            'blueprint_id': {'optional': True},
-            'created_at': {'optional': True},
-            'created_by': {'optional': True},
-            'execution_id': {'optional': True},
-        })
+        params = _CreateDeploymentUpdateArgs.parse_obj(request.json)
         sm = get_storage_manager()
-        if params.get('execution_id') is None and not current_execution:
+        if params.execution_id is None and not current_execution:
             # Only allow non-execution creation of dep updates for restores
             raise manager_exceptions.ForbiddenError(
                 'Deployment update objects can only be created by executions')
@@ -233,7 +238,7 @@ class DeploymentUpdateId(SecuredResource):
 
         add_steps = False
         with sm.transaction():
-            dep = sm.get(models.Deployment, params['deployment_id'])
+            dep = sm.get(models.Deployment, params.deployment_id)
             dep_upd = sm.get(models.DeploymentUpdate, update_id,
                              fail_silently=True)
             if dep_upd is None:
@@ -241,29 +246,29 @@ class DeploymentUpdateId(SecuredResource):
                     id=update_id,
                     _execution_fk=execution._storage_id,
                 )
-            dep_upd.state = params.get('state') or STATES.UPDATING
-            dep_upd.new_inputs = params.get('inputs')
-            if params.get('blueprint_id'):
+            dep_upd.state = params.state or STATES.UPDATING
+            dep_upd.new_inputs = params.inputs
+            if params.blueprint_id:
                 dep_upd.new_blueprint = sm.get(
-                    models.Blueprint, params['blueprint_id'])
+                    models.Blueprint, params.blueprint_id)
             if created_at:
                 dep_upd.created_at = created_at
             if created_by:
                 dep_upd.creator = created_by
-            if params.get('old_blueprint_id'):
+            if params.old_blueprint_id:
                 dep_upd.old_blueprint = sm.get(
-                    models.Blueprint, params['old_blueprint_id'])
+                    models.Blueprint, params.old_blueprint_id)
             for attr in [
                 'runtime_only_evaluation', 'deployment_plan', 'steps',
                 'deployment_update_node_instances', 'modified_entity_ids',
                 'central_plugins_to_install', 'central_plugins_to_uninstall',
                 'old_inputs', 'deployment_update_nodes', 'visibility',
             ]:
-                if params.get(attr) is not None:
+                if getattr(params, attr, None) is not None:
                     if attr == 'steps':
                         add_steps = True
                     else:
-                        setattr(dep_upd, attr, params[attr])
+                        setattr(dep_upd, attr, getattr(params, attr, None))
             dep_upd.set_deployment(dep)
 
         if add_steps:
@@ -304,35 +309,33 @@ class DeploymentUpdateId(SecuredResource):
     @authorize('deployment_update_update')
     @rest_decorators.marshal_with(models.DeploymentUpdate)
     def patch(self, update_id):
-        params = get_json_and_verify_params({
-            'state': {'optional': True},
-            'plan': {'optional': True},
-            'steps': {'optional': True},
-            'nodes': {'optional': True},
-            'node_instances': {'optional': True},
-        })
+        params = _UpdateDeploymentUpdateArgs.parse_obj(request.json)
         sm = get_storage_manager()
         with sm.transaction():
             dep_upd = sm.get(models.DeploymentUpdate, update_id)
-            if params.get('state'):
-                dep_upd.state = params['state']
-            if params.get('plan'):
-                dep_upd.deployment_plan = params['plan']
-            if params.get('steps'):
-                for step_spec in params['steps']:
+            if params.state:
+                dep_upd.state = params.state
+            if params.plan:
+                dep_upd.deployment_plan = params.plan
+            if params.steps:
+                for step_spec in params.steps:
                     step = models.DeploymentUpdateStep(
                         id=str(uuid.uuid4()),
                         **step_spec
                     )
                     step.set_deployment_update(dep_upd)
-            if params.get('nodes'):
-                dep_upd.deployment_update_nodes = params['nodes']
-            if params.get('node_instances'):
+            if params.nodes:
+                dep_upd.deployment_update_nodes = params.nodes
+            if params.node_instances:
                 dep_upd.deployment_update_node_instances = \
-                    params['node_instances']
+                    params.node_instances
             if dep_upd.state == STATES.SUCCESSFUL and not dep_upd.preview:
                 dep_upd.deployment.updated_at = datetime.utcnow()
             return dep_upd
+
+
+class _BulkCreateDepUpdatesArgs(pydantic.BaseModel):
+    deployment_updates: List[Any] = []
 
 
 class DeploymentUpdates(SecuredResource):
@@ -374,16 +377,14 @@ class DeploymentUpdates(SecuredResource):
     )
     @authorize('deployment_update_create')
     def post(self):
-        request_dict = get_json_and_verify_params({
-            'deployment_updates': {'type': list},
-        })
+        params = _BulkCreateDepUpdatesArgs.parse_obj(request.json)
         sm = get_storage_manager()
-        raw_updates = request_dict['deployment_updates']
+        raw_updates = params.deployment_updates
         raw_steps = []
         for raw_update in raw_updates:
             raw_steps.extend(raw_update.pop('steps', []))
         if not raw_updates:
-            return None, 204
+            return "", 204
         user_cache: Dict[str, models.User] = {}
         tenant_cache: Dict[str, models.Tenant] = {}
         with sm.transaction():
@@ -398,7 +399,7 @@ class DeploymentUpdates(SecuredResource):
                 models.DeploymentUpdateStep.__table__.insert(),
                 raw_steps,
             )
-        return None, 201
+        return "[]", 201
 
     def _prepare_raw_updates(self, sm, raw_updates, user_cache, tenant_cache):
         if any(item.get('creator') for item in raw_updates):

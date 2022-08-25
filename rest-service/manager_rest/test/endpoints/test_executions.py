@@ -317,7 +317,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         self.assertEqual('', execution.error)
 
     def test_update_nonexistent_execution(self):
-        resp = self.patch('/executions/1234', {'status': 'new-status'})
+        resp = self.patch('/executions/1234', {'status': 'terminated'})
         self.assertEqual(404, resp.status_code)
 
     def test_cancel_execution_by_id(self):

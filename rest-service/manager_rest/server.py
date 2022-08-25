@@ -2,12 +2,11 @@ import traceback
 import os
 import time
 import yaml
-from contextlib import contextmanager
 from io import StringIO
 
-from flask_restful import Api
 from flask import Flask, jsonify, Blueprint, current_app
 from flask_security import Security
+import pydantic
 from sqlalchemy import event
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm.session import close_all_sessions
@@ -30,6 +29,7 @@ from manager_rest.manager_exceptions import INTERNAL_SERVER_ERROR_CODE
 from manager_rest.app_logging import (setup_logger,
                                       log_request,
                                       log_response)
+
 
 if premium_enabled:
     from cloudify_premium.authentication.extended_auth_handler \
@@ -54,6 +54,14 @@ def manager_exception(error):
     else:
         current_app.logger.error(error)
     return error.to_response(), error.status_code, error.additional_headers
+
+
+@app_errors.app_errorhandler(pydantic.ValidationError)
+def validation_error(e):
+    return (
+        manager_exceptions.BadParametersError(str(e)).to_response(),
+        manager_exceptions.BadParametersError.status_code,
+    )
 
 
 @app_errors.app_errorhandler(InternalServerError)
@@ -181,8 +189,7 @@ class CloudifyFlaskApp(Flask):
                     user_datastore.find_or_create_role(name=role['name'])
                 user_datastore.commit()
 
-        with self._prevent_flask_restful_error_handling():
-            setup_resources(Api(self))
+        setup_resources(self)
         self.register_blueprint(app_errors)
 
     def _set_flask_security(self):
@@ -222,22 +229,6 @@ class CloudifyFlaskApp(Flask):
         self.update_db_uri()
         self.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
         db.init_app(self)  # Prepare the app for use with flask-sqlalchemy
-
-    @contextmanager
-    def _prevent_flask_restful_error_handling(self):
-        """Add flask-restful under this, to avoid installing its errorhandlers
-
-        Flask-restful's errorhandlers are both not flexible enough, and too
-        complex. We want to simply use flask's error handling mechanism,
-        so this will make sure that flask-restful's are overridden with the
-        default ones.
-        """
-        orig_handle_exc = self.handle_exception
-        orig_handle_user_exc = self.handle_user_exception
-        yield
-        # mypy says you cannot assign to method, but yes you can!
-        self.handle_exception = orig_handle_exc  # type: ignore
-        self.handle_user_exception = orig_handle_user_exc  # type: ignore
 
 
 app: CloudifyFlaskApp

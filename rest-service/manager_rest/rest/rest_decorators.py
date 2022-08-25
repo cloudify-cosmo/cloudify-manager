@@ -3,16 +3,13 @@ from collections import OrderedDict
 from typing import Dict
 from datetime import datetime
 
-from flask_restful import fields, marshal
-from flask_restful.utils import unpack
+from flask_restful import marshal
 from flask import request, current_app
 
 from cloudify.models_states import ExecutionState
 from manager_rest import config, manager_exceptions
 from manager_rest.utils import current_tenant
-from manager_rest.security.authorization import is_user_action_allowed
-from manager_rest.storage.models_base import SQLModelBase, db
-from manager_rest.storage.management_models import User
+from manager_rest.storage.models_base import db
 from manager_rest.execution_token import current_execution
 from manager_rest.rest.rest_utils import (
     normalize_value,
@@ -20,7 +17,6 @@ from manager_rest.rest.rest_utils import (
     request_use_all_tenants,
     is_deployment_update,
 )
-
 from .responses_v2 import ListResponse
 from .validation_models import (
     Pagination,
@@ -28,46 +24,20 @@ from .validation_models import (
     Sort,
 )
 
+from flask import request
+from flask_restful import marshal, fields
+from flask_restful.utils import unpack
+from manager_rest.storage.management_models import User
+from manager_rest.storage.models_base import SQLModelBase
+
+from manager_rest.rest.responses_v2 import ListResponse
+from manager_rest.security.authorization import is_user_action_allowed
+
 INCLUDE = 'Include'
 SORT = 'Sort'
 FILTER = 'Filter'
 
 SPECIAL_CHARS = ['\\', '_', '%']
-
-
-def _validate_fields(valid_fields, fields_to_check, action):
-    """Assert that `fields_to_check` is a subset of `valid_fields`
-
-    :param valid_fields: A list/dict of valid fields
-    :param fields_to_check: A list/dict of fields to check
-    :param action: The action being performed (Sort/Include/Filter)
-    """
-    error_type = {INCLUDE: manager_exceptions.NoSuchIncludeFieldError,
-                  SORT: manager_exceptions.BadParametersError,
-                  FILTER: manager_exceptions.BadParametersError}
-    unknowns = [k for k in fields_to_check if k not in valid_fields]
-    if unknowns:
-        raise error_type[action](
-            '{action} keys \'{key_names}\' do not exist. Allowed '
-            'keys are: {fields}'
-            .format(
-                action=action,
-                key_names=unknowns,
-                fields=list(valid_fields))
-        )
-
-
-# region V1 decorators
-
-def insecure_rest_method(func):
-    """block an insecure REST method if manager disabled insecure endpoints
-    """
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        if config.instance.insecure_endpoints_disabled:
-            raise manager_exceptions.MethodNotAllowedError()
-        return func(*args, **kwargs)
-    return wrapper
 
 
 class marshal_with(object):
@@ -161,14 +131,14 @@ class marshal_with(object):
     @staticmethod
     def _get_data():
         get_data = request.args.get('_get_data', False)
-        return verify_and_convert_bool('get_data', get_data)
+        return verify_and_convert_bool(get_data)
 
     @staticmethod
     def _include_hash():
         include_hash = request.args.get('_include_hash', False)
         if include_hash and is_user_action_allowed(
                 'get_password_hash', None, True):
-            return verify_and_convert_bool('include_hash', include_hash)
+            return verify_and_convert_bool(include_hash)
         return False
 
     def _get_fields_to_include(self):
@@ -198,7 +168,40 @@ class marshal_with(object):
             return self.response_class.skipped_fields.get(api_version, [])
         return []
 
-# endregion
+
+def _validate_fields(valid_fields, fields_to_check, action):
+    """Assert that `fields_to_check` is a subset of `valid_fields`
+
+    :param valid_fields: A list/dict of valid fields
+    :param fields_to_check: A list/dict of fields to check
+    :param action: The action being performed (Sort/Include/Filter)
+    """
+    error_type = {INCLUDE: manager_exceptions.NoSuchIncludeFieldError,
+                  SORT: manager_exceptions.BadParametersError,
+                  FILTER: manager_exceptions.BadParametersError}
+    unknowns = [k for k in fields_to_check if k not in valid_fields]
+    if unknowns:
+        raise error_type[action](
+            '{action} keys \'{key_names}\' do not exist. Allowed '
+            'keys are: {fields}'
+            .format(
+                action=action,
+                key_names=unknowns,
+                fields=list(valid_fields))
+        )
+
+
+# region V1 decorators
+
+def insecure_rest_method(func):
+    """block an insecure REST method if manager disabled insecure endpoints
+    """
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if config.instance.insecure_endpoints_disabled:
+            raise manager_exceptions.MethodNotAllowedError()
+        return func(*args, **kwargs)
+    return wrapper
 
 
 # region V2 decorators
@@ -427,7 +430,7 @@ def evaluate_functions(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         val = request.args.get('_evaluate_functions', False)
-        val = verify_and_convert_bool('_evaluate_functions', val)
+        val = verify_and_convert_bool(val)
         kwargs['evaluate_functions'] = val
         return func(*args, **kwargs)
     return wrapper

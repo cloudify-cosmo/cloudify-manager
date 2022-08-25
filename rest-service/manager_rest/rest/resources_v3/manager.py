@@ -1,3 +1,7 @@
+import pydantic
+import string
+from typing import Optional
+
 from flask import request
 from flask import current_app
 
@@ -123,6 +127,78 @@ class FileServerAuth(SecuredResource):
         return {}
 
 
+def _validate_allowed_substitutions(param_name, param_value, allowed):
+    if param_value is None:
+        return
+    f = string.Formatter()
+    invalid = []
+    for _, field, _, _ in f.parse(param_value):
+        if field is None:
+            # This will occur at the end of a string unless the string ends at
+            # the end of a field
+            continue
+        if field not in allowed:
+            invalid.append(field)
+    if invalid:
+        raise pydantic.ValidationError(
+            '{candidate_name} has invalid parameters.\n'
+            'Invalid parameters found: {invalid}.\n'
+            'Allowed: {allowed}'.format(
+                candidate_name=param_name,
+                invalid=', '.join(invalid),
+                allowed=', '.join(allowed),
+            )
+        )
+
+
+class _LDAPConfigArgs(pydantic.BaseModel):
+    ldap_server: str
+    ldap_domain: str
+    ldap_username: Optional[str] = None
+    ldap_password: Optional[str] = None
+    ldap_is_active_directory: Optional[bool] = False
+    ldap_dn_extra: Optional[str] = None
+    ldap_ca_cert: Optional[str] = None
+    ldap_nested_levels: Optional[int] = None
+    ldap_bind_format: Optional[str] = None
+    ldap_base_dn: Optional[str] = None
+    ldap_group_dn: Optional[str] = None
+    ldap_group_member_filter: Optional[str] = None
+    ldap_user_filter: Optional[str] = None
+    ldap_attribute_email: Optional[str] = None
+    ldap_attribute_first_name: Optional[str] = None
+    ldap_attribute_last_name: Optional[str] = None
+    ldap_attribute_uid: Optional[str] = None
+    ldap_attribute_group_membership: Optional[str] = None
+
+    @pydantic.validator('ldap_bind_format')
+    def ldap_bind_format_substitutions(cls, v):
+        _validate_allowed_substitutions('ldap_bind_format', v, allowed=[
+            'username', 'domain', 'base_dn', 'domain_dn', 'group_dn',
+        ])
+
+    @pydantic.validator('ldap_group_dn')
+    def ldap_group_dn_substitutions(cls, v):
+        _validate_allowed_substitutions(
+            'ldap_group_dn', v,
+            allowed=['base_dn', 'domain_dn'],
+        )
+
+    @pydantic.validator('ldap_group_member_filter')
+    def ldap_group_member_filter_substitutions(cls, v):
+        _validate_allowed_substitutions(
+            'ldap_group_member_filter', v,
+            allowed=['object_dn'],
+        )
+
+    @pydantic.validator('ldap_user_filter')
+    def ldap_user_filter_substitutions(cls, v):
+        _validate_allowed_substitutions(
+            'ldap_user_filter', v,
+            allowed=['username', 'base_dn', 'domain_dn', 'group_dn'],
+        )
+
+
 class LdapAuthentication(SecuredResource):
     @authorize('ldap_set')
     @rest_decorators.marshal_with(LdapResponse)
@@ -168,41 +244,7 @@ class LdapAuthentication(SecuredResource):
         if not premium_enabled:
             raise MethodNotAllowedError('LDAP is only supported in the '
                                         'Cloudify premium edition.')
-        base_substitutions = ['base_dn', 'domain_dn', 'group_dn']
-        ldap_config = rest_utils.get_json_and_verify_params({
-            'ldap_server': {},
-            'ldap_domain': {},
-            'ldap_username': {'optional': True},
-            'ldap_password': {'optional': True},
-            'ldap_is_active_directory': {'optional': True},
-            'ldap_dn_extra': {'optional': True},
-            'ldap_ca_cert': {'optional': True},
-            'ldap_nested_levels': {'optional': True},
-            'ldap_bind_format': {
-                'optional': True,
-                'allowed_substitutions': [
-                    'username', 'domain'] + base_substitutions,
-            },
-            'ldap_group_dn': {
-                'optional': True,
-                'allowed_substitutions': ['base_dn', 'domain_dn'],
-            },
-            'ldap_base_dn': {'optional': True},
-            'ldap_group_member_filter': {
-                'optional': True,
-                'allowed_substitutions': ['object_dn']
-            },
-            'ldap_user_filter': {
-                'optional': True,
-                'allowed_substitutions': ['username'] + base_substitutions,
-            },
-            'ldap_attribute_email': {'optional': True},
-            'ldap_attribute_first_name': {'optional': True},
-            'ldap_attribute_last_name': {'optional': True},
-            'ldap_attribute_uid': {'optional': True},
-            'ldap_attribute_group_membership': {'optional': True},
-        })
-
+        ldap_config = _LDAPConfigArgs.parse_obj(request.json).dict()
         if ldap_config.get('ldap_nested_levels') is None:
             ldap_config['ldap_nested_levels'] = 1
         else:
@@ -214,12 +256,6 @@ class LdapAuthentication(SecuredResource):
                 # Otherwise we try to set None on the config entry, which is
                 # not a string.
                 ldap_config[attr] = ''
-
-        ldap_config['ldap_is_active_directory'] = \
-            rest_utils.verify_and_convert_bool(
-                'ldap_is_active_directory',
-                ldap_config.get('ldap_is_active_directory') or False
-            )
 
         if ldap_config['ldap_server'].startswith('ldaps://'):
             if 'ldap_ca_cert' not in ldap_config:

@@ -1,3 +1,6 @@
+import pydantic
+from typing import Optional
+
 from flask import request
 
 from cloudify.models_states import VisibilityState
@@ -11,10 +14,15 @@ from manager_rest.security.authorization import (
 )
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.resource_manager import get_resource_manager
-from manager_rest.rest.rest_utils import (validate_inputs,
-                                          verify_and_convert_bool,
-                                          get_visibility_parameter,
-                                          get_json_and_verify_params)
+from manager_rest.rest.rest_utils import validate_inputs, ListQuery
+
+
+class _SiteCreateArgs(pydantic.BaseModel):
+    location: Optional[str] = None
+    new_name: Optional[str] = None
+    created_at: Optional[str] = None
+    created_by: Optional[str] = None
+    visibility: Optional[VisibilityState] = None
 
 
 class SitesName(SecuredResource):
@@ -42,13 +50,13 @@ class SitesName(SecuredResource):
         new_site.visibility = (request_dict['visibility'] or
                                VisibilityState.TENANT)
 
-        if 'created_at' in request_dict:
+        if request_dict['created_at']:
             check_user_action_allowed('set_timestamp')
             new_site.created_at = request_dict['created_at']
         else:
             new_site.created_at = utils.get_formatted_timestamp()
 
-        if 'created_by' in request_dict:
+        if request_dict['created_by']:
             check_user_action_allowed('set_owner')
             new_site.creator = rest_utils.valid_user(
                 request_dict['created_by'])
@@ -64,10 +72,12 @@ class SitesName(SecuredResource):
         storage_manager = get_storage_manager()
         self._validate_new_name(request_dict, storage_manager, name)
         site = storage_manager.get(models.Site, name)
-        site.name = request_dict.get('new_name', site.name)
-        site.id = request_dict.get('new_name', site.id)
-        site.latitude = request_dict.get('latitude', site.latitude)
-        site.longitude = request_dict.get('longitude', site.longitude)
+        site.name = request_dict['new_name'] or site.name
+        site.id = request_dict['new_name'] or site.id
+        if 'latitude' in request_dict:
+            site.latitude = request_dict['latitude']
+        if 'longitude' in request_dict:
+            site.longitude = request_dict['longitude']
         visibility = request_dict['visibility']
         if visibility:
             get_resource_manager().validate_visibility_value(site, visibility)
@@ -82,19 +92,11 @@ class SitesName(SecuredResource):
         storage_manager = get_storage_manager()
         site = storage_manager.get(models.Site, name)
         storage_manager.delete(site, validate_global=True)
-        return None, 204
+        return "", 204
 
     def _validate_site_params(self, name):
         validate_inputs({'name': name})
-        visibility = get_visibility_parameter(
-            optional=True,
-            valid_values=VisibilityState.STATES,
-        )
-        request_dict = get_json_and_verify_params({
-            'location': {'type': str, 'optional': True},
-            'new_name': {'type': str, 'optional': True}
-        })
-        request_dict['visibility'] = visibility
+        request_dict = _SiteCreateArgs.parse_obj(request.json).dict()
         self._validate_location(request_dict)
         return request_dict
 
@@ -155,17 +157,11 @@ class Sites(SecuredResource):
     @rest_decorators.create_filters(models.Site)
     @rest_decorators.paginate
     @rest_decorators.sortable(models.Site)
-    @rest_decorators.all_tenants
     @rest_decorators.search('name')
     def get(self, _include=None, filters=None, pagination=None, sort=None,
-            all_tenants=None, search=None):
-        """
-        List sites
-        """
-        get_all_results = verify_and_convert_bool(
-            '_get_all_results',
-            request.args.get('_get_all_results', False)
-        )
+            search=None):
+        """List sites"""
+        args = ListQuery.parse_obj(request.args)
         return get_storage_manager().list(
             models.Site,
             include=_include,
@@ -173,6 +169,6 @@ class Sites(SecuredResource):
             substr_filters=search,
             pagination=pagination,
             sort=sort,
-            all_tenants=all_tenants,
-            get_all_results=get_all_results
+            all_tenants=args.all_tenants,
+            get_all_results=args.get_all_results
         )

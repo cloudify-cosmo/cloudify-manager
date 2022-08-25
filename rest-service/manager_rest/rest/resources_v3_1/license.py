@@ -1,4 +1,6 @@
-from flask import request
+import pydantic
+
+from flask import request, jsonify
 
 from manager_rest.rest import responses_v3
 from manager_rest.security.authorization import authorize
@@ -9,7 +11,6 @@ from manager_rest.security import (
 )
 from manager_rest.manager_exceptions import ConflictError
 from manager_rest.storage import models, get_storage_manager
-from manager_rest.rest.rest_utils import get_json_and_verify_params
 from manager_rest.rest.rest_decorators import (
     marshal_with,
     paginate
@@ -52,6 +53,10 @@ class LicensePremium(SecuredLicenseResource):
         return license_handler.remove_license()
 
 
+class _CustomerIDArgs(pydantic.BaseModel):
+    customer_id: str
+
+
 class LicenseCommunity(SecuredResource):
     @marshal_with(responses_v3.License)
     @authorize('license_upload')
@@ -59,9 +64,7 @@ class LicenseCommunity(SecuredResource):
         """
         Store the Customer ID received from Hubspot in the Manager.
         """
-        request_dict = get_json_and_verify_params({
-            'customer_id': {'type': str},
-        })
+        args = _CustomerIDArgs.parse_obj(request.json)
         sm = get_storage_manager()
         licenses = sm.list(models.License, get_all_results=True)
         customer_id = str(licenses[0].customer_id) if licenses else None
@@ -69,7 +72,7 @@ class LicenseCommunity(SecuredResource):
             raise ConflictError(
                 'A Customer ID already exists for this manager: '
                 '{}'.format(customer_id))
-        return sm.put(models.License(customer_id=request_dict['customer_id']))
+        return sm.put(models.License(customer_id=args.customer_id))
 
     @premium_only
     def put(self):
@@ -89,7 +92,7 @@ License = LicensePremium if _PREMIUM else LicenseCommunity
 
 class LicenseCheckPremium(SecuredResource):
     def get(self):
-        return "OK", 200
+        return '"OK"', 200
 
 
 class LicenseCheckCommunity(SecuredResource):
@@ -101,8 +104,10 @@ class LicenseCheckCommunity(SecuredResource):
         customer_id = str(licenses[0].customer_id) if licenses else None
         if customer_id:
             return customer_id, 200
-        return {"message": "No Customer ID found on the manager",
-                "error_code": "missing_cloudify_license"}, 400
+        return jsonify({
+            "message": "No Customer ID found on the manager",
+            "error_code": "missing_cloudify_license"
+        }), 400
 
 
 LicenseCheck = LicenseCheckPremium if _PREMIUM else LicenseCheckCommunity

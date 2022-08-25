@@ -119,6 +119,7 @@ class CIColumn(Column):
     """A column for case insensitive string fields
     """
     is_ci = True
+    inherit_cache = True
 
 
 def _get_extension_type(desc):

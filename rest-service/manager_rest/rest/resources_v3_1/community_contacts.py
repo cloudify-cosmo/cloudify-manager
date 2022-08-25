@@ -1,13 +1,24 @@
+import pydantic
+from typing import Optional
+
 from requests import post
-from flask import current_app
+from flask import current_app, request
 from json import JSONDecodeError
 
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest import premium_enabled, manager_exceptions
-from manager_rest.rest.rest_utils import get_json_and_verify_params
+
 
 CREATE_CONTACT_URL = "https://api.cloudify.co/cloudifyCommunityCreateContact"
+
+
+class _CreateContactArgs(pydantic.BaseModel):
+    first_name: str
+    last_name: str
+    email: str
+    phone: Optional[str]
+    is_eula: bool
 
 
 class CommunityContacts(SecuredResource):
@@ -15,13 +26,7 @@ class CommunityContacts(SecuredResource):
     def post(self, **kwargs):
         if premium_enabled:
             raise manager_exceptions.CommunityOnly()
-        request_dict = get_json_and_verify_params({
-            'first_name': {'type': str},
-            'last_name': {'type': str},
-            'email': {'type': str},
-            'phone': {'type': str, 'optional': True},
-            'is_eula': {'type': bool},
-        })
+        request_dict = _CreateContactArgs.parse_obj(request.json).dict()
         if not request_dict['is_eula']:
             raise manager_exceptions.BadParametersError(
                 "EULA must be confirmed by user")

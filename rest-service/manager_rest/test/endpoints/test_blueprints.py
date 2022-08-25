@@ -431,7 +431,7 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
                            blueprint_id)
         self.assertRaisesRegex(
             CloudifyClientError,
-            'Unknown parameters: abc',
+            'abc',
             self.client.blueprints.update,
             blueprint_id,
             {'abc': 123}
@@ -444,15 +444,14 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
                            blueprint_id)
         self.assertRaisesRegex(
             CloudifyClientError,
-            'visibility parameter is expected to be of type {}'.format(
-                str.__name__),
+            'visibility',
             self.client.blueprints.update,
             blueprint_id,
             {'visibility': 123}
         )
         self.assertRaisesRegex(
             CloudifyClientError,
-            'plan parameter is expected to be of type dict',
+            'plan',
             self.client.blueprints.update,
             blueprint_id,
             {'plan': 'abcd'}

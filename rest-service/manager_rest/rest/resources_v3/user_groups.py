@@ -13,7 +13,10 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from flask import current_app
+import pydantic
+from typing import Optional
+
+from flask import current_app, request
 
 from manager_rest import constants
 from manager_rest.storage import models
@@ -34,6 +37,12 @@ try:
 except ImportError:
     GroupResponse = BaseResponse
     SecuredMultiTenancyResource = MissingPremiumFeatureResource
+
+
+class _UserGroupCreateArgs(pydantic.BaseModel):
+    group_name: str
+    ldap_group_dn: Optional[str] = None
+    role: Optional[str] = constants.DEFAULT_SYSTEM_ROLE
 
 
 class UserGroups(SecuredMultiTenancyResource):
@@ -62,10 +71,10 @@ class UserGroups(SecuredMultiTenancyResource):
         """
         Create a group
         """
-        request_dict = rest_utils.get_json_and_verify_params()
-        group_name = request_dict['group_name']
-        ldap_group_dn = request_dict.get('ldap_group_dn')
-        role = request_dict.get('role', constants.DEFAULT_SYSTEM_ROLE)
+        params = _UserGroupCreateArgs.parse_obj(request.json)
+        group_name = params.group_name
+        ldap_group_dn = params.ldap_group_dn
+        role = params.role
         rest_utils.verify_role(role, is_system_role=True)
         rest_utils.validate_inputs({'group_name': group_name})
         if group_name == 'users':
@@ -78,18 +87,19 @@ class UserGroups(SecuredMultiTenancyResource):
         return multi_tenancy.create_group(group_name, ldap_group_dn, role)
 
 
-class UserGroupsId(SecuredMultiTenancyResource):
+class _UpdateUserGroupArgs(pydantic.BaseModel):
+    role: str
 
+
+class UserGroupsId(SecuredMultiTenancyResource):
     @authorize('user_group_update')
     @rest_decorators.marshal_with(GroupResponse)
     def post(self, group_name, multi_tenancy):
         """
         Set role for a certain group
         """
-        request_dict = rest_utils.get_json_and_verify_params()
-        role_name = request_dict.get('role')
-        if not role_name:
-            raise BadParametersError('`role` not provided')
+        args = _UpdateUserGroupArgs.parse_obj(request.json)
+        role_name = args.role
         rest_utils.verify_role(role_name, is_system_role=True)
         return multi_tenancy.set_group_role(group_name, role_name)
 
@@ -109,7 +119,12 @@ class UserGroupsId(SecuredMultiTenancyResource):
         """
         rest_utils.validate_inputs({'group_name': group_name})
         multi_tenancy.delete_group(group_name)
-        return None, 204
+        return "", 204
+
+
+class _UserGroupsUsersArgs(pydantic.BaseModel):
+    username: str
+    group_name: str
 
 
 class UserGroupsUsers(SecuredMultiTenancyResource):
@@ -126,8 +141,7 @@ class UserGroupsUsers(SecuredMultiTenancyResource):
                 'Explicit group to user association is not permitted when '
                 'using LDAP. Group association to users is done automatically'
                 ' according to the groups associated with the user in LDAP.')
-        request_dict = rest_utils.get_json_and_verify_params({'username',
-                                                              'group_name'})
+        request_dict = _UserGroupCreateArgs.parse_obj(request.json).dict()
         rest_utils.validate_inputs(request_dict)
         return multi_tenancy.add_user_to_group(
             request_dict['username'],
@@ -139,10 +153,9 @@ class UserGroupsUsers(SecuredMultiTenancyResource):
         """
         Remove a user from a group
         """
-        request_dict = rest_utils.get_json_and_verify_params({'username',
-                                                              'group_name'})
+        request_dict = _UserGroupCreateArgs.parse_obj(request.json).dict()
         multi_tenancy.remove_user_from_group(
             request_dict['username'],
             request_dict['group_name']
         )
-        return None, 204
+        return "", 204

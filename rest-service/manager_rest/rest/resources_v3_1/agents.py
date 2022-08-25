@@ -1,6 +1,10 @@
+import pydantic
+from typing import Any, Optional
+
+
 from flask import current_app, request
 
-from cloudify.models_states import AgentState
+from cloudify.models_states import AgentState, VisibilityState
 from cloudify.cryptography_utils import encrypt, decrypt
 from cloudify.amqp_client import SendHandler
 
@@ -14,29 +18,28 @@ from manager_rest.security.authorization import (authorize,
                                                  check_user_action_allowed)
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.rest.rest_utils import (validate_inputs,
-                                          verify_and_convert_bool,
-                                          get_json_and_verify_params,
                                           parse_datetime_string,
-                                          valid_user)
+                                          valid_user,
+                                          ListQuery)
 from manager_rest.workflow_executor import get_amqp_client
 
 
-class Agents(SecuredResource):
+class _AgentsReplaceCertsArgs(pydantic.BaseModel):
+    broker_ca_cert: Optional[Any] = None
+    manager_ca_cert: Optional[Any] = None
+    bundle: Optional[bool] = None
 
+
+class Agents(SecuredResource):
     @rest_decorators.marshal_with(AgentResponse)
     @rest_decorators.create_filters(models.Agent)
     @rest_decorators.paginate
     @rest_decorators.sortable(models.Agent)
-    @rest_decorators.all_tenants
     @rest_decorators.search('name')
     @authorize('agent_list')
     def get(self, _include=None, filters=None, pagination=None, sort=None,
-            all_tenants=None, search=None):
-
-        get_all_results = verify_and_convert_bool(
-            '_get_all_results',
-            request.args.get('_get_all_results', False)
-        )
+            search=None):
+        args = ListQuery.parse_obj(request.args)
         return get_storage_manager().list(
             models.Agent,
             include=_include,
@@ -44,19 +47,17 @@ class Agents(SecuredResource):
             substr_filters=search,
             pagination=pagination,
             sort=sort,
-            all_tenants=all_tenants,
-            get_all_results=get_all_results
+            all_tenants=args.all_tenants,
+            get_all_results=args.get_all_results
         )
 
     @authorize('agent_replace_certs')
     def patch(self):
         """Replace CA certificates on running agents."""
-        request_dict = get_json_and_verify_params({'bundle': {'type': bool}})
-        # broker_ca_cert or manager_ca_cert can be None so no need to
-        # specify their type
-        broker_ca_cert = request_dict.get('broker_ca_cert')
-        manager_ca_cert = request_dict.get('manager_ca_cert')
-        bundle = request_dict.get('bundle')
+        args = _AgentsReplaceCertsArgs.parse_obj(request.json)
+        broker_ca_cert = args.broker_ca_cert
+        manager_ca_cert = args.manager_ca_cert
+        bundle = args.bundle
         sm = get_storage_manager()
         num_of_updated_agents = 0
 
@@ -122,6 +123,26 @@ class Agents(SecuredResource):
         return new_broker_ca_cert, new_manager_ca_cert
 
 
+class _AgentCreateArgs(pydantic.BaseModel):
+    node_instance_id: Optional[str] = None
+    state: Optional[str] = None
+    create_rabbitmq_user: Optional[bool] = False
+    created_at: Optional[str] = None
+    created_by: Optional[str] = None
+    rabbitmq_username: Optional[str] = None
+    rabbitmq_password: Optional[str] = None
+    rabbitmq_exchange: Optional[str] = None
+    ip: Optional[str] = None
+    install_method: Optional[str] = None
+    system: Optional[str] = None
+    version: Optional[str] = None
+    visibility: Optional[VisibilityState] = None
+
+
+class _AgentUpdateArgs(pydantic.BaseModel):
+    state: str
+
+
 class AgentsName(SecuredResource):
     @rest_decorators.marshal_with(models.Agent)
     @authorize('agent_get')
@@ -139,14 +160,8 @@ class AgentsName(SecuredResource):
     @rest_decorators.marshal_with(models.Agent)
     @authorize('agent_create')
     def put(self, name):
-        """
-        Create a new agent
-        """
-        request_dict = get_json_and_verify_params({
-            'node_instance_id': {'type': str},
-            'state': {'type': str},
-            'create_rabbitmq_user': {'type': bool}
-        })
+        """Create a new agent"""
+        request_dict = _AgentCreateArgs.parse_obj(request.json).dict()
         validate_inputs({'name': name})
         state = request_dict.get('state')
         self._validate_state(state)
@@ -173,11 +188,9 @@ class AgentsName(SecuredResource):
         """
         Update an existing agent
         """
-        request_dict = get_json_and_verify_params({
-            'state': {'type': str}
-        })
+        args = _AgentUpdateArgs.parse_obj(request.json)
         validate_inputs({'name': name})
-        state = request_dict['state']
+        state = args.state
         self._validate_state(state)
         return self._update_agent(name, state)
 

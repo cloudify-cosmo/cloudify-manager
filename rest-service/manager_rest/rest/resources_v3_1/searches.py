@@ -1,7 +1,8 @@
+import pydantic
 from collections import defaultdict
+from typing import Any, Dict, List, Optional
 
 from flask import request
-from flask_restful.reqparse import Argument
 
 from dsl_parser.utils import get_function
 
@@ -85,19 +86,19 @@ def _swagger_searches_docs(resource_model, resource_name):
     }
 
 
+class _SearchArgs(pydantic.BaseModel):
+    filter_rules: Optional[List[Any]] = None
+    constraints: Optional[Dict[str, Any]] = None
+
+
 class ResourceSearches(SecuredResource):
     def post(self, resource_model, filters_model, _include, filters,
-             pagination, sort, all_tenants, search, filter_id, **kwargs):
+             pagination, sort, search, filter_id,
+             constraints=None, **kwargs):
         """List resource items"""
-        get_all_results = rest_utils.verify_and_convert_bool(
-            '_get_all_results',
-            request.args.get('_get_all_results', False)
-        )
-        request_schema = {'filter_rules': {'optional': True, 'type': list},
-                          'constraints': {'optional': True, 'type': dict}}
-        request_dict = rest_utils.get_json_and_verify_params(request_schema)
-        constraints = kwargs.get('constraints') if 'constraints' in kwargs \
-            else request_dict.get('constraints')
+        query = rest_utils.ListQuery.parse_obj(request.args)
+        args = _SearchArgs.parse_obj(request.json)
+        constraints = constraints or args.constraints
         resource_field = kwargs.get('resource_field', 'id')
         sm = get_storage_manager()
         filter_rules = get_filter_rules(sm,
@@ -105,9 +106,8 @@ class ResourceSearches(SecuredResource):
                                         resource_field,
                                         filters_model,
                                         filter_id,
-                                        request_dict.get('filter_rules'),
+                                        args.filter_rules,
                                         constraints)
-
         sort_labels = None
         if sort:
             sort_labels = {k.split(":", 1)[1]: v
@@ -123,8 +123,8 @@ class ResourceSearches(SecuredResource):
             pagination=pagination,
             sort=sort,
             sort_labels=sort_labels,
-            all_tenants=all_tenants,
-            get_all_results=get_all_results,
+            all_tenants=query.all_tenants,
+            get_all_results=query.get_all_results,
             filter_rules=filter_rules,
         )
 
@@ -138,15 +138,14 @@ class DeploymentsSearches(ResourceSearches):
     @rest_decorators.marshal_with(models.Deployment)
     @rest_decorators.paginate
     @rest_decorators.sortable(models.Deployment)
-    @rest_decorators.all_tenants
     @rest_decorators.search_multiple_parameters(DEPLOYMENT_SEARCHES_MAP)
     @rest_decorators.filter_id
     def post(self, _include=None, pagination=None, sort=None,
-             all_tenants=None, search=None, filter_id=None, **kwargs):
+             search=None, filter_id=None, **kwargs):
         """List deployments using filter rules or DSL constraints"""
         filters = rest_utils.deployment_group_id_filter()
         return super().post(models.Deployment, models.DeploymentsFilter,
-                            _include, filters, pagination, sort, all_tenants,
+                            _include, filters, pagination, sort,
                             search, filter_id, resource_field='display_name',
                             **kwargs)
 
@@ -158,15 +157,14 @@ class BlueprintsSearches(ResourceSearches):
     @rest_decorators.marshal_with(models.Blueprint)
     @rest_decorators.paginate
     @rest_decorators.sortable(models.Blueprint)
-    @rest_decorators.all_tenants
     @rest_decorators.search('id')
     @rest_decorators.filter_id
     def post(self, _include=None, pagination=None, sort=None,
-             all_tenants=None, search=None, filter_id=None, **kwargs):
+             search=None, filter_id=None, **kwargs):
         """List blueprints using filter rules or DSL constraints"""
         filters = {'is_hidden': False}
         return super().post(models.Blueprint, models.BlueprintsFilter,
-                            _include, filters, pagination, sort, all_tenants,
+                            _include, filters, pagination, sort,
                             search, filter_id, **kwargs)
 
 
@@ -183,15 +181,14 @@ class WorkflowsSearches(ResourceSearches):
         filter_rules_types=FILTER_RULE_TYPES)
     @authorize('deployment_list', allow_all_tenants=True)
     @rest_decorators.marshal_list_response
-    @rest_decorators.all_tenants
     @rest_decorators.search('id')
     @rest_decorators.filter_id
-    def post(self, all_tenants=None, search=None, filter_id=None, **kwargs):
+    def post(self, search=None, filter_id=None, **kwargs):
         """List workflows using filter rules"""
         _include = ['id', 'workflows']
         filters = rest_utils.deployment_group_id_filter()
         result = super().post(models.Deployment, models.DeploymentsFilter,
-                              _include, filters, None, None, all_tenants,
+                              _include, filters, None, None,
                               search, filter_id, **kwargs)
 
         return workflows_list_response(result)
@@ -203,14 +200,13 @@ class NodesSearches(ResourceSearches):
     @rest_decorators.marshal_with(models.Node)
     @rest_decorators.paginate
     @rest_decorators.sortable(models.Node)
-    @rest_decorators.all_tenants
     @rest_decorators.search('id')
     def post(self, _include=None, pagination=None, sort=None,
-             all_tenants=None, search=None, **kwargs):
+             search=None, **kwargs):
         """List Nodes using filter rules or DSL constraints"""
         blueprint_id, deployment_id, constraints = \
             retrieve_constraints(id_required=True)
-
+        all_tenants = False  # TODO
         if blueprint_id:
             sm = get_storage_manager()
             blueprint = sm.get(models.Blueprint, blueprint_id,
@@ -251,16 +247,16 @@ class NodeTypesSearches(ResourceSearches):
     @rest_decorators.marshal_with(models.Node)
     @rest_decorators.paginate
     @rest_decorators.sortable(models.Node)
-    @rest_decorators.all_tenants
     @rest_decorators.search('type')
     def post(self, _include=None, pagination=None, sort=None,
-             all_tenants=None, search=None, **kwargs):
+             search=None, **kwargs):
         """List Nodes using filter rules or DSL constraints"""
         blueprint_id, deployment_id, constraints = \
             retrieve_constraints(id_required=True)
         if 'name_pattern' in constraints:
             constraints['type_specs'] = constraints.pop('name_pattern')
 
+        all_tenants = False  # TODO
         if blueprint_id:
             sm = get_storage_manager()
             blueprint = sm.get(models.Blueprint, blueprint_id,
@@ -274,7 +270,7 @@ class NodeTypesSearches(ResourceSearches):
                 deployment_id, constraints['valid_values'])
         filters = {'deployment_id': deployment_id}
         return super().post(models.Node, None, _include, filters, pagination,
-                            sort, all_tenants, search, None,
+                            sort, search, None,
                             constraints=constraints,
                             resource_field='type', **kwargs)
 
@@ -299,6 +295,10 @@ class NodeTypesSearches(ResourceSearches):
         )
 
 
+class _InstanceSearchQuery(pydantic.BaseModel):
+    node_id: Optional[str] = None
+
+
 class NodeInstancesSearches(ResourceSearches):
     @swagger.operation(**_swagger_searches_docs(models.NodeInstance,
                                                 'node_instances'))
@@ -306,25 +306,21 @@ class NodeInstancesSearches(ResourceSearches):
     @rest_decorators.marshal_with(models.NodeInstance)
     @rest_decorators.paginate
     @rest_decorators.sortable(models.NodeInstance)
-    @rest_decorators.all_tenants
     @rest_decorators.search('id')
     def post(self, _include=None, pagination=None, sort=None,
-             all_tenants=None, search=None, **kwargs):
+             search=None, **kwargs):
         """List NodeInstances using filter rules"""
         _, deployment_id, constraints = retrieve_constraints()
         if 'name_pattern' in constraints:
             constraints['id_specs'] = constraints.pop('name_pattern')
-        args = rest_utils.get_args_and_verify_arguments([
-            Argument('node_id', required=False),
-        ])
-        node_id = args.get('node_id')
+        node_id = _InstanceSearchQuery.parse_obj(request.args).node_id
         filters = {}
         if deployment_id:
             filters['deployment_id'] = deployment_id
         if node_id:
             filters['node_id'] = node_id
         return super().post(models.NodeInstance, None, _include, filters,
-                            pagination, sort, all_tenants, search, None,
+                            pagination, sort, search, None,
                             constraints=constraints,
                             resource_field='id', **kwargs)
 
@@ -341,8 +337,18 @@ class SecretsSearches(ResourceSearches):
              search=None, **kwargs):
         """List secrets using filter rules or DSL constraints"""
         return super().post(models.Secret, None, _include, {}, pagination,
-                            sort, False, search, None,
-                            resource_field='key', **kwargs)
+                            sort, search, None, resource_field='key', **kwargs)
+
+
+class _SearchParamQuery(pydantic.BaseModel):
+    search: Optional[str] = pydantic.Field(
+        alias='_search',
+        default=None,
+    )
+    get_all_results: Optional[bool] = pydantic.Field(
+        alias='_get_all_results',
+        default=False,
+    )
 
 
 class CapabilitiesSearches(ResourceSearches):
@@ -401,15 +407,10 @@ class CapabilitiesSearches(ResourceSearches):
         if 'name_pattern' in constraints:
             constraints['capability_key_specs'] = \
                 constraints.pop('name_pattern')
-        args = rest_utils.get_args_and_verify_arguments([
-            Argument('_search', required=False),
-        ])
-        search = args._search
 
-        get_all_results = rest_utils.verify_and_convert_bool(
-            '_get_all_results',
-            request.args.get('_get_all_results', False)
-        )
+        args = _SearchParamQuery.parse_obj(request.args)
+        search = args.search
+        get_all_results = args.get_all_results
 
         deployments = get_storage_manager().list(
             models.Deployment,
@@ -506,9 +507,10 @@ class ScalingGroupsSearches(ResourceSearches):
         if 'name_pattern' in constraints:
             constraints['scaling_group_name_specs'] = \
                 constraints.pop('name_pattern')
-        search_value = rest_utils.get_args_and_verify_arguments([
-            Argument('_search', required=False),
-        ]).get('_search')
+
+        args = _SearchParamQuery.parse_obj(request.args)
+        search_value = args.search
+        get_all_results = args.get_all_results
 
         if blueprint_id:
             sm = get_storage_manager()
@@ -517,11 +519,6 @@ class ScalingGroupsSearches(ResourceSearches):
             return self.build_response(blueprint.plan['scaling_groups'],
                                        search_value,
                                        constraints)
-
-        get_all_results = rest_utils.verify_and_convert_bool(
-            '_get_all_results',
-            request.args.get('_get_all_results', False)
-        )
 
         deployments = get_storage_manager().list(
             models.Deployment,
@@ -561,14 +558,15 @@ class ScalingGroupsSearches(ResourceSearches):
         )
 
 
+class _ConstraintsArgs(pydantic.BaseModel):
+    deployment_id: Optional[str] = None
+    blueprint_id: Optional[str] = None
+    constraints: Optional[dict] = None
+
+
 def retrieve_constraints(id_required=False):
-    args = rest_utils.get_args_and_verify_arguments([
-        Argument('deployment_id', required=False),
-        Argument('blueprint_id', required=False),
-    ])
-    request_dict = rest_utils.get_json_and_verify_params(
-        {'constraints': {'optional': True, 'type': dict}})
-    constraints = request_dict.get('constraints', {})
+    args = _ConstraintsArgs.parse_obj(request.json).dict()
+    constraints = args.constraints or {}
     if args.get('deployment_id') and 'deployment_id' in constraints:
         raise manager_exceptions.BadParametersError(
             "You should provide either a valid 'deployment_id' parameter "

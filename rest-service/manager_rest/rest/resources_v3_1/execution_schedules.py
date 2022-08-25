@@ -1,13 +1,13 @@
+import pydantic
+from typing import Any, Dict, List, Optional
+
+
 from flask import request
-from flask_restful.reqparse import Argument
 
 from manager_rest import manager_exceptions
 from manager_rest.rest import rest_decorators, swagger
 from manager_rest.rest.rest_utils import (
-    get_json_and_verify_params,
-    verify_and_convert_bool,
     validate_inputs,
-    get_args_and_verify_arguments,
     parse_datetime_multiple_formats,
     parse_datetime_string,
     compute_rule_from_scheduling_params,
@@ -47,6 +47,47 @@ class ExecutionSchedules(SecuredResource):
         )
 
 
+class _ExecutionArguments(pydantic.BaseModel):
+    allow_custom_parameters: Optional[bool] = False
+    force: Optional[bool] = False
+    dry_run: Optional[bool] = False
+    wait_after_fail: Optional[int] = 600
+
+
+class _CreateScheduleArgs(pydantic.BaseModel):
+    workflow_id: str
+    since: str
+    until: Optional[str] = None
+    created_at: Optional[str] = None
+    created_by: Optional[str] = None
+    parameters: Optional[Dict[str, Any]] = None
+    slip: Optional[int] = 0
+    stop_on_fail: Optional[bool] = False
+    enabled: Optional[bool] = True
+    rrule: Optional[str] = None
+    recurrence: Optional[str] = None
+    weekdays: Optional[List[str]] = None
+    count: Optional[int] = None
+    execution_arguments: Optional[_ExecutionArguments] = None
+
+
+class _HasDeploymentID(pydantic.BaseModel):
+    deployment_id: str
+
+
+class _UpdateScheduleArgs(pydantic.BaseModel):
+    enabled: Optional[bool] = None
+    stop_on_fail: Optional[bool] = None
+    slip: Optional[int] = None
+    since: Optional[str] = None
+    until: Optional[str] = None
+    workflow_id: Optional[str] = None
+    rrule: Optional[str] = None
+    recurrence: Optional[str] = None
+    weekdays: Optional[List[str]] = None
+    count: Optional[int] = None
+
+
 class ExecutionSchedulesId(SecuredResource):
     @rest_decorators.marshal_with(models.ExecutionSchedule)
     @authorize('execution_schedule_create')
@@ -54,44 +95,45 @@ class ExecutionSchedulesId(SecuredResource):
         """Schedule a workflow execution"""
 
         validate_inputs({'schedule_id': schedule_id})
-        deployment_id = get_args_and_verify_arguments([
-            Argument('deployment_id', type=str, required=True),
-        ])['deployment_id']
-        request_dict = get_json_and_verify_params({'workflow_id',
-                                                   'since'})
-
+        deployment_id = _HasDeploymentID.parse_obj(request.args).deployment_id
+        args = _CreateScheduleArgs.parse_obj(request.json)
         created_at = creator = None
-        if request_dict.get('created_at'):
+        if args.created_at:
             check_user_action_allowed('set_timestamp', None, True)
-            created_at = parse_datetime_string(request_dict['created_at'])
+            created_at = parse_datetime_string(args.created_at)
 
-        if request_dict.get('created_by'):
+        if args.created_by:
             check_user_action_allowed('set_owner', None, True)
-            creator = valid_user(request_dict['created_by'])
+            creator = valid_user(args.created_by)
 
-        workflow_id = request_dict['workflow_id']
-        execution_arguments = self._get_execution_arguments(request_dict)
-        parameters = request_dict.get('parameters', None)
+        if args.execution_arguments:
+            execution_arguments = args.execution_arguments.dict()
+        else:
+            execution_arguments = {}
+
+        # rename dry_run -> is_dry_run
+        execution_arguments['is_dry_run'] = \
+            execution_arguments.pop('dry_run', False)
+
+        parameters = args.parameters
         if parameters is not None and not isinstance(parameters, dict):
             raise manager_exceptions.BadParametersError(
                 "parameters: expected a dict, but got: {0}".format(parameters))
 
         rm = get_resource_manager()
         deployment = rm.sm.get(models.Deployment, deployment_id)
-        rm._verify_workflow_in_deployment(workflow_id,
+        rm._verify_workflow_in_deployment(args.workflow_id,
                                           deployment,
                                           deployment_id)
 
-        since = request_dict['since']
-        until = request_dict.get('until')
+        since = args.since
+        until = args.until
         if since:
             since = parse_datetime_multiple_formats(since)
         if until:
             until = parse_datetime_multiple_formats(until)
-        rule = compute_rule_from_scheduling_params(request_dict)
-        slip = request_dict.get('slip', 0)
-        stop_on_fail = verify_and_convert_bool(
-            'stop_on_fail',  request_dict.get('stop_on_fail', False))
+        rule = compute_rule_from_scheduling_params(args)
+        slip = args.slip
         now = get_formatted_timestamp()
         schedule = models.ExecutionSchedule(
             id=schedule_id,
@@ -101,11 +143,11 @@ class ExecutionSchedulesId(SecuredResource):
             until=until,
             rule=rule,
             slip=slip,
-            workflow_id=workflow_id,
+            workflow_id=args.workflow_id,
             parameters=parameters,
             execution_arguments=execution_arguments,
-            stop_on_fail=stop_on_fail,
-            enabled=request_dict.get('enabled', True),
+            stop_on_fail=args.stop_on_fail,
+            enabled=args.enabled,
         )
         if creator:
             schedule.creator = creator
@@ -116,38 +158,29 @@ class ExecutionSchedulesId(SecuredResource):
     @authorize('execution_schedule_create')
     def patch(self, schedule_id, **kwargs):
         """Updates scheduling parameters of an existing execution schedule"""
-
-        deployment_id = get_args_and_verify_arguments([
-            Argument('deployment_id', type=str, required=True)
-        ])['deployment_id']
+        deployment_id = _HasDeploymentID.parse_obj(request.args).deployment_id
         sm = get_storage_manager()
         schedule = sm.get(
             models.ExecutionSchedule,
             None,
             filters={'id': schedule_id,  'deployment_id': deployment_id}
         )
-        slip = request.json.get('slip')
-        stop_on_fail = request.json.get('stop_on_fail')
-        enabled = request.json.get('enabled')
+        args = _UpdateScheduleArgs.parse_obj(request.json)
 
-        since = request.json.get('since')
-        until = request.json.get('until')
-        workflow_id = request.json.get('workflow_id')
-        if since:
-            schedule.since = parse_datetime_multiple_formats(since)
-        if until:
-            schedule.until = parse_datetime_multiple_formats(until)
-        if workflow_id:
-            schedule.workflow_id = workflow_id
-        if slip is not None:
-            schedule.slip = slip
-        if stop_on_fail is not None:
-            schedule.stop_on_fail = verify_and_convert_bool('stop_on_fail',
-                                                            stop_on_fail)
-        if enabled is not None:
-            schedule.enabled = verify_and_convert_bool('enabled', enabled)
+        if args.since:
+            schedule.since = parse_datetime_multiple_formats(args.since)
+        if args.until:
+            schedule.until = parse_datetime_multiple_formats(args.until)
+        if args.workflow_id:
+            schedule.workflow_id = args.workflow_id
+        if args.slip is not None:
+            schedule.slip = args.slip
+        if args.stop_on_fail is not None:
+            schedule.stop_on_fail = args.stop_on_fail
+        if args.enabled is not None:
+            schedule.enabled = args.enabled
         schedule.rule = compute_rule_from_scheduling_params(
-            request.json, existing_rule=schedule.rule)
+            args, existing_rule=schedule.rule)
         schedule.next_occurrence = schedule.compute_next_occurrence()
         sm.update(schedule)
         return schedule, 201
@@ -163,9 +196,7 @@ class ExecutionSchedulesId(SecuredResource):
         """
         Get execution schedule by id
         """
-        deployment_id = get_args_and_verify_arguments([
-            Argument('deployment_id', type=str, required=True)
-        ])['deployment_id']
+        deployment_id = _HasDeploymentID.parse_obj(request.args).deployment_id
         return get_storage_manager().get(
             models.ExecutionSchedule,
             None,
@@ -175,35 +206,11 @@ class ExecutionSchedulesId(SecuredResource):
 
     @authorize('execution_schedule_create')
     def delete(self, schedule_id):
-        deployment_id = get_args_and_verify_arguments([
-            Argument('deployment_id', type=str, required=True)
-        ])['deployment_id']
+        deployment_id = _HasDeploymentID.parse_obj(request.args).deployment_id
         sm = get_storage_manager()
         schedule = sm.get(
             models.ExecutionSchedule,
             None,
             filters={'id': schedule_id, 'deployment_id': deployment_id})
         sm.delete(schedule)
-        return None, 204
-
-    @staticmethod
-    def _get_execution_arguments(request_dict):
-        arguments = request_dict.get('execution_arguments')
-        if not arguments:
-            return {}
-        if not isinstance(arguments, dict):
-            raise manager_exceptions.BadParametersError(
-                "execution_arguments: expected a dict, but got: {}"
-                .format(arguments))
-        return {
-            'allow_custom_parameters': verify_and_convert_bool(
-                'allow_custom_parameters',
-                arguments.get('allow_custom_parameters', False)),
-            'force': verify_and_convert_bool(
-                'force',
-                arguments.get('force', False)),
-            'is_dry_run': verify_and_convert_bool(
-                'dry_run',
-                arguments.get('dry_run', False)),
-            'wait_after_fail': arguments.get('wait_after_fail', 600)
-        }
+        return "", 204
