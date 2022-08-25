@@ -25,14 +25,13 @@ URL:            https://github.com/cloudify-cosmo/cloudify-manager
 Vendor:         Cloudify Platform Ltd.
 Packager:       Cloudify Platform Ltd.
 
-BuildRequires:  python3 >= 3.10
 BuildRequires:  openssl-devel, openldap-devel, libffi-devel, postgresql-devel
 BuildRequires:  git, sudo
 BuildRequires: dbus-devel >= %{dbus_version}
 BuildRequires: dbus-glib-devel >= %{dbus_glib_version}
 BuildRequires: python3-devel
 
-Requires:       python3 >= 3.10, postgresql-libs, sudo, dbus >= 1.6, nginx
+Requires:      postgresql-libs, sudo, dbus >= 1.6, nginx
 Requires(pre):  shadow-utils
 
 %description
@@ -41,7 +40,7 @@ Cloudify's REST Service.
 
 %build
 
-python3 -m venv %_manager_env
+python3.10 -m venv %_manager_env
 
 %_manager_env/bin/pip install --upgrade pip setuptools
 %_manager_env/bin/pip install 'gunicorn>20,<21'

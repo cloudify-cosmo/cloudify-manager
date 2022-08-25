@@ -21,10 +21,10 @@ URL:            https://github.com/cloudify-cosmo/cloudify-manager
 Vendor:         Cloudify Platform Ltd.
 Packager:       Cloudify Platform Ltd.
 
-BuildRequires:  python3 >= 3.10, openssl-devel, git
+BuildRequires:  openssl-devel, git
 BuildRequires:  postgresql-devel
-BuildRequires: python3-devel
-Requires:       python3 >= 3.10, postgresql-libs
+BuildRequires:  python3-devel
+Requires:       postgresql-libs
 Requires(pre):  shadow-utils
 
 %description
@@ -32,8 +32,8 @@ Cloudify's Management worker
 
 
 %build
-python3 -m venv /opt/mgmtworker/env
-%{PIP_INSTALL} --upgrade pip"<20.0" "setuptools<58.5"
+python3.10 -m venv /opt/mgmtworker/env
+%{PIP_INSTALL} --upgrade pip "setuptools<58.5"
 %{PIP_INSTALL} -r "${RPM_SOURCE_DIR}/packaging/mgmtworker/requirements.txt"
 %{PIP_INSTALL} --upgrade "${RPM_SOURCE_DIR}/mgmtworker"
 %{PIP_INSTALL} --upgrade "${RPM_SOURCE_DIR}/workflows"

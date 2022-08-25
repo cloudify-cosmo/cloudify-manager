@@ -443,7 +443,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
             'default_tenant',
             deployment.id,
             'mock-plugin', '0.1',
-            'lib/python3.6/site-packages/',
+            'lib/python3.10/site-packages/',
             'mock_plugin/ops.py'
         )
 
