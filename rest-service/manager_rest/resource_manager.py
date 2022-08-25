@@ -1692,7 +1692,7 @@ class ResourceManager(object):
                 f'{bad_overrides}'
             )
         for attr, value in kwargs.items():
-            if attr is None:
+            if value is None:
                 continue
             setattr(new_deployment, attr, value)
 
