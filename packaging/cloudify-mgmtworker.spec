@@ -21,10 +21,10 @@ URL:            https://github.com/cloudify-cosmo/cloudify-manager
 Vendor:         Cloudify Platform Ltd.
 Packager:       Cloudify Platform Ltd.
 
-BuildRequires:  python3 >= 3.6, openssl-devel, git
+BuildRequires:  python3 >= 3.10, openssl-devel, git
 BuildRequires:  postgresql-devel
 BuildRequires: python3-devel
-Requires:       python3 >= 3.6, postgresql-libs
+Requires:       python3 >= 3.10, postgresql-libs
 Requires(pre):  shadow-utils
 
 %description
