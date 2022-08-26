@@ -1654,8 +1654,7 @@ class ResourceManager(object):
                           runtime_only_evaluation=False,
                           display_name=None,
                           created_at=None,
-                          created_by=None,
-                          workflows=None):
+                          **kwargs):
         verify_blueprint_uploaded_state(blueprint)
         visibility = self.get_resource_visibility(models.Deployment,
                                                   deployment_id,
@@ -1676,13 +1675,26 @@ class ResourceManager(object):
             updated_at=now,
             deployment_status=DeploymentState.REQUIRE_ATTENTION,
         )
-        if created_by:
-            new_deployment.creator = created_by
-        if workflows:
-            new_deployment.workflows = workflows
         new_deployment.runtime_only_evaluation = runtime_only_evaluation
         new_deployment.blueprint = blueprint
         new_deployment.visibility = visibility
+
+        allowed_overrides = {
+            'created_by', 'workflows', 'policy_types', 'policy_triggers',
+            'groups', 'scaling_groups', 'inputs', 'outputs', 'resource_tags',
+            'capabilities', 'description', 'deployment_status',
+            'installation_status',
+        }
+        bad_overrides = kwargs.keys() - allowed_overrides
+        if bad_overrides:
+            raise ValueError(
+                'Unknown keys for overriding deployment creation: '
+                f'{bad_overrides}'
+            )
+        for attr, value in kwargs.items():
+            if value is None:
+                continue
+            setattr(new_deployment, attr, value)
 
         if site:
             validate_deployment_and_site_visibility(new_deployment, site)

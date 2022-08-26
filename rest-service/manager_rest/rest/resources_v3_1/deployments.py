@@ -231,6 +231,13 @@ class DeploymentsId(resources_v1.DeploymentsId):
         site_name = _get_site_name(request_dict)
         site = sm.get(models.Site, site_name) if site_name else None
 
+        skip_create_dep_env = bool(request_dict.get('workdir_zip'))
+        if not skip_create_dep_env:
+            # create_dep_env will use and populate the inputs if it is running
+            # so don't provide them beforehand or we will try (and fail) to
+            # set them twice
+            request_dict.pop('inputs', None)
+
         rm.cleanup_failed_deployment(deployment_id)
         with sm.transaction():
             if not skip_plugins_validation:
@@ -246,8 +253,19 @@ class DeploymentsId(resources_v1.DeploymentsId):
                 created_at=created_at,
                 created_by=owner,
                 workflows=request_dict.get('workflows'),
+                groups=request_dict.get('groups'),
+                scaling_groups=request_dict.get('scaling_groups'),
+                policy_triggers=request_dict.get('policy_triggers'),
+                policy_types=request_dict.get('policy_types'),
+                inputs=request_dict.get('inputs'),
+                outputs=request_dict.get('outputs'),
+                resource_tags=request_dict.get('resource_tags'),
+                capabilities=request_dict.get('capabilities'),
+                description=request_dict.get('description'),
+                deployment_status=request_dict.get('deployment_status'),
+                installation_status=request_dict.get('installation_status'),
             )
-            if request_dict.get('workdir_zip'):
+            if skip_create_dep_env:
                 tmpdir_path = mkdtemp()
                 try:
                     workdir_path = _get_workdir_path(deployment_id,
