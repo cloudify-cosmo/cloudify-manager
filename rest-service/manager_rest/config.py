@@ -23,8 +23,16 @@ from manager_rest.manager_exceptions import (
 )
 
 CONFIG_TYPES = [
-    ('MANAGER_REST_CONFIG_PATH', ''),
-    ('MANAGER_REST_SECURITY_CONFIG_PATH', 'security'),
+    (
+        'MANAGER_REST_CONFIG_PATH',
+        '',
+        '/opt/manager/cloudify-rest.conf',
+    ),
+    (
+        'MANAGER_REST_SECURITY_CONFIG_PATH',
+        'security',
+        '/opt/manager/rest-security.conf',
+    ),
 ]
 SKIP_RESET_WRITE = ['authorization']
 NOT_SET = object()
@@ -171,9 +179,17 @@ class Config(object):
     _logger = None
 
     def load_configuration(self, from_db=True):
-        for env_var_name, namespace in CONFIG_TYPES:
-            if env_var_name in os.environ:
-                self.load_from_file(os.environ[env_var_name], namespace)
+        for env_var_name, namespace, default_file in CONFIG_TYPES:
+            uses_default = False
+            filename = os.environ.get(env_var_name)
+            if not filename:
+                filename = default_file
+                uses_default = True
+            try:
+                self.load_from_file(filename, namespace)
+            except IOError:
+                if not uses_default:
+                    raise
         if from_db:
             self.load_from_db()
 
@@ -485,13 +501,13 @@ def reset(configuration=None, write=False):
     config = vars(instance)
     for key in config:
         conf_type = ''
-        for env_var_name, namespace in CONFIG_TYPES:
+        for _env_var_name, namespace, _default_file in CONFIG_TYPES:
             if key.startswith(namespace) and len(namespace) >= len(conf_type):
                 conf_type = namespace
         file_key = key[len(conf_type) + 1:] if conf_type else key
         configs.setdefault(conf_type, {})[file_key] = config[key]
 
-    for config_file_env_var, namespace in CONFIG_TYPES:
+    for config_file_env_var, namespace, _default_file in CONFIG_TYPES:
         if namespace in SKIP_RESET_WRITE:
             continue
         with open(os.environ[config_file_env_var], 'w') as f:
