@@ -131,12 +131,19 @@ def op(ctx, return_value=None, fail=False):
     else:
         raise NonRecoverableError(f'unknown ctx.type: {ctx.type}')
 
-    if 'invocations' not in instance.runtime_properties:
-        instance.runtime_properties['invocations'] = []
     name = prefix + ctx.operation.name.split('.')[-1]
-    invocations = instance.runtime_properties['invocations']
-    invocations.append(name)
-    instance.runtime_properties['invocations'] = invocations
+
+    def _update_handler(_, latest_props):
+        """To update invocations, append the name to the list.
+
+        If there's a conflict, we'll just retry adding the same name.
+        """
+        if 'invocations' not in latest_props:
+            latest_props['invocations'] = []
+        latest_props['invocations'] = latest_props['invocations'] + [name]
+        return latest_props
+    instance.update(_update_handler)
+
     if fail:
         raise NonRecoverableError()
     return return_value
