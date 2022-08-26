@@ -231,8 +231,8 @@ class DeploymentsId(resources_v1.DeploymentsId):
         site_name = _get_site_name(request_dict)
         site = sm.get(models.Site, site_name) if site_name else None
 
-        run_create_dep_env = bool(request_dict.get('workdir_zip'))
-        if not run_create_dep_env:
+        skip_create_dep_env = bool(request_dict.get('workdir_zip'))
+        if not skip_create_dep_env:
             # create_dep_env will use and populate the inputs if it is running
             # so don't provide them beforehand or we will try (and fail) to
             # set them twice
@@ -265,7 +265,7 @@ class DeploymentsId(resources_v1.DeploymentsId):
                 deployment_status=request_dict.get('deployment_status'),
                 installation_status=request_dict.get('installation_status'),
             )
-            if run_create_dep_env:
+            if skip_create_dep_env:
                 tmpdir_path = mkdtemp()
                 try:
                     workdir_path = _get_workdir_path(deployment_id,
