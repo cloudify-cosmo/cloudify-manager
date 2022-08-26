@@ -68,9 +68,6 @@ class CloudifyAPI(FastAPI):
         config.instance.logger = self.logger
 
     def configure(self):
-        if config.instance.postgresql_host is None:
-            config.instance.load_from_file(
-                self.settings.cloudify_rest_config_file)
         config.instance.load_configuration()
         self.logger = setup_logger(
             config.instance.api_service_log_path,
