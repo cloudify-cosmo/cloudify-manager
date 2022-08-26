@@ -16,4 +16,7 @@ class CloudifyManagerServiceTest(unittest.TestCase):
             # TypeError when checking if postgresql_host address is IPv6
             s = CloudifyAPI()
             self.assertRaises(TypeError, s.configure)
-            m.assert_called_with('/opt/manager/cloudify-rest.conf')
+        m.assert_has_calls([
+            mock.call('/opt/manager/cloudify-rest.conf', ''),
+            mock.call('/opt/manager/rest-security.conf', 'security'),
+        ])
