@@ -8,7 +8,6 @@ from cloudify_api.server import CloudifyAPI
 class CloudifyManagerServiceTest(unittest.TestCase):
     def test_server_init(self):
         app = CloudifyAPI()
-        assert app.settings.cloudify_rest_config_file
         assert app.logger
 
     def test_server_load_config_raises(self):
