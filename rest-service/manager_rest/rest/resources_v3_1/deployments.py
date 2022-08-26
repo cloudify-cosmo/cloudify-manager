@@ -233,7 +233,9 @@ class DeploymentsId(resources_v1.DeploymentsId):
 
         run_create_dep_env = bool(request_dict.get('workdir_zip'))
         if not run_create_dep_env:
-            # Don't pre-populate inputs when creating deployments normally
+            # create_dep_env will use and populate the inputs if it is running
+            # so don't provide them beforehand or we will try (and fail) to
+            # set them twice
             request_dict.pop('inputs', None)
 
         rm.cleanup_failed_deployment(deployment_id)
