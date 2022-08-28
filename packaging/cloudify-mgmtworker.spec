@@ -39,7 +39,7 @@ python3.10 -m venv /opt/mgmtworker/env
 %{PIP_INSTALL} --upgrade "${RPM_SOURCE_DIR}/workflows"
 %{PIP_INSTALL} --upgrade "${RPM_SOURCE_DIR}/cloudify_types"
 
-%{PIP_INSTALL} --upgrade kerberos==1.3.0
+%{PIP_INSTALL} --upgrade kerberos==1.3.1
 
 
 %install
