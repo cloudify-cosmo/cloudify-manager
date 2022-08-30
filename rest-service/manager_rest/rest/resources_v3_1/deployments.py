@@ -335,9 +335,17 @@ class DeploymentsId(resources_v1.DeploymentsId):
                 'description', 'workflows', 'inputs', 'policy_types',
                 'policy_triggers', 'groups', 'scaling_groups', 'outputs',
                 'capabilities', 'display_name', 'runtime_only_evaluation',
-                'resource_tags',
+                'resource_tags', 'create_execution', 'latest_execution',
             }
             allow_change = {'display_name'}
+            if 'create_execution' in request_dict:
+                deployment._create_execution_fk = sm.get(
+                    models.Execution, request_dict.pop('create_execution')
+                )._storage_id
+            if 'latest_execution' in request_dict:
+                deployment._latest_execution_fk = sm.get(
+                    models.Execution, request_dict.pop('latest_execution')
+                )._storage_id
             for attrib in allowed_attribs:
                 if attrib not in request_dict:
                     continue
