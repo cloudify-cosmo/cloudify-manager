@@ -559,7 +559,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
 
     def test_deployment_create_with_overrides(self):
         string_template = 'this_is_a_test_{}'
-        string_params = ['visibility', 'description', 'display_name']
+        string_params = ['description', 'display_name']
         dict_params = ['inputs', 'policy_triggers', 'policy_types', 'outputs',
                        'capabilities', 'resource_tags']
         overrides = {
@@ -577,6 +577,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             },
             "runtime_only_evaluation": False,
             "labels": [],
+            'visibility': 'tenant',
             'scaling_groups': {
                 'group1': {'members': [], 'properties': {}},
             },
