@@ -30,6 +30,6 @@ setup(
         'psycopg2==2.9.3',
         'cryptography==3.3.2',
         'python-dateutil==2.8.2',
-        'pytz==2021.3',
+        'pytz',
     ]
 )
