@@ -1,19 +1,3 @@
-########
-# Copyright (c) 2017 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#        http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#    * See the License for the specific language governing permissions and
-#    * limitations under the License.
-
-
 import uuid
 import pytest
 
@@ -25,10 +9,12 @@ pytestmark = pytest.mark.group_deployments
 
 @pytest.mark.usefixtures('cloudmock_plugin')
 class TestDeploymentCreation(AgentlessTestCase):
-
-    """Create multiple deployments."""
-
-    DEPLOYMENTS_COUNT = 10
+    def _upload_blueprint(self):
+        dsl_path = utils.get_resource('dsl/basic.yaml')
+        blueprint_id = 'd{0}'.format(uuid.uuid4())
+        self.client.blueprints.upload(dsl_path, blueprint_id)
+        utils.wait_for_blueprint_upload(blueprint_id, self.client)
+        return blueprint_id
 
     def test_deployment_with_the_same_id(self):
         """Create multiple deployments with the same ID.
@@ -38,12 +24,10 @@ class TestDeploymentCreation(AgentlessTestCase):
         a deployment of the same ID just after it's been deleted.
 
         """
-        dsl_path = utils.get_resource('dsl/basic.yaml')
-        blueprint_id = deployment_id = 'd{0}'.format(uuid.uuid4())
-        self.client.blueprints.upload(dsl_path, blueprint_id)
-        utils.wait_for_blueprint_upload(blueprint_id, self.client)
+        deployment_id = blueprint_id = self._upload_blueprint()
 
-        for _ in range(self.DEPLOYMENTS_COUNT):
+        deployments_count = 10
+        for _ in range(deployments_count):
             self.client.deployments.create(
                 blueprint_id, deployment_id, skip_plugins_validation=True)
             utils.wait_for_deployment_creation_to_complete(
@@ -55,3 +39,42 @@ class TestDeploymentCreation(AgentlessTestCase):
             utils.wait_for_deployment_deletion_to_complete(
                 deployment_id, self.client
             )
+
+    def test_deployment_create_with_overrides(self):
+        blueprint_id = self._upload_blueprint()
+
+        string_template = 'this_is_a_test_{}'
+        string_params = ['visibility', 'description', 'display_name']
+        dict_params = ['inputs', 'policy_triggers', 'policy_types', 'outputs',
+                       'capabilities', 'scaling_groups', 'resource_tags']
+        kwargs = {
+            "created_at": "2022-08-31T09:47:13.712Z",
+            "created_by": "admin",
+            "installation_status": "active",
+            "deployment_status": "good",
+            "workflows": [{"name": "install", "plugin": "abc",
+                           "operation": "something", "parameters": {},
+                           "is_cascading": False, "is_available": True,
+                           "availability_rules": None}],
+            "runtime_only_evaluation": False,
+            "labels": [],
+        }
+        for string_param in string_params:
+            kwargs[string_param] = string_template.format(string_param)
+        for dict_param in dict_params:
+            kwargs[dict_param] = {
+                string_param: string_template.format(string_param)}
+
+        self.client.deployments.create(
+            blueprint_id,
+            deployment_id=blueprint_id,
+            skip_plugins_validation=True,
+            # Empty workdir zip
+            _workdir_zip='UEsFBgAAAAAAAAAAAAAAAAAAAAAAAA==',
+            **kwargs
+        )
+
+        dep = self.client.deployments.get(blueprint_id)
+
+        for param in kwargs:
+            assert dep[param] == kwargs[param]
