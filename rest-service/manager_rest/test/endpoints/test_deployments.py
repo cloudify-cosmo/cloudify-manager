@@ -606,7 +606,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             )
         dep = models.Deployment.query.filter_by(id='dep1').one()
         for param in overrides:
-            assert dep[param] == overrides[param]
+            assert getattr(dep, param) == overrides[param]
 
     def test_put(self):
         (blueprint_id,
