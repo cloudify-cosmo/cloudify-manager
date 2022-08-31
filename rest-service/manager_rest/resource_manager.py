@@ -1691,6 +1691,8 @@ class ResourceManager(object):
                 'Unknown keys for overriding deployment creation: '
                 f'{bad_overrides}'
             )
+        if 'created_by' in kwargs:
+            new_deployment.creator = kwargs.pop('created_by')
         for attr, value in kwargs.items():
             if value is None:
                 continue

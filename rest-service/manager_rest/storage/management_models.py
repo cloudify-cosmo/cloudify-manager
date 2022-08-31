@@ -311,9 +311,6 @@ class User(SQLModelBase, UserMixin):
     )
     tenants = association_proxy('tenant_associations', 'tenant')
 
-    def __init__(self, *args, **kwargs):
-        super(User, self).__init__(*args, **kwargs)
-
     def _get_identifier_dict(self):
         return OrderedDict({'username': self.username})
 
