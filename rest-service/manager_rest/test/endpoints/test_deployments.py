@@ -14,6 +14,7 @@
 #  * limitations under the License.
 
 import errno
+import mock
 import os
 import uuid
 from datetime import datetime
@@ -555,6 +556,49 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                                self.client.deployments.create,
                                'blueprint_id',
                                'illegal deployment id')
+
+    def test_deployment_create_with_overrides(self):
+        string_template = 'this_is_a_test_{}'
+        string_params = ['visibility', 'description', 'display_name']
+        dict_params = ['inputs', 'policy_triggers', 'policy_types', 'outputs',
+                       'capabilities', 'scaling_groups', 'resource_tags']
+        overrides = {
+            "created_at": "2022-08-31T09:47:13.712Z",
+            "created_by": "admin",
+            "installation_status": "active",
+            "deployment_status": "good",
+            "workflows": [{"name": "install", "plugin": "abc",
+                           "operation": "something", "parameters": {},
+                           "is_cascading": False, "is_available": True,
+                           "availability_rules": None}],
+            "runtime_only_evaluation": False,
+            "labels": [],
+        }
+        for string_param in string_params:
+            overrides[string_param] = string_template.format(string_param)
+        for dict_param in dict_params:
+            overrides[dict_param] = {
+                string_param: string_template.format(string_param)}
+
+        bp = models.Blueprint(
+            id='bp1',
+            creator=self.user,
+            tenant=self.tenant,
+            state='uploaded',
+            plan={},
+        )
+
+        with mock.patch('os.makedirs', return_value=self.tmpdir):
+            self.client.deployments.create(
+                bp.id,
+                deployment_id='dep1',
+                # Empty workdir zip
+                _workdir_zip='UEsFBgAAAAAAAAAAAAAAAAAAAAAAAA==',
+                **overrides
+            )
+        dep = models.Deployment.query.filter_by(id='dep1').one()
+        for param in overrides:
+            assert dep[param] == overrides[param]
 
     def test_put(self):
         (blueprint_id,
