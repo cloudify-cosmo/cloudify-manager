@@ -31,5 +31,6 @@ setup(
         'pytest-asyncio',
         'python-dateutil',
         'requests',
+        'retrying',
     ]
 )
