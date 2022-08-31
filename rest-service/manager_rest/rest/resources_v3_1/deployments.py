@@ -264,6 +264,7 @@ class DeploymentsId(resources_v1.DeploymentsId):
                 description=request_dict.get('description'),
                 deployment_status=request_dict.get('deployment_status'),
                 installation_status=request_dict.get('installation_status'),
+                display_name=request_dict.get('display_name'),
             )
             if skip_create_dep_env:
                 tmpdir_path = mkdtemp()
