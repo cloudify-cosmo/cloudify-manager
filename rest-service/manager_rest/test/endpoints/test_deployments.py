@@ -1570,11 +1570,10 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         self.assertEqual(dep2.display_name, display_name)
 
     def test_deployment_display_name_with_control_chars_fails(self):
-        self.assertRaisesRegex(
-            ValueError,
-            'contains illegal characters',
-            self.put_deployment,
-            display_name='ab\u0000cd')
+        with self.assertRaises(CloudifyClientError) as cm:
+            self.put_deployment(display_name='ab\u0000cd')
+        assert cm.exception.status_code == 400
+        assert 'characters' in str(cm.exception)
 
     def test_deployments_list_search_by_display_name(self):
         dep1_name = 'Dep$lo(y.m_e#nt 1'

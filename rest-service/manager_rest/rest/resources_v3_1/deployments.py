@@ -239,70 +239,75 @@ class DeploymentsId(resources_v1.DeploymentsId):
             request_dict.pop('inputs', None)
 
         rm.cleanup_failed_deployment(deployment_id)
-        with sm.transaction():
-            if not skip_plugins_validation:
-                rm.check_blueprint_plugins_installed(blueprint.plan)
-            deployment = rm.create_deployment(
-                blueprint,
-                deployment_id,
-                private_resource=args.private_resource,
-                visibility=visibility,
-                site=site,
-                runtime_only_evaluation=request_dict.get(
-                    'runtime_only_evaluation', False),
-                created_at=created_at,
-                created_by=owner,
-                workflows=request_dict.get('workflows'),
-                groups=request_dict.get('groups'),
-                scaling_groups=request_dict.get('scaling_groups'),
-                policy_triggers=request_dict.get('policy_triggers'),
-                policy_types=request_dict.get('policy_types'),
-                inputs=request_dict.get('inputs'),
-                outputs=request_dict.get('outputs'),
-                resource_tags=request_dict.get('resource_tags'),
-                capabilities=request_dict.get('capabilities'),
-                description=request_dict.get('description'),
-                deployment_status=request_dict.get('deployment_status'),
-                installation_status=request_dict.get('installation_status'),
-                display_name=request_dict.get('display_name'),
-            )
-            if skip_create_dep_env:
-                tmpdir_path = mkdtemp()
-                try:
-                    workdir_path = _get_workdir_path(deployment_id,
-                                                     deployment.tenant_name)
-                    os.makedirs(workdir_path)
-                    zip_path = os.path.join(tmpdir_path, 'dep.zip')
-                    with open(zip_path, 'wb') as zip_handle:
-                        zip_handle.write(
-                            b64decode(request_dict['workdir_zip'])
-                        )
-                    with zipfile.ZipFile(zip_path, 'r') as zipf:
-                        zipf.extractall(workdir_path)
-                except FileExistsError:
-                    raise DeploymentCreationError(
-                        'Error attempting to prepare deployment workdir. '
-                        'Workdir already exists.'
-                    )
-                finally:
-                    rmtree(tmpdir_path)
-                # We don't execute the create_dep_env when a workdir is
-                # provided- this is part of a restore or similar
-                return deployment, 201
-            create_execution = deployment.make_create_environment_execution(
-                inputs=inputs,
-                labels=labels,
-                display_name=request_dict.get('display_name'),
-            )
-            try:
-                messages = rm.prepare_executions(
-                    [create_execution],
-                    bypass_maintenance=bypass_maintenance,
-                    commit=False
+        try:
+            with sm.transaction():
+                if not skip_plugins_validation:
+                    rm.check_blueprint_plugins_installed(blueprint.plan)
+                deployment = rm.create_deployment(
+                    blueprint,
+                    deployment_id,
+                    private_resource=args.private_resource,
+                    visibility=visibility,
+                    site=site,
+                    runtime_only_evaluation=request_dict.get(
+                        'runtime_only_evaluation', False),
+                    created_at=created_at,
+                    created_by=owner,
+                    workflows=request_dict.get('workflows'),
+                    groups=request_dict.get('groups'),
+                    scaling_groups=request_dict.get('scaling_groups'),
+                    policy_triggers=request_dict.get('policy_triggers'),
+                    policy_types=request_dict.get('policy_types'),
+                    inputs=request_dict.get('inputs'),
+                    outputs=request_dict.get('outputs'),
+                    resource_tags=request_dict.get('resource_tags'),
+                    capabilities=request_dict.get('capabilities'),
+                    description=request_dict.get('description'),
+                    deployment_status=request_dict.get('deployment_status'),
+                    installation_status=request_dict.get(
+                        'installation_status'),
+                    display_name=request_dict.get('display_name'),
                 )
-            except manager_exceptions.ExistingRunningExecutionError:
-                rm.delete_deployment(deployment)
-                raise
+                if skip_create_dep_env:
+                    tmpdir_path = mkdtemp()
+                    try:
+                        workdir_path = _get_workdir_path(
+                            deployment_id, deployment.tenant_name)
+                        os.makedirs(workdir_path)
+                        zip_path = os.path.join(tmpdir_path, 'dep.zip')
+                        with open(zip_path, 'wb') as zip_handle:
+                            zip_handle.write(
+                                b64decode(request_dict['workdir_zip'])
+                            )
+                        with zipfile.ZipFile(zip_path, 'r') as zipf:
+                            zipf.extractall(workdir_path)
+                    except FileExistsError:
+                        raise DeploymentCreationError(
+                            'Error attempting to prepare deployment workdir. '
+                            'Workdir already exists.'
+                        )
+                    finally:
+                        rmtree(tmpdir_path)
+                    # We don't execute the create_dep_env when a workdir is
+                    # provided- this is part of a restore or similar
+                    return deployment, 201
+                create_execution = \
+                    deployment.make_create_environment_execution(
+                        inputs=inputs,
+                        labels=labels,
+                        display_name=request_dict.get('display_name'),
+                    )
+                try:
+                    messages = rm.prepare_executions(
+                        [create_execution],
+                        bypass_maintenance=bypass_maintenance,
+                        commit=False
+                    )
+                except manager_exceptions.ExistingRunningExecutionError:
+                    rm.delete_deployment(deployment)
+                    raise
+        except ValueError as e:
+            raise manager_exceptions.BadParametersError(e)
         workflow_executor.execute_workflow(messages)
         if not args.async_create:
             rest_utils.wait_for_execution(sm, deployment.create_execution.id)
