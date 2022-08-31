@@ -115,6 +115,8 @@ auth_permissions = {
     'secret_create': ['sys_admin', 'manager', 'user'],
     'maintenance_mode_set': ['sys_admin'],
     'manage_others_tokens': ['sys_admin'],
+    'set_timestamp': ['sys_admin'],
+    'set_owner': ['sys_admin'],
 }
 
 

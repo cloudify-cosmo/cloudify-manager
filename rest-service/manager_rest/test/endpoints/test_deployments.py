@@ -559,20 +559,28 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
 
     def test_deployment_create_with_overrides(self):
         string_template = 'this_is_a_test_{}'
-        string_params = ['visibility', 'description', 'display_name']
+        string_params = ['description', 'display_name']
         dict_params = ['inputs', 'policy_triggers', 'policy_types', 'outputs',
-                       'capabilities', 'scaling_groups', 'resource_tags']
+                       'capabilities', 'resource_tags']
         overrides = {
             "created_at": "2022-08-31T09:47:13.712Z",
             "created_by": "admin",
             "installation_status": "active",
             "deployment_status": "good",
-            "workflows": [{"name": "install", "plugin": "abc",
-                           "operation": "something", "parameters": {},
-                           "is_cascading": False, "is_available": True,
-                           "availability_rules": None}],
+            "workflows": {
+                'install': {
+                    "name": "install", "plugin": "abc",
+                    "operation": "something", "parameters": {},
+                    "is_cascading": False, "is_available": True,
+                    "availability_rules": None
+                },
+            },
             "runtime_only_evaluation": False,
             "labels": [],
+            'visibility': 'tenant',
+            'scaling_groups': {
+                'group1': {'members': [], 'properties': {}},
+            },
         }
         for string_param in string_params:
             overrides[string_param] = string_template.format(string_param)
@@ -598,7 +606,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             )
         dep = models.Deployment.query.filter_by(id='dep1').one()
         for param in overrides:
-            assert dep[param] == overrides[param]
+            assert getattr(dep, param) == overrides[param]
 
     def test_put(self):
         (blueprint_id,
@@ -1562,11 +1570,10 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         self.assertEqual(dep2.display_name, display_name)
 
     def test_deployment_display_name_with_control_chars_fails(self):
-        self.assertRaisesRegex(
-            ValueError,
-            'contains illegal characters',
-            self.put_deployment,
-            display_name='ab\u0000cd')
+        with self.assertRaises(CloudifyClientError) as cm:
+            self.put_deployment(display_name='ab\u0000cd')
+        assert cm.exception.status_code == 400
+        assert 'characters' in str(cm.exception)
 
     def test_deployments_list_search_by_display_name(self):
         dep1_name = 'Dep$lo(y.m_e#nt 1'
