@@ -561,18 +561,25 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         string_template = 'this_is_a_test_{}'
         string_params = ['visibility', 'description', 'display_name']
         dict_params = ['inputs', 'policy_triggers', 'policy_types', 'outputs',
-                       'capabilities', 'scaling_groups', 'resource_tags']
+                       'capabilities', 'resource_tags']
         overrides = {
             "created_at": "2022-08-31T09:47:13.712Z",
             "created_by": "admin",
             "installation_status": "active",
             "deployment_status": "good",
-            "workflows": [{"name": "install", "plugin": "abc",
-                           "operation": "something", "parameters": {},
-                           "is_cascading": False, "is_available": True,
-                           "availability_rules": None}],
+            "workflows": {
+                'install': {
+                    "name": "install", "plugin": "abc",
+                    "operation": "something", "parameters": {},
+                    "is_cascading": False, "is_available": True,
+                    "availability_rules": None
+                },
+            },
             "runtime_only_evaluation": False,
             "labels": [],
+            'scaling_groups': {
+                'group1': {'members': [], 'properties': {}},
+            },
         }
         for string_param in string_params:
             overrides[string_param] = string_template.format(string_param)
