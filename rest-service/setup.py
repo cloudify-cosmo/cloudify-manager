@@ -39,6 +39,7 @@ install_requires = [
     'email-validator>1,<2',
     'retrying',
     'pydantic',
+    'distro',
 ]
 
 

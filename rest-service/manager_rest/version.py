@@ -14,7 +14,7 @@
 #  * limitations under the License.
 #
 
-import platform
+import distro
 import subprocess
 import pkg_resources
 from manager_rest import premium_enabled
@@ -29,7 +29,7 @@ def get_edition():
 
 
 def get_distribution():
-    distribution, _, release = platform.linux_distribution(
+    distribution, _, release = distro.linux_distribution(
         full_distribution_name=False)
     return distribution, release
 

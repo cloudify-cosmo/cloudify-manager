@@ -42,12 +42,12 @@ mkdir -p /tmp/BUILD_SOURCES
 cd /tmp/BUILD_SOURCES
 
 # -- build & install OpenSSL 1.1.1, required for Python 3.10
-wget https://ftp.openssl.org/source/openssl-1.1.1k.tar.gz
+curl https://ftp.openssl.org/source/openssl-1.1.1k.tar.gz -o openssl-1.1.1k.tar.gz
 tar -xzvf openssl-1.1.1k.tar.gz
 cd openssl-1.1.1k && ./config --prefix=/usr --openssldir=/etc/ssl --libdir=lib no-shared zlib-dynamic && make && make install
 # -- build & install Python 3.10
 cd ..
-wget https://www.python.org/ftp/python/3.10.6/Python-3.10.6.tgz
+curl https://www.python.org/ftp/python/3.10.6/Python-3.10.6.tgz -o Python-3.10.6.tgz
 tar xvf Python-3.10.6.tgz
 cd Python-3.10.6 && sed -i 's/PKG_CONFIG openssl /PKG_CONFIG openssl11 /g' configure && ./configure --prefix=/opt/python3.10 && sudo make altinstall
 
@@ -64,10 +64,6 @@ cd Python-3.10.6 && sed -i 's/PKG_CONFIG openssl /PKG_CONFIG openssl11 /g' confi
 
 
 %install
-
-# Copy our custom Python to build root
-#mkdir -p %{buildroot}/opt/python3.10
-#cp -R /opt/python3.10 %{buildroot}/opt/python3.10
 
 mkdir -p %{buildroot}/opt/mgmtworker
 mv /opt/mgmtworker/env %{buildroot}/opt/mgmtworker
