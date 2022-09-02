@@ -558,6 +558,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                                'illegal deployment id')
 
     def test_deployment_create_with_overrides(self):
+        self.sm.put(models.User(username='alice'))
         string_template = 'this_is_a_test_{}'
         string_params = ['description', 'display_name']
         dict_params = ['inputs', 'policy_triggers', 'policy_types', 'outputs',
