@@ -236,10 +236,9 @@ class DeploymentsId(resources_v1.DeploymentsId):
             # so don't provide them beforehand or we will try (and fail) to
             # set them twice
             request_dict.pop('inputs', None)
-            request_dict.pop('labels', None)
             # We need the processed version only if running create_dep_env
             labels = rest_utils.get_labels_list(
-                request_dict.get('labels', []))
+                request_dict.pop('labels', []))
         else:
             labels = None
 
