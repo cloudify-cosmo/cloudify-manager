@@ -611,7 +611,20 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             )
         dep = models.Deployment.query.filter_by(id='dep1').one()
         for param in overrides:
-            assert getattr(dep, param) == overrides[param]
+            if param == 'labels':
+                dep_labels = [
+                    {
+                        'key': label.key,
+                        'value': label.value,
+                        'created_at': label.created_at,
+                        'created_by': label.creator.username,
+                    }
+                    for label in dep.labels
+                ]
+                for expected_label in overrides['labels']:
+                    assert expected_label in dep_labels
+            else:
+                assert getattr(dep, param) == overrides[param]
 
     def test_put(self):
         (blueprint_id,
