@@ -211,7 +211,6 @@ class DeploymentsId(resources_v1.DeploymentsId):
             optional=True,
             valid_values=VisibilityState.STATES
         )
-        labels = rest_utils.get_labels_list(request_dict.get('labels', []))
         inputs = request_dict.get('inputs', {})
         skip_plugins_validation = self.get_skip_plugin_validation_flag(
             request_dict)
@@ -233,10 +232,15 @@ class DeploymentsId(resources_v1.DeploymentsId):
 
         skip_create_dep_env = bool(request_dict.get('workdir_zip'))
         if not skip_create_dep_env:
-            # create_dep_env will use and populate the inputs if it is running
+            # create_dep_env will use and populate some attrs if it is running
             # so don't provide them beforehand or we will try (and fail) to
             # set them twice
             request_dict.pop('inputs', None)
+            # We need the processed version only if running create_dep_env
+            labels = rest_utils.get_labels_list(
+                request_dict.pop('labels', []))
+        else:
+            labels = None
 
         rm.cleanup_failed_deployment(deployment_id)
         try:
@@ -267,6 +271,7 @@ class DeploymentsId(resources_v1.DeploymentsId):
                     installation_status=request_dict.get(
                         'installation_status'),
                     display_name=request_dict.get('display_name'),
+                    labels=request_dict.get('labels')
                 )
                 if skip_create_dep_env:
                     tmpdir_path = mkdtemp()
@@ -922,6 +927,9 @@ class DeploymentGroupsId(SecuredResource):
             except manager_exceptions.NotFoundError:
                 group = models.DeploymentGroup(id=group_id)
                 sm.put(group)
+                # flush so the newly-created group gets an ID, so that its
+                # ._storage_id can be used as a FK target
+                db.session.flush()
             if 'creation_counter' in request_dict:
                 group.creation_counter = request_dict['creation_counter']
             if creator:

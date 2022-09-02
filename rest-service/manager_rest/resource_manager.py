@@ -1683,7 +1683,7 @@ class ResourceManager(object):
             'created_by', 'workflows', 'policy_types', 'policy_triggers',
             'groups', 'scaling_groups', 'inputs', 'outputs', 'resource_tags',
             'capabilities', 'description', 'deployment_status',
-            'installation_status',
+            'installation_status', 'labels',
         }
         bad_overrides = kwargs.keys() - allowed_overrides
         if bad_overrides:
@@ -1691,7 +1691,8 @@ class ResourceManager(object):
                 'Unknown keys for overriding deployment creation: '
                 f'{bad_overrides}'
             )
-        if 'created_by' in kwargs:
+        labels = kwargs.pop('labels', None)
+        if kwargs.get('created_by'):
             new_deployment.creator = kwargs.pop('created_by')
         for attr, value in kwargs.items():
             if value is None:
@@ -1702,7 +1703,12 @@ class ResourceManager(object):
             validate_deployment_and_site_visibility(new_deployment, site)
             new_deployment.site = site
 
-        self.sm.put(new_deployment)
+        deployment = self.sm.put(new_deployment)
+
+        if labels:
+            db.session.flush()
+        self.insert_labels(models.DeploymentLabel, deployment, labels)
+
         return new_deployment
 
     @staticmethod
@@ -2738,22 +2744,47 @@ class ResourceManager(object):
             return
         lowercase_labels = {'csys-obj-type'}
         current_time = datetime.utcnow()
+        new_labels = []
         for key, value in labels_list:
             if key.lower() in lowercase_labels:
                 key = key.lower()
                 value = value.lower()
-            new_label = {'key': key,
-                         'value': value,
-                         'created_at': created_at or current_time,
-                         'creator': creator or current_user}
-            if labels_resource_model == models.DeploymentLabel:
-                new_label['deployment'] = resource
-            elif labels_resource_model == models.BlueprintLabel:
-                new_label['blueprint'] = resource
-            elif labels_resource_model == models.DeploymentGroupLabel:
-                new_label['deployment_group'] = resource
+            new_labels.append({'key': key,
+                               'value': value,
+                               'created_at': created_at or current_time,
+                               'creator': creator or current_user})
 
-            self.sm.put(labels_resource_model(**new_label))
+        self.insert_labels(labels_resource_model, resource, new_labels)
+
+    def insert_labels(self,
+                      labels_resource_model,
+                      resource,
+                      labels):
+        if not labels:
+            return
+
+        def lookup_user(username, cache, sm):
+            if username not in cache:
+                cache[username] = sm.get(
+                    models.User, None,
+                    filters={'username': username}).id
+            return cache[username]
+
+        user_cache = {current_user.username: current_user.id}
+
+        for label in labels:
+            label['_labeled_model_fk'] = resource._storage_id
+            if label.get('created_by'):
+                creator_id = lookup_user(label.pop('created_by'),
+                                         user_cache, self.sm)
+            else:
+                creator_id = label.pop('creator').id
+            label['_creator_id'] = creator_id
+
+        db.session.execute(
+            labels_resource_model.__table__.insert(),
+            labels,
+        )
 
     def create_deployment_schedules(self, deployment, plan):
         plan_deployment_settings = plan.get('deployment_settings')

@@ -558,6 +558,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                                'illegal deployment id')
 
     def test_deployment_create_with_overrides(self):
+        self.sm.put(models.User(username='alice'))
         string_template = 'this_is_a_test_{}'
         string_params = ['description', 'display_name']
         dict_params = ['inputs', 'policy_triggers', 'policy_types', 'outputs',
@@ -576,11 +577,16 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                 },
             },
             "runtime_only_evaluation": False,
-            "labels": [],
             'visibility': 'tenant',
             'scaling_groups': {
                 'group1': {'members': [], 'properties': {}},
             },
+            'labels': [{
+                'created_by': 'alice',
+                'created_at': '2022-09-01T21:42:24.121Z',
+                'key': 'something',
+                'value': 'fast',
+            }],
         }
         for string_param in string_params:
             overrides[string_param] = string_template.format(string_param)
@@ -606,7 +612,20 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             )
         dep = models.Deployment.query.filter_by(id='dep1').one()
         for param in overrides:
-            assert getattr(dep, param) == overrides[param]
+            if param == 'labels':
+                dep_labels = [
+                    {
+                        'key': label.key,
+                        'value': label.value,
+                        'created_at': label.created_at,
+                        'created_by': label.creator.username,
+                    }
+                    for label in dep.labels
+                ]
+                for expected_label in overrides['labels']:
+                    assert expected_label in dep_labels
+            else:
+                assert getattr(dep, param) == overrides[param]
 
     def test_put(self):
         (blueprint_id,
