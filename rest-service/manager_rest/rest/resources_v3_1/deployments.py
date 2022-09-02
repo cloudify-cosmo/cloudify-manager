@@ -927,6 +927,9 @@ class DeploymentGroupsId(SecuredResource):
             except manager_exceptions.NotFoundError:
                 group = models.DeploymentGroup(id=group_id)
                 sm.put(group)
+                # flush so the newly-created group gets an ID, so that its
+                # ._storage_id can be used as a FK target
+                db.session.flush()
             if 'creation_counter' in request_dict:
                 group.creation_counter = request_dict['creation_counter']
             if creator:
