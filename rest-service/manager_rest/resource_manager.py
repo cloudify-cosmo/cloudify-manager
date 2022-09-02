@@ -2763,12 +2763,20 @@ class ResourceManager(object):
         if not labels:
             return
 
+        def lookup_user(username, cache, sm):
+            if username not in cache:
+                cache[username] = sm.get(
+                    models.User, None,
+                    filters={'username': username}).id
+            return cache[username]
+
+        user_cache = {current_user.username: current_user.id}
+
         for label in labels:
             label['_labeled_model_fk'] = resource._storage_id
             if label.get('created_by'):
-                creator_id = self.sm.get(
-                    models.User, None,
-                    filters={'username': label.pop('created_by')}).id
+                creator_id = lookup_user(label.pop('created_by'),
+                                         user_cache, self.sm)
             else:
                 creator_id = label.pop('creator').id
             label['_creator_id'] = creator_id
