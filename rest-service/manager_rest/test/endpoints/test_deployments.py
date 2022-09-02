@@ -576,7 +576,6 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                 },
             },
             "runtime_only_evaluation": False,
-            "labels": [],
             'visibility': 'tenant',
             'scaling_groups': {
                 'group1': {'members': [], 'properties': {}},
