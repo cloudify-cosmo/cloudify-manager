@@ -41,8 +41,7 @@ from manager_rest.constants import (
     FILE_SERVER_DEPLOYMENTS_FOLDER,
     DEPLOYMENT_UPDATE_STATES as UpdateStates,
 )
-from manager_rest.utils import (current_tenant,
-                                get_formatted_timestamp,
+from manager_rest.utils import (get_formatted_timestamp,
                                 is_create_global_permitted,
                                 validate_global_modification,
                                 validate_deployment_and_site_visibility,
@@ -2763,11 +2762,6 @@ class ResourceManager(object):
                       labels):
         if not labels:
             return
-        resource_key = {
-            models.DeploymentLabel: 'deployment',
-            models.BlueprintLabel: 'blueprint',
-            models.DeploymentGroupLabel: 'deployment_group',
-        }[labels_resource_model]
 
         for label in labels:
             label['_labeled_model_fk'] = resource._storage_id
