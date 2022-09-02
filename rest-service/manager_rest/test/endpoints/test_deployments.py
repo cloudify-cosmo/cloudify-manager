@@ -581,6 +581,12 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             'scaling_groups': {
                 'group1': {'members': [], 'properties': {}},
             },
+            'labels': [{
+                'created_by': 'alice',
+                'created_at': '2022-09-01T21:42:24.121Z',
+                'key': 'something',
+                'value': 'fast',
+            }],
         }
         for string_param in string_params:
             overrides[string_param] = string_template.format(string_param)
