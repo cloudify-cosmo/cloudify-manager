@@ -1,7 +1,7 @@
 import socket
 import http.client
 import xmlrpc.client
-from typing import Dict
+from typing import Dict, Any
 
 from flask import request
 from flask import current_app
@@ -228,6 +228,9 @@ def _lookup_supervisor_service_status(service_name):
             raise
 
     else:
+        if not isinstance(status_response, dict):
+            raise RuntimeError(
+                f'unexpected status_response: {status_response!r}')
         service_status = status_response['statename']
         if service_status == 'RUNNING':
             service_status = NodeServiceStatus.ACTIVE
