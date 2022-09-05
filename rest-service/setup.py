@@ -27,7 +27,6 @@ install_requires = [
     'psutil>5,<6',
     'wagon>0.10',
     'python-dateutil>=2.8.1,<3',
-    'voluptuous>=0.9.3,<0.10',
     'pika',
     'cffi>=1.14,<1.15',
     'cryptography>=3.3,<3.4',
@@ -39,6 +38,7 @@ install_requires = [
     'cachetools>=3,<4',
     'email-validator>1,<2',
     'retrying',
+    'pydantic==1.9.2',
 ]
 
 

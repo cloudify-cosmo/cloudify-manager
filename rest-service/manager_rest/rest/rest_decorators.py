@@ -1,25 +1,11 @@
-import pytz
-
 from functools import wraps
 from collections import OrderedDict
 from typing import Dict
 
-from dateutil.parser import parse as parse_datetime
 from flask_restful import fields, marshal
 from flask_restful.utils import unpack
 from flask import request, current_app
-from voluptuous import (
-    All,
-    Any,
-    Coerce,
-    ExactSequence,
-    Invalid,
-    Length,
-    Match,
-    REMOVE_EXTRA,
-    Range,
-    Schema,
-)
+
 from cloudify.models_states import ExecutionState
 from manager_rest import config, manager_exceptions
 from manager_rest.utils import current_tenant
@@ -35,6 +21,11 @@ from manager_rest.rest.rest_utils import (
 )
 
 from .responses_v2 import ListResponse
+from .validation_models import (
+    Pagination,
+    Range,
+    Sort,
+)
 
 INCLUDE = 'Include'
 SORT = 'Sort'
@@ -239,72 +230,27 @@ def rangeable(func):
     :rtype: callable
 
     """
-    def valid_datetime(datetime):
-        """Make sure that datetime is parseable.
-
-        :param datetime: Datetime value to parse
-        :type datetime: str
-        :return: The datetime value after parsing
-        :rtype: :class:`datetime.datetime`
-
-        """
-        try:
-            parsed_datetime = parse_datetime(datetime)
-        except Exception:
-            raise Invalid('Datetime parsing error')
-
-        # Make sure timestamp is in UTC, but doesn't have any timezone info.
-        # Passing timezone aware timestamp to PosgreSQL through SQLAlchemy
-        # doesn't seem to work well in manual tests
-        if parsed_datetime.tzinfo:
-            parsed_datetime = (
-                parsed_datetime.astimezone(pytz.timezone('UTC'))
-                .replace(tzinfo=None)
-            )
-
-        return parsed_datetime
-
-    def from_or_to_present(range_param):
-        """Make sure that at least one of from or to are present.
-
-        :param range_param: Range parameter split at the commas
-        :type range_param: tuple(str, str, str)
-        :return: The same value that was passed
-        :rtype: tuple(str, str, str)
-
-        """
-        field, from_, to = range_param
-        if not (from_ or to):
-            raise Invalid('At least one of from/to must be passed')
-        return range_param
-
-    schema = Schema(
-        All(
-            ExactSequence([
-                str,
-                Any(valid_datetime, ''),
-                Any(valid_datetime, ''),
-            ]),
-            Length(min=3, max=3),
-            from_or_to_present,
-            msg=(
-                'Range parameter should be formatted as follows: '
-                '<field:str>,[<from:datetime>],[<to:datetime>]\n'
-                'Where from/to are optional, '
-                'but at least one of them must be passed'
-            )
-        )
-    )
-
     @wraps(func)
     def create_range_params(*args, **kw):
         range_args = request.args.getlist('_range')
-        range_params = [
-            schema(range_arg.split(','))
-            for range_arg in range_args
-        ]
+        range_params = []
         range_filters: Dict[str, Dict[str, str]] = {}
-        for key, range_from, range_to in range_params:
+
+        for range_arg in range_args:
+            range_field_names = ['key', 'from', 'to']
+            range_field_values = range_arg.split(',')
+            range_attrs = {key: value for key, value in zip(range_field_names, range_field_values) if value}
+            range_params.append(
+                Range(**range_attrs)
+            )
+
+        for range_param in range_params:
+            range_param = range_param.dict(by_alias=True)
+
+            key = range_param['key']
+            range_from = range_param['from']
+            range_to = range_param['to']
+
             range_filters[key] = {}
             if range_from:
                 range_filters[key]['from'] = range_from
@@ -327,37 +273,25 @@ def sortable(response_class=None):
     Once the request parameters have been transformed into the dictionary
     object it's passed as the `sort` parameter to the decorated function.
 
-    A `voluptuous.error.Invalid` exception will be raised if any of the request
+    A `pydantic.error_wrappers.ValidationError` exception will be raised if any of the request
     parameters has an invalid value.
     """
     fields = response_class.resource_fields if response_class else {}
-
-    schema = Schema(
-        [
-            Match(
-                # `@` allowed for compatibility with elasticsearch fields
-                r'[+-]?[\w@]+',
-                msg=(
-                    '`_sort` parameter should be a column name '
-                    'optionally prefixed with +/-'
-                ),
-            ),
-        ],
-        extra=REMOVE_EXTRA,
-    )
 
     def sortable_dec(func):
         @wraps(func)
         def create_sort_params(*args, **kw):
             """Validate sort parameters and pass them to the wrapped function.
             """
+            sort_args = request.args.getlist('_sort')
+            validated_sort_args = [Sort(sort=sort_arg) for sort_arg in sort_args]
             # maintain order of sort fields
             sort_params = OrderedDict([
                 (
-                    param.lstrip('+-'),
-                    'desc' if param[0] == '-' else 'asc',
+                    validated_sort.sort.lstrip('+-'),
+                    'desc' if validated_sort.sort[0] == '-' else 'asc',
                 )
-                for param in schema(request.args.getlist('_sort'))
+                for validated_sort in validated_sort_args
             ])
             if fields:
                 _validate_fields(fields, sort_params, SORT)
@@ -446,27 +380,16 @@ def paginate(func):
     :type func: callable
 
     """
-    schema = Schema(
-        {
-            '_size': All(
-                Coerce(int),
-                Range(min=0),
-                msg='`_size` is expected to be a positive integer',
-            ),
-            '_offset': All(
-                Coerce(int),
-                Range(min=0),
-                msg='`_offset` is expected to be a positive integer',
-            ),
-        },
-        extra=REMOVE_EXTRA,
-    )
 
     @wraps(func)
     def verify_and_create_pagination_params(*args, **kw):
         """Validate pagination parameters and pass them to wrapped function."""
-        pagination_params = {k.lstrip('_'): v
-                             for k, v in schema(request.args).items()}
+
+        pagination_args = request.args.to_dict()
+
+        pagination_params = Pagination(**pagination_args).dict()
+        pagination_params = {key: value for key, value in pagination_params.items() if value is not None}
+
         result = func(pagination=pagination_params, *args, **kw)
         return ListResponse(items=result.items, metadata=result.metadata)
 

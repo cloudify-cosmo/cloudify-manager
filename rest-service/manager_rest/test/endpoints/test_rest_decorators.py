@@ -20,7 +20,7 @@ from unittest import TestCase
 from dateutil.parser import parse as parse_datetime
 from flask import Flask
 from mock import Mock
-from voluptuous import Invalid
+from pydantic import ValidationError
 
 from manager_rest.rest.rest_decorators import (
     paginate,
@@ -61,7 +61,7 @@ class PaginateTest(TestCase):
             return Mock()
 
         with self.app.test_request_context('/?_size=-1&_offset=-1'):
-            with self.assertRaises(Invalid):
+            with self.assertRaises(ValidationError):
                 paginate(verify)()
 
 
@@ -96,7 +96,7 @@ class RangeableTest(TestCase):
             with self.app.test_request_context(
                 f'/?_range={urllib.parse.quote(invalid_value)}'
             ):
-                with self.assertRaises(Invalid):
+                with self.assertRaises(ValidationError):
                     rangeable(Mock)()
 
     def test_iso8601_datetime(self):
@@ -221,5 +221,5 @@ class SortableTest(TestCase):
         """Exception raised when invalid value is passed."""
 
         with self.app.test_request_context('/?_sort=%20abcd'):
-            with self.assertRaises(Invalid):
+            with self.assertRaises(ValidationError):
                 sortable()(Mock)()
