@@ -45,6 +45,17 @@ class PaginateTest(TestCase):
         with self.app.test_request_context('/'):
             paginate(verify)()
 
+    def test_zero(self):
+        """Size and offset set to zero."""
+
+        def verify(pagination):
+            self.assertEqual(pagination['size'], 0)
+            self.assertEqual(pagination['offset'], 0)
+            return Mock()
+
+        with self.app.test_request_context('/?_size=0&_offset=0'):
+            paginate(verify)()
+
     def test_coercion(self):
         """Values passed as strings are coerced to integers."""
         def verify(pagination):

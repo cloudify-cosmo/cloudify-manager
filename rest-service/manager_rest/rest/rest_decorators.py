@@ -373,7 +373,7 @@ def paginate(func):
     (note that the leading underscore is dropped) if a values was passed in a
     request header. Otherwise, the dictionary will be empty.
 
-    A `voluptuous.error.Invalid` exception will be raised if any of the request
+    A `pydantic.error_wrappers.ValidationError` exception will be raised if any of the request
     parameters has an invalid value.
 
     :param func: Function to be decorated
@@ -385,10 +385,7 @@ def paginate(func):
     def verify_and_create_pagination_params(*args, **kw):
         """Validate pagination parameters and pass them to wrapped function."""
 
-        pagination_args = request.args.to_dict()
-
-        pagination_params = Pagination(**pagination_args).dict()
-        pagination_params = {key: value for key, value in pagination_params.items() if value is not None}
+        pagination_params = Pagination.parse_obj(request.args).dict(exclude_none=True)
 
         result = func(pagination=pagination_params, *args, **kw)
         return ListResponse(items=result.items, metadata=result.metadata)
