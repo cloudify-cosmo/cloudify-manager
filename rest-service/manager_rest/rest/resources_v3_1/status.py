@@ -1,7 +1,7 @@
 import socket
 import http.client
 import xmlrpc.client
-from typing import Dict, Any
+from typing import Dict
 
 from flask import request
 from flask import current_app
