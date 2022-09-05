@@ -1435,6 +1435,12 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         assert deployments[0].id == dep1.id
         assert deployments.metadata['filtered'] == 1
 
+        label = deployments[0]['labels'][0]
+        assert label['created_by'] == self.user.username
+        assert label['created_at'] == dep1.labels[0].created_at
+        assert label['key'] == 'key1'
+        assert label['value'] == 'value1'
+
     def test_update_attributes(self):
         self.put_blueprint()
         bp = self.sm.get(models.Blueprint, 'blueprint')

@@ -159,11 +159,11 @@ class Label(object):
         'key': fields.String,
         'value': fields.String,
         'created_at': fields.String,
-        'creator_id': fields.Integer
+        'created_by': fields.String,
     }
 
     def __init__(self, **kwargs):
         self.key = kwargs.get('key')
         self.value = kwargs.get('value')
         self.created_at = kwargs.get('created_at')
-        self.creator_id = kwargs.get('creator_id')
+        self.created_by = kwargs.get('created_by')
