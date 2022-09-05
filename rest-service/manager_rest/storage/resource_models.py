@@ -2291,6 +2291,7 @@ class Operation(CreatedAtMixin, SQLResourceBase):
     agent_name = db.Column(db.Text)
 
     _tasks_graph_fk = foreign_key(TasksGraph._storage_id)
+    tasks_graph_id = association_proxy('tasks_graph', 'id')
 
     @declared_attr
     def tasks_graph(cls):
