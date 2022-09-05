@@ -226,6 +226,7 @@ class OperationsTestCase(OperationsTestBase, base_test.BaseServerTestCase):
         assert cm.value.status_code == 404
         op = self.client.operations.get('op1')
         assert op.id == 'op1'
+        assert op.tasks_graph_id == tg1.id
 
     def test_update_SendNodeEventTask(self):
         """When setting a SendNodeEventTask finished, an event is emitted"""
