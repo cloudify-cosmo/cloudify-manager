@@ -39,7 +39,7 @@ from cloudify_rest_client.exceptions import (
 
 
 TEST_PACKAGE_NAME = 'cloudify-script-plugin'
-TEST_PACKAGE_VERSION = '1.2'
+TEST_PACKAGE_VERSION = '1.3'
 
 
 class TestCheckDeploymentDelete(base_test.BaseServerTestCase):

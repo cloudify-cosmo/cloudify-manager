@@ -30,7 +30,7 @@ from manager_rest.manager_exceptions import (InvalidPluginError,
 
 TEST_PACKAGE_NAME = 'cloudify-script-plugin'
 # Version 1 must be less than Version 2
-TEST_PLUGIN_VERSION1 = '1.2'
+TEST_PLUGIN_VERSION1 = '1.3'
 TEST_PLUGIN_VERSION2 = '1.5'
 
 PLUGIN_IMPORT_FORMAT = PLUGIN_PREFIX + "{0}?version={1}"

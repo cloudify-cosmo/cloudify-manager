@@ -201,7 +201,7 @@ class NodeInstancesId(SecuredResource):
             {'version': {'type': int}}
         )
 
-        if not isinstance(request.json, collections.Mapping):
+        if not isinstance(request.json, collections.abc.Mapping):
             raise manager_exceptions.BadParametersError(
                 'Request body needs to be a mapping')
         version = request_dict['version'] or 1
