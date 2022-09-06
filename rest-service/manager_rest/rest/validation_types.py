@@ -1,9 +1,10 @@
 import pytz
 
 from dateutil.parser import parse as parse_datetime
+from datetime import datetime
 
 
-class DateTime(str):
+class DateTime(datetime):
     @classmethod
     def __get_validators__(cls):
         yield cls.validate

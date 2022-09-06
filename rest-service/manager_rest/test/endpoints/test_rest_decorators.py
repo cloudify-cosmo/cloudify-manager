@@ -110,6 +110,22 @@ class RangeableTest(TestCase):
                 with self.assertRaises(ValidationError):
                     rangeable(Mock)()
 
+    def test_multiple_ranges(self):
+        valid_datetime_str = '2016-09-12T00:00:00.0Z'
+        valid_datetime = (
+            parse_datetime(valid_datetime_str).replace(tzinfo=None)
+        )
+
+        with self.app.test_request_context(
+                f'/?_range=a,{valid_datetime},&'
+                f'_range=b,,{valid_datetime}'
+        ):
+            expected_value = {
+                'a': {'from': valid_datetime},
+                'b': {'to': valid_datetime},
+            }
+            rangeable(self.verify(expected_value))()
+
     def test_iso8601_datetime(self):
         """ISO8601 datetimes are valid and pass validation."""
         valid_datetime_strs = (

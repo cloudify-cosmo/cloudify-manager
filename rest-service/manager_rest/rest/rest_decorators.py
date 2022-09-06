@@ -1,6 +1,7 @@
 from functools import wraps
 from collections import OrderedDict
 from typing import Dict
+from datetime import datetime
 
 from flask_restful import fields, marshal
 from flask_restful.utils import unpack
@@ -23,7 +24,7 @@ from manager_rest.rest.rest_utils import (
 from .responses_v2 import ListResponse
 from .validation_models import (
     Pagination,
-    Range,
+    RangesList,
     Sort,
 )
 
@@ -232,30 +233,18 @@ def rangeable(func):
     """
     @wraps(func)
     def create_range_params(*args, **kw):
-        range_args = request.args.getlist('_range')
-        range_params = []
-        range_filters: Dict[str, Dict[str, str]] = {}
+        ranges = RangesList.parse_obj(request.args.to_dict(flat=False)).ranges
+        range_filters: Dict[str, Dict[datetime, datetime]] = {}
 
-        for range_arg in range_args:
-            range_field_names = ['key', 'from', 'to']
-            range_field_values = range_arg.split(',')
-            range_attrs = {key: value for key, value in zip(range_field_names, range_field_values) if value}
-            range_params.append(
-                Range(**range_attrs)
-            )
-
-        for range_param in range_params:
-            range_param = range_param.dict(by_alias=True)
-
-            key = range_param['key']
-            range_from = range_param['from']
-            range_to = range_param['to']
-
+        for range_param in ranges:
+            key = range_param.key
             range_filters[key] = {}
-            if range_from:
-                range_filters[key]['from'] = range_from
-            if range_to:
-                range_filters[key]['to'] = range_to
+
+            if range_param.from_field:
+                range_filters[key]['from'] = range_param.from_field
+            if range_param.to:
+                range_filters[key]['to'] = range_param.to
+
         return func(range_filters=range_filters, *args, **kw)
     return create_range_params
 
@@ -283,16 +272,15 @@ def sortable(response_class=None):
         def create_sort_params(*args, **kw):
             """Validate sort parameters and pass them to the wrapped function.
             """
-            sort_args = request.args.getlist('_sort')
-            validated_sort_args = [Sort(sort=sort_arg) for sort_arg in sort_args]
+            sorts = Sort.parse_obj(request.args.to_dict(flat=False)).sort
             # maintain order of sort fields
-            sort_params = OrderedDict([
+            sort_params = OrderedDict(
                 (
-                    validated_sort.sort.lstrip('+-'),
-                    'desc' if validated_sort.sort[0] == '-' else 'asc',
+                    sort.lstrip('+-'),
+                    'desc' if sort[0] == '-' else 'asc',
                 )
-                for validated_sort in validated_sort_args
-            ])
+                for sort in sorts
+            )
             if fields:
                 _validate_fields(fields, sort_params, SORT)
             return func(sort=sort_params, *args, **kw)
