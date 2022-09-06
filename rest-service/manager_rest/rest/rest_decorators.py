@@ -262,8 +262,8 @@ def sortable(response_class=None):
     Once the request parameters have been transformed into the dictionary
     object it's passed as the `sort` parameter to the decorated function.
 
-    A `pydantic.error_wrappers.ValidationError` exception will be raised if any of the request
-    parameters has an invalid value.
+    A `pydantic.error_wrappers.ValidationError` exception will be raised
+    if any of the request parameters has an invalid value.
     """
     fields = response_class.resource_fields if response_class else {}
 
@@ -361,8 +361,8 @@ def paginate(func):
     (note that the leading underscore is dropped) if a values was passed in a
     request header. Otherwise, the dictionary will be empty.
 
-    A `pydantic.error_wrappers.ValidationError` exception will be raised if any of the request
-    parameters has an invalid value.
+    A `pydantic.error_wrappers.ValidationError` exception will be raised
+    if any of the request parameters has an invalid value.
 
     :param func: Function to be decorated
     :type func: callable
@@ -373,7 +373,9 @@ def paginate(func):
     def verify_and_create_pagination_params(*args, **kw):
         """Validate pagination parameters and pass them to wrapped function."""
 
-        pagination_params = Pagination.parse_obj(request.args).dict(exclude_none=True)
+        pagination_params = Pagination.parse_obj(request.args).dict(
+            exclude_none=True,
+        )
 
         result = func(pagination=pagination_params, *args, **kw)
         return ListResponse(items=result.items, metadata=result.metadata)
