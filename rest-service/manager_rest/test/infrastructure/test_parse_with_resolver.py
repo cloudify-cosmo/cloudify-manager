@@ -14,9 +14,12 @@
 #  * limitations under the License.
 
 import os
+from datetime import datetime
 
 from dsl_parser import tasks, constants
 
+from manager_rest.constants import FILE_SERVER_PLUGINS_FOLDER
+from manager_rest.storage import models
 from manager_rest.test.base_test import BaseServerTestCase
 from manager_rest.resolver_with_catalog_support import \
     ResolverWithCatalogSupport
@@ -24,7 +27,6 @@ from manager_rest.resolver_with_catalog_support import \
 
 TEST_PACKAGE_NAME = 'cloudify-diamond-plugin'
 TEST_PACKAGE_VERSION = '1.3'
-TEST_PACKAGE_YAML_FILE = 'mock_blueprint/plugin-cloudify-diamond-plugin.yaml'
 
 
 class TestParseWithResolver(BaseServerTestCase):
@@ -33,10 +35,24 @@ class TestParseWithResolver(BaseServerTestCase):
         self.resolver = ResolverWithCatalogSupport(storage_manager=self.sm)
 
     def test_successful_plugin_import_resolver(self):
-        self.upload_plugin(TEST_PACKAGE_NAME,
-                           TEST_PACKAGE_VERSION,
-                           TEST_PACKAGE_YAML_FILE)
-
+        plugin = models.Plugin(
+            id='plugin1',
+            package_name=TEST_PACKAGE_NAME,
+            package_version=TEST_PACKAGE_VERSION,
+            archive_name='archive.wgn',
+            uploaded_at=datetime.utcnow(),
+            wheels=[],
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        plugin_dir = os.path.join(
+            self.server_configuration.file_server_root,
+            FILE_SERVER_PLUGINS_FOLDER,
+            plugin.id,
+        )
+        os.makedirs(plugin_dir)
+        with open(os.path.join(plugin_dir, 'plugin.yaml'), 'w'):
+            pass
         dsl_location = os.path.join(
             self.get_blueprint_path('mock_blueprint'),
             'blueprint_with_plugin_import.yaml')

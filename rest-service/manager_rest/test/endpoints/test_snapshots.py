@@ -27,7 +27,10 @@ class SnapshotsTest(BaseServerTestCase):
                                False)
 
     def test_snapshot_upload_progress(self):
-        tmp_file_path = self.create_wheel('wagon', '0.6.2')
+        tmp_file_path = os.path.join(self.tmpdir, 'bigfile')
+        with open(tmp_file_path, 'w') as f:
+            for _ in range(1000):
+                f.write('abcdef')
         total_size = os.path.getsize(tmp_file_path)
 
         progress_func = generate_progress_func(total_size=total_size)
@@ -40,7 +43,10 @@ class SnapshotsTest(BaseServerTestCase):
             self.quiet_delete(tmp_file_path)
 
     def test_snapshot_download_progress(self):
-        tmp_file_path = self.create_wheel('wagon', '0.6.2')
+        tmp_file_path = os.path.join(self.tmpdir, 'bigfile')
+        with open(tmp_file_path, 'w') as f:
+            for _ in range(1000):
+                f.write('abcdef')
         total_size = os.path.getsize(tmp_file_path)
         tmp_local_path = '/tmp/snapshot.sn'
 

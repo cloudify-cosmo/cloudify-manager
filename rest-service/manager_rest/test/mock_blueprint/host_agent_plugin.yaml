@@ -1,6 +1,0 @@
-plugins:
-  cool:
-    executor: host_agent
-    source: https://github.com/cloudify-cosmo/cloudify-script-plugin/archive/1.2.zip
-    package_name: cloudify-script-plugin
-
