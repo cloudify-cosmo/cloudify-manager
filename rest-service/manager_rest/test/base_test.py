@@ -303,6 +303,10 @@ class BaseServerTestCase(unittest.TestCase):
         cls.client = cls.create_client()
 
     def setUp(self):
+        test_context = server.app.test_request_context()
+        test_context.push()  # type: ignore
+        self.addCleanup(test_context.pop)
+
         self._handle_default_db_config()
         default_tenant = models.Tenant.query.get(0)
         self.sm = SQLStorageManager(
@@ -426,13 +430,7 @@ class BaseServerTestCase(unittest.TestCase):
     def _handle_flask_app_and_db(cls):
         """Set up Flask app context, and handle DB related tasks
         """
-        cls._set_flask_app_context()
         cls.app = cls._get_app(server.app)
-
-    @classmethod
-    def _set_flask_app_context(cls):
-        flask_app_context = server.app.test_request_context()
-        flask_app_context.push()  # type: ignore
 
     @staticmethod
     def _insert_default_permissions():
