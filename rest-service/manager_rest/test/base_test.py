@@ -19,16 +19,12 @@ import time
 import uuid
 import shutil
 import logging
-import zipfile
-import tarfile
 import unittest
 import tempfile
 import sqlalchemy.exc
 from sqlalchemy.orm.session import close_all_sessions
 from typing import List
 
-import yaml
-import wagon
 import psycopg2
 import requests
 import traceback
@@ -645,38 +641,6 @@ class BaseServerTestCase(unittest.TestCase):
 
         return url
 
-    # this method is completely copied from the cli. once caravan sits in a
-    # more general package, it should be removed.
-    @staticmethod
-    def _create_caravan(mappings, dest, name=None):
-        tempdir = tempfile.mkdtemp()
-        metadata = {}
-
-        for wgn_path, yaml_path in mappings.items():
-            plugin_root_dir = os.path.basename(wgn_path).split('.', 1)[0]
-            os.mkdir(os.path.join(tempdir, plugin_root_dir))
-
-            dest_wgn_path = os.path.join(plugin_root_dir,
-                                         os.path.basename(wgn_path))
-            dest_yaml_path = os.path.join(plugin_root_dir,
-                                          os.path.basename(yaml_path))
-
-            shutil.copy(wgn_path, os.path.join(tempdir, dest_wgn_path))
-            shutil.copy(yaml_path, os.path.join(tempdir, dest_yaml_path))
-            metadata[dest_wgn_path] = dest_yaml_path
-
-        with open(os.path.join(tempdir, 'METADATA'), 'w+') as f:
-            yaml.dump(metadata, f)
-
-        tar_name = name or 'palace'
-        tar_path = os.path.join(dest, '{0}.cvn'.format(tar_name))
-        tarfile_ = tarfile.open(tar_path, 'w:gz')
-        try:
-            tarfile_.add(tempdir, arcname=tar_name)
-        finally:
-            tarfile_.close()
-        return tar_path
-
     def post(self, resource_path, data, query_params=None):
         url = self._version_url(resource_path)
         result = self.app.post(urlquote(url),
@@ -887,75 +851,6 @@ class BaseServerTestCase(unittest.TestCase):
         self.execute_upload_blueprint_workflow(blueprint_id, client)
         blueprint = client.blueprints.get(blueprint_id)
         return blueprint
-
-    @staticmethod
-    def _create_wagon_and_yaml(package_name,
-                               package_version,
-                               package_yaml_file='mock_blueprint/plugin.yaml'):
-        temp_file_path = BaseServerTestCase.create_wheel(package_name,
-                                                         package_version)
-        yaml_path = BaseServerTestCase.get_full_path(package_yaml_file)
-        return temp_file_path, yaml_path
-
-    @classmethod
-    def upload_plugin(cls,
-                      package_name,
-                      package_version,
-                      package_yaml='mock_blueprint/plugin.yaml'):
-        wgn_path, yaml_path = cls._create_wagon_and_yaml(
-            package_name,
-            package_version,
-            package_yaml
-        )
-        zip_path = cls.zip_files([wgn_path, yaml_path])
-        response = cls.post_file('/plugins', zip_path)
-        os.remove(wgn_path)
-        return response
-
-    @staticmethod
-    def zip_files(files):
-        source_folder = tempfile.mkdtemp()
-        destination_zip = source_folder + '.zip'
-        for path in files:
-            shutil.copy(path, source_folder)
-        BaseServerTestCase.zip(source_folder, destination_zip,
-                               include_folder=False)
-        return destination_zip
-
-    @staticmethod
-    def zip(source, destination, include_folder=True):
-        with zipfile.ZipFile(destination, 'w') as zip_file:
-            for root, _, files in os.walk(source):
-                for filename in files:
-                    file_path = os.path.join(root, filename)
-                    source_dir = os.path.dirname(source) if include_folder \
-                        else source
-                    zip_file.write(
-                        file_path, os.path.relpath(file_path, source_dir))
-        return destination
-
-    @staticmethod
-    def create_wheel(package_name, package_version):
-        module_src = '{0}=={1}'.format(package_name, package_version)
-        return wagon.create(
-            module_src,
-            archive_destination_dir=tempfile.mkdtemp(),
-            force=True
-        )
-
-    def upload_caravan(self, packages):
-        mapping = dict(
-            self._create_wagon_and_yaml(
-                package,
-                version_and_yaml[0],
-                version_and_yaml[1])
-            for package, version_and_yaml in packages.items()
-        )
-
-        caravan_path = self._create_caravan(mapping, tempfile.gettempdir())
-        response = self.post_file('/plugins', caravan_path)
-        os.remove(caravan_path)
-        return response
 
     def wait_for_url(self, url, timeout=5):
         end = time.time() + timeout
