@@ -126,7 +126,7 @@ jinja2==3.0.3
     #   flask-babelex
 jsonschema==3.2.0
     # via cloudify-rest-service (setup.py)
-mako==1.1.6
+mako==1.2.2
     # via alembic
 markupsafe==2.0.1
     # via
