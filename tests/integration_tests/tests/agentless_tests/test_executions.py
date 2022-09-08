@@ -528,13 +528,13 @@ class ExecutionsTest(AgentlessTestCase):
         self._create_snapshot_and_modify_execution_status(Execution.STARTED)
         with self.assertRaisesRegex(
                 CloudifyClientError, '[Cc]annot start') as cm:
-            upload_mock_plugin(self.client, 'cloudify-script-plugin', '1.2')
+            upload_mock_plugin(self.client, 'cloudify-script-plugin', '1.3')
         self.assertEqual(cm.exception.status_code, 400)
 
     def test_fail_to_delete_plugin_while_creating_snapshot(self):
         # Upload plugin
         plugin = upload_mock_plugin(
-            self.client, 'cloudify-script-plugin', '1.2')
+            self.client, 'cloudify-script-plugin', '1.3')
         plugins_list = self.client.plugins.list()
         # 3 plugins were uploaded with the test class
         self.assertEqual(4, len(plugins_list),

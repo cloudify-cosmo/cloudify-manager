@@ -1,6 +1,9 @@
 %define __python /opt/mgmtworker/env/bin/python
 %define __jar_repack %{nil}
 %define PIP_INSTALL /opt/mgmtworker/env/bin/pip install -c "${RPM_SOURCE_DIR}/packaging/mgmtworker/constraints.txt"
+%define __find_provides %{nil}
+%define __find_requires %{nil}
+%define _use_internal_dependency_generator 0
 
 # Prevent mangling shebangs (RH8 build default), which fails
 #  with the test files of networkx<2 due to RH8 not having python2.
@@ -21,10 +24,9 @@ URL:            https://github.com/cloudify-cosmo/cloudify-manager
 Vendor:         Cloudify Platform Ltd.
 Packager:       Cloudify Platform Ltd.
 
-BuildRequires:  python3 >= 3.6, openssl-devel, git
+BuildRequires:  openssl-devel, git
 BuildRequires:  postgresql-devel
-BuildRequires: python3-devel
-Requires:       python3 >= 3.6, postgresql-libs
+Requires:       postgresql-libs
 Requires(pre):  shadow-utils
 
 %description
@@ -32,19 +34,40 @@ Cloudify's Management worker
 
 
 %build
-python3 -m venv /opt/mgmtworker/env
-%{PIP_INSTALL} --upgrade pip"<20.0" "setuptools<58.5"
+
+# First let's build Python 3.10 in a custom location
+mkdir -p /opt/python3.10
+
+mkdir -p /tmp/BUILD_SOURCES
+cd /tmp/BUILD_SOURCES
+
+# -- build & install OpenSSL 1.1.1, required for Python 3.10
+curl https://ftp.openssl.org/source/openssl-1.1.1k.tar.gz -o openssl-1.1.1k.tar.gz
+tar -xzvf openssl-1.1.1k.tar.gz
+cd openssl-1.1.1k && ./config --prefix=/usr --openssldir=/etc/ssl --libdir=lib no-shared zlib-dynamic && make && make install
+# -- build & install Python 3.10
+cd ..
+curl https://www.python.org/ftp/python/3.10.6/Python-3.10.6.tgz -o Python-3.10.6.tgz
+tar xvf Python-3.10.6.tgz
+cd Python-3.10.6 && sed -i 's/PKG_CONFIG openssl /PKG_CONFIG openssl11 /g' configure && ./configure --prefix=/opt/python3.10 && sudo make altinstall
+
+# Create the venv with the custom Python symlinked in
+/opt/python3.10/bin/python3.10 -m venv /opt/mgmtworker/env
+
+%{PIP_INSTALL} --upgrade pip "setuptools<58.5"
 %{PIP_INSTALL} -r "${RPM_SOURCE_DIR}/packaging/mgmtworker/requirements.txt"
 %{PIP_INSTALL} --upgrade "${RPM_SOURCE_DIR}/mgmtworker"
 %{PIP_INSTALL} --upgrade "${RPM_SOURCE_DIR}/workflows"
 %{PIP_INSTALL} --upgrade "${RPM_SOURCE_DIR}/cloudify_types"
 
-%{PIP_INSTALL} --upgrade kerberos==1.3.0
+%{PIP_INSTALL} --upgrade kerberos==1.3.1
 
 
 %install
+
 mkdir -p %{buildroot}/opt/mgmtworker
 mv /opt/mgmtworker/env %{buildroot}/opt/mgmtworker
+
 mkdir -p %{buildroot}/var/log/cloudify/mgmtworker
 mkdir -p %{buildroot}/opt/mgmtworker/config
 mkdir -p %{buildroot}/opt/mgmtworker/work
@@ -61,6 +84,7 @@ groupadd -fr cfylogs
 
 
 %files
+
 %defattr(-,root,root)
 /etc/cloudify/logging.conf
 /etc/logrotate.d/cloudify-mgmtworker
