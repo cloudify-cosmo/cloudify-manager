@@ -13,8 +13,8 @@ checkout:
 executors:
   restservice_test:
     docker:
-      - image: circleci/python:3.6
-      - image: circleci/postgres:9.5-alpine
+      - image: cimg/python:3.10.6
+      - image: cimg/postgres:14.4.0
         environment:
           POSTGRES_USER: cloudify
           POSTGRES_PASSWORD: cloudify
@@ -108,11 +108,11 @@ jobs:
 
   test_amqp_postgres:
     docker:
-      - image: circleci/python:3.6
+      - image: cimg/python:3.10.6
         environment:
           TEST_DATABASE_URL: postgresql://cloudify:cloudify@localhost/cloudify_db
       - image: rabbitmq:3.7.7
-      - image: circleci/postgres:9.5-alpine
+      - image: cimg/postgres:14.4.0
         environment:
           POSTGRES_USER: cloudify
           POSTGRES_PASSWORD: cloudify
@@ -180,7 +180,7 @@ jobs:
 
   flake8:
     docker:
-      - image: circleci/python:3.6
+      - image: cimg/python:3.10.6
     steps:
       - checkout
       - run: pip install --user flake8
