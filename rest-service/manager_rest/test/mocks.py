@@ -19,6 +19,8 @@ from datetime import datetime
 from functools import wraps
 from urllib.parse import urlencode
 
+from flask import g
+
 from cloudify_rest_client.client import HTTPClient
 from cloudify_rest_client.executions import Execution
 
@@ -82,6 +84,13 @@ class MockHTTPClient(HTTPClient):
                    stream=False,
                    versioned_url=True,
                    timeout=None):
+        # hack: we have app-ctx everywhere in tests, but we'd like to still
+        # load the user again on every request, in case this client uses
+        # a different  user than the previous request. So, if a user is
+        # currently logged in, in the app context, clear that.
+        if '_login_user' in g:
+            delattr(g, '_login_user')
+
         if CLIENT_API_VERSION == 'v1':
             # in v1, HTTPClient won't append the version part of the URL
             # on its own, so it's done here instead
