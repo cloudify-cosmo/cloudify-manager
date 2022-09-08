@@ -21,10 +21,7 @@ class TokenTests(SecurityTestBase):
     # The default error should just be Unauthorized so that we know we're not
     # revealing any information to someone trying to probe the system
     def _assert_token_unauthorized(self, token, error='Unauthorized'):
-        if error in ['deactivated', 'locked']:
-            message = 'Wrong credentials or locked account'
-        else:
-            message = f'User unauthorized: {error}'
+        message = f'User unauthorized: {error}'
         with self.use_secured_client(token=token):
             with pytest.raises(UserUnauthorizedError, match=message):
                 self.client.deployments.list()
@@ -110,14 +107,16 @@ class TokenTests(SecurityTestBase):
             token = self.client.tokens.create()
         try:
             self._lock_alice()
-            self._assert_token_unauthorized(token=token.value, error='locked')
+            self._assert_token_unauthorized(
+                token=token.value,
+                error='.+locked account')
         finally:
             self._unlock_alice()
 
     def test_token_for_deactivated_account_fails_auth(self):
         token = self._create_inactive_user_token()
         self._assert_token_unauthorized(token=token['value'],
-                                        error='deactivated')
+                                        error='No authentication')
 
     def test_token_returns_role(self):
         with self.use_secured_client(username='alice',
