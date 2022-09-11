@@ -14,11 +14,13 @@
 #  * limitations under the License.
 
 import os
+from datetime import datetime
 
 from cloudify.models_states import VisibilityState
 from cloudify_rest_client.exceptions import CloudifyClientError
 
-from .test_base import SecurityTestBase
+from manager_rest.storage import models
+from manager_rest.test.security.test_base import SecurityTestBase
 
 
 class ResourcePermissionTests(SecurityTestBase):
@@ -54,12 +56,17 @@ class ResourcePermissionTests(SecurityTestBase):
         return deployment_id
 
     def _upload_plugin(self, visibility=VisibilityState.TENANT):
-        plugin_path = self.create_wheel('psutil', '3.3.0')
-
-        with self.use_secured_client(username='bob',
-                                     password='bob_password'):
-            plugin = self.client.plugins.upload(plugin_path,
-                                                visibility=visibility)
+        plugin = models.Plugin(
+            id='plugin1',
+            archive_name='plugin1',
+            package_name='package',
+            package_version='1.0.0',
+            wheels=[],
+            uploaded_at=datetime.utcnow(),
+            visibility=visibility,
+            tenant=self.tenant,
+            creator=models.User.query.filter_by(username='bob').one(),
+        )
         return plugin.id
 
     def test_private_blueprint(self):

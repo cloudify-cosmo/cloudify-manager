@@ -1,11 +1,11 @@
 import pytest
 import requests
 
-from cloudify_cli.env import get_auth_header
-
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.constants import USER_ROLE
 from integration_tests.tests.utils import get_resource as resource
+from integration_tests.framework.utils import create_auth_header
+
 
 pytestmark = pytest.mark.group_premium
 
@@ -39,7 +39,7 @@ class ResourcesAvailableTest(AgentlessTestCase):
             expected_status_code=200)
 
         # user u can only access blueprints in tenant t
-        user_headers = get_auth_header('u', 'password')
+        user_headers = create_auth_header('u', 'password')
         # valid access
         self._assert_request_status_code(
             headers=user_headers,

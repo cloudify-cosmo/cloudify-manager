@@ -20,6 +20,8 @@ import unittest
 from itertools import dropwhile
 from datetime import datetime, timedelta
 
+from flask import Flask
+
 from cloudify_rest_client import exceptions
 from cloudify.models_states import ExecutionState, VisibilityState
 from cloudify.workflows import tasks as cloudify_tasks
@@ -707,6 +709,15 @@ class ExecutionsTestCase(BaseServerTestCase):
 
 @mock.patch.object(db, 'session', mock.MagicMock())
 class TestExecutionModelValidationTests(unittest.TestCase):
+    def setUp(self):
+        super().setUp()
+        # validating execution parameters does implicitly get a storage manager
+        # which requires an app context (current_app), so let's push one
+        app = Flask(__name__)
+        ctx = app.app_context()
+        ctx.push()
+        self.addCleanup(ctx.pop)
+
     def test_missing_workflow(self):
         d = models.Deployment(workflows={
             'wf': {}

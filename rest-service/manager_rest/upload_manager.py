@@ -790,7 +790,7 @@ class UploadedPluginsManager(UploadedDataManager):
 
         plugin_extras = self._load_plugin_extras(archive_dir)
 
-        build_props = plugin.get('build_server_os_properties')
+        build_props = plugin.get('build_server_os_properties') or {}
         plugin_info = {'package_name': plugin.get('package_name'),
                        'archive_name': plugin.get('archive_name')}
         resource_manager = get_resource_manager()
@@ -813,7 +813,7 @@ class UploadedPluginsManager(UploadedDataManager):
             distribution=build_props.get('distribution'),
             distribution_version=build_props.get('distribution_version'),
             distribution_release=build_props.get('distribution_release'),
-            wheels=plugin.get('wheels'),
+            wheels=plugin.get('wheels') or [],
             excluded_wheels=plugin.get('excluded_wheels'),
             supported_py_versions=plugin.get('supported_python_versions'),
             uploaded_at=uploaded_at or get_formatted_timestamp(),
@@ -849,7 +849,7 @@ class UploadedPluginsManager(UploadedDataManager):
 
         with open(filename, 'r') as fh:
             try:
-                plugin_yaml = yaml.safe_load(fh)
+                plugin_yaml = yaml.safe_load(fh) or {}
             except yaml.YAMLError as e:
                 raise manager_exceptions.InvalidPluginError(
                     f"The provided plugin's description ({filename}) "

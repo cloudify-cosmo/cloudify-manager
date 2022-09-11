@@ -39,7 +39,7 @@ from cloudify_rest_client.exceptions import (
 
 
 TEST_PACKAGE_NAME = 'cloudify-script-plugin'
-TEST_PACKAGE_VERSION = '1.2'
+TEST_PACKAGE_VERSION = '1.3'
 
 
 class TestCheckDeploymentDelete(base_test.BaseServerTestCase):
@@ -1109,7 +1109,16 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             cm.exception.error_code)
 
     def test_creation_success_when_source_plugin_exists_on_manager(self):
-        self.upload_plugin(TEST_PACKAGE_NAME, TEST_PACKAGE_VERSION).json
+        models.Plugin(
+            id='plugin1',
+            package_name=TEST_PACKAGE_NAME,
+            package_version=TEST_PACKAGE_VERSION,
+            archive_name='archive.wgn',
+            uploaded_at=datetime.utcnow(),
+            wheels=[],
+            creator=self.user,
+            tenant=self.tenant,
+        )
         id_ = 'i{0}'.format(uuid.uuid4())
         self.put_deployment(
             blueprint_file_name='deployment_with_'
@@ -1118,7 +1127,16 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             deployment_id=id_)
 
     def test_creation_success_when_source_plugin_with_address_exists(self):
-        self.upload_plugin(TEST_PACKAGE_NAME, TEST_PACKAGE_VERSION).json
+        models.Plugin(
+            id='plugin1',
+            package_name=TEST_PACKAGE_NAME,
+            package_version=TEST_PACKAGE_VERSION,
+            archive_name='archive.wgn',
+            uploaded_at=datetime.utcnow(),
+            wheels=[],
+            creator=self.user,
+            tenant=self.tenant,
+        )
         id_ = 'i{0}'.format(uuid.uuid4())
         self.put_deployment(
             blueprint_file_name='deployment_with_source_address.yaml',

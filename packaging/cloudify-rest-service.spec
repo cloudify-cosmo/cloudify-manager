@@ -5,6 +5,9 @@
 %define dbus_version 1.6
 %define __jar_repack %{nil}
 %global __requires_exclude LIBDBUS_1_3
+%define __find_provides %{nil}
+%define __find_requires %{nil}
+%define _use_internal_dependency_generator 0
 
 # Prevent mangling shebangs (RH8 build default), which fails
 #  with the test files of networkx<2 due to RH8 not having python2.
@@ -25,23 +28,41 @@ URL:            https://github.com/cloudify-cosmo/cloudify-manager
 Vendor:         Cloudify Platform Ltd.
 Packager:       Cloudify Platform Ltd.
 
-BuildRequires:  python3 >= 3.6
 BuildRequires:  openssl-devel, openldap-devel, libffi-devel, postgresql-devel
 BuildRequires:  git, sudo
 BuildRequires: dbus-devel >= %{dbus_version}
 BuildRequires: dbus-glib-devel >= %{dbus_glib_version}
-BuildRequires: python3-devel
 
-Requires:       python3 >= 3.6, postgresql-libs, sudo, dbus >= 1.6, nginx
+Requires:      postgresql-libs, sudo, dbus >= 1.6, nginx
 Requires(pre):  shadow-utils
 
 %description
 Cloudify's REST Service.
 
 
+%prep
+
+# First let's build Python 3.10 in a custom location
+mkdir -p /opt/python3.10
+
+mkdir -p /tmp/BUILD_SOURCES
+cd /tmp/BUILD_SOURCES
+
+# -- build & install OpenSSL 1.1.1, required for Python 3.10
+curl https://ftp.openssl.org/source/openssl-1.1.1k.tar.gz -o openssl-1.1.1k.tar.gz
+tar -xzvf openssl-1.1.1k.tar.gz
+cd openssl-1.1.1k && ./config --prefix=/usr --openssldir=/etc/ssl --libdir=lib no-shared zlib-dynamic && make && make install
+# -- build & install Python 3.10
+cd ..
+curl https://www.python.org/ftp/python/3.10.6/Python-3.10.6.tgz -o Python-3.10.6.tgz
+tar xvf Python-3.10.6.tgz
+cd Python-3.10.6 && sed -i 's/PKG_CONFIG openssl /PKG_CONFIG openssl11 /g' configure && ./configure --prefix=/opt/python3.10 && sudo make altinstall
+
+
 %build
 
-python3 -m venv %_manager_env
+# Create the venv with the custom Python symlinked in
+/opt/python3.10/bin/python3.10 -m venv %_manager_env
 
 %_manager_env/bin/pip install --upgrade pip setuptools
 %_manager_env/bin/pip install 'gunicorn>20,<21'
