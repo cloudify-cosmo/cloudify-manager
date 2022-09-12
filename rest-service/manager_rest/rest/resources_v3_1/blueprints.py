@@ -1,4 +1,5 @@
 from os.path import join
+import json
 
 from flask import request
 
@@ -89,29 +90,44 @@ class BlueprintsId(resources_v2.BlueprintsId):
         Upload a blueprint (id specified)
         """
         rest_utils.validate_inputs({'blueprint_id': blueprint_id})
-        args = get_args_and_verify_arguments(
-            [Argument('async_upload', type=boolean, default=False),
-             Argument('created_by'),
-             Argument('created_at'),
-             Argument('labels')]
+
+        args = (
+            json.loads(request.form.get('params', '{}'))
+            or dict(request.args)
         )
 
-        created_at = owner = None
-        if args.created_at:
+        async_upload = args.get('async_upload', False)
+        created_at = args.get('created_at')
+        created_by = args.get('created_by')
+        labels = args.get('labels')
+        visibility = args.get('visibility')
+        private_resource = args.get('private_resource')
+        application_file_name = args.get('application_file_name', '')
+        skip_execution = args.get('skip_execution', False)
+        state = args.get('state')
+        blueprint_url = args.get('blueprint_archive_url')
+
+        if blueprint_url:
+            if request.data or \
+                    'Transfer-Encoding' in request.headers or \
+                    'blueprint_archive' in request.files:
+                raise BadParametersError(
+                    "Can pass {0} as only one of: URL via query parameters, "
+                    "request body, multi-form or "
+                    "chunked.".format(self._get_kind()))
+
+        if created_at:
             check_user_action_allowed('set_timestamp', None, True)
-            created_at = rest_utils.parse_datetime_string(args.created_at)
+            created_at = rest_utils.parse_datetime_string(created_at)
 
-        if args.created_by:
+        if created_by:
             check_user_action_allowed('set_owner', None, True)
-            owner = rest_utils.valid_user(args.created_by)
+            created_by = rest_utils.valid_user(created_by)
 
-        async_upload = args.async_upload
-        visibility = rest_utils.get_visibility_parameter(
-            optional=True,
-            is_argument=True,
-            valid_values=VisibilityState.STATES
-        )
-        labels = self._get_labels_from_args(args)
+        if visibility:
+            rest_utils.validate_visibility(
+                visibility, valid_values=VisibilityState.STATES)
+
         # Fail fast if trying to upload a duplicate blueprint.
         # Allow overriding an existing blueprint which failed to upload
         current_tenant = request.headers.get('tenant')
@@ -148,28 +164,17 @@ class BlueprintsId(resources_v2.BlueprintsId):
                                   override_failed=override_failed,
                                   labels=labels,
                                   created_at=created_at,
-                                  owner=owner)
+                                  owner=created_by,
+                                  private_resource=private_resource,
+                                  application_file_name=application_file_name,
+                                  skip_execution=skip_execution,
+                                  state=state,
+                                  blueprint_url=blueprint_url)
         if not async_upload:
             sm = get_storage_manager()
             blueprint, _ = response
             response = rest_utils.get_uploaded_blueprint(sm, blueprint)
         return response
-
-    @staticmethod
-    def _get_labels_from_args(args):
-        if args.labels:
-            labels_list = []
-            raw_labels_list = args.labels.replace('\\,', '\x00').split(',')
-            for raw_label in raw_labels_list:
-                raw_label = raw_label.replace('\x00', ',').\
-                    replace('\\=', '\x00')
-                key, value = raw_label.split('=')
-                key = key.replace('\x00', '=')
-                value = value.replace('\x00', '=')
-                labels_list.append({key: value})
-            return rest_utils.get_labels_list(labels_list)
-
-        return None
 
     @swagger.operation(
         responseClass=models.Blueprint,
