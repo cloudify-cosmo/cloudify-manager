@@ -1,18 +1,3 @@
-#########
-# Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 import numbers
 import types
 from datetime import datetime
@@ -20,6 +5,7 @@ from functools import wraps
 from urllib.parse import urlencode
 
 from flask import g
+from werkzeug.datastructures import FileStorage
 
 from cloudify_rest_client.client import HTTPClient
 from cloudify_rest_client.executions import Execution
@@ -117,6 +103,23 @@ class MockHTTPClient(HTTPClient):
         elif 'put' in requests_method.__name__:
             if isinstance(body, types.GeneratorType):
                 body = b''.join(body)
+            if hasattr(body, 'fields'):
+                # FlaskClient wants dicts, not MultipartEncoders or the like
+                body = body.fields
+                for entry in body:
+                    if (
+                        isinstance(body[entry], tuple)
+                        and body[entry][0] == 'filename'
+                    ):
+                        body[entry] = FileStorage(
+                            stream=open(body[entry][1].name, 'rb'))
+
+                # Remove application/json header to not override multipart
+                for header in headers:
+                    if headers[header] == 'application/json':
+                        break
+                headers.pop(header)
+
             response = self.app.put(request_url,
                                     headers=headers,
                                     data=body,
