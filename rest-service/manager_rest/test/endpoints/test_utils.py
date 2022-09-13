@@ -26,15 +26,17 @@ def generate_progress_func(total_size, buffer_size=8192):
     iteration = [0]
     max_iterations = total_size // buffer_size
 
-    def print_progress(read, total):
+    def print_progress(watcher):
+        read_bytes, total_bytes = watcher.bytes_read, watcher.len
+
         i = iteration[0]
-        assert total == total_size
+        assert read_bytes == total_bytes
 
         expected_read_value = buffer_size * (i + 1)
         if i < max_iterations:
-            assert read == expected_read_value
+            assert read_bytes == expected_read_value
         else:
-            assert read == total_size
+            assert read_bytes == total_bytes
 
         iteration[0] += 1
 
