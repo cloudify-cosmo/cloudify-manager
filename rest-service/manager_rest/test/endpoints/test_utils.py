@@ -10,11 +10,15 @@ def generate_progress_func(total_size, buffer_size=8192):
     iteration = [0]
     max_iterations = total_size // buffer_size
 
-    def print_progress(watcher):
-        read_bytes, total_bytes = watcher.bytes_read, watcher.len
+    def print_progress(*args):
+        if len(args) == 2:
+            read_bytes, total_bytes = args
+        else:
+            # This is a MultipartUploadEncoderMonitor
+            read_bytes, total_bytes = args[0].bytes_read, args[0].len
 
         i = iteration[0]
-        assert read_size == total_bytes
+        assert read_bytes == total_bytes
 
         expected_read_value = buffer_size * (i + 1)
         if i < max_iterations:
