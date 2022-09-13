@@ -115,10 +115,14 @@ class MockHTTPClient(HTTPClient):
                             stream=open(body[entry][1].name, 'rb'))
 
                 # Remove application/json header to not override multipart
-                for header in headers:
-                    if headers[header] == 'application/json':
-                        break
-                headers.pop(header)
+                headers = {
+                    header: value
+                    for header, value in headers.items()
+                    if not (
+                        header.lower() == 'content-type'
+                        and value.lower() == 'application/json'
+                    )
+                }
 
             response = self.app.put(request_url,
                                     headers=headers,
