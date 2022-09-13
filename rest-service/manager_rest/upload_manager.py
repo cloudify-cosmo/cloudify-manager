@@ -176,9 +176,6 @@ class UploadedDataManager(object):
             elif file_key == 'blueprint_archive':
                 self._save_bytes(request.files[file_key],
                                  archive_target_path)
-            elif file_key == 'archive':
-                self._save_bytes(request.files[file_key],
-                                 archive_target_path)
         return inputs
 
     @staticmethod
