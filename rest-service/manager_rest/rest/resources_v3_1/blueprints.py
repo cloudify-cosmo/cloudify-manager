@@ -338,8 +338,10 @@ def _create_blueprint_labels(blueprint, provided_labels):
     labels_list = get_labels_from_plan(blueprint.plan,
                                        constants.BLUEPRINT_LABELS)
     if provided_labels:
-        labels_list.extend(tuple(label) for label in provided_labels if
-                           tuple(label) not in labels_list)
+        provided_labels = [(item['key'], item['value'])
+                           for item in provided_labels]
+        labels_list.extend(item for item in provided_labels
+                           if item not in labels_list)
     rm = get_resource_manager()
     rm.create_resource_labels(models.BlueprintLabel, blueprint, labels_list)
 
