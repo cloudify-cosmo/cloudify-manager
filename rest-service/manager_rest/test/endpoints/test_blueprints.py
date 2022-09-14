@@ -216,22 +216,6 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         self.assertEqual('b1', blueprints[0].id)
         self.assertEqual('b0', blueprints[1].id)
 
-    def test_blueprint_upload_progress(self):
-        tmp_dir = '/tmp/tmp_upload_blueprint'
-        blueprint_path = self._create_big_blueprint('empty_blueprint.yaml',
-                                                    tmp_dir)
-
-        size = self.client.blueprints.calc_size(blueprint_path)
-
-        progress_func = generate_progress_func(total_size=size)
-
-        try:
-            self.client.blueprints.upload(blueprint_path, 'b',
-                                          progress_callback=progress_func,
-                                          async_upload=True)
-        finally:
-            self.quiet_delete_directory(tmp_dir)
-
     def test_blueprint_download_progress(self):
         tmp_dir = '/tmp/tmp_upload_blueprint'
         tmp_local_path = '/tmp/blueprint.bl'
