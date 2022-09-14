@@ -108,9 +108,10 @@ class BlueprintsId(resources_v2.BlueprintsId):
         blueprint_url = args.get('blueprint_archive_url')
 
         if blueprint_url:
-            if request.data or \
-                    'Transfer-Encoding' in request.headers or \
-                    'blueprint_archive' in request.files:
+            if (
+                request.data or  # blueprint in body (pre-7.0 client)
+                'blueprint_archive' in request.files  # multipart
+            ):
                 raise BadParametersError(
                     "Can pass blueprint as only one of: URL via query "
                     "parameters, multi-form or chunked.")
