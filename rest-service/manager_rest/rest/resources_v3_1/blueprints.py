@@ -127,11 +127,14 @@ class BlueprintsId(resources_v2.BlueprintsId):
             rest_utils.validate_visibility(
                 visibility, valid_values=VisibilityState.STATES)
 
+        unique_labels_check = []
         for label in labels:
             parsed_key, parsed_value = rest_utils.parse_label(label['key'],
                                                               label['value'])
             label['key'] = parsed_key
             label['value'] = parsed_value
+            unique_labels_check.append((parsed_key, parsed_value))
+        rest_utils.test_unique_labels(unique_labels_check)
 
         # Fail fast if trying to upload a duplicate blueprint.
         # Allow overriding an existing blueprint which failed to upload
