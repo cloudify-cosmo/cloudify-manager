@@ -1,22 +1,5 @@
-#########
-# Copyright (c) 2016 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
-
 def generate_progress_func(total_size, buffer_size=8192):
     """Generate a function that helps test upload/download progress
-
     :param total_size: Total size of the file to upload/download
     :param buffer_size: Size of chunk
     :return: A function that receives 2 ints - number of bytes read so far,
@@ -28,7 +11,9 @@ def generate_progress_func(total_size, buffer_size=8192):
 
     def print_progress(read, total):
         i = iteration[0]
-        assert total == total_size
+
+        # We need to allow larger, as multipart has some overhead
+        assert total >= total_size
 
         expected_read_value = buffer_size * (i + 1)
         if i < max_iterations:
