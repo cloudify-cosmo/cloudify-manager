@@ -91,10 +91,12 @@ class BlueprintsId(resources_v2.BlueprintsId):
         """
         rest_utils.validate_inputs({'blueprint_id': blueprint_id})
 
-        args = (
-            json.loads(request.form.get('params', '{}'))
-            or dict(request.args)
-        )
+        args = None
+        form_params = request.form.get('params')
+        if form_params:
+            args = json.loads(form_params)
+        if not args:
+            args = request.args.to_dict(flat=False)
 
         async_upload = args.get('async_upload', False)
         created_at = args.get('created_at')
