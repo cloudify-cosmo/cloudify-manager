@@ -99,7 +99,7 @@ class BlueprintsId(resources_v2.BlueprintsId):
         async_upload = args.get('async_upload', False)
         created_at = args.get('created_at')
         created_by = args.get('created_by')
-        labels = args.get('labels')
+        labels = args.get('labels', [])
         visibility = args.get('visibility')
         private_resource = args.get('private_resource')
         application_file_name = args.get('application_file_name', '')
@@ -126,6 +126,12 @@ class BlueprintsId(resources_v2.BlueprintsId):
         if visibility:
             rest_utils.validate_visibility(
                 visibility, valid_values=VisibilityState.STATES)
+
+        for label in labels:
+            parsed_key, parsed_value = rest_utils.parse_label(label['key'],
+                                                              label['value'])
+            label['key'] = parsed_key
+            label['value'] = parsed_value
 
         # Fail fast if trying to upload a duplicate blueprint.
         # Allow overriding an existing blueprint which failed to upload
