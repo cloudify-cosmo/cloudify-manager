@@ -11,7 +11,9 @@ def generate_progress_func(total_size, buffer_size=8192):
 
     def print_progress(read, total):
         i = iteration[0]
-        assert total == total_size
+
+        # We need to allow larger, as multipart has some overhead
+        assert total >= total_size
 
         expected_read_value = buffer_size * (i + 1)
         if i < max_iterations:
