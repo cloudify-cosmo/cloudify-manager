@@ -112,9 +112,8 @@ class BlueprintsId(resources_v2.BlueprintsId):
                     'Transfer-Encoding' in request.headers or \
                     'blueprint_archive' in request.files:
                 raise BadParametersError(
-                    "Can pass {0} as only one of: URL via query parameters, "
-                    "request body, multi-form or "
-                    "chunked.".format(self._get_kind()))
+                    "Can pass blueprint as only one of: URL via query "
+                    "parameters, multi-form or chunked.")
 
         if created_at:
             check_user_action_allowed('set_timestamp', None, True)
