@@ -123,7 +123,7 @@ class BlueprintsId(resources_v2.BlueprintsId):
             check_user_action_allowed('set_owner', None, True)
             created_by = rest_utils.valid_user(created_by)
 
-        if visibility:
+        if visibility is not None:
             rest_utils.validate_visibility(
                 visibility, valid_values=VisibilityState.STATES)
 
