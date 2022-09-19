@@ -64,7 +64,4 @@ setup(
             'manager_rest.shell.substitute_import_lines:main',
         ]
     },
-    extras_require={
-        'dbus': ['dbus-python==1.2.18'],
-    }
 )

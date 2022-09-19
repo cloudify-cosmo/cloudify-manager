@@ -1,10 +1,7 @@
 %define _manager_env /opt/manager/env
 %define __python %_manager_env/bin/python
 
-%define dbus_glib_version 0.100
-%define dbus_version 1.6
 %define __jar_repack %{nil}
-%global __requires_exclude LIBDBUS_1_3
 %define __find_provides %{nil}
 %define __find_requires %{nil}
 %define _use_internal_dependency_generator 0
@@ -30,10 +27,8 @@ Packager:       Cloudify Platform Ltd.
 
 BuildRequires:  openssl-devel, openldap-devel, libffi-devel, postgresql-devel
 BuildRequires:  git, sudo
-BuildRequires: dbus-devel >= %{dbus_version}
-BuildRequires: dbus-glib-devel >= %{dbus_glib_version}
 
-Requires:      postgresql-libs, sudo, dbus >= 1.6, nginx
+Requires:      postgresql-libs, sudo, nginx
 Requires(pre):  shadow-utils
 
 %description
@@ -55,7 +50,7 @@ sudo tar zxvf cfy-python3.10.tgz -C /
 %_manager_env/bin/pip install 'gunicorn>20,<21'
 %_manager_env/bin/pip install -r "${RPM_SOURCE_DIR}/rest-service/requirements.txt"
 %_manager_env/bin/pip install -r "${RPM_SOURCE_DIR}/api-service/requirements.txt"
-%_manager_env/bin/pip install "${RPM_SOURCE_DIR}/rest-service"[dbus]
+%_manager_env/bin/pip install "${RPM_SOURCE_DIR}/rest-service"
 %_manager_env/bin/pip install "${RPM_SOURCE_DIR}/api-service"
 %_manager_env/bin/pip install "${RPM_SOURCE_DIR}/amqp-postgres"
 %_manager_env/bin/pip install "${RPM_SOURCE_DIR}/execution-scheduler"
