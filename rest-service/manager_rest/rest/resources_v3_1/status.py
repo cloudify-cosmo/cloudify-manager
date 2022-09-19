@@ -17,22 +17,10 @@ from manager_rest.security.authorization import authorize
 from manager_rest.rest.rest_decorators import marshal_with
 from manager_rest.rest.rest_utils import verify_and_convert_bool
 from manager_rest.syncthing_status_manager import get_syncthing_status
-from manager_rest.rest.resources_v1.status import (
-    should_be_in_services_output,
-    get_system_manager_services
-)
 
 try:
-    from cloudify.systemddbus import get_services
-except ImportError:
-    # For unit tests, currently systemd should be available on every manager
-    get_services = None
-
-try:
-    from cloudify_premium import syncthing_utils
     from cloudify_premium.ha import utils as ha_utils
 except ImportError:
-    syncthing_utils = None
     ha_utils = None
 
 
@@ -105,10 +93,6 @@ class Status(SecuredResource):
             'summary',
             request.args.get('summary', False)
         )
-
-        if not get_services:
-            return {'status': ServiceStatus.FAIL, 'services': {}}
-
         status, services = _get_status_and_services()
 
         if summary_response:
@@ -119,10 +103,7 @@ class Status(SecuredResource):
 
 def _get_status_and_services():
     services: Dict[str, Dict] = {}
-    if config.instance.service_management == 'supervisord':
-        service_statuses = _check_supervisord_services(services)
-    else:
-        service_statuses = _check_systemd_services(services)
+    service_statuses = _check_supervisord_services(services)
     rabbitmq_status = _check_rabbitmq(services)
 
     # Successfully making any query requires us to check the DB is up
@@ -168,45 +149,6 @@ def _check_supervisord_services(services):
     return statuses
 
 
-def _check_systemd_services(services):
-    def _get_services_with_suffix(_services):
-        return {
-            '{0}.service'.format(k): v for (k, v) in _services.items()
-        }
-    all_services = get_system_manager_services(
-        BASE_SERVICES,
-        OPTIONAL_SERVICES
-    )
-    all_services = _get_services_with_suffix(all_services)
-    systemd_services = get_services(all_services)
-    statuses = []
-    for service in systemd_services:
-        status = _lookup_systemd_service_status(
-            service, _get_services_with_suffix(OPTIONAL_SERVICES)
-        )
-        if status:
-            services[service['display_name']] = {
-                'status': status,
-                'is_remote': False,
-                'extra_info': {
-                    'systemd': service
-                }
-            }
-            statuses.append(status)
-    return statuses
-
-
-def _lookup_systemd_service_status(service, optional_services):
-    status = None
-    if should_be_in_services_output(service, optional_services):
-        is_service_running = service['instances'] and (
-                service['instances'][0]['state'] == 'running')
-        status = NodeServiceStatus.ACTIVE if is_service_running \
-            else NodeServiceStatus.INACTIVE
-
-    return status
-
-
 def _lookup_supervisor_service_status(service_name):
     service_status = None
     is_optional = True if service_name in OPTIONAL_SERVICES else False
@@ -226,7 +168,8 @@ def _lookup_supervisor_service_status(service_name):
                 service_status = NodeServiceStatus.INACTIVE
         else:
             raise
-
+    except FileNotFoundError:
+        service_status = NodeServiceStatus.INACTIVE
     else:
         if not isinstance(status_response, dict):
             raise RuntimeError(
@@ -242,9 +185,8 @@ def _lookup_supervisor_service_status(service_name):
 
 def _check_rabbitmq(services):
     name = 'RabbitMQ'
-    client = get_amqp_client()
     try:
-        with client:
+        with get_amqp_client():
             extra_info = {'connection_check': ServiceStatus.HEALTHY}
             _add_or_update_service(services,
                                    name,
@@ -284,3 +226,16 @@ def _add_or_update_service(services, display_name, status, extra_info=None):
     if extra_info:
         services[display_name].setdefault('extra_info', {})
         services[display_name]['extra_info'].update(extra_info)
+
+
+def get_system_manager_services(base_services, optional_services):
+    """Services the status of which we keep track of.
+    :return: a dict of {service_name: label}
+    """
+    services = {}
+
+    # Use updates to avoid mutating the 'constant'
+    services.update(base_services)
+    services.update(optional_services)
+
+    return services
