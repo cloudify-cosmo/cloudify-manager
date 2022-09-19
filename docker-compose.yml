@@ -1,0 +1,40 @@
+# Run from source root by following command:
+#   docker-compose -f cloudify-manager/docker-compose.yml up
+#
+# Directory has to contain:
+#  - cloudify-common
+#  - cloudify-agent
+#  - cloudify-manager
+#  - config.yaml (configuration for manager)
+#  - cloudify_internal_ca_cert.pem
+#  - cloudify_internal_ca_key.pem
+
+version: "3.8"
+
+services:
+  manager:
+    container_name: manager
+    image: cloudify-manager-aio
+    volumes:
+      - ../config.yaml:/etc/cloudify/config.yaml
+      - ../cloudify_internal_ca_cert.pem:/tmp/cloudify_internal_ca_cert.pem
+      - ../cloudify_internal_ca_key.pem:/tmp/cloudify_internal_ca_key.pem
+    networks:
+      - cloudify
+    restart: unless-stopped
+
+  mgmtworker:
+    container_name: mgmtworker
+    build:
+      context: ../
+      dockerfile: cloudify-manager/mgmtworker/Dockerfile
+    env_file:
+      - .env
+    networks:
+      - cloudify
+    restart: unless-stopped
+
+networks:
+  cloudify:
+    driver: bridge
+    name: cloudify

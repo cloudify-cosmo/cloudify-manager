@@ -67,3 +67,6 @@ riemann.log
 # Created when running pytest
 .cloudify/
 config.yaml
+
+# Environment files
+.env
