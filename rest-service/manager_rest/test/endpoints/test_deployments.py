@@ -18,7 +18,7 @@ import mock
 import os
 import uuid
 from datetime import datetime
-from typing import Optional, Dict
+from typing import Optional, Dict, Any
 
 from cloudify.models_states import (VisibilityState,
                                     ExecutionState,
@@ -563,7 +563,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         string_params = ['description', 'display_name']
         dict_params = ['inputs', 'policy_triggers', 'policy_types', 'outputs',
                        'capabilities', 'resource_tags']
-        overrides = {
+        overrides: Dict[str, Any] = {
             "created_at": "2022-08-31T09:47:13.712Z",
             "created_by": "admin",
             "installation_status": "active",
