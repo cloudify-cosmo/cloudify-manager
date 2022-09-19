@@ -1,6 +1,6 @@
 %define __python /opt/mgmtworker/env/bin/python
 %define __jar_repack %{nil}
-%define PIP_INSTALL /opt/mgmtworker/env/bin/pip install -c "${RPM_SOURCE_DIR}/packaging/mgmtworker/constraints.txt"
+%define PIP_INSTALL /opt/mgmtworker/env/bin/pip install
 %define __find_provides %{nil}
 %define __find_requires %{nil}
 %define _use_internal_dependency_generator 0
