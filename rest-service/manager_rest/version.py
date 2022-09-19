@@ -29,9 +29,7 @@ def get_edition():
 
 
 def get_distribution():
-    distribution, _, release = distro.linux_distribution(
-        full_distribution_name=False)
-    return distribution, release
+    return distro.id(), distro.codename()
 
 
 def get_version_data():
