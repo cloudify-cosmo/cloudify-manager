@@ -324,44 +324,26 @@ class UploadedSnapshotsManager(UploadedDataManager):
 
 class UploadedBlueprintsManager(UploadedDataManager):
 
-    def receive_uploaded_data(self, data_id=None, **kwargs):
-        blueprint_url = None
-        visibility = kwargs.get(_VISIBILITY, None)
-        labels = kwargs.get('labels', None)
-        override_failed_blueprint = kwargs.get('override_failed', False)
-
-        args = get_args_and_verify_arguments([
-            Argument('private_resource', type=boolean),
-            Argument('application_file_name', default=''),
-            Argument('skip_execution', type=boolean, default=False),
-            Argument('state', default=None),
-        ])
-
-        # Handle importing blueprint through url
-        if self._get_data_url_key() in request.args:
-            if request.data or \
-                    'Transfer-Encoding' in request.headers or \
-                    'blueprint_archive' in request.files:
-                raise manager_exceptions.BadParametersError(
-                    "Can pass {0} as only one of: URL via query parameters, "
-                    "request body, multi-form or "
-                    "chunked.".format(self._get_kind()))
-            blueprint_url = request.args[self._get_data_url_key()]
-
+    def receive_uploaded_data(
+        self, data_id=None, visibility=None, override_failed=False,
+        labels=None, created_at=None, owner=None, private_resource=None,
+        application_file_name='', skip_execution=None, state=None,
+        blueprint_url=None
+    ):
         visibility = get_resource_manager().get_resource_visibility(
-            Blueprint, data_id, visibility, args.private_resource)
+            Blueprint, data_id, visibility, private_resource)
 
         new_blueprint = self._prepare_and_process_doc(
             data_id,
             visibility,
             blueprint_url,
-            application_file_name=args.application_file_name,
-            override_failed_blueprint=override_failed_blueprint,
+            application_file_name=application_file_name,
+            override_failed_blueprint=override_failed,
             labels=labels,
-            created_at=kwargs.get('created_at'),
-            owner=kwargs.get('owner'),
-            state=args.state,
-            skip_execution=args.skip_execution)
+            created_at=created_at,
+            owner=owner,
+            state=state,
+            skip_execution=skip_execution)
         return new_blueprint, 201
 
     def _prepare_and_process_doc(self, data_id, visibility, blueprint_url,
@@ -525,9 +507,6 @@ class UploadedBlueprintsManager(UploadedDataManager):
 
     def _get_kind(self):
         return 'blueprint'
-
-    def _get_data_url_key(self):
-        return 'blueprint_archive_url'
 
     def _get_target_dir_path(self):
         return os.path.join(
