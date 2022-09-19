@@ -3,13 +3,13 @@ kind: Pod
 spec:
   containers:
   - name: jnlp
-    image: jenkins/inbound-agent:4.3-4
+    image: jenkins/inbound-agent:4.11.2-2
     resources:
       limits:
         cpu: 0.5
         memory: 256Mi
   - name: python
-    image: 263721492972.dkr.ecr.eu-west-1.amazonaws.com/cloudify-python3.6
+    image: 263721492972.dkr.ecr.eu-west-1.amazonaws.com/cloudify-python3.10
     resources:
       requests:
         cpu: 2

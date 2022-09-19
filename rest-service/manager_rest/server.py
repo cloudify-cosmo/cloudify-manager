@@ -13,6 +13,7 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm.session import close_all_sessions
 from sqlalchemy.pool import Pool
 from werkzeug.exceptions import InternalServerError
+from pydantic import ValidationError
 
 
 from manager_rest import config, premium_enabled, manager_exceptions
@@ -63,6 +64,14 @@ def internal_error(e):
         error_code=INTERNAL_SERVER_ERROR_CODE,
         server_traceback=s_traceback.getvalue()
     ), 500
+
+
+@app_errors.app_errorhandler(ValidationError)
+def _validation_error(e):
+    return jsonify(
+        message=str(e),
+        error_code=manager_exceptions.BadParametersError.error_code,
+    ), manager_exceptions.BadParametersError.status_code
 
 
 def cope_with_db_failover():

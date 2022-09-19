@@ -10,6 +10,21 @@ def vEnv(){
       virtualenv .venv
     ''', label: "creating virtualenv"
 }
+
+def doGetVersion(){
+  sh(script: '''#!/bin/sh -e
+    . cloudify-manager/packaging/version_info
+    echo ${CLOUDIFY_VERSION}
+  ''', label: 'get package version', returnStdout: true).trim()
+}
+
+def doGetPreRelease(){
+  sh(script: '''#!/bin/sh -e
+    . cloudify-manager/packaging/version_info
+    echo ${CLOUDIFY_PACKAGE_RELEASE}
+  ''', label: 'get package release', returnStdout: true).trim()
+}
+
 @Library('pipeline-shared-library') _
 
 pipeline {
@@ -32,8 +47,8 @@ pipeline {
   environment {
     BRANCH = "${env.BRANCH_NAME}"
     PROJECT = "cloudify-manager"
-    VERSION = getVersion("${env.PROJECT}", "${env.BRANCH_NAME}").trim()
-    PRERELEASE = getPreRelease("${env.PROJECT}", "${env.BRANCH_NAME}").trim()
+    VERSION = doGetVersion()
+    PRERELEASE = doGetPreRelease()
     S3_BASE_URL = "${env.VERSION}/${env.PRERELEASE}-build/${env.PROJECT}/${env.BRANCH}"
     S3_BUILD_PATH = "${env.S3_BASE_URL}/${env.BUILD_NUMBER}"
     S3_LATEST_BUILD_PATH = "${env.S3_BASE_URL}/latest"

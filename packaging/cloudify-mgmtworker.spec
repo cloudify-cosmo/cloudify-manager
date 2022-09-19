@@ -1,6 +1,9 @@
 %define __python /opt/mgmtworker/env/bin/python
 %define __jar_repack %{nil}
-%define PIP_INSTALL /opt/mgmtworker/env/bin/pip install -c "${RPM_SOURCE_DIR}/packaging/mgmtworker/constraints.txt"
+%define PIP_INSTALL /opt/mgmtworker/env/bin/pip install
+%define __find_provides %{nil}
+%define __find_requires %{nil}
+%define _use_internal_dependency_generator 0
 
 # Prevent mangling shebangs (RH8 build default), which fails
 #  with the test files of networkx<2 due to RH8 not having python2.
@@ -21,30 +24,39 @@ URL:            https://github.com/cloudify-cosmo/cloudify-manager
 Vendor:         Cloudify Platform Ltd.
 Packager:       Cloudify Platform Ltd.
 
-BuildRequires:  python3 >= 3.6, openssl-devel, git
+BuildRequires:  openssl-devel, git
 BuildRequires:  postgresql-devel
-BuildRequires: python3-devel
-Requires:       python3 >= 3.6, postgresql-libs
+Requires:       postgresql-libs
 Requires(pre):  shadow-utils
 
 %description
 Cloudify's Management worker
 
+%prep
+
+# Download and untar our python3.10 package
+curl https://cloudify-cicd.s3.amazonaws.com/python-build-packages/cfy-python3.10.tgz -o cfy-python3.10.tgz
+sudo tar zxvf cfy-python3.10.tgz -C /
 
 %build
-python3 -m venv /opt/mgmtworker/env
-%{PIP_INSTALL} --upgrade pip"<20.0" "setuptools<58.5"
+
+# Create the venv with the custom Python symlinked in
+/opt/python3.10/bin/python3.10 -m venv /opt/mgmtworker/env
+
+%{PIP_INSTALL} --upgrade pip "setuptools<=63.2"
 %{PIP_INSTALL} -r "${RPM_SOURCE_DIR}/packaging/mgmtworker/requirements.txt"
 %{PIP_INSTALL} --upgrade "${RPM_SOURCE_DIR}/mgmtworker"
 %{PIP_INSTALL} --upgrade "${RPM_SOURCE_DIR}/workflows"
 %{PIP_INSTALL} --upgrade "${RPM_SOURCE_DIR}/cloudify_types"
 
-%{PIP_INSTALL} --upgrade kerberos==1.3.0
+%{PIP_INSTALL} --upgrade kerberos==1.3.1
 
 
 %install
+
 mkdir -p %{buildroot}/opt/mgmtworker
 mv /opt/mgmtworker/env %{buildroot}/opt/mgmtworker
+
 mkdir -p %{buildroot}/var/log/cloudify/mgmtworker
 mkdir -p %{buildroot}/opt/mgmtworker/config
 mkdir -p %{buildroot}/opt/mgmtworker/work
@@ -61,6 +73,7 @@ groupadd -fr cfylogs
 
 
 %files
+
 %defattr(-,root,root)
 /etc/cloudify/logging.conf
 /etc/logrotate.d/cloudify-mgmtworker

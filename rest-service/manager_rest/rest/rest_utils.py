@@ -281,12 +281,16 @@ def get_visibility_parameter(optional=False,
         })
         visibility = request_dict.get('visibility', None)
 
+    validate_visibility(visibility, valid_values)
+    return visibility
+
+
+def validate_visibility(visibility, valid_values):
     if visibility is not None and visibility not in valid_values:
         raise manager_exceptions.BadParametersError(
             "Invalid visibility: `{0}`. Valid visibility's values are: {1}"
             .format(visibility, valid_values)
         )
-    return visibility
 
 
 def parse_datetime_string(datetime_str):

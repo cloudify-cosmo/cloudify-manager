@@ -27,10 +27,9 @@ install_requires = [
     'psutil>5,<6',
     'wagon>0.10',
     'python-dateutil>=2.8.1,<3',
-    'voluptuous>=0.9.3,<0.10',
     'pika',
     'cffi>=1.14,<1.15',
-    'cryptography>=3.3,<3.4',
+    'cryptography>=37,<40',
     'psycopg2',
     'pytz',
     'packaging',
@@ -39,6 +38,8 @@ install_requires = [
     'cachetools>=3,<4',
     'email-validator>1,<2',
     'retrying',
+    'pydantic',
+    'distro',
 ]
 
 
@@ -64,6 +65,6 @@ setup(
         ]
     },
     extras_require={
-        'dbus': ['dbus-python==1.2.4'],
+        'dbus': ['dbus-python==1.2.18'],
     }
 )
