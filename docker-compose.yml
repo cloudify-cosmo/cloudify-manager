@@ -34,6 +34,28 @@ services:
       - cloudify
     restart: unless-stopped
 
+  rest_service:
+    container_name: rest_service
+    build:
+      context: ../
+      dockerfile: cloudify-manager/rest-service/Dockerfile
+    env_file:
+      - .env
+    networks:
+      - cloudify
+    restart: unless-stopped
+
+  postgresql:
+    container_name: postgresql
+    image: postgres
+    env_file:
+      - .env
+    volumes:
+      - ../db-schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    networks:
+      - cloudify
+    restart: unless-stopped
+
 networks:
   cloudify:
     driver: bridge
