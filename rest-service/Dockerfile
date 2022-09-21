@@ -1,7 +1,6 @@
 FROM python:3.10-slim
 
-ENV WORKER_COUNT=0
-ENV CPU_RATIO=0.2
+ENV WORKER_COUNT=1
 ENV MAX_WORKER_COUNT=4
 ENV MAX_REQUESTS=1000
 ENV PORT=8101
@@ -17,7 +16,6 @@ RUN --mount=type=cache,target=/root/.cache apt-get install -y libpq-dev # Requir
 RUN --mount=type=cache,target=/root/.cache apt-get install -y gcc # Required for psycopg2
 RUN --mount=type=cache,target=/root/.cache apt-get install -y libffi-dev # Required for cffi
 
-
 WORKDIR /opt
 
 COPY . rest-service
@@ -29,13 +27,9 @@ RUN --mount=type=cache,target=/root/.cache pip install gunicorn
 
 RUN mkdir /src
 COPY docker/cloudify.pth /usr/local/lib/python3.10/site-packages/cloudify.pth
-# Create log file
-RUN mkdir -p /var/log/cloudify/rest
-RUN touch /var/log/cloudify/rest/gunicorn.log
 
-RUN adduser cfyuser
-RUN rm -rf /run/cloudify-restservice/
+RUN mkdir -p /var/log/cloudify/rest
+RUN mkdir -p /opt/manager
 RUN mkdir -p /run/cloudify-restservice
-RUN chown cfyuser. /run/cloudify-restservice
-RUN chmod 755 /run/cloudify-restservice
+
 ENTRYPOINT /opt/rest-service/docker/entrypoint.sh
