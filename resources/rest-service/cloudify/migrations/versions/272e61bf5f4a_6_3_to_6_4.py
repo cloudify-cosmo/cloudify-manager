@@ -312,7 +312,7 @@ def add_config_admin_only_column():
             config_table
             .update()
             .where(config_table.c.name == op.inline_literal(key))
-            .values(admin_only=True)
+            .values(admin_only=op.inline_literal(True))
         )
 
 
