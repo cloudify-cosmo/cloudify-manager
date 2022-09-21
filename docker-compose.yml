@@ -1,12 +1,16 @@
 version: "3.8"
 
 services:
-  mgmtworker:
-    container_name: mgmtworker
-      - .env
-    networks:
-      - cloudify
-    restart: unless-stopped
+  # mgmtworker is disabled until nginx is present - cannot call the API just yet
+  # mgmtworker:
+  #   container_name: mgmtworker
+  #   build:
+  #     dockerfile: mgmtworker/Dockerfile
+  #   env_file:
+  #     - .env
+  #   networks:
+  #     - cloudify
+  #   restart: unless-stopped
 
   rest_service:
     container_name: rest_service
