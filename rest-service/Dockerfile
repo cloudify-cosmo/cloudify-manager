@@ -25,6 +25,8 @@ RUN --mount=type=cache,target=/root/.cache pip install -r rest-service/requireme
 RUN --mount=type=cache,target=/root/.cache pip install rest-service/
 RUN --mount=type=cache,target=/root/.cache pip install gunicorn
 
+RUN mkdir /src
+COPY docker/cloudify.pth /usr/local/lib/python3.10/site-packages/cloudify.pth
 # Create log file
 RUN mkdir -p /var/log/cloudify/rest
 RUN touch /var/log/cloudify/rest/gunicorn.log
