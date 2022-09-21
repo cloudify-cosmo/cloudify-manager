@@ -1,11 +1,3 @@
-# Run from source root
-#
-# Directory has to contain:
-#  - cloudify-common
-#  - cloudify-manager
-#  - cloudify-rest.conf
-#  - rest-security.conf
-
 FROM python:3.10-slim
 
 ENV WORKER_COUNT=0
@@ -23,17 +15,14 @@ RUN --mount=type=cache,target=/root/.cache apt-get install -y libffi-dev # Requi
 
 WORKDIR /opt
 
-# TODO: Change the way dependencies are installed
-COPY cloudify-common cloudify-common
-COPY cloudify-manager/rest-service rest-service
+COPY . rest-service
 
 COPY cloudify-rest.conf /opt/manager/cloudify-rest.conf
 COPY rest-security.conf /opt/manager/rest-security.conf
 
 RUN --mount=type=cache,target=/root/.cache pip install --upgrade pip
-
-RUN --mount=type=cache,target=/root/.cache pip install -e cloudify-common[dispatcher]
-RUN --mount=type=cache,target=/root/.cache pip install -e rest-service
+RUN --mount=type=cache,target=/root/.cache pip install -r rest-service/requirements.txt
+RUN --mount=type=cache,target=/root/.cache pip install rest-service/
 RUN --mount=type=cache,target=/root/.cache pip install gunicorn
 
 # Create log file

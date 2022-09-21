@@ -1,14 +1,3 @@
-# Run from source root by following command:
-#   docker-compose -f cloudify-manager/docker-compose.yml up
-#
-# Directory has to contain:
-#  - cloudify-common
-#  - cloudify-agent
-#  - cloudify-manager
-#  - config.yaml (configuration for manager)
-#  - cloudify_internal_ca_cert.pem
-#  - cloudify_internal_ca_key.pem
-
 version: "3.8"
 
 services:
@@ -25,10 +14,6 @@ services:
 
   mgmtworker:
     container_name: mgmtworker
-    build:
-      context: ../
-      dockerfile: cloudify-manager/mgmtworker/Dockerfile
-    env_file:
       - .env
     networks:
       - cloudify
@@ -36,9 +21,7 @@ services:
 
   rest_service:
     container_name: rest_service
-    build:
-      context: ../
-      dockerfile: cloudify-manager/rest-service/Dockerfile
+    build: rest-service
     env_file:
       - .env
     networks:
