@@ -1,17 +1,6 @@
 version: "3.8"
 
 services:
-  manager:
-    container_name: manager
-    image: cloudify-manager-aio
-    volumes:
-      - ../config.yaml:/etc/cloudify/config.yaml
-      - ../cloudify_internal_ca_cert.pem:/tmp/cloudify_internal_ca_cert.pem
-      - ../cloudify_internal_ca_key.pem:/tmp/cloudify_internal_ca_key.pem
-    networks:
-      - cloudify
-    restart: unless-stopped
-
   mgmtworker:
     container_name: mgmtworker
       - .env
