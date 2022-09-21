@@ -71,7 +71,7 @@ def add_config_log_fetch_credentials():
         [
             {
                 'name': 'log_fetch_username',
-                'value': None,
+                'value': "",
                 'scope': 'rest',
                 'schema': None,
                 'is_editable': True,
@@ -79,7 +79,7 @@ def add_config_log_fetch_credentials():
             },
             {
                 'name': 'log_fetch_password',
-                'value': None,
+                'value': "",
                 'scope': 'rest',
                 'schema': None,
                 'is_editable': True,
