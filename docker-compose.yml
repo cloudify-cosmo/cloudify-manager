@@ -15,8 +15,8 @@ services:
   rest_service:
     container_name: rest_service
     build: rest-service
-    env_file:
-      - .env
+    depends_on:
+      - postgresql
     networks:
       - cloudify
     restart: unless-stopped
@@ -24,10 +24,12 @@ services:
   postgresql:
     container_name: postgresql
     image: postgres
-    env_file:
-      - .env
+    environment:
+      POSTGRES_DB: cloudify_db
+      POSTGRES_USER: cloudify
+      POSTGRES_PASSWORD: cloudify
     volumes:
-      - ../db-schema.sql:/docker-entrypoint-initdb.d/schema.sql
+      - ./packaging/db-schema.sql:/docker-entrypoint-initdb.d/schema.sql
     networks:
       - cloudify
     restart: unless-stopped
