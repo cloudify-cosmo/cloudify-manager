@@ -71,7 +71,7 @@ def add_config_log_fetch_credentials():
         [
             {
                 'name': 'log_fetch_username',
-                'value': None,
+                'value': "",
                 'scope': 'rest',
                 'schema': None,
                 'is_editable': True,
@@ -79,7 +79,7 @@ def add_config_log_fetch_credentials():
             },
             {
                 'name': 'log_fetch_password',
-                'value': None,
+                'value': "",
                 'scope': 'rest',
                 'schema': None,
                 'is_editable': True,
@@ -312,7 +312,7 @@ def add_config_admin_only_column():
             config_table
             .update()
             .where(config_table.c.name == op.inline_literal(key))
-            .values(admin_only=True)
+            .values(admin_only=op.inline_literal(True))
         )
 
 
