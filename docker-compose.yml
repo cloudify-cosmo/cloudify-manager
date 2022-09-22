@@ -1,46 +1,23 @@
-# Run from source root by following command:
-#   docker-compose -f cloudify-manager/docker-compose.yml up
-#
-# Directory has to contain:
-#  - cloudify-common
-#  - cloudify-agent
-#  - cloudify-manager
-#  - config.yaml (configuration for manager)
-#  - cloudify_internal_ca_cert.pem
-#  - cloudify_internal_ca_key.pem
-
 version: "3.8"
 
 services:
-  manager:
-    container_name: manager
-    image: cloudify-manager-aio
-    volumes:
-      - ../config.yaml:/etc/cloudify/config.yaml
-      - ../cloudify_internal_ca_cert.pem:/tmp/cloudify_internal_ca_cert.pem
-      - ../cloudify_internal_ca_key.pem:/tmp/cloudify_internal_ca_key.pem
-    networks:
-      - cloudify
-    restart: unless-stopped
-
-  mgmtworker:
-    container_name: mgmtworker
-    build:
-      context: ../
-      dockerfile: cloudify-manager/mgmtworker/Dockerfile
-    env_file:
-      - .env
-    networks:
-      - cloudify
-    restart: unless-stopped
+#  mgmtworker:
+#    container_name: mgmtworker
+#    build: mgmtworker
+#    env_file:
+#      - .env
+#    volumes:
+#      - ../cloudify_internal_ca_cert.pem:/opt/mgmtworker/cloudify_internal_ca_cert.pem
+#      - ./resources/rest-service/cloudify/types:/opt/manager/resources/cloudify/types
+#    networks:
+#      - cloudify
+#    restart: unless-stopped
 
   rest_service:
     container_name: rest_service
-    build:
-      context: ../
-      dockerfile: cloudify-manager/rest-service/Dockerfile
-    env_file:
-      - .env
+    build: rest-service
+    depends_on:
+      - postgresql
     networks:
       - cloudify
     restart: unless-stopped
@@ -48,10 +25,12 @@ services:
   postgresql:
     container_name: postgresql
     image: postgres
-    env_file:
-      - .env
+    environment:
+      POSTGRES_DB: cloudify_db
+      POSTGRES_USER: cloudify
+      POSTGRES_PASSWORD: cloudify
     volumes:
-      - ../db-schema.sql:/docker-entrypoint-initdb.d/schema.sql
+      - ./packaging/db-schema.sql:/docker-entrypoint-initdb.d/schema.sql
     networks:
       - cloudify
     restart: unless-stopped
