@@ -17,9 +17,11 @@ WORKDIR /opt
 
 COPY . mgmtworker
 
-RUN --mount=type=cache,target=/root/.cache pip install --upgrade pip
-RUN --mount=type=cache,target=/root/.cache pip install -r mgmtworker/requirements.txt
-RUN --mount=type=cache,target=/root/.cache pip install mgmtworker/
+RUN --mount=type=cache,target=/root/.cache \
+    pip install \
+      --upgrade pip \
+      -r mgmtworker/requirements.txt \
+      mgmtworker/
 
 ENTRYPOINT ["python", "-m", "mgmtworker.worker"]
 CMD [\
