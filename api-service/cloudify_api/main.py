@@ -10,7 +10,7 @@ DEBUG = False
 def create_application() -> cloudify_api.CloudifyAPI:
     pkg = pkg_resources.require(cloudify_api.__package__)[0]
     application = cloudify_api.CloudifyAPI(
-        title=pkg._parsed_pkg_info.get('Summary'),
+        title=pkg.project_name,
         version=pkg.version,
         debug=DEBUG
     )
