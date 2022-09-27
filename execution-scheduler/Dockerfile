@@ -25,11 +25,11 @@ RUN --mount=type=cache,target=/root/.cache \
       -r execution-scheduler/requirements.txt \
       execution-scheduler/
 
-RUN mkdir /src
-COPY docker/cloudify.pth /usr/local/lib/python3.10/site-packages/cloudify.pth
-
 RUN mkdir -p \
     /opt/manager \
-    /var/log/cloudify/execution-scheduler
+    /var/log/cloudify/execution-scheduler \
+    /src
+
+COPY docker/cloudify.pth /usr/local/lib/python3.10/site-packages/cloudify.pth
 
 ENTRYPOINT /opt/execution-scheduler/docker/entrypoint.sh
