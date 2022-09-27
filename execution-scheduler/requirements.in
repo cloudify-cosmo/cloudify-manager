@@ -1,0 +1,2 @@
+https://github.com/cloudify-cosmo/cloudify-manager/archive/master.zip#egg=cloudify-rest-service&subdirectory=rest-service
+https://github.com/cloudify-cosmo/cloudify-common/archive/master.zip#egg=cloudify-common[dispatcher]

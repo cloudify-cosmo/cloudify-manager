@@ -13,11 +13,18 @@ services:
 #      - cloudify
 #    restart: unless-stopped
 
-  rest_service:
-    container_name: rest_service
-    build: rest-service
-    depends_on:
-      - postgresql
+#  rest_service:
+#    container_name: rest_service
+#    build: rest-service
+#    depends_on:
+#      - postgresql
+#    networks:
+#      - cloudify
+#    restart: unless-stopped
+
+  execution_scheduler:
+    container_name: execution_scheduler
+    build: execution-scheduler
     networks:
       - cloudify
     restart: unless-stopped
