@@ -22,6 +22,15 @@ services:
       - cloudify
     restart: unless-stopped
 
+  execution_scheduler:
+    container_name: execution_scheduler
+    build: execution-scheduler
+    depends_on:
+      - postgresql
+    networks:
+      - cloudify
+    restart: unless-stopped
+
   postgresql:
     container_name: postgresql
     image: postgres
