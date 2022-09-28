@@ -49,7 +49,7 @@ Cloudify Agent packages
 %install
 
 mkdir -p %{buildroot}%_agents_dir
-python ${RPM_SOURCE_DIR}/packaging/agents/copy_packages.py "${RPM_SOURCE_DIR}" "%{buildroot}%_agents_dir"
+python3 ${RPM_SOURCE_DIR}/packaging/agents/copy_packages.py "${RPM_SOURCE_DIR}" "%{buildroot}%_agents_dir"
 
 
 %pre
