@@ -28,6 +28,7 @@ Vendor:         Cloudify Platform Ltd.
 Packager:       Cloudify Platform Ltd.
 
 Requires(pre):  shadow-utils
+Requires:       python3 >= 3.6
 
 Source0:        https://cloudify-release-eu.s3.amazonaws.com/cloudify/%{CLOUDIFY_VERSION}/%{CLOUDIFY_PACKAGE_RELEASE}-release/manylinux-x86_64-agent_%{CLOUDIFY_VERSION}-%{CLOUDIFY_PACKAGE_RELEASE}.tar.gz
 Source1:        https://cloudify-release-eu.s3.amazonaws.com/cloudify/%{CLOUDIFY_VERSION}/%{CLOUDIFY_PACKAGE_RELEASE}-release/manylinux-aarch64-agent_%{CLOUDIFY_VERSION}-%{CLOUDIFY_PACKAGE_RELEASE}.tar.gz
@@ -48,7 +49,7 @@ Cloudify Agent packages
 %install
 
 mkdir -p %{buildroot}%_agents_dir
-python ${RPM_SOURCE_DIR}/packaging/agents/copy_packages.py "${RPM_SOURCE_DIR}" "%{buildroot}%_agents_dir"
+python3 ${RPM_SOURCE_DIR}/packaging/agents/copy_packages.py "${RPM_SOURCE_DIR}" "%{buildroot}%_agents_dir"
 
 
 %pre
