@@ -31,15 +31,14 @@ BuildRequires:  git, sudo
 Requires:      postgresql-libs, sudo, nginx
 Requires(pre):  shadow-utils
 
+Source0:        https://cloudify-cicd.s3.amazonaws.com/python-build-packages/cfy-python3.10-%{ARCHITECTURE}.tgz
+
 %description
 Cloudify's REST Service.
 
 
 %prep
-
-# Download and untar our python3.10 package
-curl https://cloudify-cicd.s3.amazonaws.com/python-build-packages/cfy-python3.10.tgz -o cfy-python3.10.tgz
-sudo tar zxvf cfy-python3.10.tgz -C /
+sudo tar xf %{S:0} -C /
 
 %build
 
