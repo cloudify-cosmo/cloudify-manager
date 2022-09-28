@@ -19,7 +19,7 @@ def splitext(filename):
 
 
 def normalize_agent_name(filename):
-    return filename.split("_", 1)[0].lower()
+    return filename.rpartition("_")[0].lower()
 
 
 def normalize_names(directory, target_dir):
