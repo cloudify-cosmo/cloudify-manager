@@ -1396,7 +1396,8 @@ class Execution(CreatedAtMixin, SQLResourceBase):
                     'package_version': plugin.get('package_version'),
                     'visibility': plugin.get('visibility'),
                     'tenant_name': plugin.get('tenant_name'),
-                    'source': plugin.get('source')
+                    'source': plugin.get('source'),
+                    'properties': plugin.get('properties'),
                 }
                 managed_plugin = (
                     session.query(Plugin)
