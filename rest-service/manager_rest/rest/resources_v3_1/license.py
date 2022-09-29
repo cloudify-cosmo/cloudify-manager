@@ -15,6 +15,7 @@ from manager_rest.rest.rest_decorators import (
     marshal_with,
     paginate
 )
+from manager_rest.utils import is_sanity_mode
 try:
     from cloudify_premium.license.secured_license_resource import (
         SecuredLicenseResource)
@@ -94,6 +95,8 @@ class LicenseCheckPremium(SecuredResource):
 
 class LicenseCheckCommunity(SecuredResource):
     def get(self):
+        if is_sanity_mode():
+            return 'Sanity', 200
         licenses = get_storage_manager().list(models.License,
                                               get_all_results=True)
         customer_id = str(licenses[0].customer_id) if licenses else None
