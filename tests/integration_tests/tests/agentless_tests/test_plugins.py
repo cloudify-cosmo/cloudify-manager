@@ -155,13 +155,42 @@ class TestPlugins(AgentlessTestCase):
         execution = self.client.executions.start(deployment_id='d1',
                                                  workflow_id='install')
         self.wait_for_execution_to_end(execution)
-        output_file_name = f'/tmp/execution-{execution.id}-output.yaml'
+        output_file_name = f'/tmp/execution-{execution.id}-test_node.yaml'
         output_text = docker_utils.read_file(self.env.container_id,
                                              output_file_name)
         properties_used = yaml.safe_load(output_text)
         assert properties_used == {
             'string_property': 'foo',
             'list_property': [1, 2, 3],
+        }
+
+    @pytest.mark.usefixtures('with_properties_plugin')
+    def test_plugin_with_properties_namespaced(self):
+        bp_path = test_utils.get_resource(
+            'dsl/plugin_properties_namespaced.yaml')
+        self.client.blueprints.upload(bp_path, 'bp')
+        test_utils.wait_for_blueprint_upload('bp', self.client)
+        self.client.deployments.create('bp', 'd2')
+        test_utils.wait_for_deployment_creation_to_complete(
+            self.env.container_id, 'd2', self.client)
+        execution = self.client.executions.start(deployment_id='d2',
+                                                 workflow_id='install')
+        self.wait_for_execution_to_end(execution)
+        output_file_name_ns1 = f'/tmp/execution-{execution.id}-node_ns1.yaml'
+        output_text_ns1 = docker_utils.read_file(self.env.container_id,
+                                                 output_file_name_ns1)
+        output_file_name_ns2 = f'/tmp/execution-{execution.id}-node_ns2.yaml'
+        output_text_ns2 = docker_utils.read_file(self.env.container_id,
+                                                 output_file_name_ns2)
+        properties_used_ns1 = yaml.safe_load(output_text_ns1)
+        assert properties_used_ns1 == {
+            'ns1--string_property': 'foo',
+            'ns1--list_property': [1, 2, 3],
+        }
+        properties_used_ns2 = yaml.safe_load(output_text_ns2)
+        assert properties_used_ns2 == {
+            'ns2--string_property': 'bar',
+            'ns2--list_property': [9, 8, 7],
         }
 
 

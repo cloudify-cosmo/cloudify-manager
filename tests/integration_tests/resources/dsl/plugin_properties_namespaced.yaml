@@ -2,10 +2,10 @@ tosca_definitions_version: cloudify_dsl_1_5
 
 imports:
   - cloudify/types/types.yaml
-  - ns1--plugin:with-properties-plugin?version=>=0.0.1:
+  - ns1--plugin:with_properties?version=>=0.0.1:
       string_property: foo
       list_property: [1, 2, 3]
-  - ns2--plugin:with-properties-plugin?version=>=0.0.1:
+  - ns2--plugin:with_properties?version=>=0.0.1:
       string_property: bar
       list_property: [9, 8, 7]
 
