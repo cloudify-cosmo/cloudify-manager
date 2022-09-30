@@ -31,6 +31,18 @@ services:
       - cloudify
     restart: unless-stopped
 
+  nginx:
+    container_name: nginx
+    build: nginx
+    depends_on:
+      - rest_service
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - cloudify
+    restart: unless-stopped
+
   postgresql:
     container_name: postgresql
     image: postgres

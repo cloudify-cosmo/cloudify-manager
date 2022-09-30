@@ -1,0 +1,7 @@
+# Declares the size of a request's body. This is mainly used to allow large blueprints to be uploaded.
+client_max_body_size 0m;
+
+# Overcoming the renowned http://stackoverflow.com/questions/19238122/nginx-with-ubuntu-and-rails-on-digital-ocean
+types_hash_max_size 4096;
+
+include "/etc/nginx/conf.d/*.upstream";
