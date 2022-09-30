@@ -1,0 +1,22 @@
+plugins:
+  with_properties:
+    executor: central_deployment_agent
+    package_name: with_properties
+    package_version: 0.0.1
+    properties_description: A test of plugin's properties
+    properties:
+      string_property:
+        type: string
+        description: A property of "string" type
+        display_label: String property
+      list_property:
+        type: list
+        description: A property of "list" type
+        display_label: List property
+
+node_types:
+  test_type:
+    derived_from: cloudify.nodes.Root
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        start: with_properties.with_properties.tasks.op

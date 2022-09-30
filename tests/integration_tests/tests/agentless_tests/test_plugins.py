@@ -15,12 +15,14 @@
 
 import pytest
 import retrying
+import yaml
 
 from cloudify.models_states import PluginInstallationState
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from integration_tests import AgentlessTestCase
+from integration_tests.framework import docker as docker_utils
 from integration_tests.tests import utils as test_utils
 
 pytestmark = pytest.mark.group_plugins
@@ -141,6 +143,26 @@ class TestPlugins(AgentlessTestCase):
         test_utils.wait_for_blueprint_upload('bp13', self.client)
         self.client.blueprints.upload(bp14_path, 'bp14')
         test_utils.wait_for_blueprint_upload('bp14', self.client)
+
+    @pytest.mark.usefixtures('with_properties_plugin')
+    def test_plugin_with_properties(self):
+        bp_path = test_utils.get_resource('dsl/plugin_properties.yaml')
+        self.client.blueprints.upload(bp_path, 'bp')
+        test_utils.wait_for_blueprint_upload('bp', self.client)
+        self.client.deployments.create('bp', 'd1')
+        test_utils.wait_for_deployment_creation_to_complete(
+            self.env.container_id, 'd1', self.client)
+        execution = self.client.executions.start(deployment_id='d1',
+                                                 workflow_id='install')
+        self.wait_for_execution_to_end(execution)
+        output_file_name = f'/tmp/execution-{execution.id}-output.yaml'
+        output_text = docker_utils.read_file(self.env.container_id,
+                                             output_file_name)
+        properties_used = yaml.safe_load(output_text)
+        assert properties_used == {
+            'string_property': 'foo',
+            'list_property': [1, 2, 3],
+        }
 
 
 class TestPluginsSystemState(AgentlessTestCase):
