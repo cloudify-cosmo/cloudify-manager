@@ -1,5 +1,5 @@
 location ~ ^/(blueprints|executions|deployments|nodes|events|status|provider|node-instances|version|evaluate|deployment-modifications|tokens) {
-    rewrite ^/(.*)${DOLLAR} /api/v1/${DOLLAR}1;
+    rewrite ^/(.*)$ /api/v1/$1;
 }
 location /api/ {
     location ~* .help.json {

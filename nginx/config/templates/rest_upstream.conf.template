@@ -45,7 +45,7 @@ server {
 
   # TODO: Disable non-ssl connections
   # location / {
-  #   return 308 https://${DOLLAR}host${DOLLAR}request_uri;
+  #   return 308 https://$host$request_uri;
   # }
 
   # TODO: Disable non-ssl connections

@@ -6,10 +6,10 @@ ENV REST_SERVICE_PORT=8100
 
 WORKDIR /opt
 
-COPY . nginx
+RUN rm -rf /etc/nginx/conf.d/default.conf
 
 RUN mkdir -p /var/log/cloudify/nginx
 
-RUN rm -rf /etc/nginx/conf.d/default.conf
-
-ENTRYPOINT nginx/docker/entrypoint.sh
+COPY ./config/nginx.conf /etc/nginx/nginx.conf
+COPY ./config/conf.d /etc/nginx/conf.d
+COPY ./config/templates /etc/nginx/templates
