@@ -1,0 +1,5 @@
+worker_processes  ${WORKER_PROCESS};
+
+events {
+  worker_connections  ${WORKER_CONNECTIONS};
+}

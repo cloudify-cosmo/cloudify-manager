@@ -1,0 +1,17 @@
+    proxy_pass         http://cloudify-rest;
+    proxy_redirect     off;
+
+    proxy_set_header   Host              $host;
+    proxy_set_header   X-Real-IP         $remote_addr;
+    proxy_set_header   X-Server-Port     $server_port;
+    proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header   X-Forwarded-Proto $scheme;
+
+    proxy_hide_header  X-Cloudify-Audit-Auth-Method;
+    proxy_hide_header  X-Cloudify-Audit-Tenant;
+    proxy_hide_header  X-Cloudify-Audit-Username;
+
+    gzip on;
+    gzip_types application/json;
+    gzip_min_length 1000;
+    gzip_proxied any;
