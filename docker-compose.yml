@@ -45,6 +45,15 @@ services:
       - cloudify
     restart: unless-stopped
 
+  rabbitmq:
+    container_name: rabbitmq
+    build: rabbitmq
+    volumes:
+      - ./ssl:/etc/cloudify/ssl
+    networks:
+      - cloudify
+    restart: unless-stopped
+
   postgresql:
     container_name: postgresql
     image: postgres

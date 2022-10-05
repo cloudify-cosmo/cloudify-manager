@@ -1,0 +1,25 @@
+{
+  "vhosts":[
+    {"name": "/"}
+  ],
+  "exchanges": [
+    {
+      "name": "cloudify-logs",
+      "vhost": "/",
+      "type": "fanout",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "cloudify-events-topic",
+      "vhost": "/",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    }
+  ]
+}
