@@ -137,3 +137,43 @@ class UsersTest(AgentlessTestCase):
 
     def test_list_users_no_get_data(self):
         self._test_list_users(get_data=False)
+
+    def _create_sysadmin_user_and_client(self):
+        self.client.users.create(
+            self.test_username,
+            self.test_password,
+            ADMIN_ROLE
+        )
+        test_client = self.create_rest_client(
+            username=self.test_username,
+            password=self.test_password,
+        )
+        return test_client
+
+    def test_deactivate_last_sysadmin_fails(self):
+        test_client = self._create_sysadmin_user_and_client()
+        self.client.users.deactivate('admin')
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            'Cannot deactivate the last active sys_admin',
+            test_client.users.deactivate,
+            self.test_username)
+
+    def test_delete_last_sysadmin_fails(self):
+        test_client = self._create_sysadmin_user_and_client()
+        self.client.users.deactivate('admin')
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            'Cannot delete the last active sys_admin',
+            test_client.users.delete,
+            self.test_username)
+
+    def test_demote_last_sysadmin_fails(self):
+        test_client = self._create_sysadmin_user_and_client()
+        self.client.users.deactivate('admin')
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            'Cannot modify the role of the last active sys_admin',
+            test_client.users.set_role,
+            self.test_username,
+            USER_ROLE)
