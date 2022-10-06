@@ -49,7 +49,8 @@ services:
     container_name: rabbitmq
     build: rabbitmq
     volumes:
-      - ./ssl:/etc/cloudify/ssl
+      - ./packaging/rabbitmq/files/etc/cloudify/rabbitmq:/etc/cloudify/rabbitmq:ro
+      - ./ssl:/etc/cloudify/ssl:ro
     networks:
       - cloudify
     restart: unless-stopped
