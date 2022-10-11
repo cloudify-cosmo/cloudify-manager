@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
+
+# This part was added by the own.
 python3 /opt/rabbitmq/script/configure_definitions.py
+# Rest of file was copied from the original source.
+# https://github.com/docker-library/rabbitmq/blob/221037ea6c661baa6f3c1ad195ef6e15f4bfcb11/docker-entrypoint.sh
 
 set -euo pipefail
 
