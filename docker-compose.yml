@@ -49,7 +49,6 @@ services:
     container_name: rabbitmq
     build: rabbitmq
     volumes:
-      - ./packaging/rabbitmq/files/etc/cloudify/rabbitmq:/etc/cloudify/rabbitmq:ro
       - ./ssl:/etc/cloudify/ssl:ro
     networks:
       - cloudify
