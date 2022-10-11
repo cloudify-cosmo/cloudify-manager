@@ -15,8 +15,10 @@ RUN --mount=type=cache,target=/root/.cache \
 
 COPY ./config /etc/cloudify/rabbitmq
 COPY ./script /opt/rabbitmq/script
+COPY ./docker /opt/rabbitmq/docker
 
 RUN mkdir -p /var/log/cloudify/rabbitmq
 RUN chmod 777 -R /var/log/cloudify/rabbitmq
 
-RUN python3 /opt/rabbitmq/script/configure_definitions.py
+ENTRYPOINT ["/opt/rabbitmq/docker/entrypoint.sh"]
+CMD ["rabbitmq-server"]

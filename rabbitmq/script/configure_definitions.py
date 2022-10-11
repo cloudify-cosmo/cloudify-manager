@@ -9,37 +9,37 @@ class Definitions:
         self.file_path = "/etc/cloudify/rabbitmq/definitions.json"
 
     def configure(self):
-        username = self.__get_username()
-        password = self.__get_password()
-        password_hash = self.__get_password_hash(password)
+        username = self._get_username()
+        password = self._get_password()
+        password_hash = self._get_password_hash(password)
 
-        definitions = self.__read_definitions()
+        definitions = self._read_definitions()
 
         definitions["users"][0]["name"] = username
         definitions["users"][0]["password_hash"] = password_hash
 
         definitions["permissions"][0]["user"] = username
 
-        self.__write_definitions(definitions)
+        self._write_definitions(definitions)
 
-    def __read_definitions(self):
+    def _read_definitions(self):
         with open(self.file_path, 'r') as file:
             return json.load(file)
 
-    def __write_definitions(self, definitions):
+    def _write_definitions(self, definitions):
         with open(self.file_path, 'w') as file:
             json.dump(definitions, file, indent=4)
 
     @staticmethod
-    def __get_username():
+    def _get_username():
         return os.environ['RABBITMQ_USERNAME']
 
     @staticmethod
-    def __get_password():
+    def _get_password():
         return os.environ['RABBITMQ_PASSWORD']
 
     @staticmethod
-    def __get_password_hash(password):
+    def _get_password_hash(password):
         salt = os.urandom(4)
         hashed = hashlib.sha256(salt + password.encode('utf-8')).digest()
 
