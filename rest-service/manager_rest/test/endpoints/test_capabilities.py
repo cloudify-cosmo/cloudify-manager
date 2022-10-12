@@ -15,7 +15,9 @@
 
 from typing import Dict, Any
 
+from manager_rest.storage import models
 from manager_rest.test import base_test
+from manager_rest.test.utils import node_intance_counts
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 
@@ -244,54 +246,78 @@ class CapabilitiesTestCase(base_test.BaseServerTestCase):
 
 class TestGetGroupCapability(base_test.BaseServerTestCase):
     def test_get_capability(self):
-        """Test the various variants of get_group_capability
+        """Test the various variants of get_group_capability"""
+        bp = models.Blueprint(id='bp', creator=self.user, tenant=self.tenant)
 
-        The blueprint contains all the ways get_group_capability can
-        be called, both as deployment outputs, and as node properties.
+        # prepare a deployment-group with 3 deployments, each having
+        # different capabilities
+        for dep_id, capabilities in [
+            ('dep1', {
+                'cap1': {'value': 'd1-inp1'},
+                'cap2': {'value': 'd1-inp2'},
+                'complex_capability': {
+                    'value': {'level_1': ['d1-inp1', 'd1-inp2']}
+                }
+            }),
+            ('dep2', {
+                'cap1': {'value': 'd2-inp1'},
+                'cap2': {'value': 'd2-inp2'},
+                'complex_capability': {
+                    'value': {'level_1': ['d2-inp1', 'd2-inp2']}
+                }
+            }),
+            ('dep3', {'cap1': {'value': 'd3-inp1'}}),
+        ]:
+            models.Deployment(
+                id=dep_id,
+                capabilities=capabilities,
+                blueprint=bp, creator=self.user, tenant=self.tenant,
+            )
 
-        We try them all in a single test, because the setup cost is
-        nontrivial, as we have to create several deployments.
-
-        And yes, the same blueprint serves also as the blueprint for
-        the group, because that blueprint also exposes the capabilities.
-        (and the other blueprint only has a single capability)
-        """
-        self.put_blueprint(
-            blueprint_file_name='blueprint_with_group_capabilities.yaml')
-        self.put_blueprint(
-            blueprint_file_name='blueprint_with_group_capabilities_2.yaml',
-            blueprint_id='blueprint_with_one_cap')
-        dep1 = self.client.deployments.create('blueprint', 'dep1', inputs={
-            'inp1': 'd1-inp1', 'inp2': 'd1-inp2'
-        })
-        self.create_deployment_environment(dep1)
-        dep2 = self.client.deployments.create('blueprint', 'dep2', inputs={
-            'inp1': 'd2-inp1', 'inp2': 'd2-inp2'
-        })
-        self.create_deployment_environment(dep2)
-        dep3 = self.client.deployments.create(
-            'blueprint_with_one_cap', 'dep3', inputs={'inp1': 'd3-inp1'})
-        self.create_deployment_environment(dep3)
         self.client.deployment_groups.put(
             'g1',
-            deployment_ids=[dep1.id, dep2.id, dep3.id]
+            deployment_ids=['dep1', 'dep2', 'dep3'],
         )
-        dep4 = self.client.deployments.create('blueprint', 'dep4')
-        self.create_deployment_environment(dep4)
-        with self.assertRaisesRegex(
-                CloudifyClientError, 'some-group-id') as cm:
-            # get-group-cap of a group that doesnt exist is a 404
-            self.client.nodes.get(
-                deployment_id=dep4.id,
-                node_id='node1',
-                evaluate_functions=True,
-            )
-        assert cm.exception.status_code == 404
 
-        dep5 = self.client.deployments.create('blueprint', 'dep5', inputs={
-            'parent_group_id': 'g1'
-        })
-        self.create_deployment_environment(dep5)
+        # those are going to be the functions that we assert on. We'll test
+        # both retrieving those values in deployment outputs, and in node
+        # properties
+        to_retrieve = {
+            'cap1': {'get_group_capability': ['g1', 'cap1']},
+            'cap2': {'get_group_capability': ['g1', 'cap2']},
+            'both_caps': {'get_group_capability': ['g1', ['cap1', 'cap2']]},
+            'cap1_by_id': {
+                'get_group_capability': ['g1', 'deployment_id:cap1']
+            },
+            'complex_cap': {
+                'get_group_capability': ['g1', 'complex_capability']
+            },
+            'complex_cap_indexed': {
+                'get_group_capability': [
+                    'g1', 'complex_capability', 'level_1', 1,
+                ],
+            },
+            'complex_cap_indexed_by_id': {
+                'get_group_capability': [
+                    'g1', 'deployment_id:complex_capability', 'level_1', 1,
+                ],
+            },
+        }
+
+        dep5 = models.Deployment(
+            id='dep5',
+            outputs={k: {'value': v} for k, v in to_retrieve.items()},
+            blueprint=bp, creator=self.user, tenant=self.tenant,
+        )
+        models.Node(
+            id='node1',
+            type='node',
+            properties={'value': to_retrieve},
+            deployment=dep5,
+            creator=self.user,
+            tenant=self.tenant,
+            **node_intance_counts(1),
+        )
 
         node_property = self.client.nodes.get(
             deployment_id=dep5.id,
@@ -323,40 +349,89 @@ class TestGetGroupCapability(base_test.BaseServerTestCase):
             'dep2': 'd2-inp2',
         }
 
+    def test_nonexistent_group(self):
+        bp = models.Blueprint(id='bp', creator=self.user, tenant=self.tenant)
+        dep4 = models.Deployment(
+            id='dep4',
+            outputs={
+                'cap1': {'value': {
+                    'get_group_capability': ['some-group-id', 'cap1'],
+                }},
+            },
+            blueprint=bp, creator=self.user, tenant=self.tenant,
+        )
+        with self.assertRaisesRegex(
+                CloudifyClientError, 'some-group-id') as cm:
+            # get-group-cap of a group that doesnt exist is a 404
+            self.client.deployments.outputs.get(dep4.id)
+        assert cm.exception.status_code == 404
+
 
 class TestGetEnvironmentCapability(base_test.BaseServerTestCase):
 
     def test_get_environment_capability(self):
-        shared_dep_id = 'shared'
-        other_dep_id = 'child'
-        shared_bl_name = 'blueprint_with_capabilities.yaml'
-        other_bl_name = 'blueprint_with_get_environment_capabilities.yaml'
+        bp = models.Blueprint(
+            id='bp1',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        env = models.Deployment(
+            id='shared',
+            blueprint=bp,
+            capabilities={
+                'node1_key': {
+                    'value': {
+                        'get_attribute': ['node1', 'key', 0, 'nested', 0]
+                    },
+                },
+                'complex_capability': {
+                    'value': {'level1': {'level2': {'level3': ['value1']}}}
+                }
+            },
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        node1 = models.Node(
+            id='node1',
+            type='node',
+            properties={'key': [{'nested': ['test_value']}]},
+            deployment=env,
+            creator=self.user,
+            tenant=self.tenant,
+            **node_intance_counts(1),
+        )
+        models.NodeInstance(
+            id='node1_1',
+            node=node1,
+            state='started',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        child = models.Deployment(
+            id='child',
+            blueprint=bp,
+            labels=[models.DeploymentLabel(
+                key='csys-obj-parent',
+                value=env.id,
+                creator=self.user,
+            )],
+            outputs={
+                'node1_key': {
+                    'value': {'get_environment_capability': 'node1_key'},
+                },
+                'flattened': {
+                    'value': {
+                        'get_environment_capability': [
+                            'complex_capability', 'level1', 'level2',
+                            'level3', 0
+                        ],
+                    },
+                }
+            },
+            creator=self.user,
+            tenant=self.tenant,
+        )
 
-        self.put_deployment(
-            blueprint_file_name=shared_bl_name,
-            blueprint_id=shared_dep_id,
-            deployment_id=shared_dep_id)
-
-        self.put_deployment(
-            blueprint_file_name=other_bl_name,
-            blueprint_id=other_dep_id,
-            deployment_id=other_dep_id)
-
-        # Expose capabilities
-        capabilities = self.client.deployments.capabilities.get(shared_dep_id)
-        node_1_key = capabilities['capabilities']['node_1_key']
-        node_2_key = capabilities['capabilities']['node_2_key']
-        node_1_key_nested = capabilities['capabilities']['node_1_key_nested']
-        node_2_key_nested = capabilities['capabilities']['node_2_key_nested']
-        complex_capability = capabilities['capabilities']['complex_capability']
-
-        # outputs referencing `capabilities` using `get_environment_capability`
-        outputs = self.client.deployments.outputs.get(other_dep_id)
-        assert outputs['outputs']['node_1_key'] == node_1_key
-        assert outputs['outputs']['node_2_key'] == node_2_key
-        assert outputs['outputs']['node_1_key_nested'] == node_1_key_nested
-        assert outputs['outputs']['node_2_key_nested'] == node_2_key_nested
-        assert outputs['outputs']['level2_key_1'] == complex_capability[
-            'level_1']['level_2']['key_1']
-        assert outputs['outputs']['level1_key_2'] == complex_capability[
-            'level_1']['key_2']
+        outputs = self.client.deployments.outputs.get(child.id)['outputs']
+        assert outputs['node1_key'] == 'test_value'
+        assert outputs['flattened'] == 'value1'

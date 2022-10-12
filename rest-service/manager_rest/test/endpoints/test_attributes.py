@@ -15,7 +15,9 @@
 
 import uuid
 
+from manager_rest.storage import models
 from manager_rest.test import base_test
+from manager_rest.test.utils import node_intance_counts
 from cloudify_rest_client.exceptions import FunctionsEvaluationError
 
 
@@ -24,32 +26,51 @@ class AttributesTestCase(base_test.BaseServerTestCase):
     def setUp(self):
         super(AttributesTestCase, self).setUp()
         self.id_ = 'i{0}'.format(uuid.uuid4())
-        self.put_deployment(
-            blueprint_file_name='blueprint_for_get_attribute.yaml',
-            blueprint_id=self.id_,
-            deployment_id=self.id_)
+        bp = models.Blueprint(
+            id='bp1',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        dep = models.Deployment(
+            id='dep1',
+            blueprint=bp,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        self.id_ = dep.id
 
-        instances = self.client.node_instances.list(deployment_id=self.id_)
-
-        self.node1 = [x for x in instances if x.node_id == 'node1'][0]
-        self.node2 = [x for x in instances if x.node_id == 'node2'][0]
-        self.node3 = [x for x in instances if x.node_id == 'node3'][0]
-        self.node4 = [x for x in instances if x.node_id == 'node4'][0]
-
-        self.client.node_instances.update(
-            self.node1.id, runtime_properties={'key1': 'value1'})
-        self.client.node_instances.update(
-            self.node2.id, runtime_properties={'key2': 'value2'})
-        self.client.node_instances.update(
-            self.node3.id, runtime_properties={'key3': 'value3'})
-        self.client.node_instances.update(
-            self.node4.id, runtime_properties={'key4': 'value4'})
+        for node_id, properties, runtime_properties, instance_count in [
+            ('node1', {}, {'key1': 'value1'}, 1),
+            ('node2', {}, {'key2': 'value2'}, 1),
+            ('node3', {}, {'key3': 'value3'}, 1),
+            ('node4', {}, {'key4': 'value4'}, 1),
+            ('node5', {}, {}, 2),
+            ('node6', {'key6': 'value6'}, {}, 1),
+        ]:
+            node = models.Node(
+                id=node_id,
+                deployment=dep,
+                type='node',
+                properties=properties,
+                creator=self.user,
+                tenant=self.tenant,
+                **node_intance_counts(instance_count),
+            )
+            for num in range(instance_count):
+                models.NodeInstance(
+                    id=f'{node_id}_{num}',
+                    node=node,
+                    state='started',
+                    runtime_properties=runtime_properties,
+                    creator=self.user,
+                    tenant=self.tenant,
+                )
 
     def test_attributes(self):
         context = {
-            'self': self.node1.id,
-            'source': self.node2.id,
-            'target': self.node3.id
+            'self': 'node1_0',
+            'source': 'node2_0',
+            'target': 'node3_0',
         }
         payload = {
             'node1': {'get_attribute': ['SELF', 'key1']},
@@ -108,29 +129,70 @@ class AttributesTestCase(base_test.BaseServerTestCase):
 
 
 class MultiInstanceAttributesTestCase(base_test.BaseServerTestCase):
+    def setUp(self):
+        super().setUp()
+        self.id_ = 'i{0}'.format(uuid.uuid4())
+        bp = models.Blueprint(
+            id=self.id_, creator=self.user, tenant=self.tenant)
+        dep = models.Deployment(
+            id=self.id_, blueprint=bp, creator=self.user, tenant=self.tenant)
+        node1 = models.Node(
+            id='node1',
+            deployment=dep,
+            type='node',
+            creator=self.user,
+            tenant=self.tenant,
+            **node_intance_counts(2),
+        )
+        node2 = models.Node(
+            id='node2',
+            deployment=dep,
+            type='node',
+            creator=self.user,
+            tenant=self.tenant,
+            **node_intance_counts(2),
+        )
+        for num in range(1, 3):
+            instance_id = f'{node1.id}_{num}'
+            models.NodeInstance(
+                id=instance_id,
+                node=node1,
+                state='started',
+                runtime_properties={'key': instance_id},
+                creator=self.user,
+                tenant=self.tenant,
+            )
+        for num in range(1, 3):
+            instance_id = f'{node2.id}_{num}'
+            target_id = f'{node1.id}_{num}'
+            models.NodeInstance(
+                id=instance_id,
+                node=node2,
+                state='started',
+                relationships=[{
+                    'type': 'cloudify.relationships.contained_in',
+                    'target_id': target_id,
+                    'target_name': 'node1',
+                }],
+                creator=self.user,
+                tenant=self.tenant,
+            )
+
     def test_multi_instance_attributes(self):
         # The actual multi instance resolution logic is tested in the dsl
         # parser unit tests. This test serves only to have an end to end path
         # that includes actual storage DeploymentNode and
         # DeploymentNodeInstance when using the intrinsic functions storage
-        id_ = 'i{0}'.format(uuid.uuid4())
-        self.put_deployment(
-            blueprint_file_name='get_attribute_multi_instance.yaml',
-            blueprint_id=id_,
-            deployment_id=id_)
-        instances = self.client.node_instances.list(deployment_id=id_)
-        node3_ids = [x.id for x in instances if x.node_id == 'node3']
-        node6_ids = [x.id for x in instances if x.node_id == 'node6']
-        for node3_id in node3_ids:
-            self.client.node_instances.update(
-                node3_id, runtime_properties={'key': node3_id})
-        payload = {'node3': {'get_attribute': ['node3', 'key']}}
-        contexts = [{'self': node6_id} for node6_id in node6_ids]
-        expected_payloads = [{'node3': node3_id} for node3_id in node3_ids]
-        result_payloads = [
-            self.client.evaluate.functions(id_, contexts[i], payload).payload
-            for i in range(2)]
-        self.assertTrue((expected_payloads[0] == result_payloads[0] and
-                         expected_payloads[1] == result_payloads[1]) or
-                        (expected_payloads[0] == result_payloads[1] and
-                         expected_payloads[1] == result_payloads[0]))
+        payload = {'node1': {'get_attribute': ['node1', 'key']}}
+        result1 = self.client.evaluate.functions(
+            self.id_,
+            {'self': 'node2_1'},
+            payload,
+        ).payload
+        result2 = self.client.evaluate.functions(
+            self.id_,
+            {'self': 'node2_2'},
+            payload,
+        ).payload
+        assert result1 == {'node1': 'node1_1'}
+        assert result2 == {'node1': 'node1_2'}
