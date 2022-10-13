@@ -9,6 +9,7 @@ postgresql_password: ${POSTGRES_PASSWORD}
 
 echo "
 secret_key: ${SECRET_KEY}
+hash_salt: ${HASH_SALT}
 " > /opt/manager/rest-security.conf
 
 exec gunicorn \

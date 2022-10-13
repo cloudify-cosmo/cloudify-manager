@@ -19,6 +19,8 @@ services:
       context: rest-service
       ssh:
         - default
+    volumes:
+      - ./config.yaml:/opt/config.yaml
     depends_on:
       - postgresql
     networks:

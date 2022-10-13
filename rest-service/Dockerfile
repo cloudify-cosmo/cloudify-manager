@@ -5,10 +5,12 @@ ENV MAX_WORKER_COUNT=4
 ENV MAX_REQUESTS=1000
 ENV PORT=8100
 ENV SECRET_KEY=abcdefgh-secret-1234
+ENV HASH_SALT=abcdefgh-salt-1234
 ENV POSTGRES_DB=cloudify_db
 ENV POSTGRES_HOST=postgresql
 ENV POSTGRES_USER=cloudify
 ENV POSTGRES_PASSWORD=cloudify
+ENV CONFIG_FILE_PATH=/opt/config.yaml
 
 RUN --mount=type=cache,target=/root/.cache \
     apt-get update \
