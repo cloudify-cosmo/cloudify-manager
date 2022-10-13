@@ -106,9 +106,14 @@ class SearchesTestCase(base_test.BaseServerTestCase):
         self.assert_metadata_filtered(deployments, 1)
 
     def test_searches_with_search_and_filter_rules(self):
-        _, _, _, dep1 = self.put_deployment(deployment_id='dep1',
-                                            blueprint_id='bp1')
-        self.put_deployment(deployment_id='dep2', blueprint_id='bp2')
+        bp1 = models.Blueprint(id='bp1', creator=self.user, tenant=self.tenant)
+        bp2 = models.Blueprint(id='bp2', creator=self.user, tenant=self.tenant)
+        dep1 = models.Deployment(
+            id='dep1', blueprint=bp1, creator=self.user, tenant=self.tenant
+        )
+        models.Deployment(
+            id='dep2', blueprint=bp2, creator=self.user, tenant=self.tenant,
+        )
         filter_rules_bp1 = [
             FilterRule('blueprint_id', ['bp1'], 'any_of', 'attribute'),
             FilterRule('created_by', ['admin'], 'any_of', 'attribute')
@@ -147,12 +152,30 @@ class SearchesTestCase(base_test.BaseServerTestCase):
         self.assertEqual(resources[0].id, compared_resource.id)
 
     def test_searches_with_search_and_search_name(self):
-        self.put_deployment(deployment_id='qwe1', blueprint_id='bp1',
-                            display_name='a coil', labels=[{'key': 'a'}])
-        self.put_deployment(deployment_id='asd2', blueprint_id='bp2',
-                            display_name='a coin', labels=[{'key': 'b'}])
-        self.put_deployment(deployment_id='asd3', blueprint_id='bp3',
-                            display_name='a toy', labels=[{'key': 'c'}])
+        b1 = models.Blueprint(id='b1', creator=self.user, tenant=self.tenant)
+        models.Blueprint(id='b2', creator=self.user, tenant=self.tenant)
+        models.Blueprint(id='b3', creator=self.user, tenant=self.tenant)
+        models.Deployment(
+            id='qwe1', display_name='a coil', blueprint=b1,
+            creator=self.user, tenant=self.tenant,
+            labels=[models.DeploymentLabel(
+                key='key', value='a', creator=self.user,
+            )],
+        )
+        models.Deployment(
+            id='asd2', display_name='a coin', blueprint=b1,
+            creator=self.user, tenant=self.tenant,
+            labels=[models.DeploymentLabel(
+                key='key', value='b', creator=self.user,
+            )],
+        )
+        models.Deployment(
+            id='asd3', display_name='a toy', blueprint=b1,
+            creator=self.user, tenant=self.tenant,
+            labels=[models.DeploymentLabel(
+                key='key', value='c', creator=self.user,
+            )],
+        )
         any_blueprint = [
             FilterRule('key', [], 'is_not_null', 'label'),
         ]
@@ -169,10 +192,30 @@ class SearchesTestCase(base_test.BaseServerTestCase):
         self.assertEqual(deployments[0].id, 'qwe1')
 
     def test_deployments_search_with_constraints(self):
-        self.put_deployment(deployment_id='d1', blueprint_id='b1',
-                            labels=[{'type': 'test'}, {'one': 'yes'}])
-        self.put_deployment(deployment_id='d2', blueprint_id='b2',
-                            labels=[{'type': 'test'}])
+        b1 = models.Blueprint(id='b1', creator=self.user, tenant=self.tenant)
+        b2 = models.Blueprint(id='b2', creator=self.user, tenant=self.tenant)
+        models.Deployment(
+            id='d1',
+            blueprint=b1,
+            labels=[
+                models.DeploymentLabel(
+                    key='type', value='test', creator=self.user),
+                models.DeploymentLabel(
+                    key='one', value='yes', creator=self.user),
+            ],
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        models.Deployment(
+            id='d2',
+            blueprint=b2,
+            labels=[
+                models.DeploymentLabel(
+                    key='type', value='test', creator=self.user),
+            ],
+            creator=self.user,
+            tenant=self.tenant,
+        )
         self.create_filter(self.client.deployments_filters, 'filter1',
                            [FilterRule('one', ['yes'], 'any_of', 'label')])
         deployments = self.client.deployments.list(
@@ -186,8 +229,19 @@ class SearchesTestCase(base_test.BaseServerTestCase):
         self.assertEqual(len(deployments), 0)
 
     def test_deployments_search_valid_params(self):
-        self.put_deployment(deployment_id='d1', blueprint_id='b1',
-                            labels=[{'type': 'test'}, {'one': 'yes'}])
+        b1 = models.Blueprint(id='b1', creator=self.user, tenant=self.tenant)
+        models.Deployment(
+            id='d1',
+            blueprint=b1,
+            labels=[
+                models.DeploymentLabel(
+                    key='type', value='test', creator=self.user),
+                models.DeploymentLabel(
+                    key='one', value='yes', creator=self.user),
+            ],
+            creator=self.user,
+            tenant=self.tenant,
+        )
         self.create_filter(self.client.deployments_filters, 'filter1',
                            [FilterRule('one', ['yes'], 'any_of', 'label')])
         self.assertRaisesRegex(

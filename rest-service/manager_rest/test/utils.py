@@ -59,3 +59,14 @@ def tar_file(file_to_tar, destination_dir, tar_name=''):
     with tarfile.open(tar_path, "w:gz") as tar:
         tar.add(file_to_tar, arcname=tar_name)
     return tar_path
+
+
+def node_intance_counts(count):
+    """Shorthand to make all the instance count-related node properties"""
+    return {
+        'deploy_number_of_instances': count,
+        'min_number_of_instances': count,
+        'max_number_of_instances': count,
+        'number_of_instances': count,
+        'planned_number_of_instances': count,
+    }

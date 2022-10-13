@@ -13,27 +13,58 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import uuid
-
 import mock
 
 from cloudify_rest_client.exceptions import NoSuchIncludeFieldError
 
 from manager_rest.test import base_test
-from manager_rest.storage import ListResult
-from manager_rest.storage.models import Blueprint
+from manager_rest.test.utils import node_intance_counts
+from manager_rest.storage import ListResult, models
 
 
 class IncludeQueryParamTests(base_test.BaseServerTestCase):
 
     def setUp(self):
         super(IncludeQueryParamTests, self).setUp()
-        self.put_deployment(deployment_id='d{0}'.format(uuid.uuid4()),
-                            blueprint_file_name='blueprint.yaml')
+        bp = models.Blueprint(
+            id='bp1',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        dep = models.Deployment(
+            id='dep1',
+            blueprint=bp,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        models.Execution(
+            id='exc1',
+            workflow_id='install',
+            deployment=dep,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        node = models.Node(
+            id='node1',
+            type='node',
+            deployment=dep,
+            creator=self.user,
+            tenant=self.tenant,
+            **node_intance_counts(2)
+        )
+        for num in range(2):
+            models.NodeInstance(
+                id=f'{node.id}_{num}',
+                node=node,
+                state='started',
+                creator=self.user,
+                tenant=self.tenant,
+            )
+        self.deployment_id = dep.id
 
     def test_include_propagation_to_model(self):
         self._test_include_propagation_to_model(
-            [Blueprint],
+            [models.Blueprint],
             dict(
                 include=[u'id'],
                 filters={'is_hidden': False},
@@ -172,14 +203,11 @@ class IncludeQueryParamTests(base_test.BaseServerTestCase):
             lambda: self.client.manager.get_context(_include=['hello']))
 
     def test_association_proxy_include(self):
-        self.put_deployment(deployment_id='a', blueprint_id='a')
-        self.put_deployment(deployment_id='b', blueprint_id='b')
-        response = self.client.deployments.get('a', _include=['blueprint_id'])
-        self.assertEqual(response, {'blueprint_id': 'a'})
-        response = self.client.deployments.get('b', _include=['blueprint_id'])
-        self.assertEqual(response, {'blueprint_id': 'b'})
+        response = self.client.deployments.get(
+            self.deployment_id, _include=['blueprint_id'])
+        self.assertEqual(response, {'blueprint_id': 'bp1'})
 
     def test_created_by_include(self):
-        self.put_deployment(deployment_id='a', blueprint_id='a')
-        response = self.client.deployments.get('a', _include=['created_by'])
+        response = self.client.deployments.get(
+            self.deployment_id, _include=['created_by'])
         self.assertEqual(response, {'created_by': 'admin'})

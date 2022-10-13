@@ -79,7 +79,7 @@ def db_conn():
 
 
 def run_loop(conn):
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
     loop.add_reader(conn, lambda: handle(conn))
     loop.run_forever()
 

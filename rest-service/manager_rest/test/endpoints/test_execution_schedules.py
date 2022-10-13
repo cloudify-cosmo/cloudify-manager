@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 
+from manager_rest.storage import models
 from manager_rest.test.base_test import BaseServerTestCase
 
 from cloudify_rest_client.exceptions import CloudifyClientError
@@ -7,7 +8,6 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 
 class ExecutionSchedulesTestCase(BaseServerTestCase):
 
-    DEPLOYMENT_ID = 'deployment'
     fmt = '%Y-%m-%dT%H:%M:%S.%fZ'
     an_hour_from_now = \
         datetime.utcnow().replace(microsecond=0) + timedelta(hours=1)
@@ -21,7 +21,19 @@ class ExecutionSchedulesTestCase(BaseServerTestCase):
 
     def setUp(self):
         super(ExecutionSchedulesTestCase, self).setUp()
-        _, self.deployment_id, _, _ = self.put_deployment(self.DEPLOYMENT_ID)
+        bp = models.Blueprint(
+            id='bp1',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        dep = models.Deployment(
+            id='deployment',
+            blueprint=bp,
+            workflows={'install': {}, 'uninstall': {}},
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        self.deployment_id = dep.id
 
     def test_schedule_create(self):
         schedule_id = 'sched-1'

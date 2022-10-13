@@ -29,8 +29,14 @@ class TestUsageCollectorTriggers(base_test.BaseServerTestCase):
         assert usage_metrics.total_blueprints == 3
 
     def test_total_executions(self):
-        self.put_deployment('d1')
-        # this executes upload_blueprint and create_deployment_environment
+        for num in range(2):
+            models.Execution(
+                id=f'exc{num}',
+                workflow_id='wf1',
+                is_system_workflow=True,
+                creator=self.user,
+                tenant=self.tenant,
+            )
         usage_metrics = models.UsageCollector.query.first()
         assert usage_metrics.total_executions == 2
 
