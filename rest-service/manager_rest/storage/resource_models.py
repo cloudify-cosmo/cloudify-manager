@@ -87,7 +87,8 @@ class Blueprint(CreatedAtMixin, SQLResourceBase):
     )
 
     main_file_name = db.Column(db.Text)
-    plan = db.Column(db.PickleType(protocol=2))
+    plan_p = db.Column(db.PickleType(protocol=2))
+    plan = db.Column(JSONString)
     updated_at = db.Column(UTCDateTime)
     description = db.Column(db.Text)
     is_hidden = db.Column(db.Boolean, nullable=False, default=False)
@@ -182,14 +183,18 @@ class Plugin(SQLResourceBase):
     distribution = db.Column(db.Text)
     distribution_release = db.Column(db.Text)
     distribution_version = db.Column(db.Text)
-    excluded_wheels = db.Column(db.PickleType(protocol=2))
+    excluded_wheels_p = db.Column(db.PickleType(protocol=2))
+    excluded_wheels = db.Column(JSONString)
     package_name = db.Column(db.Text, nullable=False, index=True)
     package_source = db.Column(db.Text)
     package_version = db.Column(db.Text)
-    supported_platform = db.Column(db.PickleType(protocol=2))
-    supported_py_versions = db.Column(db.PickleType(protocol=2))
+    supported_platform_p = db.Column(db.PickleType(protocol=2))
+    supported_platform = db.Column(JSONString)
+    supported_py_versions_p = db.Column(db.PickleType(protocol=2))
+    supported_py_versions = db.Column(JSONString)
     uploaded_at = db.Column(UTCDateTime, nullable=False, index=True)
-    wheels = db.Column(db.PickleType(protocol=2), nullable=False)
+    wheels_p = db.Column(db.PickleType(protocol=2))
+    wheels = db.Column(JSONString, nullable=False)
     title = db.Column(db.Text)
     blueprint_labels = db.Column(JSONString)
     labels = db.Column(JSONString)
@@ -398,18 +403,27 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
     workdir_zip = None
 
     description = db.Column(db.Text)
-    inputs = db.Column(db.PickleType(protocol=2))
-    groups = db.Column(db.PickleType(protocol=2))
+    inputs_p = db.Column(db.PickleType(protocol=2))
+    inputs = db.Column(JSONString)
+    groups_p = db.Column(db.PickleType(protocol=2))
+    groups = db.Column(JSONString)
     permalink = db.Column(db.Text)
-    policy_triggers = db.Column(db.PickleType(protocol=2))
-    policy_types = db.Column(db.PickleType(protocol=2))
-    outputs = db.Column(db.PickleType(protocol=2, comparator=lambda *a: False))
-    capabilities = db.Column(db.PickleType(
+    policy_triggers_p = db.Column(db.PickleType(protocol=2))
+    policy_triggers = db.Column(JSONString)
+    policy_types_p = db.Column(db.PickleType(protocol=2))
+    policy_types = db.Column(JSONString)
+    outputs_p = db.Column(db.PickleType(protocol=2,
+                                        comparator=lambda *a: False))
+    outputs = db.Column(JSONString)
+    capabilities_p = db.Column(db.PickleType(
         protocol=2, comparator=lambda *a: False))
-    scaling_groups = db.Column(db.PickleType(protocol=2))
+    capabilities = db.Column(JSONString)
+    scaling_groups_p = db.Column(db.PickleType(protocol=2))
+    scaling_groups = db.Column(JSONString)
     updated_at = db.Column(UTCDateTime)
-    workflows = db.Column(db.PickleType(
+    workflows_p = db.Column(db.PickleType(
         protocol=2, comparator=lambda *a: False))
+    workflows = db.Column(JSONString)
     runtime_only_evaluation = db.Column(db.Boolean, default=False)
     installation_status = db.Column(db.Enum(
         DeploymentState.ACTIVE,
@@ -1096,7 +1110,8 @@ class Execution(CreatedAtMixin, SQLResourceBase):
     error = db.Column(db.Text)
     is_system_workflow = db.Column(db.Boolean, nullable=False, index=True,
                                    default=False)
-    parameters = db.Column(db.PickleType(protocol=2))
+    parameters_p = db.Column(db.PickleType(protocol=2))
+    parameters = db.Column(JSONString)
     status = db.Column(
         db.Enum(*ExecutionState.STATES, name='execution_status')
     )
@@ -1757,7 +1772,8 @@ class PluginsUpdate(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'plugins_updates'
 
     state = db.Column(db.Text)
-    deployments_to_update = db.Column(db.PickleType(protocol=2))
+    deployments_to_update_p = db.Column(db.PickleType(protocol=2))
+    deployments_to_update = db.Column(JSONString)
     deployments_per_tenant = db.Column(JSONString)
     forced = db.Column(db.Boolean, default=False)
     all_tenants = db.Column(db.Boolean, default=False, nullable=False)
@@ -1802,15 +1818,24 @@ class PluginsUpdate(CreatedAtMixin, SQLResourceBase):
 class DeploymentUpdate(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'deployment_updates'
 
-    deployment_plan = db.Column(db.PickleType(protocol=2))
-    deployment_update_node_instances = db.Column(db.PickleType(protocol=2))
-    deployment_update_deployment = db.Column(db.PickleType(protocol=2))
-    central_plugins_to_uninstall = db.Column(db.PickleType(protocol=2))
-    central_plugins_to_install = db.Column(db.PickleType(protocol=2))
-    deployment_update_nodes = db.Column(db.PickleType(protocol=2))
-    modified_entity_ids = db.Column(db.PickleType(protocol=2))
-    old_inputs = db.Column(db.PickleType(protocol=2))
-    new_inputs = db.Column(db.PickleType(protocol=2))
+    deployment_plan_p = db.Column(db.PickleType(protocol=2))
+    deployment_plan = db.Column(JSONString)
+    deployment_update_node_instances_p = db.Column(db.PickleType(protocol=2))
+    deployment_update_node_instances = db.Column(JSONString)
+    deployment_update_deployment_p = db.Column(db.PickleType(protocol=2))
+    deployment_update_deployment = db.Column(JSONString)
+    central_plugins_to_uninstall_p = db.Column(db.PickleType(protocol=2))
+    central_plugins_to_uninstall = db.Column(JSONString)
+    central_plugins_to_install_p = db.Column(db.PickleType(protocol=2))
+    central_plugins_to_install = db.Column(JSONString)
+    deployment_update_nodes_p = db.Column(db.PickleType(protocol=2))
+    deployment_update_nodes = db.Column(JSONString)
+    modified_entity_ids_p = db.Column(db.PickleType(protocol=2))
+    modified_entity_ids = db.Column(JSONString)
+    old_inputs_p = db.Column(db.PickleType(protocol=2))
+    old_inputs = db.Column(JSONString)
+    new_inputs_p = db.Column(db.PickleType(protocol=2))
+    new_inputs = db.Column(JSONString)
     state = db.Column(db.Text)
     runtime_only_evaluation = db.Column(db.Boolean, default=False)
     keep_old_deployment_dependencies = db.Column(
@@ -1973,10 +1998,13 @@ class DeploymentUpdateStep(SQLResourceBase):
 class DeploymentModification(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'deployment_modifications'
 
-    context = db.Column(db.PickleType(protocol=2))
+    context_p = db.Column(db.PickleType(protocol=2))
+    context = db.Column(JSONString)
     ended_at = db.Column(UTCDateTime, index=True)
-    modified_nodes = db.Column(db.PickleType(protocol=2))
-    node_instances = db.Column(db.PickleType(protocol=2))
+    modified_nodes_p = db.Column(db.PickleType(protocol=2))
+    modified_nodes = db.Column(JSONString)
+    node_instances_p = db.Column(db.PickleType(protocol=2))
+    node_instances = db.Column(JSONString)
     status = db.Column(db.Enum(
         *DeploymentModificationState.STATES,
         name='deployment_modification_status'
@@ -2014,13 +2042,19 @@ class Node(SQLResourceBase):
     min_number_of_instances = db.Column(db.Integer, nullable=False)
     number_of_instances = db.Column(db.Integer, nullable=False)
     planned_number_of_instances = db.Column(db.Integer, nullable=False)
-    plugins = db.Column(db.PickleType(protocol=2))
-    plugins_to_install = db.Column(db.PickleType(protocol=2))
-    properties = db.Column(db.PickleType(protocol=2))
-    relationships = db.Column(db.PickleType(protocol=2))
-    operations = db.Column(db.PickleType(protocol=2))
+    plugins_p = db.Column(db.PickleType(protocol=2))
+    plugins = db.Column(JSONString)
+    plugins_to_install_p = db.Column(db.PickleType(protocol=2))
+    plugins_to_install = db.Column(JSONString)
+    properties_p = db.Column(db.PickleType(protocol=2))
+    properties = db.Column(JSONString)
+    relationships_p = db.Column(db.PickleType(protocol=2))
+    relationships = db.Column(JSONString)
+    operations_p = db.Column(db.PickleType(protocol=2))
+    operations = db.Column(JSONString)
     type = db.Column(db.Text, nullable=False, index=True)
-    type_hierarchy = db.Column(db.PickleType(protocol=2))
+    type_hierarchy_p = db.Column(db.PickleType(protocol=2))
+    type_hierarchy = db.Column(JSONString)
 
     drifted_instances =\
         db.Column(db.Integer, server_default='0', nullable=False, default=0)
@@ -2105,10 +2139,13 @@ class NodeInstance(SQLResourceBase):
     # in the code, currently, that the host will be created beforehand
     host_id = db.Column(db.Text)
     index = db.Column(db.Integer)
-    relationships = db.Column(db.PickleType(protocol=2))
-    runtime_properties = db.Column(db.PickleType(protocol=2))
+    relationships_p = db.Column(db.PickleType(protocol=2))
+    relationships = db.Column(JSONString)
+    runtime_properties_p = db.Column(db.PickleType(protocol=2))
+    runtime_properties = db.Column(JSONString)
     system_properties = db.Column(JSONString)
-    scaling_groups = db.Column(db.PickleType(protocol=2))
+    scaling_groups_p = db.Column(db.PickleType(protocol=2))
+    scaling_groups = db.Column(JSONString)
     state = db.Column(db.Text, nullable=False, index=True)
     version = db.Column(db.Integer, nullable=False)
 
