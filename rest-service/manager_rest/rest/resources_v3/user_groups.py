@@ -135,7 +135,6 @@ class UserGroupsUsers(SecuredMultiTenancyResource):
         )
 
     @authorize('user_group_remove_user')
-    @rest_decorators.no_external_authenticator('remove user from group')
     def delete(self, multi_tenancy):
         """
         Remove a user from a group

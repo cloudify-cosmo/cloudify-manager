@@ -141,7 +141,6 @@ class UsersIdPremium(SecuredMultiTenancyResource):
         return multi_tenancy.get_user(username)
 
     @authorize('user_delete')
-    @rest_decorators.no_external_authenticator('delete user')
     def delete(self, username, multi_tenancy):
         """
         Delete a user
