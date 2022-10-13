@@ -16,7 +16,13 @@ RUN --mount=type=cache,target=/root/.cache \
     apt-get install -y \
       libpq-dev \
       gcc \
-      libffi-dev
+      libffi-dev \
+      libsasl2-dev \
+      libldap2-dev \
+      libkrb5-dev \
+      git
+
+RUN mkdir -p -m 0600 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
 
 WORKDIR /opt
 
@@ -28,6 +34,10 @@ RUN --mount=type=cache,target=/root/.cache \
       -r rest-service/requirements.txt \
       rest-service/ \
       gunicorn
+
+RUN --mount=type=ssh \
+    pip install \
+    -r rest-service/requirements_ssh.txt
 
 RUN mkdir /src
 COPY docker/cloudify.pth /usr/local/lib/python3.10/site-packages/cloudify.pth

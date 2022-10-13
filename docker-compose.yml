@@ -15,7 +15,10 @@ services:
 
   rest_service:
     container_name: rest_service
-    build: rest-service
+    build:
+      context: rest-service
+      ssh:
+        - default
     depends_on:
       - postgresql
     networks:
