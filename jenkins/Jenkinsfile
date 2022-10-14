@@ -86,14 +86,14 @@ pipeline {
                     -n 3 \
                     rest-service/manager_rest
                 ''', label: "restservice tests"
-                echo 'Running pytest <<workflows>>'
+                echo 'Running pytest <<mgmtworker>>'
                 sh '''
                   . .venv/bin/activate
-                  cd workflows
+                  cd mgmtworker
                   pip install -Ur test-requirements.txt
                   pytest \
                     -sv \
-                    cloudify_system_workflows
+                    .
                 '''
                 echo 'Running pytest <<cloudify_types>>'
                 sh '''
