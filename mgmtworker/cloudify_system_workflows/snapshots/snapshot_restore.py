@@ -55,6 +55,7 @@ from .constants import (
     V_4_6_0,
     V_5_0_5,
     V_5_3_0,
+    V_7_0_0,
     SECURITY_FILE_LOCATION,
     SECURITY_FILENAME,
     REST_AUTHORIZATION_CONFIG_PATH,
@@ -232,6 +233,7 @@ class SnapshotRestore(object):
                 self._set_default_user_profile_flags()
                 self._create_system_filters()
                 self._copy_blueprint_icons()
+                self._migrate_pickle_to_json()
                 postgres.refresh_roles()
 
             if self._restore_certificates:
@@ -829,6 +831,16 @@ class SnapshotRestore(object):
             ctx.logger.warning(
                 "Marking original execution %s scheduled for %s as FAILED.",
                 execution.id, execution.scheduled_for)
+
+    def _migrate_pickle_to_json(self):
+        if self._snapshot_version < V_7_0_0:
+            dir_path = os.path.dirname(os.path.realpath(__file__))
+            scrip_path = os.path.join(
+                dir_path,
+                'migrate_pickle_to_json.py'
+            )
+            command = [MANAGER_PYTHON, scrip_path, self._tempdir]
+            utils.run(command)
 
     @staticmethod
     def _mark_manager_restoring():
