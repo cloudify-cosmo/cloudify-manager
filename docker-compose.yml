@@ -80,8 +80,7 @@ services:
       - postgresql
     networks:
       - cloudify
-    entrypoint: python
-    command: [ '-m', 'manager_rest.configure_manager' ]
+    entrypoint: /opt/rest-service/docker/entrypoint_config.sh
 
 networks:
   cloudify:

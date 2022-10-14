@@ -49,6 +49,4 @@ RUN mkdir -p \
       /opt/manager \
       /run/cloudify-restservice
 
-RUN /opt/rest-service/docker/prepare_secrets.sh
-
 ENTRYPOINT /opt/rest-service/docker/entrypoint.sh
