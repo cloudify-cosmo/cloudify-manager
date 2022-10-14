@@ -70,6 +70,18 @@ services:
       - cloudify
     restart: unless-stopped
 
+  config:
+    container_name: config
+    build:
+      context: rest-service
+      ssh:
+        - default
+    depends_on:
+      - postgresql
+    networks:
+      - cloudify
+    entrypoint: /opt/rest-service/docker/entrypoint_config.sh
+
 networks:
   cloudify:
     driver: bridge

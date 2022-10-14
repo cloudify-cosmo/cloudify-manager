@@ -52,7 +52,9 @@ def create_default_user_tenant_and_roles(admin_username,
     sm = get_storage_manager()
     admin_role = sm.get(Role, None, filters={'name': 'sys_admin'})
     default_tenant = _create_default_tenant()
-    amqp_manager.create_tenant_vhost_and_user(tenant=default_tenant)
+
+    if amqp_manager:
+        amqp_manager.create_tenant_vhost_and_user(tenant=default_tenant)
 
     admin_user = user_datastore.create_user(
         id=constants.BOOTSTRAP_ADMIN_ID,
