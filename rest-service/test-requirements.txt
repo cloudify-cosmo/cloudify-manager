@@ -6,4 +6,7 @@ wagon>0.10
 pytest
 pytest-cov
 pytest-xdist
--e ../workflows
+
+# agent is only here for the mgmtworker, which is only (temporarily) used in tests
+https://github.com/cloudify-cosmo/cloudify-agent/archive/master.zip
+-e ../mgmtworker
