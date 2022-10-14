@@ -25,7 +25,7 @@ if __name__ == '__main__':
         '--config_file_path',
         help='Path to a config file containing info needed by this script',
         required=False,
-        default=os.environ['CONFIG_FILE_PATH'],
+        default=os.environ.get('CONFIG_FILE_PATH'),
     )
     args = parser.parse_args()
 

@@ -10,7 +10,7 @@ ENV POSTGRES_DB=cloudify_db
 ENV POSTGRES_HOST=postgresql
 ENV POSTGRES_USER=cloudify
 ENV POSTGRES_PASSWORD=cloudify
-ENV CONFIG_FILE_PATH=/opt/config.yaml
+ENV CONFIG_FILE_PATH=/opt/rest-service/docker/config.yaml
 
 RUN --mount=type=cache,target=/root/.cache \
     apt-get update \
@@ -48,5 +48,7 @@ RUN mkdir -p \
       /var/log/cloudify/rest \
       /opt/manager \
       /run/cloudify-restservice
+
+RUN /opt/rest-service/docker/prepare_secrets.sh
 
 ENTRYPOINT /opt/rest-service/docker/entrypoint.sh

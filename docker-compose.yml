@@ -19,8 +19,6 @@ services:
       context: rest-service
       ssh:
         - default
-    volumes:
-      - ./config.yaml:/opt/config.yaml
     depends_on:
       - postgresql
     networks:
@@ -71,6 +69,19 @@ services:
     networks:
       - cloudify
     restart: unless-stopped
+
+  config:
+    container_name: config
+    build:
+      context: rest-service
+      ssh:
+        - default
+    depends_on:
+      - postgresql
+    networks:
+      - cloudify
+    entrypoint: python
+    command: [ '-m', 'manager_rest.configure_manager' ]
 
 networks:
   cloudify:
