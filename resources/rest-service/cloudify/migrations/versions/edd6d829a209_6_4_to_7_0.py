@@ -1,4 +1,4 @@
-"""empty message
+"""Cloudify 6.4 to 7.0 DB migration
 
 Revision ID: edd6d829a209
 Revises: 272e61bf5f4a

@@ -290,7 +290,7 @@ def _migrate_plugins_updates_table(session: Session):
 
 
 def migrate_pickle_to_json():
-    """Migrate the fields which were pickled to their"""
+    """Migrate the fields which were pickled to their JSON counterparts"""
     _migrate_blueprints_table(db.session)
     _migrate_deployments_table(db.session)
     _migrate_deployment_modifications_table(db.session)
