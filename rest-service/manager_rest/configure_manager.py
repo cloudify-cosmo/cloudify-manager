@@ -24,6 +24,7 @@ def _generate_password(length=12):
 
     return password
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Create admin user in DB'
@@ -44,7 +45,8 @@ if __name__ == '__main__':
     )
 
     if not user_config['manager']['security']['admin_password']:
-        user_config['manager']['security']['admin_password'] = _generate_password()
+        user_config['manager']['security']['admin_password'] = \
+            _generate_password()
 
     user_credentials = {
         'admin_username': user_config['manager']['security']['admin_username'],
