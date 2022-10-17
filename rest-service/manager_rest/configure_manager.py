@@ -1,5 +1,7 @@
 import argparse
 import os
+import random
+import string
 import yaml
 
 from manager_rest import config
@@ -14,6 +16,13 @@ def _add_default_user_and_tenant(amqp_manager, script_config):
         admin_password=script_config['admin_password'],
         amqp_manager=amqp_manager
     )
+
+
+def _generate_password(length=12):
+    chars = string.ascii_lowercase + string.ascii_uppercase + string.digits
+    password = ''.join(random.choice(chars) for _ in range(length))
+
+    return password
 
 
 if __name__ == '__main__':
@@ -34,6 +43,10 @@ if __name__ == '__main__':
     user_config = yaml.safe_load(
         open(args.config_file_path)
     )
+
+    if not user_config['manager']['security']['admin_password']:
+        user_config['manager']['security']['admin_password'] = \
+            _generate_password()
 
     user_credentials = {
         'admin_username': user_config['manager']['security']['admin_username'],
