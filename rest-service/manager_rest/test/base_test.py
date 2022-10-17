@@ -53,17 +53,10 @@ from manager_rest.storage.models_base import db
 from manager_rest.rest.filters_utils import FilterRule
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.storage.filters import add_filter_rules_to_query
-from manager_rest.test.security_utils import (
-    get_admin_user,
-    get_status_reporters,
-)
+from manager_rest.test.security_utils import get_admin_user
 from manager_rest import utils, config, constants, archiving
-from manager_rest.storage import models
+from manager_rest.storage import models, user_datastore
 from manager_rest.storage.storage_manager import SQLStorageManager
-from manager_rest.storage.storage_utils import (
-    create_default_user_tenant_and_roles,
-    create_status_reporter_user_and_assign_role
-)
 from manager_rest.constants import (
     AttrsOperator,
     LabelsOperator,
@@ -308,30 +301,44 @@ class BaseServerTestCase(unittest.TestCase):
         self.addCleanup(test_context.pop)
 
         self._handle_default_db_config()
-        default_tenant = models.Tenant.query.get(0)
+        self.user = user_datastore.create_user(
+            id=constants.BOOTSTRAP_ADMIN_ID,
+            username='admin',
+            password='admin',
+            roles=['sys_admin'],
+        )
+        rabbitmq_password = \
+            'gAAAAABb9p7U_Lnlmg7vyijjoxovyg215ThYi-VCTCzVYa1p-vpzi31WGko' \
+            'KD_hK1mQyKgjRss_Nz-3m-cgHpZChnVT4bxZIjnOnL6sF8RtozvlRoGHtnF' \
+            'G6jxqQDeEf5Heos0ia4Q5H  '
+        self.tenant = models.Tenant(
+            id=constants.DEFAULT_TENANT_ID,
+            name=constants.DEFAULT_TENANT_NAME,
+            rabbitmq_username='rabbitmq_username_default_tenant',
+            rabbitmq_vhost='rabbitmq_vhost_defualt_tenant',
+            rabbitmq_password=rabbitmq_password,
+        )
+
+        self.user.tenant_associations.append(models.UserTenantAssoc(
+            user=self.user,
+            tenant=self.tenant,
+            role=user_datastore.find_role(constants.DEFAULT_TENANT_ROLE),
+        ))
+        user_datastore.commit()
+
         self.sm = SQLStorageManager(
-            tenant=default_tenant,
-            user=models.User.query.get(0),
+            tenant=self.tenant,
+            user=self.user,
         )
         self.rm = get_resource_manager(self.sm)
         if premium_enabled:
             # License is required only when working with Cloudify Premium
             upload_mock_cloudify_license(self.sm)
 
-        utils.set_current_tenant(default_tenant)
+        utils.set_current_tenant(self.tenant)
         self.initialize_provider_context()
         self.addCleanup(self._drop_db, keep_tables=['config'])
         self.addCleanup(self._clean_tmpdir)
-        self.user = (
-            db.session.query(models.User)
-            .filter_by(username='admin')
-            .one()
-        )
-        self.tenant = (
-            db.session.query(models.Tenant)
-            .filter_by(name='default_tenant')
-            .one()
-        )
 
     @staticmethod
     def _drop_db(keep_tables=None):
@@ -478,31 +485,7 @@ class BaseServerTestCase(unittest.TestCase):
                 f"-e POSTGRES_DB={config.instance.postgresql_db_name} "
                 "-p 5432:5432 -d postgres")
             raise
-        admin_user = get_admin_user()
-
-        BaseServerTestCase._insert_default_permissions()
-        # We're mocking the AMQPManager, we aren't really using Rabbit here
-        default_tenant = create_default_user_tenant_and_roles(
-            admin_username=admin_user['username'],
-            admin_password=admin_user['password'],
-            amqp_manager=Mock()
-        )
-        default_tenant.rabbitmq_username = \
-            'rabbitmq_username_default_tenant'
-        default_tenant.rabbitmq_vhost = \
-            'rabbitmq_vhost_defualt_tenant'
-        default_tenant.rabbitmq_password = \
-            'gAAAAABb9p7U_Lnlmg7vyijjoxovyg215ThYi-VCTCzVYa1p-vpzi31WGko' \
-            'KD_hK1mQyKgjRss_Nz-3m-cgHpZChnVT4bxZIjnOnL6sF8RtozvlRoGHtnF' \
-            'G6jxqQDeEf5Heos0ia4Q5H  '
-
-        for reporter in get_status_reporters():
-            create_status_reporter_user_and_assign_role(
-                reporter['username'],
-                reporter['password'],
-                reporter['role'],
-                reporter['id']
-            )
+        self._insert_default_permissions()
 
     @staticmethod
     def _get_app(flask_app, user=None):
