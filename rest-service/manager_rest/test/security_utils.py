@@ -15,15 +15,6 @@
 
 from flask_security.utils import hash_password
 
-from cloudify.cluster_status import (
-    DB_STATUS_REPORTER,
-    BROKER_STATUS_REPORTER,
-    MANAGER_STATUS_REPORTER,
-    MANAGER_STATUS_REPORTER_ID,
-    BROKER_STATUS_REPORTER_ID,
-    DB_STATUS_REPORTER_ID
-)
-
 from manager_rest.storage.models import Tenant, UserTenantAssoc
 from manager_rest.storage import user_datastore
 from manager_rest.constants import (
@@ -42,29 +33,6 @@ def get_admin_user():
         'password': 'admin',
         'role': ADMIN_ROLE
     }
-
-
-def get_status_reporters():
-    return [
-        {
-            'username': MANAGER_STATUS_REPORTER,
-            'password': 'password',
-            'role': MANAGER_STATUS_REPORTER,
-            'id': MANAGER_STATUS_REPORTER_ID
-        },
-        {
-            'username': BROKER_STATUS_REPORTER,
-            'password': 'password',
-            'role': BROKER_STATUS_REPORTER,
-            'id': BROKER_STATUS_REPORTER_ID
-        },
-        {
-            'username': DB_STATUS_REPORTER,
-            'password': 'password',
-            'role': DB_STATUS_REPORTER,
-            'id': DB_STATUS_REPORTER_ID
-        },
-    ]
 
 
 def get_test_users():
