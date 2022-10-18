@@ -238,10 +238,11 @@ class TestSnapshotDeploymentStatus(base_test.BaseServerTestCase):
 
     def test_pickle_to_json_blueprints(self):
         silly_plan = {'first': 'foo', 'then': ['bar', 'baz', 3.14, True, -1]}
-        bp = self._make_blueprint(id='bp', plan_p=silly_plan)
-        assert bp.plan is None
-        migrate_pickle_to_json()
-        assert silly_plan == bp.plan
+        bp1 = self._make_blueprint(id='bp1', plan_p=silly_plan)
+        bp2 = self._make_blueprint(id='bp2', plan_p=silly_plan)
+        assert bp1.plan is None
+        migrate_pickle_to_json(batch_size=1)
+        assert silly_plan == bp1.plan == bp2.plan
 
     def test_pickle_to_json_deployments(self):
         silly_capabilities = {'what': 'ever'}
@@ -251,7 +252,8 @@ class TestSnapshotDeploymentStatus(base_test.BaseServerTestCase):
         silly_policy_types = ['foo', 'bar']
         silly_scaling_groups = 3.14
         silly_workflows = "Lorem ipsum"
-        dep = self._make_deployment(
+        dep1 = self._make_deployment(
+            id="d1",
             capabilities_p=silly_capabilities,
             groups_p=silly_groups,
             inputs_p=silly_inputs,
@@ -260,39 +262,57 @@ class TestSnapshotDeploymentStatus(base_test.BaseServerTestCase):
             scaling_groups_p=silly_scaling_groups,
             workflows_p=silly_workflows,
         )
-        assert dep.capabilities is None
-        assert dep.groups is None
-        assert dep.inputs is None
-        assert dep.policy_triggers is None
-        assert dep.policy_types is None
-        assert dep.scaling_groups is None
-        assert dep.workflows is None
-        migrate_pickle_to_json()
-        assert silly_capabilities == dep.capabilities
-        assert silly_groups == dep.groups
-        assert silly_inputs == dep.inputs
-        assert silly_policy_triggers == dep.policy_triggers
-        assert silly_policy_types == dep.policy_types
-        assert silly_scaling_groups == dep.scaling_groups
-        assert silly_workflows == dep.workflows
+        dep2 = self._make_deployment(
+            id="d2",
+            capabilities_p=silly_capabilities,
+            groups_p=silly_groups,
+            inputs_p=silly_inputs,
+            policy_triggers_p=silly_policy_triggers,
+            policy_types_p=silly_policy_types,
+            scaling_groups_p=silly_scaling_groups,
+            workflows_p=silly_workflows,
+        )
+        assert dep1.capabilities is None
+        assert dep1.groups is None
+        assert dep1.inputs is None
+        assert dep1.policy_triggers is None
+        assert dep1.policy_types is None
+        assert dep1.scaling_groups is None
+        assert dep1.workflows is None
+        migrate_pickle_to_json(batch_size=1)
+        assert silly_capabilities == dep1.capabilities == dep2.capabilities
+        assert silly_groups == dep1.groups == dep2.groups
+        assert silly_inputs == dep1.inputs == dep2.inputs
+        assert silly_policy_triggers == dep1.policy_triggers \
+               == dep2.policy_triggers
+        assert silly_policy_types == dep1.policy_types == dep2.policy_types
+        assert silly_scaling_groups == dep1.scaling_groups \
+               == dep2.scaling_groups
+        assert silly_workflows == dep1.workflows == dep2.workflows
 
     def test_pickle_to_json_deployment_modifications(self):
         silly_context = {'some': 'thing'}
         silly_modified_nodes = (-2, -1, 0, 1, )
         silly_node_instances = [{'quick': 1}, {'brown': 2}, {'fox': 3}]
-        dep_mod = self._make_dep_mod(
+        dm1 = self._make_dep_mod(
             self._make_deployment(),
             context_p=silly_context,
             modified_nodes_p=silly_modified_nodes,
             node_instances_p=silly_node_instances,
         )
-        assert dep_mod.context is None
-        assert dep_mod.modified_nodes is None
-        assert dep_mod.node_instances is None
-        migrate_pickle_to_json()
-        assert silly_context == dep_mod.context
-        assert silly_modified_nodes == dep_mod.modified_nodes
-        assert silly_node_instances == dep_mod.node_instances
+        dm2 = self._make_dep_mod(
+            self._make_deployment(),
+            context_p=silly_context,
+            modified_nodes_p=silly_modified_nodes,
+            node_instances_p=silly_node_instances,
+        )
+        assert dm1.context is None
+        assert dm1.modified_nodes is None
+        assert dm1.node_instances is None
+        migrate_pickle_to_json(batch_size=1)
+        assert silly_context == dm1.context == dm2.context
+        assert silly_modified_nodes == dm1.modified_nodes == dm2.modified_nodes
+        assert silly_node_instances == dm1.node_instances == dm2.node_instances
 
     def test_pickle_to_json_deployment_updates(self):
         silly_deployment_plan = {'some': 'thing'}
@@ -304,7 +324,7 @@ class TestSnapshotDeploymentStatus(base_test.BaseServerTestCase):
         silly_modified_entity_ids = ['q', 'w', 'e', ]
         silly_old_inputs = {'this': ['is', 'something']}
         silly_new_inputs = {'some': 'thing'}
-        dep_upd = self._make_dep_upd(
+        du1 = self._make_dep_upd(
             self._make_deployment(),
             deployment_plan_p=silly_deployment_plan,
             deployment_update_node_instances_p=silly_deployment_update_nis,
@@ -316,36 +336,58 @@ class TestSnapshotDeploymentStatus(base_test.BaseServerTestCase):
             old_inputs_p=silly_old_inputs,
             new_inputs_p=silly_new_inputs,
         )
-        assert dep_upd.deployment_plan is None
-        assert dep_upd.deployment_update_node_instances is None
-        assert dep_upd.deployment_update_deployment is None
-        assert dep_upd.central_plugins_to_uninstall is None
-        assert dep_upd.central_plugins_to_install is None
-        assert dep_upd.deployment_update_nodes is None
-        assert dep_upd.modified_entity_ids is None
-        assert dep_upd.old_inputs is None
-        assert dep_upd.new_inputs is None
-        migrate_pickle_to_json()
-        assert silly_deployment_plan == dep_upd.deployment_plan
-        assert silly_deployment_update_nis ==\
-               dep_upd.deployment_update_node_instances
-        assert silly_deployment_update_deployment ==\
-               dep_upd.deployment_update_deployment
-        assert silly_central_plugins_to_uninstall ==\
-               dep_upd.central_plugins_to_uninstall
-        assert silly_central_plugins_to_install ==\
-               dep_upd.central_plugins_to_install
-        assert silly_deployment_update_nodes == dep_upd.deployment_update_nodes
-        assert silly_modified_entity_ids == dep_upd.modified_entity_ids
-        assert silly_old_inputs == dep_upd.old_inputs
-        assert silly_new_inputs == dep_upd.new_inputs
+        du2 = self._make_dep_upd(
+            self._make_deployment(),
+            deployment_plan_p=silly_deployment_plan,
+            deployment_update_node_instances_p=silly_deployment_update_nis,
+            deployment_update_deployment_p=silly_deployment_update_deployment,
+            central_plugins_to_uninstall_p=silly_central_plugins_to_uninstall,
+            central_plugins_to_install_p=silly_central_plugins_to_install,
+            deployment_update_nodes_p=silly_deployment_update_nodes,
+            modified_entity_ids_p=silly_modified_entity_ids,
+            old_inputs_p=silly_old_inputs,
+            new_inputs_p=silly_new_inputs,
+        )
+        assert du1.deployment_plan is None
+        assert du1.deployment_update_node_instances is None
+        assert du1.deployment_update_deployment is None
+        assert du1.central_plugins_to_uninstall is None
+        assert du1.central_plugins_to_install is None
+        assert du1.deployment_update_nodes is None
+        assert du1.modified_entity_ids is None
+        assert du1.old_inputs is None
+        assert du1.new_inputs is None
+        migrate_pickle_to_json(batch_size=1)
+        assert silly_deployment_plan == du1.deployment_plan \
+               == du2.deployment_plan
+        assert silly_deployment_update_nis \
+               == du1.deployment_update_node_instances \
+               == du2.deployment_update_node_instances
+        assert silly_deployment_update_deployment \
+               == du1.deployment_update_deployment \
+               == du2.deployment_update_deployment
+        assert silly_central_plugins_to_uninstall \
+               == du1.central_plugins_to_uninstall \
+               == du2.central_plugins_to_uninstall
+        assert silly_central_plugins_to_install \
+               == du1.central_plugins_to_install \
+               == du2.central_plugins_to_install
+        assert silly_deployment_update_nodes \
+               == du1.deployment_update_nodes \
+               == du2.deployment_update_nodes
+        assert silly_modified_entity_ids \
+               == du1.modified_entity_ids \
+               == du2.modified_entity_ids
+        assert silly_old_inputs == du1.old_inputs == du2.old_inputs
+        assert silly_new_inputs == du1.new_inputs == du2.new_inputs
 
     def test_pickle_to_json_executions(self):
         silly_parameters = {'first': 'foo', 'then': ['bar', True, -1]}
-        execution = self._make_execution(parameters_p=silly_parameters)
-        assert execution.parameters is None
-        migrate_pickle_to_json()
-        assert silly_parameters == execution.parameters
+        ex1 = self._make_execution(parameters_p=silly_parameters)
+        ex2 = self._make_execution(parameters_p=silly_parameters)
+        assert ex1.parameters is None
+        migrate_pickle_to_json(batch_size=1)
+        assert silly_parameters == ex1.parameters == ex2.parameters
 
     def test_pickle_to_json_nodes(self):
         silly_plugins = {'lorem': 'ipsum'}
@@ -354,8 +396,9 @@ class TestSnapshotDeploymentStatus(base_test.BaseServerTestCase):
         silly_relationships = {'a': {'somewhat': {'nested': {'dict': True}}}}
         silly_operations = {'bwaha': 'ha'}
         silly_type_hierarchy = {'string': {'derived_from': 'float'}}
-        node = self._make_node(
-            self._make_deployment(),
+        deployment = self._make_deployment()
+        n1 = self._make_node(
+            deployment,
             plugins_p=silly_plugins,
             plugins_to_install_p=silly_plugins_to_install,
             properties_p=silly_properties,
@@ -363,66 +406,101 @@ class TestSnapshotDeploymentStatus(base_test.BaseServerTestCase):
             operations_p=silly_operations,
             type_hierarchy_p=silly_type_hierarchy,
         )
-        assert node.plugins is None
-        assert node.plugins_to_install is None
-        assert node.properties is None
-        assert node.relationships is None
-        assert node.operations is None
-        assert node.type_hierarchy is None
-        migrate_pickle_to_json()
-        assert silly_plugins == node.plugins
-        assert silly_plugins_to_install == node.plugins_to_install
-        assert silly_properties == node.properties
-        assert silly_relationships == node.relationships
-        assert silly_operations == node.operations
-        assert silly_type_hierarchy == node.type_hierarchy
+        n2 = self._make_node(
+            deployment,
+            plugins_p=silly_plugins,
+            plugins_to_install_p=silly_plugins_to_install,
+            properties_p=silly_properties,
+            relationships_p=silly_relationships,
+            operations_p=silly_operations,
+            type_hierarchy_p=silly_type_hierarchy,
+        )
+        assert n1.plugins is None
+        assert n1.plugins_to_install is None
+        assert n1.properties is None
+        assert n1.relationships is None
+        assert n1.operations is None
+        assert n1.type_hierarchy is None
+        migrate_pickle_to_json(batch_size=1)
+        assert silly_plugins == n1.plugins == n2.plugins
+        assert silly_plugins_to_install == n1.plugins_to_install \
+               == n2.plugins_to_install
+        assert silly_properties == n1.properties == n2.properties
+        assert silly_relationships == n1.relationships == n2.relationships
+        assert silly_operations == n1.operations == n2.operations
+        assert silly_type_hierarchy == n1.type_hierarchy == n2.type_hierarchy
 
     def test_pickle_to_json_node_instances(self):
         silly_relationships = {'lorem': 'ipsum'}
         silly_runtime_properties = [1, 2, 3, ]
         silly_scaling_groups = {'a': {'somewhat': {'nested': {'dict': True}}}}
-        node_instance = self._make_instance(
-            self._make_node(self._make_deployment()),
+        node = self._make_node(self._make_deployment())
+        ni1 = self._make_instance(
+            node,
             relationships_p=silly_relationships,
             runtime_properties_p=silly_runtime_properties,
             scaling_groups_p=silly_scaling_groups,
         )
-        assert node_instance.relationships is None
-        assert node_instance.runtime_properties is None
-        assert node_instance.scaling_groups is None
-        migrate_pickle_to_json()
-        assert silly_relationships == node_instance.relationships
-        assert silly_runtime_properties == node_instance.runtime_properties
-        assert silly_scaling_groups == node_instance.scaling_groups
+        ni2 = self._make_instance(
+            node,
+            relationships_p=silly_relationships,
+            runtime_properties_p=silly_runtime_properties,
+            scaling_groups_p=silly_scaling_groups,
+        )
+        assert ni1.relationships is None
+        assert ni1.runtime_properties is None
+        assert ni1.scaling_groups is None
+        migrate_pickle_to_json(batch_size=1)
+        assert silly_relationships == ni1.relationships == ni2.relationships
+        assert silly_runtime_properties == ni1.runtime_properties \
+               == ni2.runtime_properties
+        assert silly_scaling_groups == ni1.scaling_groups == ni2.scaling_groups
 
     def test_pickle_to_json_plugins(self):
         silly_excluded_wheels = (-2, -1, 0, 1,)
         silly_supported_platform = {'lorem': 'ipsum'}
         silly_supported_py_versions = [1, 2, 3, ]
         silly_wheels = {'a': {'somewhat': {'nested': {'dict': True}}}}
-        plugin = self._make_plugin(
+        plugin1 = self._make_plugin(
             excluded_wheels_p=silly_excluded_wheels,
             supported_platform_p=silly_supported_platform,
             supported_py_versions_p=silly_supported_py_versions,
             wheels_p=silly_wheels,
         )
-        assert plugin.excluded_wheels is None
-        assert plugin.supported_platform is None
-        assert plugin.supported_py_versions is None
-        assert plugin.wheels is None
-        migrate_pickle_to_json()
-        assert silly_excluded_wheels == plugin.excluded_wheels
-        assert silly_supported_platform == plugin.supported_platform
-        assert silly_supported_py_versions == plugin.supported_py_versions
-        assert silly_wheels == plugin.wheels
+        plugin2 = self._make_plugin(
+            excluded_wheels_p=silly_excluded_wheels,
+            supported_platform_p=silly_supported_platform,
+            supported_py_versions_p=silly_supported_py_versions,
+            wheels_p=silly_wheels,
+        )
+        assert plugin1.excluded_wheels is None
+        assert plugin1.supported_platform is None
+        assert plugin1.supported_py_versions is None
+        assert plugin1.wheels is None
+        migrate_pickle_to_json(batch_size=1)
+        assert silly_excluded_wheels == plugin1.excluded_wheels \
+               == plugin2.excluded_wheels
+        assert silly_supported_platform == plugin1.supported_platform \
+               == plugin2.supported_platform
+        assert silly_supported_py_versions == plugin1.supported_py_versions \
+               == plugin2.supported_py_versions
+        assert silly_wheels == plugin1.wheels == plugin2.wheels
 
     def test_pickle_to_json_plugins_updates(self):
         silly_deployments_to_update = {'lorem': (-2, -1, 0, 1,)}
-        plug_upd = self._make_plugins_update(
-            self._make_blueprint(),
-            self._make_execution(),
+        blueprint = self._make_blueprint()
+        execution = self._make_execution()
+        pu1 = self._make_plugins_update(
+            blueprint,
+            execution,
             deployments_to_update_p=silly_deployments_to_update,
         )
-        assert plug_upd.deployments_to_update is None
-        migrate_pickle_to_json()
-        assert silly_deployments_to_update == plug_upd.deployments_to_update
+        pu2 = self._make_plugins_update(
+            blueprint,
+            execution,
+            deployments_to_update_p=silly_deployments_to_update,
+        )
+        assert pu1.deployments_to_update is None
+        migrate_pickle_to_json(batch_size=1)
+        assert silly_deployments_to_update == pu1.deployments_to_update \
+               == pu2.deployments_to_update
