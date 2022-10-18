@@ -14,7 +14,6 @@ from manager_rest.storage import (
     db,
     models,
     user_datastore,
-    get_storage_manager,
 )
 from manager_rest.amqp_manager import AMQPManager
 from manager_rest.flask_utils import setup_flask_app
@@ -240,14 +239,12 @@ def _load_user_config(paths):
 
 
 def _insert_rabbitmq_broker(brokers, ca_cert):
-    sm = get_storage_manager()
-
     for broker in brokers:
         inst = models.RabbitMQBroker(
             ca_cert=ca_cert,
             **broker
         )
-        sm.put(inst)
+        db.session.add(inst)
 
 
 def _get_rabbitmq_brokers(user_config):
