@@ -59,7 +59,7 @@ def _create_rabbitmq_info(rabbitmq_config):
             'networks': broker['networks'],
             'is_external': is_external,
         }
-        for name, broker in rabbitmq_config['cluster_members'].items()
+        for name, broker in rabbitmq_config.get('cluster_members', {}).items()
     ]
 
 
