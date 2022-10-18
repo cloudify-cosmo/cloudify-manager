@@ -1,4 +1,5 @@
 import argparse
+import datetime
 import os
 import random
 import string
@@ -8,6 +9,11 @@ from manager_rest import config
 from manager_rest.amqp_manager import AMQPManager
 from manager_rest.storage import storage_utils
 from manager_rest.flask_utils import setup_flask_app
+
+from manager_rest.storage import (
+    get_storage_manager,
+    models,
+)
 
 
 def _add_default_user_and_tenant(amqp_manager, script_config):
@@ -23,6 +29,75 @@ def _generate_password(length=12):
     password = ''.join(random.choice(chars) for _ in range(length))
 
     return password
+
+
+def _insert_rabbitmq_broker(brokers, ca_id):
+    sm = get_storage_manager()
+
+    for broker in brokers:
+        inst = models.RabbitMQBroker(
+            _ca_cert_id=ca_id,
+            **broker
+        )
+        sm.put(inst)
+
+
+def _create_rabbitmq_info(rabbitmq_config):
+    use_hostnames = rabbitmq_config['use_hostnames_in_db']
+    is_external = rabbitmq_config.get('is_external', False)
+
+    return [
+        {
+            'name': name,
+            'host': name if use_hostnames else broker['networks']['default'],
+            'management_host': (
+                name if use_hostnames else broker['networks']['default']
+            ),
+            'username': rabbitmq_config['username'],
+            'password': rabbitmq_config['password'],
+            'params': None,
+            'networks': broker['networks'],
+            'is_external': is_external,
+        }
+        for name, broker in rabbitmq_config['cluster_members'].items()
+    ]
+
+
+def _get_rabbitmq_ca_cert(rabbitmq_ca_cert_path):
+    if rabbitmq_ca_cert_path:
+        with open(rabbitmq_ca_cert_path) as f:
+            return f.read()
+
+    return ''
+
+
+def _insert_rabbitmq_ca_cert(cert, name):
+    sm = get_storage_manager()
+    inst = models.Certificate(
+        name=name,
+        value=cert,
+        updated_at=datetime.datetime.now(),
+        _updater_id=0,
+    )
+    sm.put(inst)
+
+    return inst.id
+
+
+def _register_rabbitmq_brokers(rabbitmq_config):
+    rabbitmq_brokers = _create_rabbitmq_info(rabbitmq_config)
+
+    if rabbitmq_brokers:
+        rabbitmq_ca_cert = _get_rabbitmq_ca_cert(rabbitmq_config['ca_path'])
+        rabbitmq_ca_id = _insert_rabbitmq_ca_cert(
+            rabbitmq_ca_cert,
+            'rabbitmq-ca',
+        )
+
+        _insert_rabbitmq_broker(
+            rabbitmq_brokers,
+            rabbitmq_ca_id,
+        )
 
 
 if __name__ == '__main__':
@@ -62,3 +137,4 @@ if __name__ == '__main__':
         )
 
     _add_default_user_and_tenant(amqp_manager, user_credentials)
+    _register_rabbitmq_brokers(user_config['rabbitmq'])
