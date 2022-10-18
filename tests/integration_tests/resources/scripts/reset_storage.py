@@ -26,14 +26,10 @@ from flask_security.utils import hash_password
 
 from manager_rest import config
 from manager_rest.storage import db, models, get_storage_manager
-from manager_rest.amqp_manager import AMQPManager
 from manager_rest.flask_utils import setup_flask_app
 from manager_rest.constants import (
-    DEFAULT_TENANT_NAME,
-    CURRENT_TENANT_CONFIG
-)
-from manager_rest.storage.storage_utils import (
-    create_default_user_tenant_and_roles
+    BOOTSTRAP_ADMIN_ID,
+    DEFAULT_TENANT_ID,
 )
 
 # This is a hacky way to get to the migrations folder
@@ -41,21 +37,6 @@ migrations_dir = '/opt/manager/resources/cloudify/migrations'
 PROVIDER_NAME = 'integration_tests'
 DEFAULT_CA_CERT = "/etc/cloudify/ssl/cloudify_internal_ca_cert.pem"
 AUTH_TOKEN_LOCATION = '/opt/mgmtworker/work/admin_token'
-
-
-def setup_amqp_manager():
-    kwargs = {}
-    if config.instance.amqp_ca:
-        kwargs['cadata'] = config.instance.amqp_ca
-    else:
-        kwargs['verify'] = DEFAULT_CA_CERT
-    amqp_manager = AMQPManager(
-        host=config.instance.amqp_management_host or "localhost",
-        username=config.instance.amqp_username or "cloudify",
-        password=config.instance.amqp_password or "c10udify",
-        **kwargs,
-    )
-    return amqp_manager
 
 
 def safe_drop_all(keep_tables):
@@ -70,14 +51,7 @@ def safe_drop_all(keep_tables):
     db.session.commit()
 
 
-def _add_defaults(app, amqp_manager, script_config):
-    """Add default tenant and admin user to the DB"""
-    default_tenant = create_default_user_tenant_and_roles(
-        admin_username='admin',
-        admin_password=None,
-        password_hash=script_config['password_hash'],
-        amqp_manager=amqp_manager
-    )
+def _reset_config(app, script_config):
     for scope, configs in script_config['manager_config'].items():
         for name, value in configs.items():
             item = (
@@ -87,8 +61,19 @@ def _add_defaults(app, amqp_manager, script_config):
             item.value = value
             db.session.add(item)
     db.session.commit()
-    app.config[CURRENT_TENANT_CONFIG] = default_tenant
-    return default_tenant
+
+
+def _delete_users():
+    """Delete all users and tenants, except for admin and default_tenant"""
+    db.session.execute(
+        models.User.__table__.delete()
+        .where(models.User.id != BOOTSTRAP_ADMIN_ID)
+    )
+    db.session.execute(
+        models.Tenant.__table__.delete()
+        .where(models.Tenant.id != DEFAULT_TENANT_ID)
+    )
+    db.session.commit()
 
 
 def close_session(app):
@@ -97,18 +82,16 @@ def close_session(app):
 
 
 def reset_storage(app, script_config):
-    amqp_manager = setup_amqp_manager()
-
-    # Clear the old RabbitMQ resources
-    amqp_manager.remove_tenant_vhost_and_user(DEFAULT_TENANT_NAME)
     # Rebuild the DB
     safe_drop_all(keep_tables=['roles', 'config', 'rabbitmq_brokers',
                                'certificates', 'managers', 'db_nodes',
                                'licenses', 'usage_collector',
-                               'permissions', 'provider_context'])
+                               'permissions', 'provider_context',
+                               'users', 'tenants', 'users_tenants',
+                               'users_roles'])
+    _delete_users()
     upgrade(directory=migrations_dir)
-    # Add default tenant, admin user and provider context
-    _add_defaults(app, amqp_manager, script_config)
+    _reset_config(app, script_config)
 
 
 def _random_string(length=10):

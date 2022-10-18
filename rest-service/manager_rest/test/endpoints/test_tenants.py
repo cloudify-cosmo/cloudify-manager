@@ -18,6 +18,7 @@ from mock import patch
 from manager_rest import constants, config
 from manager_rest.storage import models
 
+from cloudify.cryptography_utils import encrypt
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from manager_rest.test import base_test
@@ -49,12 +50,17 @@ class TenantsCommunityTestCase(base_test.BaseServerTestCase):
         """Getting a tenant with the credentials permission, the full
         tenant details, including the rabbitmq credentials.
         """
+        password = 'password1234'
+        self.tenant.rabbitmq_password = encrypt(password)
+
         with patch.dict(config.instance.authorization_permissions,
                         {CREDENTIALS_PERMISSION: ['user']}):
             result = self.client.tenants.get(constants.DEFAULT_TENANT_NAME)
-        self.assertEqual(result['name'], constants.DEFAULT_TENANT_NAME)
-        for key in ['username', 'password', 'vhost']:
-            self.assertIsNotNone(result['rabbitmq_' + key])
+
+        assert result['name'] == constants.DEFAULT_TENANT_NAME
+        assert result['rabbitmq_username'] == self.tenant.rabbitmq_username
+        assert result['rabbitmq_vhost'] == self.tenant.rabbitmq_vhost
+        assert result['rabbitmq_password'] == password
 
     def test_get_nondefault_tenant(self):
         """Getting tenants other than default_tenant is disallowed on

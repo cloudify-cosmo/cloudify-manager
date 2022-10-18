@@ -13,15 +13,9 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from flask_security.utils import hash_password
-
-from manager_rest import constants
 from manager_rest.storage.models import Node
-from manager_rest.storage import user_datastore, db, get_storage_manager
+from manager_rest.storage import db, get_storage_manager
 from manager_rest.manager_exceptions import NotFoundError
-from manager_rest.storage.management_models import (
-    Tenant, UserTenantAssoc, Role
-)
 
 
 def get_node(deployment_id, node_id):
@@ -37,119 +31,6 @@ def get_node(deployment_id, node_id):
             'was not found'.format(node_id, deployment_id)
         )
     return nodes[0]
-
-
-def create_default_user_tenant_and_roles(admin_username,
-                                         admin_password,
-                                         amqp_manager,
-                                         password_hash=None):
-    """
-    Create the bootstrap admin, the default tenant and the security roles,
-    as well as a RabbitMQ vhost and user corresponding to the default tenant
-
-    :return: The default tenant
-    """
-    sm = get_storage_manager()
-    admin_role = sm.get(Role, None, filters={'name': 'sys_admin'})
-    default_tenant = _get_default_tenant() or _create_default_tenant()
-
-    if amqp_manager:
-        amqp_manager.create_tenant_vhost_and_user(tenant=default_tenant)
-
-    admin_user = user_datastore.get_user(constants.BOOTSTRAP_ADMIN_ID)
-
-    if admin_user:
-        admin_user.password = password_hash or hash_password(admin_password)
-        db.session.commit()
-    else:
-        admin_user = user_datastore.create_user(
-            id=constants.BOOTSTRAP_ADMIN_ID,
-            username=admin_username,
-            password=password_hash or hash_password(admin_password),
-            roles=[admin_role]
-        )
-
-    print('####################################')
-    print(f'USERNAME: {admin_username}')
-    print(f'PASSWORD: {admin_password}')
-    print('####################################')
-
-    # The admin user is assigned to the default tenant.
-    # This is the default role when a user is added to a tenant.
-    # Anyway, `sys_admin` will be the effective role since is the system role.
-    user_tenant_association = _get_user_tenant_association(
-        admin_user,
-        default_tenant,
-    )
-
-    if not user_tenant_association:
-        user_role = user_datastore.find_role(constants.DEFAULT_TENANT_ROLE)
-
-        user_tenant_association = UserTenantAssoc(
-            user=admin_user,
-            tenant=default_tenant,
-            role=user_role,
-        )
-
-    admin_user.tenant_associations.append(user_tenant_association)
-    user_datastore.commit()
-    return default_tenant
-
-
-def create_status_reporter_user_and_assign_role(username,
-                                                password,
-                                                role,
-                                                user_id):
-    """Creates a user and assigns its given role.
-    """
-    user = user_datastore.create_user(
-        username=username,
-        password=hash_password(password),
-        roles=[role],
-        id=user_id
-    )
-
-    default_tenant = Tenant.query.filter_by(
-        id=constants.DEFAULT_TENANT_ID).first()
-    reporter_role = user_datastore.find_role(role)
-    if not reporter_role:
-        raise NotFoundError("The username \"{0}\" cannot have the role \"{1}\""
-                            " as the role doesn't exist"
-                            "".format(username, role))
-    user_tenant_association = UserTenantAssoc(
-        user=user,
-        tenant=default_tenant,
-        role=reporter_role,
-    )
-    user.tenant_associations.append(user_tenant_association)
-    user_datastore.commit()
-    return user
-
-
-def _get_user_tenant_association(user, tenant):
-    user_tenant_association = UserTenantAssoc.query.filter_by(
-        user=user,
-        tenant=tenant,
-    ).first()
-
-    return user_tenant_association
-
-
-def _get_default_tenant():
-    default_tenant = Tenant.query.get(
-        constants.DEFAULT_TENANT_ID,
-    )
-
-    return default_tenant
-
-
-def _create_default_tenant():
-    default_tenant = Tenant(
-        id=constants.DEFAULT_TENANT_ID,
-        name=constants.DEFAULT_TENANT_NAME
-    )
-    db.session.add(default_tenant)
-    return default_tenant
 
 
 def try_acquire_lock_on_table(lock_number):
