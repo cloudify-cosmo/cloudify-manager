@@ -76,8 +76,8 @@ class BlueprintUploadTest(AgentlessTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertRegexpMatches(
             response.json()['message'],
-            "failed uploading.* "
-            "Invalid URL '{}'".format(archive_url))
+            r"failed uploading.* "
+            r"Failed to parse: \['{}'\]".format(archive_url))
 
     def test_blueprint_upload_from_url_bad_archive_format(self):
         blueprint_id = 'bp-url-bad-format'
