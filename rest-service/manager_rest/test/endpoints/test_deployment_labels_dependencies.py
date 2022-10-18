@@ -1,7 +1,7 @@
 from manager_rest.storage import models, db
 
 from cloudify_rest_client.exceptions import CloudifyClientError
-from cloudify.models_states import DeploymentState
+from cloudify.models_states import DeploymentState, ExecutionState
 
 from manager_rest.test.base_test import BaseServerTestCase
 
@@ -444,3 +444,54 @@ class DeploymentLabelsDependenciesTest(BaseServerTestCase):
             ]
         )
         assert dep1.environment_type == 'subcloud'
+
+    def test_delete_sub_services(self):
+        # make an environment, which has a sub-environment, which has
+        # two services; when deleting those services, the sub_services_count
+        # is reduced in both the environment, and the sub-environment
+        env1 = self._deployment(id='env1')
+        env2 = self._deployment(id='env2')
+
+        self.client.deployments.update_labels(
+            'env2',
+            labels=[
+                {'csys-obj-type': 'environment'},
+                {'csys-obj-parent': 'env1'}
+            ]
+        )
+        srv1 = self._deployment(id='srv1')
+        srv2 = self._deployment(id='srv2')
+        self.client.deployments.update_labels(
+            'srv1',
+            labels=[{'csys-obj-parent': 'env2'}],
+        )
+        self.client.deployments.update_labels(
+            'srv2',
+            labels=[{'csys-obj-parent': 'env2'}],
+        )
+        assert env1.sub_environments_count == 1
+        assert env1.sub_services_count == 2
+        assert env2.sub_environments_count == 0
+        assert env2.sub_services_count == 2
+
+        delete_exc = srv1.make_delete_environment_execution()
+        db.session.commit()
+        self.client.executions.update(delete_exc.id, ExecutionState.TERMINATED)
+        assert env1.sub_services_count == 1
+        assert env1.sub_environments_count == 1
+        assert env2.sub_environments_count == 0
+        assert env2.sub_services_count == 1
+
+        delete_exc = srv2.make_delete_environment_execution()
+        db.session.commit()
+        self.client.executions.update(delete_exc.id, ExecutionState.TERMINATED)
+        assert env1.sub_services_count == 0
+        assert env1.sub_environments_count == 1
+        assert env2.sub_environments_count == 0
+        assert env2.sub_services_count == 0
+
+        delete_exc = env2.make_delete_environment_execution()
+        db.session.commit()
+        self.client.executions.update(delete_exc.id, ExecutionState.TERMINATED)
+        assert env1.sub_services_count == 0
+        assert env1.sub_environments_count == 0
