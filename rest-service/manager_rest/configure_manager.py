@@ -31,12 +31,12 @@ def _generate_password(length=12):
     return password
 
 
-def _insert_rabbitmq_broker(brokers, ca_id):
+def _insert_rabbitmq_broker(brokers, ca_cert):
     sm = get_storage_manager()
 
     for broker in brokers:
         inst = models.RabbitMQBroker(
-            _ca_cert_id=ca_id,
+            ca_cert=ca_cert,
             **broker
         )
         sm.put(inst)
@@ -72,16 +72,13 @@ def _get_rabbitmq_ca_cert(rabbitmq_ca_cert_path):
 
 
 def _insert_rabbitmq_ca_cert(cert, name):
-    sm = get_storage_manager()
     inst = models.Certificate(
         name=name,
         value=cert,
         updated_at=datetime.datetime.now(),
-        _updater_id=0,
     )
-    sm.put(inst)
 
-    return inst.id
+    return inst
 
 
 def _register_rabbitmq_brokers(rabbitmq_config):
@@ -89,14 +86,14 @@ def _register_rabbitmq_brokers(rabbitmq_config):
 
     if rabbitmq_brokers:
         rabbitmq_ca_cert = _get_rabbitmq_ca_cert(rabbitmq_config['ca_path'])
-        rabbitmq_ca_id = _insert_rabbitmq_ca_cert(
+        rabbitmq_ca = _insert_rabbitmq_ca_cert(
             rabbitmq_ca_cert,
             'rabbitmq-ca',
         )
 
         _insert_rabbitmq_broker(
             rabbitmq_brokers,
-            rabbitmq_ca_id,
+            rabbitmq_ca,
         )
 
 
