@@ -2864,18 +2864,25 @@ class ResourceManager(object):
         """Recalculate statuses & counts for all ancestors of deployment_ids"""
         if not deployment_ids:
             return
+        deployment_ids = set(deployment_ids)
         with self.sm.transaction():
             deps = models.DeploymentLabelsDependencies.get_dependencies(
                 deployment_ids, dependents=False, locking=True)
-            if not deps:
-                # no deps, means there's no tree to speak of, we just need to
-                # update deployment_ids only
+
+            # get_dependencies will get all dependencies of deployment_ids
+            # (sorted so that parents come before grandparents), but not
+            # deployment_ids themselves. If there's any we didn't retrieve,
+            # get them directly, and put them at the beginning
+            # (before their parents)
+            deployment_ids -= {d._storage_id for d in deps}
+            if deployment_ids:
                 deps = (
                     db.session.query(models.Deployment)
                     .filter(models.Deployment._storage_id.in_(deployment_ids))
                     .with_for_update()
                     .all()
-                )
+                ) + deps
+
             for dep in deps:
                 summary = models.DeploymentLabelsDependencies\
                     .get_children_summary(dep)
