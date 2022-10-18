@@ -76,3 +76,36 @@ class TestConfigureManager(base_test.BaseServerTestCase):
         configure({})
         assert models.Tenant.query.count() == 1
         assert len(self.user.tenant_associations) == 1
+
+    def test_register_rabbitmq_brokers(self):
+        models.RabbitMQBroker.query.delete()
+
+        user_config = {
+            'rabbitmq': {
+                'cluster_members': {
+                    'test_hostname_1': {
+                        'networks': {
+                            'default': 'test_address_1',
+                        },
+                    },
+                    'test_hostname_2': {
+                        'networks': {
+                            'default': 'test_address_2',
+                        },
+                    },
+                },
+            },
+        }
+
+        configure(user_config)
+
+        test_hostname_1 = models.RabbitMQBroker.query.filter_by(
+            name='test_hostname_1',
+        ).first()
+        test_hostname_2 = models.RabbitMQBroker.query.filter_by(
+            name='test_hostname_2',
+        ).first()
+
+        assert models.RabbitMQBroker.query.count() == 2
+        assert test_hostname_1.management_host == 'test_address_1'
+        assert test_hostname_2.management_host == 'test_address_2'

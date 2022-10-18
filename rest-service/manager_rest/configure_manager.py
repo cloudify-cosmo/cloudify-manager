@@ -1,4 +1,5 @@
 import argparse
+import datetime
 import os
 import random
 import string
@@ -9,7 +10,12 @@ from collections.abc import MutableMapping
 from flask_security.utils import hash_password
 
 from manager_rest import config, constants
-from manager_rest.storage import db, models, user_datastore
+from manager_rest.storage import (
+    db,
+    models,
+    user_datastore,
+    get_storage_manager,
+)
 from manager_rest.amqp_manager import AMQPManager
 from manager_rest.flask_utils import setup_flask_app
 
@@ -60,6 +66,60 @@ def _get_admin_password(user_config):
     except KeyError:
         admin_password = None
     return admin_password
+
+
+def _get_rabbitmq_ca_path(user_config):
+    try:
+        value = user_config['rabbitmq']['ca_path']
+    except KeyError:
+        value = ''
+
+    return value
+
+
+def _get_rabbitmq_use_hostnames_in_db(user_config):
+    try:
+        value = user_config['rabbitmq']['use_hostnames_in_db']
+    except KeyError:
+        value = False
+
+    return value
+
+
+def _get_rabbitmq_use_hostnames_is_external(user_config):
+    try:
+        value = user_config['rabbitmq']['is_external']
+    except KeyError:
+        value = False
+
+    return value
+
+
+def _get_rabbitmq_username(user_config):
+    try:
+        value = user_config['rabbitmq']['username']
+    except KeyError:
+        value = None
+
+    return value or 'cloudify'
+
+
+def _get_rabbitmq_password(user_config):
+    try:
+        value = user_config['rabbitmq']['username']
+    except KeyError:
+        value = None
+
+    return value or 'c10udify'
+
+
+def _get_rabbitmq_cluster_members(user_config):
+    try:
+        value = user_config['rabbitmq']['cluster_members']
+    except KeyError:
+        value = {}
+
+    return value
 
 
 def _update_admin_user(admin_user, user_config):
@@ -162,6 +222,8 @@ def configure(user_config):
     if need_assoc:
         _setup_user_tenant_assoc(admin_user, default_tenant)
 
+    _register_rabbitmq_brokers(user_config)
+
     db.session.commit()
 
 
@@ -175,6 +237,74 @@ def _load_user_config(paths):
             config_source = yaml.safe_load(f)
         dict_merge(user_config, config_source)
     return user_config
+
+
+def _insert_rabbitmq_broker(brokers, ca_cert):
+    sm = get_storage_manager()
+
+    for broker in brokers:
+        inst = models.RabbitMQBroker(
+            ca_cert=ca_cert,
+            **broker
+        )
+        sm.put(inst)
+
+
+def _get_rabbitmq_brokers(user_config):
+    use_hostnames = _get_rabbitmq_use_hostnames_in_db(user_config)
+    is_external = _get_rabbitmq_use_hostnames_is_external(user_config)
+    cluster_members = _get_rabbitmq_cluster_members(user_config)
+
+    return [
+        {
+            'name': name,
+            'host': name if use_hostnames else broker['networks']['default'],
+            'management_host': (
+                name if use_hostnames else broker['networks']['default']
+            ),
+            'username': _get_rabbitmq_username(user_config),
+            'password': _get_rabbitmq_password(user_config),
+            'params': None,
+            'networks': broker['networks'],
+            'is_external': is_external,
+        }
+        for name, broker in cluster_members.items()
+    ]
+
+
+def _get_rabbitmq_ca_cert(rabbitmq_ca_cert_path):
+    if rabbitmq_ca_cert_path:
+        with open(rabbitmq_ca_cert_path) as f:
+            return f.read()
+
+    return ''
+
+
+def _insert_rabbitmq_ca_cert(cert, name):
+    inst = models.Certificate(
+        name=name,
+        value=cert,
+        updated_at=datetime.datetime.now(),
+    )
+
+    return inst
+
+
+def _register_rabbitmq_brokers(user_config):
+    rabbitmq_brokers = _get_rabbitmq_brokers(user_config)
+
+    if rabbitmq_brokers:
+        rabbitmq_ca_path = _get_rabbitmq_ca_path(user_config)
+        rabbitmq_ca_cert = _get_rabbitmq_ca_cert(rabbitmq_ca_path)
+        rabbitmq_ca = _insert_rabbitmq_ca_cert(
+            rabbitmq_ca_cert,
+            'rabbitmq-ca',
+        )
+
+        _insert_rabbitmq_broker(
+            rabbitmq_brokers,
+            rabbitmq_ca,
+        )
 
 
 if __name__ == '__main__':
