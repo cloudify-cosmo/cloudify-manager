@@ -307,16 +307,11 @@ class BaseServerTestCase(unittest.TestCase):
             password='admin',
             roles=['sys_admin'],
         )
-        rabbitmq_password = \
-            'gAAAAABb9p7U_Lnlmg7vyijjoxovyg215ThYi-VCTCzVYa1p-vpzi31WGko' \
-            'KD_hK1mQyKgjRss_Nz-3m-cgHpZChnVT4bxZIjnOnL6sF8RtozvlRoGHtnF' \
-            'G6jxqQDeEf5Heos0ia4Q5H  '
         self.tenant = models.Tenant(
             id=constants.DEFAULT_TENANT_ID,
             name=constants.DEFAULT_TENANT_NAME,
             rabbitmq_username='rabbitmq_username_default_tenant',
             rabbitmq_vhost='rabbitmq_vhost_defualt_tenant',
-            rabbitmq_password=rabbitmq_password,
         )
 
         self.user.tenant_associations.append(models.UserTenantAssoc(
