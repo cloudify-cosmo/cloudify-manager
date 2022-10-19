@@ -586,32 +586,24 @@ class UploadedBlueprintsManager(UploadedDataManager):
 
 class UploadedBlueprintsValidator(UploadedBlueprintsManager):
 
-    def receive_uploaded_data(self, data_id=None, **kwargs):
-        blueprint_url = None
-        # avoid clashing with existing blueprint names
-        blueprint_id = data_id + uuid.uuid4().hex[:16]
-        args = get_args_and_verify_arguments([
-            Argument('application_file_name', default='')
-        ])
+    def receive_uploaded_data(
+        self, data_id=None, visibility=None, override_failed=False,
+        labels=None, created_at=None, owner=None, private_resource=None,
+        application_file_name='', skip_execution=None, state=None,
+        blueprint_url=None
+    ):
+        validated_blueprint = self._prepare_and_process_doc(
+            data_id, visibility, blueprint_url,
+            application_file_name, override_failed)
+        return validated_blueprint, 201
 
-        # Handle importing blueprint through url
-        if self._get_data_url_key() in request.args:
-            if request.data or \
-                    'Transfer-Encoding' in request.headers or \
-                    'blueprint_archive' in request.files:
-                raise manager_exceptions.BadParametersError(
-                    "Can pass {0} as only one of: URL via query parameters, "
-                    "request body, multi-form or "
-                    "chunked.".format(self._get_kind()))
-            blueprint_url = request.args[self._get_data_url_key()]
-
-        return self._prepare_and_process_doc(
-            blueprint_id,
-            blueprint_url,
-            application_file_name=args.application_file_name)
-
-    def _prepare_and_process_doc(self, data_id, blueprint_url,
-                                 application_file_name):
+    def _prepare_and_process_doc(self,
+                                 data_id,
+                                 visibility,
+                                 blueprint_url,
+                                 application_file_name,
+                                 override_failed_blueprint,
+                                 **kwargs):
         application_file_name = unquote(application_file_name)
         # Put a temporary blueprint entry in DB
         rm = get_resource_manager()
@@ -645,7 +637,7 @@ class UploadedBlueprintsValidator(UploadedBlueprintsManager):
             self.cleanup_blueprint_archive_from_file_server(
                 data_id, current_tenant.name)
             raise
-        return temp_blueprint.upload_execution
+        return temp_blueprint
 
 
 class UploadedPluginsManager(UploadedDataManager):

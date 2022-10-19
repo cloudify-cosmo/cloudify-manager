@@ -368,20 +368,29 @@ def _validate_imported_blueprints(sm, blueprint, imported_blueprints):
 
 class BlueprintsIdValidate(BlueprintsId):
     @authorize('blueprint_upload')
-    @rest_decorators.marshal_with(models.Execution)
+    @rest_decorators.marshal_with(models.Blueprint)
     def put(self, blueprint_id, **kwargs):
         """
         Validate a blueprint (id specified)
         """
+        args = None
+        form_params = request.form.get('params')
+        if form_params:
+            args = json.loads(form_params)
+        if not args:
+            args = request.args.to_dict(flat=False)
+
         rest_utils.validate_inputs({'blueprint_id': blueprint_id})
-        visibility = rest_utils.get_visibility_parameter(
-            optional=True,
-            is_argument=True,
-            valid_values=VisibilityState.STATES
-        )
+        visibility = args.pop('visibility')
+        if visibility is not None:
+            rest_utils.validate_visibility(
+                visibility, valid_values=VisibilityState.STATES)
+        application_file_name = args.pop('application_file_name', '')
+
         return UploadedBlueprintsValidator().\
             receive_uploaded_data(data_id=blueprint_id,
-                                  visibility=visibility)
+                                  visibility=visibility,
+                                  application_file_name=application_file_name)
 
 
 class BlueprintsIdArchive(resources_v1.BlueprintsIdArchive):
