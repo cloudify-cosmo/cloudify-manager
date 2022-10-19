@@ -223,7 +223,6 @@ def configure(user_config):
     if need_assoc:
         _setup_user_tenant_assoc(admin_user, default_tenant)
 
-
     db.session.commit()
 
 
