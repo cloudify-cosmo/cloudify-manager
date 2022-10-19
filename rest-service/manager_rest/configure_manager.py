@@ -205,6 +205,8 @@ def _setup_user_tenant_assoc(admin_user, default_tenant):
 
 def configure(user_config):
     """Configure the manager based on the provided config"""
+    _register_rabbitmq_brokers(user_config)
+
     default_tenant = _get_default_tenant()
     need_assoc = False
     if not default_tenant:
@@ -221,7 +223,6 @@ def configure(user_config):
     if need_assoc:
         _setup_user_tenant_assoc(admin_user, default_tenant)
 
-    _register_rabbitmq_brokers(user_config)
 
     db.session.commit()
 
@@ -302,6 +303,11 @@ def _register_rabbitmq_brokers(user_config):
             rabbitmq_brokers,
             rabbitmq_ca,
         )
+
+        # reload config after inserting rabbitmqs, so that .amqp_host
+        # and others are set
+        db.session.commit()
+        config.instance.load_from_db()
 
 
 if __name__ == '__main__':
