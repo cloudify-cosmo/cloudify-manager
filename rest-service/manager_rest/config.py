@@ -216,11 +216,16 @@ class Config(object):
     def logger(self, logger):
         self._logger = logger
 
-    def load_from_db(self):
+    def load_from_db(self, session=None):
         from manager_rest.storage import models
         last_changed = {self.last_updated}
-        engine = create_engine(self.db_url)
-        session = orm.Session(bind=engine)
+
+        session_created = False
+        if session is None:
+            engine = create_engine(self.db_url)
+            session = orm.Session(bind=engine)
+            session_created = True
+
         stored_config = (
             session.query(models.Config)
             .all()
@@ -280,8 +285,9 @@ class Config(object):
             models.Certificate.value
         ).filter_by(name=LDAP_CA_NAME).scalar()
 
-        session.close()
-        engine.dispose()
+        if session_created:
+            session.close()
+            engine.dispose()
 
         self.last_updated = max((dt for dt in last_changed if dt),
                                 default=None)

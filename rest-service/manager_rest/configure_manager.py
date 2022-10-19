@@ -306,8 +306,7 @@ def _register_rabbitmq_brokers(user_config):
 
         # reload config after inserting rabbitmqs, so that .amqp_host
         # and others are set
-        db.session.commit()
-        config.instance.load_from_db()
+        config.instance.load_from_db(session=db.session)
 
 
 if __name__ == '__main__':
