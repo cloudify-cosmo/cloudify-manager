@@ -386,11 +386,13 @@ class BlueprintsIdValidate(BlueprintsId):
             rest_utils.validate_visibility(
                 visibility, valid_values=VisibilityState.STATES)
         application_file_name = args.pop('application_file_name', '')
+        blueprint_archive_url = args.pop('blueprint_archive_url', None)
 
         return UploadedBlueprintsValidator().\
             receive_uploaded_data(data_id=blueprint_id,
                                   visibility=visibility,
-                                  application_file_name=application_file_name)
+                                  application_file_name=application_file_name,
+                                  blueprint_url=blueprint_archive_url)
 
 
 class BlueprintsIdArchive(resources_v1.BlueprintsIdArchive):
