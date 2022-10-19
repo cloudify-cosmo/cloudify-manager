@@ -21,6 +21,7 @@ import requests
 from cloudify.models_states import BlueprintUploadState
 from cloudify.utils import ipv6_url_compat
 from cloudify_rest_client.exceptions import CloudifyClientError
+from cloudify_rest_client.executions import Execution
 
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
@@ -251,10 +252,11 @@ class BlueprintValidateTest(AgentlessTestCase):
 
     def _verify_blueprint_validation(
             self, blueprint_id, blueprint_resource, expected_error=None):
-        exc = self.client.blueprints.validate(
+        bp = self.client.blueprints.validate(
             blueprint_resource,
             entity_id=blueprint_id
         )
+        exc = Execution(bp['upload_execution'])
         temp_blueprint_id = self._assert_blueprint_validation_error(
             exc, expected_error)
         self._assert_cleanup(temp_blueprint_id)
