@@ -105,7 +105,7 @@ def _get_rabbitmq_username(user_config):
 
 def _get_rabbitmq_password(user_config):
     try:
-        value = user_config['rabbitmq']['username']
+        value = user_config['rabbitmq']['password']
     except KeyError:
         value = None
 

@@ -87,6 +87,8 @@ class TestConfigureManager(base_test.BaseServerTestCase):
 
         user_config = {
             'rabbitmq': {
+                'username': 'username1',
+                'password': 'password1',
                 'cluster_members': {
                     'test_hostname_1': {
                         'networks': {
@@ -118,3 +120,5 @@ class TestConfigureManager(base_test.BaseServerTestCase):
         # rabbitmq data is loaded into config after the configure() call
         # directly, without calling .load_from_db() here
         assert config.instance.amqp_host
+        assert config.instance.amqp_username == 'username1'
+        assert config.instance.amqp_password == 'password1'
