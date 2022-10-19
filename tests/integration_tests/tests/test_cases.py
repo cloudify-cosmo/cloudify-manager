@@ -129,8 +129,8 @@ class BaseTestCase(unittest.TestCase):
     @staticmethod
     def do_assertions(assertions_func, timeout=10, **kwargs):
         return test_utils.do_retries(assertions_func,
-                                     timeout,
-                                     AssertionError,
+                                     timeout_seconds=timeout,
+                                     exception_class=AssertionError,
                                      **kwargs)
 
     def wait_for_execution_status(self, execution_id, status, timeout=30):

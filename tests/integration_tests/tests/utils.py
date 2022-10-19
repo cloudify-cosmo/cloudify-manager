@@ -181,13 +181,14 @@ def get_resource(resource):
 
 
 def do_retries(func,
+               *args,
                timeout_seconds=10,
                exception_class=BaseException,
                **kwargs):
     deadline = time.time() + timeout_seconds
     while True:
         try:
-            return func(**kwargs)
+            return func(*args, **kwargs)
         except exception_class:
             if time.time() > deadline:
                 raise

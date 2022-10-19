@@ -580,7 +580,8 @@ class ExecutionsTest(AgentlessTestCase):
         """
         dsl_path = resource('dsl/write_pid_node.yaml')
         dep = self.deploy(dsl_path, wait=False, client=self.client)
-        do_retries(verify_deployment_env_created, 30,
+        do_retries(verify_deployment_env_created,
+                   timeout_seconds=30,
                    container_id=self.env.container_id,
                    deployment_id=dep.id,
                    client=self.client)
@@ -599,9 +600,9 @@ class ExecutionsTest(AgentlessTestCase):
         # We use do_retries to give the kill cancel operation time to kill
         # the process.
         do_retries(self.assertRaises,
-                   expected_exception=subprocess.CalledProcessError,
-                   callableObj=self.read_manager_file,
-                   file_path=path)
+                   subprocess.CalledProcessError,
+                   self.read_manager_file,
+                   path)
 
     def test_legacy_cancel_execution(self):
         # this tests cancellation of an execution where the workflow
@@ -674,7 +675,8 @@ class ExecutionsTest(AgentlessTestCase):
         self.client.deployments.create(blueprint_id, deployment_id,
                                        skip_plugins_validation=True)
 
-        do_retries(verify_deployment_env_created, 60,
+        do_retries(verify_deployment_env_created,
+                   timeout_seconds=60,
                    container_id=self.env.container_id,
                    deployment_id=deployment_id,
                    client=self.client)
@@ -760,7 +762,8 @@ class ExecutionsTest(AgentlessTestCase):
         wait_for_blueprint_upload(blueprint_id, self.client, True)
         self.client.deployments.create(blueprint_id, deployment_id,
                                        skip_plugins_validation=True)
-        do_retries(verify_deployment_env_created, 30,
+        do_retries(verify_deployment_env_created,
+                   timeout_seconds=30,
                    container_id=self.env.container_id,
                    deployment_id=deployment_id,
                    client=self.client)
@@ -835,7 +838,7 @@ class ExecutionsTest(AgentlessTestCase):
                 "{0!r} did not match {1!r}".format(message, expected_regex)
             )
 
-        # We expect the instances to remain unchaged after a dry run
+        # We expect the instances to remain unchanged after a dry run
         for instance in self.client.node_instances.list():
             self.assertEqual(instance['state'], 'uninitialized')
 
@@ -843,7 +846,8 @@ class ExecutionsTest(AgentlessTestCase):
         dsl_path = resource('dsl/basic.yaml')
         dep = self.deploy(dsl_path, wait=False, client=self.client)
         dep_id = dep.id
-        do_retries(verify_deployment_env_created, 30,
+        do_retries(verify_deployment_env_created,
+                   timeout_seconds=30,
                    container_id=self.env.container_id,
                    deployment_id=dep_id,
                    client=self.client)
@@ -906,11 +910,13 @@ class ExecutionsTest(AgentlessTestCase):
         dep2 = self.deploy(dsl_path, wait=False, client=self.client)
         dep1_id = dep1.id
         dep2_id = dep2.id
-        do_retries(verify_deployment_env_created, 30,
+        do_retries(verify_deployment_env_created,
+                   timeout_seconds=30,
                    container_id=self.env.container_id,
                    deployment_id=dep1_id,
                    client=self.client)
-        do_retries(verify_deployment_env_created, 30,
+        do_retries(verify_deployment_env_created,
+                   timeout_seconds=30,
                    container_id=self.env.container_id,
                    deployment_id=dep2_id,
                    client=self.client)
@@ -936,7 +942,8 @@ class ExecutionsTest(AgentlessTestCase):
         dsl_path = resource('dsl/sleep_workflows.yaml')
         dep = self.deploy(dsl_path, wait=False, client=self.client)
         dep_id = dep.id
-        do_retries(verify_deployment_env_created, 30,
+        do_retries(verify_deployment_env_created,
+                   timeout_seconds=30,
                    container_id=self.env.container_id,
                    deployment_id=dep_id,
                    client=self.client)
@@ -965,7 +972,8 @@ class ExecutionsTest(AgentlessTestCase):
         dsl_path = resource('dsl/sleep_workflows.yaml')
         dep = self.deploy(dsl_path, wait=False, client=self.client)
         dep_id = dep.id
-        do_retries(verify_deployment_env_created, 30,
+        do_retries(verify_deployment_env_created,
+                   timeout_seconds=30,
                    container_id=self.env.container_id,
                    deployment_id=dep_id,
                    client=self.client)
@@ -995,7 +1003,8 @@ class ExecutionsTest(AgentlessTestCase):
         dsl_path = resource('dsl/sleep_workflows.yaml')
         dep = self.deploy(dsl_path, wait=False, client=self.client)
         dep_id = dep.id
-        do_retries(verify_deployment_env_created, 30,
+        do_retries(verify_deployment_env_created,
+                   timeout_seconds=30,
                    container_id=self.env.container_id,
                    deployment_id=dep_id,
                    client=self.client)

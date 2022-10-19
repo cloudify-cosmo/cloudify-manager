@@ -64,7 +64,8 @@ class TestDeploymentWorkflows(AgentlessTestCase):
         wait_for_blueprint_upload(blueprint_id, self.client)
         self.client.deployments.create(blueprint_id, deployment_id,
                                        skip_plugins_validation=True)
-        do_retries(verify_deployment_env_created, 30,
+        do_retries(verify_deployment_env_created,
+                   timeout_seconds=30,
                    container_id=self.env.container_id,
                    client=self.client,
                    deployment_id=deployment_id)
