@@ -1,3 +1,4 @@
+from manager_rest import config
 from manager_rest.configure_manager import (
     configure,
     dict_merge,
@@ -58,7 +59,7 @@ class TestConfigureManager(base_test.BaseServerTestCase):
 
     def test_update_admin_password(self):
         assert models.User.query.count() == 1
-        original_password = models.User.query.first().password
+        original_password = models.User.query.one().password
 
         configure({
             'manager': {
@@ -67,7 +68,7 @@ class TestConfigureManager(base_test.BaseServerTestCase):
                 }
             }
         })
-        assert original_password != models.User.query.first().password
+        assert original_password != models.User.query.one().password
 
     def test_create_default_tenant(self):
         db.session.delete(self.tenant)
@@ -79,6 +80,10 @@ class TestConfigureManager(base_test.BaseServerTestCase):
 
     def test_register_rabbitmq_brokers(self):
         models.RabbitMQBroker.query.delete()
+        # after deleting the brokers and reloading config, rabbitmq data
+        # is unavailable
+        config.instance.load_from_db()
+        assert not config.instance.amqp_host
 
         user_config = {
             'rabbitmq': {
@@ -101,11 +106,15 @@ class TestConfigureManager(base_test.BaseServerTestCase):
 
         test_hostname_1 = models.RabbitMQBroker.query.filter_by(
             name='test_hostname_1',
-        ).first()
+        ).one()
         test_hostname_2 = models.RabbitMQBroker.query.filter_by(
             name='test_hostname_2',
-        ).first()
+        ).one()
 
         assert models.RabbitMQBroker.query.count() == 2
         assert test_hostname_1.management_host == 'test_address_1'
         assert test_hostname_2.management_host == 'test_address_2'
+
+        # rabbitmq data is loaded into config after the configure() call
+        # directly, without calling .load_from_db() here
+        assert config.instance.amqp_host
