@@ -160,7 +160,7 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
 
     @staticmethod
     def _download_file(url, dest_path, target_filename=None):
-        with requests.get(url, stream=True, timeout=(5, None)) as resp:
+        with requests.get(url, stream=True, timeout=10.0) as resp:
             resp.raise_for_status()
             if not target_filename:
                 target_filename = os.path.basename(url)
