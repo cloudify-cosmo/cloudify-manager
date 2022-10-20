@@ -260,13 +260,13 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
         self._do_update(deployment.id, BLUEPRINT_ID)
 
-        self.assertRaisesRegex(CloudifyClientError,
-                               f'Workflow {workflow_id} does not exist in the '
-                               f'deployment {deployment.id}',
-                               self.client.executions.start,
-                               deployment_id=deployment.id,
-                               workflow_id=workflow_id,
-                               parameters={'node_id': 'site1'})
+        with self.assertRaisesRegex(
+                CloudifyClientError,
+                f'Workflow {workflow_id} does not exist in the '
+                f'deployment {deployment.id}'):
+            self.client.executions.start(deployment_id=deployment.id,
+                                         workflow_id=workflow_id,
+                                         parameters={'node_id': 'site1'})
 
         deployment = self.client.deployments.get(deployment.id)
         self.assertNotIn('my_custom_workflow',
