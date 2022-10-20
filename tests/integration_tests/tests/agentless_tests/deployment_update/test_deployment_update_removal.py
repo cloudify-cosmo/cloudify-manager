@@ -173,7 +173,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         )
         self.wait_for_execution_to_end(execution)
 
-        # the operation doesnt exist anymore - the execution was a no-op, so
+        # the operation doesn't exist anymore - the execution was a no-op, so
         # runtime-properties haven't changed
         ni = self.client.node_instances.get(modified_node_instance['id'])
         self.assertEqual(ni['runtime_properties']['source_ops_counter'], '1')
@@ -260,13 +260,13 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
         self._do_update(deployment.id, BLUEPRINT_ID)
 
-        self.assertRaisesRegex(CloudifyClientError,
-                               'Workflow {0} does not exist in deployment {1}'
-                               .format(workflow_id, deployment.id),
-                               callable_obj=self.client.executions.start,
-                               deployment_id=deployment.id,
-                               workflow_id=workflow_id,
-                               parameters={'node_id': 'site1'})
+        with self.assertRaisesRegex(
+                CloudifyClientError,
+                f'Workflow {workflow_id} does not exist in the '
+                f'deployment {deployment.id}'):
+            self.client.executions.start(deployment_id=deployment.id,
+                                         workflow_id=workflow_id,
+                                         parameters={'node_id': 'site1'})
 
         deployment = self.client.deployments.get(deployment.id)
         self.assertNotIn('my_custom_workflow',
@@ -298,7 +298,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         )
         self.wait_for_execution_to_end(execution)
 
-        # the operation doesnt exist anymore - the execution was a no-op, so
+        # the operation doesn't exist anymore - the execution was a no-op, so
         # the runtime-property was not inserted
         ni = self.client.node_instances.list(
             deployment_id=deployment.id, node_id='site2'
