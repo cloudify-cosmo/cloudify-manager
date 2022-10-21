@@ -74,7 +74,7 @@ def _get_rabbitmq_ca_path(user_config):
     except KeyError:
         value = ''
 
-    return value
+    return value or '/etc/cloudify/ssl/cloudify_internal_ca_cert.pem'
 
 
 def _get_rabbitmq_use_hostnames_in_db(user_config):
@@ -119,7 +119,13 @@ def _get_rabbitmq_cluster_members(user_config):
     except KeyError:
         value = {}
 
-    return value
+    return value or {
+            'rabbitmq': {
+                'networks': {
+                    'default': 'rabbitmq',
+                }
+            }
+        }
 
 
 def _update_admin_user(admin_user, user_config):
@@ -248,8 +254,11 @@ def _load_user_config(paths):
     for config_path in paths:
         if not config_path:
             continue
-        with open(config_path) as f:
-            config_source = yaml.safe_load(f)
+        try:
+            with open(config_path) as f:
+                config_source = yaml.safe_load(f)
+        except FileNotFoundError:
+            continue
         dict_merge(user_config, config_source)
     return user_config
 
