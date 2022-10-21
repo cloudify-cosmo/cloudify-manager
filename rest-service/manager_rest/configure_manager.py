@@ -347,7 +347,9 @@ if __name__ == '__main__':
     )
     args = parser.parse_args()
 
+
+    config.instance.load_configuration(from_db=False)
     with setup_flask_app().app_context():
-        config.instance.load_configuration()
+        config.instance.load_from_db(session=db.session)
         user_config = _load_user_config(args.config_file_path)
         configure(user_config)
