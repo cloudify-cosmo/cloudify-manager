@@ -1,8 +1,10 @@
 import asyncio
-import logging
 import json
+import logging
 
 import asyncpg
+
+NOTIFICATION_CHANNEL = 'audit_log_inserted'
 
 
 class ListenerException(Exception):
@@ -24,10 +26,20 @@ class Listener:
         self.dsn = dsn
         self.logger = logger
         self.conn_listen = None
-        self.loop = asyncio.get_event_loop()
         self.channels = {}
+        self._loop = None
 
-    def listen_on_channel(self, channel: str):
+    @property
+    def loop(self):
+        if self._loop is None:
+            self._loop = asyncio.get_event_loop()
+            if not self._loop.is_running():
+                raise ListenerException("Event loop is not running %s",
+                                        self._loop)
+            self.logger.debug("Got event loop: %s", self._loop)
+        return self._loop
+
+    def listen(self, channel=NOTIFICATION_CHANNEL):
         if channel in self.channels:
             raise TaskAlreadyExists(channel)
         self.channels[channel] = {

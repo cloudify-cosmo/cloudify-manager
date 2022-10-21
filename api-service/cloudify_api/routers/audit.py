@@ -11,9 +11,8 @@ from sqlalchemy.sql.selectable import Select
 
 from cloudify_api import models
 from cloudify_api.common import common_parameters, get_app, make_db_session
+from cloudify_api.listener import NOTIFICATION_CHANNEL
 from cloudify_api.results import DeletedResult, Paginated
-
-NOTIFICATION_CHANNEL = 'audit_log_inserted'
 
 
 class AuditLog(BaseModel):
@@ -110,7 +109,7 @@ async def stream_audit_log(request: Request,
                            execution_id: Optional[str] = None,
                            since: Optional[datetime] = None
                            ) -> StreamingResponse:
-    request.app.logger.debug("stream_audit_log")
+    request.app.logger.debug("Handling stream_audit_log request")
     queue = asyncio.Queue()
     request.app.listener.attach_queue(NOTIFICATION_CHANNEL, queue)
     headers = {"Content-Type": "text/event-stream"}
