@@ -267,11 +267,20 @@ def _load_user_config(paths):
 
 
 def _insert_rabbitmq_broker(brokers, ca_cert):
+    existing_brokers = {b.name: b for b in models.RabbitMQBroker.query.all()}
+
     for broker in brokers:
-        inst = models.RabbitMQBroker(
-            ca_cert=ca_cert,
-            **broker
-        )
+        name = broker['name']
+        if name in existing_brokers:
+            inst = existing_brokers[name]
+            for k, v in broker.items():
+                setattr(inst, k, v)
+            inst.ca_cert = ca_cert
+        else:
+            inst = models.RabbitMQBroker(
+                ca_cert=ca_cert,
+                **broker
+            )
         db.session.add(inst)
 
 
@@ -305,14 +314,18 @@ def _get_rabbitmq_ca_cert(rabbitmq_ca_cert_path):
     return ''
 
 
-def _insert_rabbitmq_ca_cert(cert, name):
-    inst = models.Certificate(
-        name=name,
-        value=cert,
-        updated_at=datetime.datetime.now(),
-    )
-
-    return inst
+def _insert_rabbitmq_ca_cert(value, name):
+    cert = models.Certificate.query.filter_by(name=name).first()
+    if cert:
+        cert.value = value
+    else:
+        cert = models.Certificate(
+            name=name,
+            value=value,
+            updated_at=datetime.datetime.now(),
+        )
+    db.session.add(cert)
+    return cert
 
 
 def _register_rabbitmq_brokers(user_config):
