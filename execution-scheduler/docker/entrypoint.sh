@@ -11,4 +11,8 @@ echo "
 secret_key: ${SECRET_KEY}
 " > /opt/manager/rest-security.conf
 
+
+python -m manager_rest.configure_manager --db-wait postgresql
+python -m manager_rest.configure_manager --rabbitmq-wait rabbitmq
+
 exec cloudify-execution-scheduler
