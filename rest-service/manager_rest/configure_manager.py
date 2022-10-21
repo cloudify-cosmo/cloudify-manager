@@ -3,7 +3,10 @@ import datetime
 import logging
 import os
 import random
+import socket
 import string
+import sys
+import time
 import yaml
 
 from collections.abc import MutableMapping
@@ -347,6 +350,28 @@ def _create_admin_token(target):
     db.session.commit()
     with open(target, 'w') as f:
         f.write(token.value)
+
+
+def _wait_for_db(address):
+    while True:
+        try:
+            with socket.create_connection((address, 5432), timeout=5):
+                return 0
+        except socket.error:
+            logging.error('Still waiting for DB: %s', address)
+            time.sleep(1)
+
+
+def _wait_for_rabbitmq(address):
+    while True:
+        try:
+            with socket.create_connection((address, 15671), timeout=5):
+                return 0
+        except socket.error:
+            logging.error('Still waiting for rabbitmq: %s', address)
+            time.sleep(1)
+
+
 if __name__ == '__main__':
     logging.basicConfig()
 
@@ -360,12 +385,26 @@ if __name__ == '__main__':
         default=[os.environ.get('CONFIG_FILE_PATH')],
     )
     parser.add_argument(
+        '--db-wait',
+        help='Wait for this DB to be up, and exit',
+        required=False
+    )
+    parser.add_argument(
+        '--rabbitmq-wait',
+        help='Wait for this RabbitMQ to be up, and exit',
+        required=False
+    )
+    parser.add_argument(
         '--create-admin-token',
         help='Create admin token at this location',
         required=False
     )
     args = parser.parse_args()
 
+    if args.db_wait:
+        sys.exit(_wait_for_db(args.db_wait))
+    if args.rabbitmq_wait:
+        sys.exit(_wait_for_rabbitmq(args.rabbitmq_wait))
 
     config.instance.load_configuration(from_db=False)
     with setup_flask_app().app_context():
