@@ -171,7 +171,15 @@ def _create_admin_user(user_config):
     admin_username = _get_admin_username(user_config)
     admin_password = _get_admin_password(user_config) or _generate_password()
 
-    admin_role = models.Role.query.filter_by(name='sys_admin').one()
+    admin_role = models.Role.query.filter_by(name='sys_admin').first()
+    if not admin_role:
+        admin_role = models.Role(
+            name='sys_admin',
+            type='system_role',
+            description='User that can manage Cloudify',
+        )
+        db.session.add(admin_role)
+
     admin_user = user_datastore.create_user(
         id=constants.BOOTSTRAP_ADMIN_ID,
         username=admin_username,
@@ -194,7 +202,14 @@ def _setup_user_tenant_assoc(admin_user, default_tenant):
 
     if not user_tenant_association:
         user_role = user_datastore.find_role(constants.DEFAULT_TENANT_ROLE)
-
+        if not user_role:
+            user_role = models.Role(
+                name=constants.DEFAULT_TENANT_ROLE,
+                type='tenant_role',
+                description='Regular user, can perform actions '
+                            'on tenants resources'
+            )
+            db.session.add(user_role)
         user_tenant_association = models.UserTenantAssoc(
             user=admin_user,
             tenant=default_tenant,
