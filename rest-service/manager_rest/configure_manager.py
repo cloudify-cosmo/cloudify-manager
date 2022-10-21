@@ -1,5 +1,6 @@
 import argparse
 import datetime
+import logging
 import os
 import random
 import string
@@ -187,10 +188,10 @@ def _create_admin_user(user_config):
         roles=[admin_role]
     )
 
-    print('####################################')
-    print(f'USERNAME: {admin_username}')
-    print(f'PASSWORD: {admin_password}')
-    print('####################################')
+    logging.critical('####################################')
+    logging.critical('USERNAME: %s', admin_username)
+    logging.critical('PASSWORD: %s', admin_password)
+    logging.critical('####################################')
     return admin_user
 
 
@@ -324,6 +325,8 @@ def _register_rabbitmq_brokers(user_config):
 
 
 if __name__ == '__main__':
+    logging.basicConfig()
+
     parser = argparse.ArgumentParser(description='Create admin user in DB')
     parser.add_argument(
         '-c',
