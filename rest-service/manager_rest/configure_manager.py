@@ -333,6 +333,20 @@ def _register_rabbitmq_brokers(user_config):
         config.instance.load_from_db(session=db.session)
 
 
+def _create_admin_token(target):
+    description = 'csys-mgmtworker'
+    # Don't leak existing Mgmtworker tokens
+    db.session.execute(
+        models.Token.__table__
+        .delete()
+        .filter_by(description=description)
+    )
+    admin_user = user_datastore.get_user(constants.BOOTSTRAP_ADMIN_ID)
+    token = admin_user.create_auth_token(description=description)
+    db.session.add(token)
+    db.session.commit()
+    with open(target, 'w') as f:
+        f.write(token.value)
 if __name__ == '__main__':
     logging.basicConfig()
 
@@ -345,6 +359,11 @@ if __name__ == '__main__':
         required=False,
         default=[os.environ.get('CONFIG_FILE_PATH')],
     )
+    parser.add_argument(
+        '--create-admin-token',
+        help='Create admin token at this location',
+        required=False
+    )
     args = parser.parse_args()
 
 
@@ -353,3 +372,5 @@ if __name__ == '__main__':
         config.instance.load_from_db(session=db.session)
         user_config = _load_user_config(args.config_file_path)
         configure(user_config)
+        if args.create_admin_token:
+            _create_admin_token(args.create_admin_token)
