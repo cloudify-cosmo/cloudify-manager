@@ -4,7 +4,7 @@ ENV RABBITMQ_USERNAME=cloudify
 ENV RABBITMQ_PASSWORD=c10udify
 ENV RABBITMQ_NODENAME=rabbit@localhost
 ENV RABBITMQ_LOG_BASE="/var/log/cloudify/rabbitmq"
-ENV RABBITMQ_CONFIG_FILE="/etc/cloudify/rabbitmq/rabbitmq"
+ENV RABBITMQ_CONFIG_FILE="/etc/cloudify/rabbitmq/rabbitmq.config"
 ENV RABBITMQ_ENABLED_PLUGINS_FILE="/etc/cloudify/rabbitmq/enabled_plugins"
 
 RUN --mount=type=cache,target=/root/.cache \
