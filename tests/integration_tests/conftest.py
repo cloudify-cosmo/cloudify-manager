@@ -274,7 +274,7 @@ def package_agent(manager_container, request):
     # to the package location
     mgmtworker_env = '/opt/mgmtworker/env/lib/python*/site-packages/'
     agent_package = \
-        '/opt/manager/resources/packages/agents/centos-core-agent.tar.gz'
+        '/opt/manager/resources/packages/agents/manylinux-x86_64-agent.tar.gz'
     agent_source_path = 'cloudify/env/lib/python*/site-packages/'
     agent_sources = []
     for src, target_venvs in sources:
@@ -297,11 +297,11 @@ def package_agent(manager_container, request):
         ])
     docker.execute(manager_container.container_id, [
         'bash', '-c',
-        'cd /tmp && tar czf centos-core-agent.tar.gz cloudify'
+        'cd /tmp && tar czf manylinux-x86_64-agent.tar.gz cloudify'
     ])
     docker.execute(manager_container.container_id, [
         'mv', '-f',
-        '/tmp/centos-core-agent.tar.gz',
+        '/tmp/manylinux-x86_64-agent.tar.gz',
         agent_package
     ])
 
