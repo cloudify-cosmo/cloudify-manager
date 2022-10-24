@@ -1,3 +1,4 @@
+tosca_definitions_version: cloudify_dsl_1_4
 plugins:
   requires_old_package_plugin:
     executor: host_agent
