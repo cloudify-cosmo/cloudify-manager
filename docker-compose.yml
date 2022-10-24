@@ -1,17 +1,31 @@
 version: "3.8"
 
 services:
-#  mgmtworker:
-#    container_name: mgmtworker
-#    build: mgmtworker
-#    env_file:
-#      - .env
-#    volumes:
-#      - ../cloudify_internal_ca_cert.pem:/opt/mgmtworker/cloudify_internal_ca_cert.pem
-#      - ./resources/rest-service/cloudify/types:/opt/manager/resources/cloudify/types
-#    networks:
-#      - cloudify
-#    restart: unless-stopped
+  mgmtworker:
+    container_name: mgmtworker
+    build: mgmtworker
+    depends_on:
+      - rabbitmq
+      - config
+    volumes:
+      - ssl:/etc/cloudify/ssl:ro
+      - mgmtworker_workdir:/opt/mgmtworker/work
+      - ./resources/rest-service/cloudify/types:/opt/manager/resources/cloudify/types
+    networks:
+      - cloudify
+    restart: unless-stopped
+
+  certs_creator:
+    container_name: certs
+    build:
+      context: rest-service
+      ssh:
+        - default
+    networks:
+      - cloudify
+    volumes:
+      - ssl:/ssl
+    entrypoint: /opt/rest-service/docker/entrypoint_certs.sh
 
   rest_service:
     container_name: rest_service
@@ -23,6 +37,8 @@ services:
       - postgresql
     networks:
       - cloudify
+    volumes:
+      - manager_config:/opt/manager
     restart: unless-stopped
 
   execution_scheduler:
@@ -39,11 +55,12 @@ services:
     build: nginx
     depends_on:
       - rest_service
+      - certs_creator
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - ./ssl:/etc/cloudify/ssl
+      - ssl:/etc/cloudify/ssl:ro
     networks:
       - cloudify
     restart: unless-stopped
@@ -52,9 +69,11 @@ services:
     container_name: rabbitmq
     build: rabbitmq
     volumes:
-      - ./ssl:/etc/cloudify/ssl:ro
+      - ssl:/etc/cloudify/ssl:ro
     networks:
       - cloudify
+    depends_on:
+      - certs_creator
     restart: unless-stopped
 
   postgresql:
@@ -78,11 +97,23 @@ services:
         - default
     depends_on:
       - postgresql
+      - certs_creator
+      - rabbitmq
     networks:
       - cloudify
+    volumes:
+      - manager_config:/opt/manager
+      - ssl:/etc/cloudify/ssl:ro
+      - mgmtworker_workdir:/mgmtworker
     entrypoint: /opt/rest-service/docker/entrypoint_config.sh
+    restart: unless-stopped
 
 networks:
   cloudify:
     driver: bridge
     name: cloudify
+
+volumes:
+  ssl:
+  manager_config:
+  mgmtworker_workdir:

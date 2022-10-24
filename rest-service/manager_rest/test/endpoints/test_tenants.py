@@ -15,7 +15,7 @@
 
 from mock import patch
 
-from manager_rest import constants, config
+from manager_rest import constants
 from manager_rest.storage import models
 
 from cloudify.cryptography_utils import encrypt
@@ -39,9 +39,16 @@ class TenantsCommunityTestCase(base_test.BaseServerTestCase):
         """Getting a tenant without the credentials permission, gives
         the tenants details but without rabbitmq credentials.
         """
-        with patch.dict(config.instance.authorization_permissions,
-                        {CREDENTIALS_PERMISSION: []}):
+        with patch(
+            'manager_rest.rest.resources_v3.tenants.is_user_action_allowed',
+            return_value=False,
+        ) as mock_check:
             result = self.client.tenants.get(constants.DEFAULT_TENANT_NAME)
+
+        mock_check.assert_called_once_with(
+            'tenant_rabbitmq_credentials',
+            constants.DEFAULT_TENANT_NAME,
+        )
         self.assertEqual(result['name'], constants.DEFAULT_TENANT_NAME)
         for key in ['username', 'password', 'vhost']:
             self.assertIsNone(result['rabbitmq_' + key])
@@ -53,9 +60,16 @@ class TenantsCommunityTestCase(base_test.BaseServerTestCase):
         password = 'password1234'
         self.tenant.rabbitmq_password = encrypt(password)
 
-        with patch.dict(config.instance.authorization_permissions,
-                        {CREDENTIALS_PERMISSION: ['user']}):
+        with patch(
+            'manager_rest.rest.resources_v3.tenants.is_user_action_allowed',
+            return_value=True,
+        ) as mock_check:
             result = self.client.tenants.get(constants.DEFAULT_TENANT_NAME)
+
+        mock_check.assert_called_once_with(
+            'tenant_rabbitmq_credentials',
+            constants.DEFAULT_TENANT_NAME,
+        )
 
         assert result['name'] == constants.DEFAULT_TENANT_NAME
         assert result['rabbitmq_username'] == self.tenant.rabbitmq_username

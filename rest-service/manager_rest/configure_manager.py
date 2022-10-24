@@ -1,8 +1,12 @@
 import argparse
 import datetime
+import logging
 import os
 import random
+import socket
 import string
+import sys
+import time
 import yaml
 
 from collections.abc import MutableMapping
@@ -73,7 +77,7 @@ def _get_rabbitmq_ca_path(user_config):
     except KeyError:
         value = ''
 
-    return value
+    return value or '/etc/cloudify/ssl/cloudify_internal_ca_cert.pem'
 
 
 def _get_rabbitmq_use_hostnames_in_db(user_config):
@@ -118,7 +122,13 @@ def _get_rabbitmq_cluster_members(user_config):
     except KeyError:
         value = {}
 
-    return value
+    return value or {
+            'rabbitmq': {
+                'networks': {
+                    'default': 'rabbitmq',
+                }
+            }
+        }
 
 
 def _update_admin_user(admin_user, user_config):
@@ -171,7 +181,15 @@ def _create_admin_user(user_config):
     admin_username = _get_admin_username(user_config)
     admin_password = _get_admin_password(user_config) or _generate_password()
 
-    admin_role = models.Role.query.filter_by(name='sys_admin').one()
+    admin_role = models.Role.query.filter_by(name='sys_admin').first()
+    if not admin_role:
+        admin_role = models.Role(
+            name='sys_admin',
+            type='system_role',
+            description='User that can manage Cloudify',
+        )
+        db.session.add(admin_role)
+
     admin_user = user_datastore.create_user(
         id=constants.BOOTSTRAP_ADMIN_ID,
         username=admin_username,
@@ -179,10 +197,10 @@ def _create_admin_user(user_config):
         roles=[admin_role]
     )
 
-    print('####################################')
-    print(f'USERNAME: {admin_username}')
-    print(f'PASSWORD: {admin_password}')
-    print('####################################')
+    logging.critical('####################################')
+    logging.critical('USERNAME: %s', admin_username)
+    logging.critical('PASSWORD: %s', admin_password)
+    logging.critical('####################################')
     return admin_user
 
 
@@ -194,7 +212,14 @@ def _setup_user_tenant_assoc(admin_user, default_tenant):
 
     if not user_tenant_association:
         user_role = user_datastore.find_role(constants.DEFAULT_TENANT_ROLE)
-
+        if not user_role:
+            user_role = models.Role(
+                name=constants.DEFAULT_TENANT_ROLE,
+                type='tenant_role',
+                description='Regular user, can perform actions '
+                            'on tenants resources'
+            )
+            db.session.add(user_role)
         user_tenant_association = models.UserTenantAssoc(
             user=admin_user,
             tenant=default_tenant,
@@ -232,18 +257,30 @@ def _load_user_config(paths):
     for config_path in paths:
         if not config_path:
             continue
-        with open(config_path) as f:
-            config_source = yaml.safe_load(f)
+        try:
+            with open(config_path) as f:
+                config_source = yaml.safe_load(f)
+        except FileNotFoundError:
+            continue
         dict_merge(user_config, config_source)
     return user_config
 
 
 def _insert_rabbitmq_broker(brokers, ca_cert):
+    existing_brokers = {b.name: b for b in models.RabbitMQBroker.query.all()}
+
     for broker in brokers:
-        inst = models.RabbitMQBroker(
-            ca_cert=ca_cert,
-            **broker
-        )
+        name = broker['name']
+        if name in existing_brokers:
+            inst = existing_brokers[name]
+            for k, v in broker.items():
+                setattr(inst, k, v)
+            inst.ca_cert = ca_cert
+        else:
+            inst = models.RabbitMQBroker(
+                ca_cert=ca_cert,
+                **broker
+            )
         db.session.add(inst)
 
 
@@ -271,20 +308,26 @@ def _get_rabbitmq_brokers(user_config):
 
 def _get_rabbitmq_ca_cert(rabbitmq_ca_cert_path):
     if rabbitmq_ca_cert_path:
-        with open(rabbitmq_ca_cert_path) as f:
-            return f.read()
-
+        try:
+            with open(rabbitmq_ca_cert_path) as f:
+                return f.read()
+        except FileNotFoundError:
+            return ''
     return ''
 
 
-def _insert_rabbitmq_ca_cert(cert, name):
-    inst = models.Certificate(
-        name=name,
-        value=cert,
-        updated_at=datetime.datetime.now(),
-    )
-
-    return inst
+def _insert_rabbitmq_ca_cert(value, name):
+    cert = models.Certificate.query.filter_by(name=name).first()
+    if cert:
+        cert.value = value
+    else:
+        cert = models.Certificate(
+            name=name,
+            value=value,
+            updated_at=datetime.datetime.now(),
+        )
+    db.session.add(cert)
+    return cert
 
 
 def _register_rabbitmq_brokers(user_config):
@@ -308,7 +351,45 @@ def _register_rabbitmq_brokers(user_config):
         config.instance.load_from_db(session=db.session)
 
 
+def _create_admin_token(target):
+    description = 'csys-mgmtworker'
+    # Don't leak existing Mgmtworker tokens
+    db.session.execute(
+        models.Token.__table__
+        .delete()
+        .filter_by(description=description)
+    )
+    admin_user = user_datastore.get_user(constants.BOOTSTRAP_ADMIN_ID)
+    token = admin_user.create_auth_token(description=description)
+    db.session.add(token)
+    db.session.commit()
+    with open(target, 'w') as f:
+        f.write(token.value)
+
+
+def _wait_for_db(address):
+    while True:
+        try:
+            with socket.create_connection((address, 5432), timeout=5):
+                return 0
+        except socket.error:
+            logging.error('Still waiting for DB: %s', address)
+            time.sleep(1)
+
+
+def _wait_for_rabbitmq(address):
+    while True:
+        try:
+            with socket.create_connection((address, 15671), timeout=5):
+                return 0
+        except socket.error:
+            logging.error('Still waiting for rabbitmq: %s', address)
+            time.sleep(1)
+
+
 if __name__ == '__main__':
+    logging.basicConfig()
+
     parser = argparse.ArgumentParser(description='Create admin user in DB')
     parser.add_argument(
         '-c',
@@ -318,9 +399,32 @@ if __name__ == '__main__':
         required=False,
         default=[os.environ.get('CONFIG_FILE_PATH')],
     )
+    parser.add_argument(
+        '--db-wait',
+        help='Wait for this DB to be up, and exit',
+        required=False
+    )
+    parser.add_argument(
+        '--rabbitmq-wait',
+        help='Wait for this RabbitMQ to be up, and exit',
+        required=False
+    )
+    parser.add_argument(
+        '--create-admin-token',
+        help='Create admin token at this location',
+        required=False
+    )
     args = parser.parse_args()
 
+    if args.db_wait:
+        sys.exit(_wait_for_db(args.db_wait))
+    if args.rabbitmq_wait:
+        sys.exit(_wait_for_rabbitmq(args.rabbitmq_wait))
+
+    config.instance.load_configuration(from_db=False)
     with setup_flask_app().app_context():
-        config.instance.load_configuration()
+        config.instance.load_from_db(session=db.session)
         user_config = _load_user_config(args.config_file_path)
         configure(user_config)
+        if args.create_admin_token:
+            _create_admin_token(args.create_admin_token)

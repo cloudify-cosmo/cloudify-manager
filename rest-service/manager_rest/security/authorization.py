@@ -84,6 +84,9 @@ def get_current_user_roles(tenant_name=None, allow_all_tenants=False):
 
 
 def is_user_action_allowed(action, tenant_name=None, allow_all_tenants=False):
+    if current_user.is_bootstrap_admin:
+        # bootstrap admin is allowed to do _everything_
+        return True
     user_roles = get_current_user_roles(tenant_name, allow_all_tenants)
     action_roles = config.instance.authorization_permissions[action]
     return set(user_roles) & set(action_roles)
