@@ -67,6 +67,9 @@ class CloudifyAPI(FastAPI):
         self.logger = logging.getLogger('cloudify_api')
         config.instance.logger = self.logger
 
+    def __str__(self):
+        return f"{self.title}-{self.version}"
+
     def configure(self):
         config.instance.load_configuration()
         self.logger = setup_logger(
@@ -102,4 +105,3 @@ class CloudifyAPI(FastAPI):
         if not self.settings.asyncpg_dsn:
             self._update_database_dsn()
         self.listener = Listener(self.settings.asyncpg_dsn, self.logger)
-        self.listener.listen_on_channel('audit_log_inserted')

@@ -3,7 +3,6 @@ import pkg_resources
 import cloudify_api
 from cloudify_api.routers import audit as audit_router
 
-
 DEBUG = False
 
 
@@ -20,3 +19,9 @@ def create_application() -> cloudify_api.CloudifyAPI:
 
 
 app = create_application()
+
+
+@app.on_event("startup")
+async def startup_event():
+    app.logger.debug("Handling startup process for %s", app)
+    app.listener.listen()
