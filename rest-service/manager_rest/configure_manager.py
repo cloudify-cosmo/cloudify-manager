@@ -308,9 +308,11 @@ def _get_rabbitmq_brokers(user_config):
 
 def _get_rabbitmq_ca_cert(rabbitmq_ca_cert_path):
     if rabbitmq_ca_cert_path:
-        with open(rabbitmq_ca_cert_path) as f:
-            return f.read()
-
+        try:
+            with open(rabbitmq_ca_cert_path) as f:
+                return f.read()
+        except FileNotFoundError:
+            return ''
     return ''
 
 
