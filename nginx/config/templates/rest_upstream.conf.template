@@ -3,6 +3,10 @@ upstream cloudify-rest {
   server rest_service:${REST_SERVICE_PORT};
 }
 
+upstream fileserver {
+  server fileserver:${FILESERVER_PORT};
+}
+
 # REST and UI external server
 server {
   # server listening for external requests
@@ -19,6 +23,9 @@ server {
 
   # Serves the Rest Service (backed by the cloudify-rest upstream).
   include "/etc/nginx/conf.d/rest-location.cloudify";
+
+  # Serves the Fileserver.
+  include "/etc/nginx/conf.d/fileserver.cloudify";
 }
 
 
@@ -61,4 +68,7 @@ server {
 
   # Serves the Rest Service (backed by the cloudify-rest upstream).
   include "/etc/nginx/conf.d/rest-location.cloudify";
+
+  # Serves the Fileserver.
+  include "/etc/nginx/conf.d/fileserver.cloudify";
 }

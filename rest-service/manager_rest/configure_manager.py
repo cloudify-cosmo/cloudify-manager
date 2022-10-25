@@ -397,7 +397,9 @@ if __name__ == '__main__':
         help='Path to a config file containing info needed by this script',
         action='append',
         required=False,
-        default=[os.environ.get('CONFIG_FILE_PATH')],
+        default=[
+            os.environ.get('CONFIG_FILE_PATH'),
+        ],
     )
     parser.add_argument(
         '--db-wait',
