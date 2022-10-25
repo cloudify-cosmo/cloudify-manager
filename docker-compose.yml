@@ -89,6 +89,18 @@ services:
       - cloudify
     restart: unless-stopped
 
+  fileserver:
+    container_name: fileserver
+    build: fileserver
+    volumes:
+      - ./fileserver/minio/data:/data
+    ports:
+      - "9000:9000"
+      - "9090:9090"
+    networks:
+      - cloudify
+    restart: unless-stopped
+
   config:
     container_name: config
     build:

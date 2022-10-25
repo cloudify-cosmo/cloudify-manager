@@ -187,11 +187,13 @@ def tenant_specific_authorization(tenant, resource_name, action='list'):
 def is_administrator(tenant, user=None):
     if user is None:
         user = current_user
-    administrators_roles = \
-        config.instance.authorization_permissions['administrators']
+
     return (
-        user.id == constants.BOOTSTRAP_ADMIN_ID or
-        user.has_role_in(tenant, administrators_roles)
+        user.is_bootstrap_admin or
+        user.has_role_in(
+            tenant,
+            config.instance.authorization_permissions['administrators'],
+        )
     )
 
 

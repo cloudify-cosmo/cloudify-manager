@@ -316,7 +316,9 @@ class User(SQLModelBase, UserMixin):
 
     @declared_attr
     def roles(cls):
-        return many_to_many_relationship(cls, Role, primary_key_tuple=True)
+        return many_to_many_relationship(cls, Role,
+                                         primary_key_tuple=True,
+                                         ondelete='CASCADE')
 
     def has_role_in(self, tenant, list_of_roles):
         user_roles = self.roles_in_tenant(tenant)

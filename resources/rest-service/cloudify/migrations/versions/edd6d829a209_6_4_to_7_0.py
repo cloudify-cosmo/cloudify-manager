@@ -19,9 +19,11 @@ depends_on = None
 def upgrade():
     add_p_to_pickle_columns()
     add_json_columns()
+    upgrade_users_roles_constraints()
 
 
 def downgrade():
+    downgrade_users_roles_constraints()
     remove_json_columns()
     remove_p_from_pickle_columns()
 
@@ -231,6 +233,19 @@ def add_json_columns():
                   sa.Column('deployments_to_update', JSONString()))
 
 
+def upgrade_users_roles_constraints():
+    op.drop_constraint('users_roles_role_id_fkey',
+                       'users_roles', type_='foreignkey')
+    op.drop_constraint('users_roles_user_id_fkey',
+                       'users_roles', type_='foreignkey')
+    op.create_foreign_key(op.f('users_roles_role_id_fkey'),
+                          'users_roles', 'roles', ['role_id'], ['id'],
+                          ondelete='CASCADE')
+    op.create_foreign_key(op.f('users_roles_user_id_fkey'),
+                          'users_roles', 'users', ['user_id'], ['id'],
+                          ondelete='CASCADE')
+
+
 # Downgrade functions
 
 def remove_p_from_pickle_columns():
@@ -398,3 +413,14 @@ def remove_json_columns():
     op.drop_column('plugins', 'wheels')
 
     op.drop_column('plugins_updates', 'deployments_to_update')
+
+
+def downgrade_users_roles_constraints():
+    op.drop_constraint(op.f('users_roles_user_id_fkey'), 'users_roles',
+                       type_='foreignkey')
+    op.drop_constraint(op.f('users_roles_role_id_fkey'), 'users_roles',
+                       type_='foreignkey')
+    op.create_foreign_key('users_roles_user_id_fkey',
+                          'users_roles', 'users', ['user_id'], ['id'])
+    op.create_foreign_key('users_roles_role_id_fkey',
+                          'users_roles', 'roles', ['role_id'], ['id'])
