@@ -2,4 +2,5 @@
 
 /opt/rest-service/docker/prepare_secrets.sh
 
-exec python -m manager_rest.configure_manager
+exec python -m manager_rest.configure_manager --create-admin-token /mgmtworker/admin_token
+
