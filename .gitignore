@@ -70,3 +70,5 @@ config.yaml
 
 # Environment files
 .env
+
+fileserver/minio/data

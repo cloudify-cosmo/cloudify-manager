@@ -11,6 +11,7 @@ ENV POSTGRES_HOST=postgresql
 ENV POSTGRES_USER=cloudify
 ENV POSTGRES_PASSWORD=cloudify
 ENV CONFIG_FILE_PATH=/opt/rest-service/docker/config.yaml
+ENV AUTH_CONFIG_FILE_PATH=/opt/rest-service/docker/authorization.yaml
 
 RUN --mount=type=cache,target=/root/.cache \
     apt-get update \

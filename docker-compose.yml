@@ -1,17 +1,17 @@
 version: "3.8"
 
 services:
-#  mgmtworker:
-#    container_name: mgmtworker
-#    build: mgmtworker
-#    env_file:
-#      - .env
-#    volumes:
-#      - ../cloudify_internal_ca_cert.pem:/opt/mgmtworker/cloudify_internal_ca_cert.pem
-#      - ./resources/rest-service/cloudify/types:/opt/manager/resources/cloudify/types
-#    networks:
-#      - cloudify
-#    restart: unless-stopped
+  mgmtworker:
+    container_name: mgmtworker
+    build: mgmtworker
+    env_file:
+      - .env
+    volumes:
+      - ../cloudify_internal_ca_cert.pem:/opt/mgmtworker/cloudify_internal_ca_cert.pem
+      - ./resources/rest-service/cloudify/types:/opt/manager/resources/cloudify/types
+    networks:
+      - cloudify
+    restart: unless-stopped
 
   rest_service:
     container_name: rest_service
@@ -66,6 +66,18 @@ services:
       POSTGRES_PASSWORD: cloudify
     volumes:
       - ./packaging/db-schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    networks:
+      - cloudify
+    restart: unless-stopped
+
+  fileserver:
+    container_name: fileserver
+    build: fileserver
+    volumes:
+      - ./fileserver/minio/data:/data
+    ports:
+      - "9000:9000"
+      - "9090:9090"
     networks:
       - cloudify
     restart: unless-stopped
