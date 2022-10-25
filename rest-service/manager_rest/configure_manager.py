@@ -230,41 +230,8 @@ def _setup_user_tenant_assoc(admin_user, default_tenant):
         db.session.add(user_tenant_association)
 
 
-def _populate_roles(user_config):
-    for role in user_config['roles']:
-        try:
-            models.Role.query.filter_by(
-                name=role['name'],
-            ).one()
-        except NoResultFound:
-            db.session.add(models.Role(
-                name=role['name'],
-                type=role['type'],
-                description=role['description'],
-            ))
-    roles = {r.name: r.id for r in
-             db.session.query(models.Role.name, models.Role.id)}
-    for permission, permission_roles in user_config['permissions'].items():
-        for role_name in permission_roles:
-            if role_name not in roles:
-                continue
-
-            try:
-                models.Permission.query.filter_by(
-                    role_id=roles[role_name],
-                    name=permission,
-                ).one()
-            except NoResultFound:
-                db.session.add(models.Permission(
-                    role_id=roles[role_name],
-                    name=permission,
-                ))
-    db.session.commit()
-
-
 def configure(user_config):
     """Configure the manager based on the provided config"""
-    _populate_roles(user_config)
     _register_rabbitmq_brokers(user_config)
 
     default_tenant = _get_default_tenant()
@@ -434,7 +401,6 @@ if __name__ == '__main__':
         required=False,
         default=[
             os.environ.get('CONFIG_FILE_PATH'),
-            os.environ.get('AUTH_CONFIG_FILE_PATH'),
         ],
     )
     parser.add_argument(
