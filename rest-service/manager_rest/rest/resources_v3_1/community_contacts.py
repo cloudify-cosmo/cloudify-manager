@@ -32,7 +32,7 @@ class CommunityContacts(SecuredResource):
             "phone": request_dict['phone'],
             "is_eula": request_dict['is_eula'],
         })
-        generic_error_msg = 'There was a problem while submiting the form, ' \
+        generic_error_msg = 'There was a problem while submitting the form, ' \
                             'please try later'
         error_log_msg = 'Error creating contact "%s" - %s: %s'
         if not r.ok:
