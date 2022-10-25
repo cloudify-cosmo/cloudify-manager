@@ -47,6 +47,9 @@ class ExistingVMTest(BaseExistingVMTest):
 class HostPluginTest(BaseExistingVMTest):
     BLUEPRINTS = 'dsl/agent_tests/plugin-requires-old-package-blueprint'
 
+    # We should find a way to deal with plugins based on Python 3.6, should be
+    # un-xfail-ed after we deal with that (RD-6168)
+    @pytest.mark.xfail
     def test_source_plugin_requires_old_package(self):
         self._test_host_plugin_requires_old_package(
             join(self.BLUEPRINTS, 'source_plugin_blueprint.yaml')
