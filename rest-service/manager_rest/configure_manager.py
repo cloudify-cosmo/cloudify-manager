@@ -22,8 +22,6 @@ from manager_rest.storage import (
 from manager_rest.amqp_manager import AMQPManager
 from manager_rest.flask_utils import setup_flask_app
 
-from sqlalchemy.exc import NoResultFound
-
 
 def dict_merge(target, source):
     """Merge source into target (like dict.update, but deep)
