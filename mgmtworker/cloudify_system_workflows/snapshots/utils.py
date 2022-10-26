@@ -104,7 +104,7 @@ def copy_stage_files(archive_root):
         os.path.join(archive_root, 'stage', stage_data))
 
 
-def restore_stage_files(archive_root, service_management, override=False):
+def restore_stage_files(archive_root, override=False):
     """Copy Cloudify Stage files from the snapshot archive to stage folder.
     Note that only the stage user can write into the stage directory,
     so we use sudo to run a script (created during bootstrap) that copies
@@ -224,17 +224,10 @@ def run(command, ignore_failures=False, redirect_output_path=None, cwd=None):
     return proc
 
 
-def run_service(service_management,
-                action,
-                service_name,
-                ignore_failures=False):
-    if service_management == 'supervisord':
-        service_command = '/usr/bin/supervisorctl -c /etc/supervisord.conf'
-    else:
-        service_command = '/usr/bin/systemctl'
-        service_name, _, _ = service_name.partition(':')
-    service_command = '{0} {1} {2}'.format(
-        service_command, action, service_name
+def run_service(action, service_name, ignore_failures=False):
+    service_command = (
+        '/usr/bin/supervisorctl -c /etc/supervisord.conf '
+        f'{action} {service_name}'
     )
     sudo(service_command, ignore_failures=ignore_failures)
 
