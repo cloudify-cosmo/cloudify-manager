@@ -194,7 +194,7 @@ class Plugin(SQLResourceBase):
     supported_py_versions = db.Column(JSONString)
     uploaded_at = db.Column(UTCDateTime, nullable=False, index=True)
     wheels_p = db.Column(db.PickleType(protocol=2))
-    wheels = db.Column(JSONString, nullable=False)
+    wheels = db.Column(JSONString)
     title = db.Column(db.Text)
     blueprint_labels = db.Column(JSONString)
     labels = db.Column(JSONString)

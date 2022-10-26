@@ -227,7 +227,7 @@ def add_json_columns():
     op.add_column('plugins',
                   sa.Column('supported_py_versions', JSONString()))
     op.add_column('plugins',
-                  sa.Column('wheels', JSONString(), nullable=False))
+                  sa.Column('wheels', JSONString()))
 
     op.add_column('plugins_updates',
                   sa.Column('deployments_to_update', JSONString()))
