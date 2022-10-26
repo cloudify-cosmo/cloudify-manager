@@ -13,9 +13,10 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import errno
+import json
 import os
 import re
-import pickle
 import shutil
 import string
 import itertools
@@ -171,7 +172,10 @@ def restore(tempdir, postgres, version):
         for elem in result:
             node_id = elem[0]
             deployment_id = elem[1]
-            node_properties = pickle.loads(elem[2])
+            if elem[2]:
+                node_properties = json.loads(elem[2])
+            else:
+                node_properties = {}
             agent_config = get_agent_config(node_properties)
             agent_key = agent_config.get('key')
 
@@ -201,7 +205,7 @@ def restore(tempdir, postgres, version):
                 with open(agent_key_path_in_dump) as f:
                     key_data = f.read()
             except IOError as e:
-                if e.errno == os.errno.ENOENT:
+                if e.errno == errno.ENOENT:
                     ctx.logger.info(
                         'key file for {} not found'.format(dir_name))
                     continue
