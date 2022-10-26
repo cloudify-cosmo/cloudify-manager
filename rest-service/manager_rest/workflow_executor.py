@@ -100,9 +100,6 @@ def restart_restservice():
     message = {
         'service_task': {
             'task_name': 'restart-restservice',
-            'kwargs': {
-                'service_management': config.instance.service_management,
-            },
         }
     }
     _broadcast_mgmtworker_task(message)

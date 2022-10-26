@@ -459,11 +459,7 @@ class BaseTestCase(unittest.TestCase):
         return client.manager.get_config(name=name, scope=scope)
 
     def get_service_management_command(self):
-        config = self.get_config('service_management')
-        service_command = 'systemctl'
-        if config.value == 'supervisord':
-            service_command = 'supervisorctl -c /etc/supervisord.conf'
-        return service_command
+        return 'supervisorctl -c /etc/supervisord.conf'
 
 
 class AgentlessTestCase(BaseTestCase):

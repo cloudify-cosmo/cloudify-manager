@@ -70,8 +70,6 @@ class Config(object):
     # when was the config last changed? it will be reloaded when this increases
     last_updated: Optional[datetime] = None
 
-    service_management = Setting('service_management', default='systemd')
-
     public_ip = Setting('public_ip')
     manager_hostname = Setting('manager_hostname', from_db=False)
 
