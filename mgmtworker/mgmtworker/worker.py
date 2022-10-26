@@ -155,15 +155,11 @@ class MgmtworkerServiceTaskConsumer(ServiceTaskConsumer):
             logger.info('Purging %s', full_path)
             shutil.rmtree(full_path, ignore_errors=True)
 
-    def restart_restservice(self, service_management):
+    def restart_restservice(self, **kwargs):
         logger.info('Restarting restservice.')
 
-        service_command = 'systemctl'
-        if service_management == 'supervisord':
-            service_command = 'supervisorctl'
-
         subprocess.check_call([
-            'sudo', service_command, 'restart', 'cloudify-restservice',
+            'sudo', 'supervisorctl', 'restart', 'cloudify-restservice',
         ])
 
     def manager_added(self):

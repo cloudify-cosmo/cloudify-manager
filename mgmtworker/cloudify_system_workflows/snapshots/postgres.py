@@ -616,10 +616,3 @@ class Postgres(object):
         ctx.logger.debug('Init Postgres config: %s', config)
         config.postgresql_password, config.postgresql_username = \
             postgres_password, postgres_username
-
-    def get_service_management(self):
-        result = self.run_query("SELECT value "
-                                "FROM public.config "
-                                "WHERE name = 'service_management';")
-
-        return result['all'][0][0]
