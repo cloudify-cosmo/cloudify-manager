@@ -17,7 +17,6 @@ import os
 import time
 import json
 import pytest
-import pickle
 import retrying
 import binascii
 
@@ -191,12 +190,8 @@ class TestSnapshot(AgentlessTestCase):
             "runtime_only_evaluation FROM deployment_updates"
         )
 
-        def _unpickle(data):
-            """Load a pickle from a DB-selected string"""
-            return pickle.loads(binascii.unhexlify(data[2:]))
-
-        plugins_to_install = _unpickle(dep_updates[0][0])
-        plugins_to_uninstall = _unpickle(dep_updates[0][1])
+        plugins_to_install = json.loads(dep_updates[0][0])
+        plugins_to_uninstall = json.loads(dep_updates[0][1])
         runtime_only_evaluation = dep_updates[0][2]
         for plug in plugins_to_install:
             assert plug['package_name'] == 'cloudify-utilities-plugin'
