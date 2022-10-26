@@ -1,5 +1,0 @@
-plugins:
-  requires_old_package_plugin:
-    executor: host_agent
-    source: requires-old-package-plugin
-    install: true
