@@ -5,7 +5,6 @@ import queue
 import logging
 import threading
 
-from os import environ
 from os.path import join
 
 from contextlib import contextmanager
@@ -22,10 +21,6 @@ from manager_rest.rest.search_utils import GetValuesWithStorageManager
 
 from cloudify.constants import SHARED_RESOURCE, COMPONENT
 from cloudify.deployment_dependencies import dependency_creator_generator
-
-REST_HOME_DIR = '/opt/manager'
-REST_CONFIG_PATH = join(REST_HOME_DIR, 'cloudify-rest.conf')
-REST_SECURITY_CONFIG_PATH = join(REST_HOME_DIR, 'rest-security.conf')
 
 LOGFILE = '/var/log/cloudify/mgmtworker/logs/restore_idd.log'
 
@@ -55,25 +50,14 @@ def get_storage_manager_instance():
     This is to be used only OUTSIDE of the context of the REST API.
     """
     try:
-        with _get_flask_app().app_context():
+        app = setup_flask_app()
+        with app.app_context():
             config.instance.load_configuration()
+            set_admin_current_user(app)
             sm = get_storage_manager()
             yield sm
     finally:
         config.reset(config.Config())
-
-
-def _get_flask_app():
-    for value, envvar in [
-            (REST_CONFIG_PATH, 'MANAGER_REST_CONFIG_PATH'),
-            (REST_SECURITY_CONFIG_PATH, 'MANAGER_REST_SECURITY_CONFIG_PATH'),
-    ]:
-        if value is not None:
-            environ[envvar] = value
-
-    app = setup_flask_app()
-    set_admin_current_user(app)
-    return app
 
 
 def is_capable_for_idd(blueprint_plan):
