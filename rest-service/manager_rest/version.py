@@ -29,7 +29,9 @@ def get_edition():
 
 
 def get_distribution():
-    return distro.id(), distro.codename()
+    distro_id = distro.id().replace('rhel', 'redhat')
+    # for consistency with the output of platform.linux_distribution
+    return distro_id, distro.codename()
 
 
 def get_version_data():
