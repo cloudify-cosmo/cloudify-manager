@@ -170,7 +170,6 @@ class SnapshotRestore(object):
         self._client = get_rest_client()
         self._manager_version = utils.get_manager_version(self._client)
         self._encryption_key = None
-        self._service_management = None
         self._semaphore = threading.Semaphore(
             self._config.snapshot_restore_threads)
 
@@ -205,8 +204,6 @@ class SnapshotRestore(object):
                 utils.sudo(ALLOW_DB_CLIENT_CERTS_SCRIPT)
                 self._restore_files_to_manager()
                 utils.sudo(DENY_DB_CLIENT_CERTS_SCRIPT)
-                self._service_management = \
-                    json.loads(postgres.get_service_management())
                 with buffer_logs(), self._pause_services():
                     self._restore_db(
                         postgres,
@@ -257,12 +254,12 @@ class SnapshotRestore(object):
             'cloudify-api:*',
         ]
         for service in to_pause:
-            utils.run_service(self._service_management, 'stop', service)
+            utils.run_service('stop', service)
         try:
             yield
         finally:
             for service in to_pause:
-                utils.run_service(self._service_management, 'start', service)
+                utils.run_service('start', service)
             self._wait_for_rest_to_restart()
 
     def _generate_new_rest_token(self):
@@ -288,19 +285,11 @@ class SnapshotRestore(object):
         self._client = get_rest_client()
 
     def _restart_rest_service(self):
-        utils.run_service(
-            self._service_management,
-            'restart',
-            'cloudify-restservice'
-        )
+        utils.run_service('restart', 'cloudify-restservice')
         self._wait_for_rest_to_restart()
 
     def _restart_stage_service(self):
-        utils.run_service(
-            self._service_management,
-            'restart',
-            'cloudify-stage'
-        )
+        utils.run_service('restart', 'cloudify-stage')
 
     def _wait_for_rest_to_restart(self, timeout=60):
         deadline = time.time() + timeout
@@ -573,7 +562,6 @@ class SnapshotRestore(object):
         self._restore_security_file()
         utils.restore_stage_files(
             self._tempdir,
-            self._service_management,
             stage_restore_override,
         )
         utils.restore_composer_files(self._tempdir)
