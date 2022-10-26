@@ -165,6 +165,27 @@ class TestPlugins(AgentlessTestCase):
         }
 
     @pytest.mark.usefixtures('with_properties_plugin')
+    def test_plugin_with_properties_some_missing(self):
+        bp_path = test_utils.get_resource(
+            'dsl/plugin_properties_some_missing.yaml')
+        self.client.blueprints.upload(bp_path, 'bp')
+        test_utils.wait_for_blueprint_upload('bp', self.client)
+        self.client.deployments.create('bp', 'd1')
+        test_utils.wait_for_deployment_creation_to_complete(
+            self.env.container_id, 'd1', self.client)
+        execution = self.client.executions.start(deployment_id='d1',
+                                                 workflow_id='install')
+        self.wait_for_execution_to_end(execution)
+        output_file_name = f'/tmp/execution-{execution.id}-test_node.yaml'
+        output_text = docker_utils.read_file(self.env.container_id,
+                                             output_file_name)
+        properties_used = yaml.safe_load(output_text)
+        assert properties_used == {
+            'string_property': 'foo',
+            'list_property': None,
+        }
+
+    @pytest.mark.usefixtures('with_properties_plugin')
     def test_plugin_with_properties_namespaced(self):
         bp_path = test_utils.get_resource(
             'dsl/plugin_properties_namespaced.yaml')
