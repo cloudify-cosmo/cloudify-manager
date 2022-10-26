@@ -199,7 +199,7 @@ def migrate_model(session: Session, model_cls, attributes, batch_size: int):
                 # only set the attribute if it's not already set
                 pickle_attr = getattr(inst, f'{attr}_p')
                 json_attr = getattr(inst, attr)
-                if pickle_attr and not json_attr:
+                if pickle_attr is not None and not json_attr:
                     setattr(inst, attr, pickle_attr)
 
             session.add(inst)
