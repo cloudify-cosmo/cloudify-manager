@@ -104,7 +104,7 @@ def copy_stage_files(archive_root):
         os.path.join(archive_root, 'stage', stage_data))
 
 
-def restore_stage_files(archive_root, service_management, override=False):
+def restore_stage_files(archive_root, override=False):
     """Copy Cloudify Stage files from the snapshot archive to stage folder.
     Note that only the stage user can write into the stage directory,
     so we use sudo to run a script (created during bootstrap) that copies
