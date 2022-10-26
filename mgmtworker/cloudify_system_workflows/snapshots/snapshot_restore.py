@@ -214,6 +214,7 @@ class SnapshotRestore(object):
                         stage_revision,
                         composer_revision
                     )
+                self._migrate_pickle_to_json()
                 self._restore_hash_salt()
                 self._encrypt_secrets(postgres)
                 self._encrypt_rabbitmq_passwords(postgres)
@@ -233,7 +234,6 @@ class SnapshotRestore(object):
                 self._set_default_user_profile_flags()
                 self._create_system_filters()
                 self._copy_blueprint_icons()
-                self._migrate_pickle_to_json()
                 postgres.refresh_roles()
 
             if self._restore_certificates:
