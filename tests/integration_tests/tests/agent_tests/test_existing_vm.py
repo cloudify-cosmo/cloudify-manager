@@ -15,7 +15,6 @@
 
 import uuid
 import pytest
-from os.path import join
 
 from integration_tests import AgentTestWithPlugins
 from integration_tests.tests.utils import get_resource as resource
@@ -42,20 +41,3 @@ class ExistingVMTest(BaseExistingVMTest):
                                if i.node_id == 'middle'][0]
         plugin_data = plugin_ops_instance['runtime_properties']
         self.assertEqual(1, len(plugin_data['mock_operation_invocation']))
-
-
-class HostPluginTest(BaseExistingVMTest):
-    BLUEPRINTS = 'dsl/agent_tests/plugin-requires-old-package-blueprint'
-
-    # We should find a way to deal with plugins based on Python 3.6, should be
-    # un-xfail-ed after we deal with that (RD-6168)
-    @pytest.mark.xfail
-    def test_source_plugin_requires_old_package(self):
-        self._test_host_plugin_requires_old_package(
-            join(self.BLUEPRINTS, 'source_plugin_blueprint.yaml')
-        )
-
-    def _test_host_plugin_requires_old_package(self, blueprint_path):
-        dsl_path = resource(blueprint_path)
-        deployment, _ = self.deploy_application(dsl_path)
-        self.undeploy_application(deployment.id)
