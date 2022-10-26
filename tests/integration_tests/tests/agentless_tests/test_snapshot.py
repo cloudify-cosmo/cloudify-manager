@@ -18,7 +18,6 @@ import time
 import json
 import pytest
 import retrying
-import binascii
 
 import requests
 from collections import Counter
