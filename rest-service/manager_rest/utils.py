@@ -187,7 +187,8 @@ def tenant_specific_authorization(tenant, resource_name, action='list'):
 def is_administrator(tenant, user=None):
     if user is None:
         user = current_user
-
+    if user.is_anonymous:
+        return False
     return (
         user.is_bootstrap_admin or
         user.has_role_in(
