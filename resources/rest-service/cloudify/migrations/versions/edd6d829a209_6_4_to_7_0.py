@@ -16,16 +16,28 @@ branch_labels = None
 depends_on = None
 
 
+config_table = sa.table(
+    'config',
+    sa.Column('name', sa.Text),
+    sa.Column('value', JSONString()),
+    sa.Column('schema', JSONString()),
+    sa.Column('is_editable', sa.Boolean),
+    sa.Column('scope', sa.Text),
+)
+
+
 def upgrade():
     add_p_to_pickle_columns()
     add_json_columns()
     upgrade_users_roles_constraints()
+    drop_service_management_config()
 
 
 def downgrade():
     downgrade_users_roles_constraints()
     remove_json_columns()
     remove_p_from_pickle_columns()
+    add_service_management_config()
 
 
 # Upgrade functions
@@ -424,3 +436,26 @@ def downgrade_users_roles_constraints():
                           'users_roles', 'users', ['user_id'], ['id'])
     op.create_foreign_key('users_roles_role_id_fkey',
                           'users_roles', 'roles', ['role_id'], ['id'])
+
+
+def drop_service_management_config():
+    op.execute(
+        config_table.delete().where(
+            config_table.c.name == op.inline_literal('service_management')
+        )
+    )
+
+
+def add_service_management_config():
+    op.bulk_insert(
+        config_table,
+        [
+            {
+                'name': 'service_management',
+                'value': 'supervisord',
+                'scope': 'rest',
+                'schema': {'type': 'string'},
+                'is_editable': True,
+            },
+        ]
+    )
