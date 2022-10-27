@@ -54,8 +54,7 @@ class AuditLogTest(AgentlessTestCase):
         self.client.blueprints.delete(blueprint_id)
         timestamp_after_delete = datetime.utcnow()
 
-        result = self.client.auditlog.delete(before=timestamp_zero.isoformat())
-        assert result.deleted > 0
+        self.client.auditlog.delete(before=timestamp_zero.isoformat())
         audit_logs = filter_logs(self.client.auditlog.list(get_all=True),
                                  ref_table='blueprints',
                                  operation='create')
