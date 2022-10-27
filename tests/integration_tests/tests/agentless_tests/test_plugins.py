@@ -165,9 +165,9 @@ class TestPlugins(AgentlessTestCase):
         }
 
     @pytest.mark.usefixtures('with_properties_plugin')
-    def test_plugin_with_properties_some_missing(self):
+    def test_plugin_with_properties_intrinsic_func(self):
         bp_path = test_utils.get_resource(
-            'dsl/plugin_properties_some_missing.yaml')
+            'dsl/plugin_properties_intrinsic_func.yaml')
         self.client.blueprints.upload(bp_path, 'bp')
         test_utils.wait_for_blueprint_upload('bp', self.client)
         self.client.deployments.create('bp', 'd1')
@@ -181,8 +181,8 @@ class TestPlugins(AgentlessTestCase):
                                              output_file_name)
         properties_used = yaml.safe_load(output_text)
         assert properties_used == {
-            'string_property': 'foo',
-            'list_property': None,
+            'string_property': None,
+            'list_property': [1, 2, 3, 4],
         }
 
     @pytest.mark.usefixtures('with_properties_plugin')

@@ -1,9 +1,17 @@
 tosca_definitions_version: cloudify_dsl_1_5
 
+inputs:
+  a_list:
+    description: Some list
+    type: list
+    item_type: integer
+    display_label: A list
+    default: [1, 2, 3, 4]
+
 imports:
   - cloudify/types/types.yaml
   - plugin:with_properties?version=>=0.0.1:
-      string_property: foo
+      list_property: {get_input: a_list}
 
 node_templates:
   test_node:
