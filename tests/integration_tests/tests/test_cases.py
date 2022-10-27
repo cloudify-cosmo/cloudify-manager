@@ -1,3 +1,4 @@
+import csv
 import os
 import sys
 import json
@@ -474,7 +475,7 @@ class AgentlessTestCase(BaseTestCase):
             'sudo', '-upostgres', 'psql', '-t', '-F,', 'cloudify_db',
             '-c', '\\copy ({0}) to stdout with csv'.format(query)
         ])
-        return [line.split(',') for line in out.split('\n') if line.strip()]
+        return list(csv.reader(out.strip().split('\n')))
 
     def assert_labels(self, labels_list_1, labels_list_2):
         simplified_labels = set()
