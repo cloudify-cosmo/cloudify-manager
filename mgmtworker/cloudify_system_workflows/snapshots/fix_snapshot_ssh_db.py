@@ -19,8 +19,8 @@ import os
 import argparse
 
 from manager_rest import flask_utils, config
-from manager_rest.storage.models import Deployment
-from manager_rest.storage import get_storage_manager
+from manager_rest.storage.models import Deployment, User
+from manager_rest.storage.storage_manager import SQLStorageManager
 
 # These vars need to be loaded before the rest server is imported
 # We're not currently sourcing anything else (such as rest port) to avoid
@@ -89,8 +89,7 @@ def main(original_string, secret_name):
           - Deployment operation inputs.
           - Deployment node properties (including agent configuration).
     """
-    sm = get_storage_manager()
-
+    sm = SQLStorageManager(user=User.query.get(0))
     res = sm.list(model_class=Deployment, get_all_results=True)
     for deployment in res:
         for node in deployment.nodes:
@@ -145,9 +144,8 @@ def main(original_string, secret_name):
 
 
 def setup_flask_app(tenant_name):
-    app = flask_utils.setup_flask_app()
+    flask_utils.setup_flask_app()
     config.instance.load_configuration()
-    flask_utils.set_admin_current_user(app)
     tenant = flask_utils.get_tenant_by_name(tenant_name)
     flask_utils.set_tenant_in_app(tenant)
 
