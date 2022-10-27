@@ -11,6 +11,7 @@ inputs:
 imports:
   - cloudify/types/types.yaml
   - plugin:with_properties?version=>=0.0.1:
+      string_property: {get_secret: my_secret}
       list_property: {get_input: a_list}
 
 node_templates:

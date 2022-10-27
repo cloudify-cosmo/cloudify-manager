@@ -161,11 +161,13 @@ class TestPlugins(AgentlessTestCase):
         properties_used = yaml.safe_load(output_text)
         assert properties_used == {
             'string_property': 'foo',
+            'integer_property': 54321,
             'list_property': [1, 2, 3],
         }
 
     @pytest.mark.usefixtures('with_properties_plugin')
     def test_plugin_with_properties_intrinsic_func(self):
+        self.client.secrets.create('my_secret', 's3cr3t')
         bp_path = test_utils.get_resource(
             'dsl/plugin_properties_intrinsic_func.yaml')
         self.client.blueprints.upload(bp_path, 'bp')
@@ -181,7 +183,8 @@ class TestPlugins(AgentlessTestCase):
                                              output_file_name)
         properties_used = yaml.safe_load(output_text)
         assert properties_used == {
-            'string_property': None,
+            'string_property': 's3cr3t',
+            'integer_property': None,
             'list_property': [1, 2, 3, 4],
         }
 
@@ -206,11 +209,13 @@ class TestPlugins(AgentlessTestCase):
         properties_used_ns1 = yaml.safe_load(output_text_ns1)
         assert properties_used_ns1 == {
             'ns1--string_property': 'foo',
+            'ns1--integer_property': 54321,
             'ns1--list_property': [1, 2, 3],
         }
         properties_used_ns2 = yaml.safe_load(output_text_ns2)
         assert properties_used_ns2 == {
             'ns2--string_property': 'bar',
+            'ns2--integer_property': 67890,
             'ns2--list_property': [9, 8, 7],
         }
 
