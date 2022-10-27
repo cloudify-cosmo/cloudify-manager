@@ -63,6 +63,15 @@ def _reset_config(app, script_config):
     db.session.commit()
 
 
+def _reset_admin_user(script_config):
+    admin = models.User.query.filter_by(username='admin').one()
+    tenant = models.Tenant.query.filter_by(name='default_tenant').one()
+    admin.password = script_config['password_hash']
+    admin.active = True
+    tenant.rabbitmq_password = script_config['default_tenant_password']
+    db.session.commit()
+
+
 def _delete_users():
     """Delete all users and tenants, except for admin and default_tenant"""
     db.session.execute(
@@ -92,6 +101,7 @@ def reset_storage(app, script_config):
     _delete_users()
     upgrade(directory=migrations_dir)
     _reset_config(app, script_config)
+    _reset_admin_user(script_config)
 
 
 def _random_string(length=10):

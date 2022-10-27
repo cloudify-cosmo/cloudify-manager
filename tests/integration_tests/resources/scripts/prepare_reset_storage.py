@@ -17,8 +17,11 @@ MANAGER_CONFIG = {
 
 
 def get_password_hash():
-    setup_flask_app()
-    return models.User.query.get(0).password
+    return models.User.query.one().password
+
+
+def get_tenant_password():
+    return models.Tenant.query.one().rabbitmq_password
 
 
 if __name__ == '__main__':
@@ -29,10 +32,12 @@ if __name__ == '__main__':
     config.instance.load_from_file('/opt/manager/rest-security.conf',
                                    namespace='security')
 
-    script_config = {
-        'manager_config': MANAGER_CONFIG,
-        'password_hash': get_password_hash(),
-    }
+    with setup_flask_app().app_context():
+        script_config = {
+            'manager_config': MANAGER_CONFIG,
+            'password_hash': get_password_hash(),
+            'default_tenant_password': get_tenant_password(),
+        }
 
     with open(args.config, 'w') as f:
         json.dump(script_config, f)

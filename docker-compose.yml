@@ -52,7 +52,7 @@ services:
 
   nginx:
     container_name: nginx
-    build: nginx
+    build: service_containers/nginx
     depends_on:
       - rest_service
       - certs_creator
@@ -67,7 +67,7 @@ services:
 
   rabbitmq:
     container_name: rabbitmq
-    build: rabbitmq
+    build: service_containers/rabbitmq
     volumes:
       - ssl:/etc/cloudify/ssl:ro
     networks:
@@ -91,7 +91,7 @@ services:
 
   fileserver:
     container_name: fileserver
-    build: fileserver
+    build: service_containers/fileserver
     volumes:
       - ./fileserver/minio/data:/data
     ports:
