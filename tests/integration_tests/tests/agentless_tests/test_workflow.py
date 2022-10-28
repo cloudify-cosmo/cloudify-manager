@@ -103,15 +103,17 @@ class BasicWorkflowsTest(AgentlessTestCase):
             dsl_path,
             blueprint_id=blueprint_id,
             inputs={'a_blueprint_id': blueprint_id,
-                    'a_secret_key': 'my_secret'},
+                    'a_secret_key': 'my_secret',
+                    'a_string': 'foobar'},
             timeout_seconds=30
         )
         self.execute_workflow(
             'test_parameters',
             deployment.id,
             parameters={
-                'to_be_tested': ['blueprint_id', 'secret', 'secret_key'],
-                'secret_key': 'your_secret'
+                'secret_key': 'your_secret',
+                'some_string': {'get_input': 'a_string'},
+                'list_of_strings': [{'get_input': 'a_string'}, 'foo', 'bar']
             }
         )
         instances = self.client.node_instances.list()
@@ -120,6 +122,8 @@ class BasicWorkflowsTest(AgentlessTestCase):
         assert rp.get('blueprint_id') == blueprint_id
         assert rp.get('secret') == 's3cr3t'
         assert rp.get('secret_key') == 'your_secret'
+        assert rp.get('some_string') == 'foobar'
+        assert set(rp.get('list_of_strings')) == {'foobar', 'foo', 'bar'}
 
     @pytest.mark.usefixtures('testmockoperations_plugin')
     def test_dependencies_order_with_two_nodes(self):

@@ -1083,7 +1083,7 @@ def evaluate_workflow_parameters(deployment_id: str, parameters: dict):
     from manager_rest.dsl_functions import evaluate_intrinsic_functions
 
     to_evaluate = {k: v for k, v in parameters.items()
-                   if isinstance(v, dict)}
+                   if isinstance(v, (list, dict))}
     evaluated = evaluate_intrinsic_functions(to_evaluate, deployment_id)
     parameters.update(evaluated)
 

@@ -1,27 +1,23 @@
 import json
 import sys
 
-from cloudify.decorators import workflow
-from cloudify.manager import get_rest_client
 from cloudify.workflows import ctx
 
 
-@workflow
 def test_parameter(name, value):
     assert value is not None
     print("Tested parameter '{0}' is {1}".format(name, value))
-    client = get_rest_client()
 
     node = ctx.get_node('test_node')
     if not node:
         return
-    for ni in client.node_instances.list(node_id=node.id):
+    for ni in node.instances:
         rp = ni.runtime_properties
         rp.update({'tested': True, name: value})
-        client.node_instances.update(
+        ctx.update_node_instance(
             ni.id,
+            runtime_properties=rp,
             version=ni.version,
-            runtime_properties=rp
         )
 
 
