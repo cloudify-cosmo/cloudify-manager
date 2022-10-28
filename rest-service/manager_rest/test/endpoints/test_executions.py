@@ -673,6 +673,34 @@ class ExecutionsTestCase(BaseServerTestCase):
         self.client.executions.delete(to_datetime=datetime.utcnow())
         assert len(self.client.executions.list()) == 1   # skip ep.env.create
 
+    def test_intrinsic_fn_execution_parameters(self):
+        sm_mock = mock.patch(
+            'manager_rest.dsl_functions.get_storage_manager',
+            return_value=self.sm
+        )
+        with sm_mock, self.sm.transaction():
+            bp = models.Blueprint(
+                id='bp',
+                creator=self.user,
+                tenant=self.tenant
+            )
+            dep = models.Deployment(
+                id='dep',
+                blueprint=bp,
+                scaling_groups={},
+                workflows={'test': {'parameters': {'x': {}}}},
+                inputs={'inp1': 'foobar'},
+                creator=self.user,
+                tenant=self.tenant,
+            )
+            db.session.flush()
+            exc = models.Execution(
+                parameters={'x': {'get_input': 'inp1'}},
+                deployment=dep,
+                workflow_id='test',
+            )
+        assert exc.parameters['x'] == 'foobar'
+
     def _create_execution_and_update_token(self, deployment_id, token):
         self.put_deployment(deployment_id, blueprint_id=deployment_id)
         execution = self.client.executions.start(deployment_id, 'install')
