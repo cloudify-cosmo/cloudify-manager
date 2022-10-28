@@ -1078,6 +1078,16 @@ class BlueprintsFilter(FilterBase):
     )
 
 
+def evaluate_workflow_parameters(deployment_id: str, parameters: dict):
+    # Keep this import line here because of circular dependencies
+    from manager_rest.dsl_functions import evaluate_intrinsic_functions
+
+    to_evaluate = {k: v for k, v in parameters.items()
+                   if isinstance(v, dict)}
+    evaluated = evaluate_intrinsic_functions(to_evaluate, deployment_id)
+    parameters.update(evaluated)
+
+
 class Execution(CreatedAtMixin, SQLResourceBase):
     def __init__(self, **kwargs):
         # allow-custom must be set before other attributes, necessarily
@@ -1271,6 +1281,11 @@ class Execution(CreatedAtMixin, SQLResourceBase):
                 f'Remove these parameters or use the flag for allowing '
                 f'custom parameters') from None
 
+        for name, param in workflow_parameters.items():
+            if 'default' in param:
+                parameters.setdefault(name, param['default'])
+        evaluate_workflow_parameters(deployment.id, parameters)
+
         wrong_types = {}
         for name, param in workflow_parameters.items():
             declared_type = param.get('type')
@@ -1288,10 +1303,6 @@ class Execution(CreatedAtMixin, SQLResourceBase):
                 f'Parameter "{n}" must be of type {t}'
                 for n, t in wrong_types.items())
             )
-
-        for name, param in workflow_parameters.items():
-            if 'default' in param:
-                parameters.setdefault(name, param['default'])
 
         constraint_violations = {}
         for name, param in workflow_parameters.items():
