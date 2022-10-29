@@ -13,9 +13,11 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import pytest
+
 from mock import patch
 
-from manager_rest import constants
+from manager_rest import constants, premium_enabled
 from manager_rest.storage import models
 
 from cloudify.cryptography_utils import encrypt
@@ -23,11 +25,14 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 
 from manager_rest.test import base_test
 
-
 CREDENTIALS_PERMISSION = 'tenant_rabbitmq_credentials'
 
 
-@patch('manager_rest.security.secured_resource.premium_enabled', False)
+@pytest.mark.skipif(
+    premium_enabled,
+    reason='Community tests cannot be run when cloudify-premium is '
+           'installed. Premium tests are in cloudify-premium.'
+)
 class TenantsCommunityTestCase(base_test.BaseServerTestCase):
     def test_list_tenants(self):
         """Listing tenants is allowed on community."""

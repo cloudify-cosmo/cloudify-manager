@@ -1,13 +1,18 @@
 import mock
+import pytest
 from json import JSONDecodeError
 from typing import Dict, Any
 
+from manager_rest import premium_enabled
 from manager_rest.test import base_test
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 
-@mock.patch('manager_rest.rest.resources_v3_1.'
-            'community_contacts.premium_enabled', False)
+@pytest.mark.skipif(
+    premium_enabled,
+    reason='Community tests cannot be run when cloudify-premium is '
+           'installed. Premium tests are in cloudify-premium.'
+)
 class TestCommunityContacts(base_test.BaseServerTestCase):
     data = {"first_name": "John",
             "last_name": "Smith",
