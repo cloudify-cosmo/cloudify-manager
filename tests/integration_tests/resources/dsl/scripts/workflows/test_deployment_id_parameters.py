@@ -1,11 +1,24 @@
+import json
 import sys
 
-import json
+from cloudify.workflows import ctx
 
 
 def test_parameter(name, value):
     assert value is not None
     print("Tested parameter '{0}' is {1}".format(name, value))
+
+    node = ctx.get_node('test_node')
+    if not node:
+        return
+    for ni in node.instances:
+        rp = ni.runtime_properties
+        rp.update({'tested': True, name: value})
+        ctx.update_node_instance(
+            ni.id,
+            runtime_properties=rp,
+            version=ni.version,
+        )
 
 
 if __name__ == '__main__':

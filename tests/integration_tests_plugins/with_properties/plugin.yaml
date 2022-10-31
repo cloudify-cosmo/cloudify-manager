@@ -9,6 +9,10 @@ plugins:
         type: string
         description: A property of "string" type
         display_label: String property
+      integer_property:
+        type: integer
+        description: A property of "integer" type
+        display_label: Integer property
       list_property:
         type: list
         description: A property of "list" type

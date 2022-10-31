@@ -14,8 +14,18 @@
 #  * limitations under the License.
 
 from collections import namedtuple
-from enum import Enum
 from typing import List, Union, Tuple
+
+
+try:
+    from enum import StrEnum
+except ImportError:
+    from enum import Enum
+    # before python 3.11, StrEnum didn't exist. Trivial reimplementation:
+
+    class StrEnum(str, Enum):
+        def __str__(self):
+            return self.value
 
 
 CONVENTION_APPLICATION_BLUEPRINT_FILE = 'blueprint.yaml'
@@ -102,7 +112,7 @@ RESERVED_LABELS = {'csys-obj-name',
 RESERVED_PREFIX = 'csys-'
 
 
-class LabelsOperator(str, Enum):
+class LabelsOperator(StrEnum):
     ANY_OF = 'any_of'
     NOT_ANY_OF = 'not_any_of'
     IS_NULL = 'is_null'
@@ -110,7 +120,7 @@ class LabelsOperator(str, Enum):
     IS_NOT = 'is_not'
 
 
-class AttrsOperator(str, Enum):
+class AttrsOperator(StrEnum):
     ANY_OF = 'any_of'
     NOT_ANY_OF = 'not_any_of'
     CONTAINS = 'contains'
@@ -120,7 +130,7 @@ class AttrsOperator(str, Enum):
     IS_NOT_EMPTY = 'is_not_empty'
 
 
-class FilterRuleType(str, Enum):
+class FilterRuleType(StrEnum):
     LABEL = 'label'
     ATTRIBUTE = 'attribute'
 

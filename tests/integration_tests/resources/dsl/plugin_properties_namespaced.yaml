@@ -4,9 +4,11 @@ imports:
   - cloudify/types/types.yaml
   - ns1--plugin:with_properties?version=>=0.0.1:
       string_property: foo
+      integer_property: 54321
       list_property: [1, 2, 3]
   - ns2--plugin:with_properties?version=>=0.0.1:
       string_property: bar
+      integer_property: 67890
       list_property: [9, 8, 7]
 
 node_templates:
