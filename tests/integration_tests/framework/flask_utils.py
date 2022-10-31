@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
 import logging
 
 from cloudify.utils import setup_logger
@@ -47,17 +46,3 @@ def reset_storage(container_id):
     # localhost-only APIs (rabbitmq management api)
     execute(container_id,
             [MANAGER_PYTHON, SCRIPT_PATH, '--config', CONFIG_PATH])
-
-
-def set_ldap(config_data):
-    logger.info('Setting LDAP configuration')
-    _prepare_set_ldap_script()
-    execute("{manager_python} {script_path} --config '{cfg_data}'"
-            .format(manager_python=MANAGER_PYTHON,
-                    script_path='/tmp/set_ldap.py',
-                    cfg_data=json.dumps(config_data)))
-
-
-def _prepare_set_ldap_script():
-    set_ldap_script = get_resource('scripts/set_ldap.py')
-    copy_file_to_manager(set_ldap_script, '/tmp/set_ldap.py')

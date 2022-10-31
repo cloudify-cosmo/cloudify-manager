@@ -13,10 +13,14 @@ from logging.handlers import WatchedFileHandler
 from manager_rest import utils
 from manager_rest import config
 from manager_rest.rest import rest_utils
-from manager_rest.storage import get_storage_manager, models
+from manager_rest.storage import models
+from manager_rest.storage.storage_manager import SQLStorageManager
 from manager_rest.constants import FILE_SERVER_BLUEPRINTS_FOLDER
-from manager_rest.flask_utils import (setup_flask_app, set_admin_current_user,
-                                      get_tenant_by_name, set_tenant_in_app)
+from manager_rest.flask_utils import (
+    setup_flask_app,
+    get_tenant_by_name,
+    set_tenant_in_app,
+)
 from manager_rest.rest.search_utils import GetValuesWithStorageManager
 
 from cloudify.constants import SHARED_RESOURCE, COMPONENT
@@ -53,8 +57,7 @@ def get_storage_manager_instance():
         app = setup_flask_app()
         with app.app_context():
             config.instance.load_configuration()
-            set_admin_current_user(app)
-            sm = get_storage_manager()
+            sm = SQLStorageManager(user=models.User.query.get(0))
             yield sm
     finally:
         config.reset(config.Config())
