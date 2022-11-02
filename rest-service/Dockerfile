@@ -10,6 +10,8 @@ ENV POSTGRES_DB=cloudify_db
 ENV POSTGRES_HOST=postgresql
 ENV POSTGRES_USER=cloudify
 ENV POSTGRES_PASSWORD=cloudify
+# FILE_SERVER_TYPE=minio or local
+ENV FILE_SERVER_TYPE=minio
 ENV CONFIG_FILE_PATH=/opt/rest-service/docker/config.yaml
 
 RUN --mount=type=cache,target=/root/.cache \

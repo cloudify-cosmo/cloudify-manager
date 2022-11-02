@@ -6,6 +6,7 @@ postgresql_db_name: ${POSTGRES_DB}
 postgresql_host: ${POSTGRES_HOST}
 postgresql_username: ${POSTGRES_USER}
 postgresql_password: ${POSTGRES_PASSWORD}
+file_server_type: ${FILE_SERVER_TYPE}
 " > /opt/manager/cloudify-rest.conf
 fi
 

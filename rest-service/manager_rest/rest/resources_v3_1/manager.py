@@ -14,12 +14,15 @@
 #  * limitations under the License.
 
 import os
+import requests
+from xml.etree import ElementTree
 from typing import Any
 
-from flask import request
+from flask import request, send_file
 from flask_restful.reqparse import Argument
 
 from cloudify.constants import MANAGER_RESOURCES_PATH
+from manager_rest import config
 from manager_rest.security import SecuredResource, premium_only
 from manager_rest.rest import rest_utils
 from manager_rest.storage import get_storage_manager, models
@@ -183,3 +186,127 @@ class FileServerIndex(SecuredResource):
                         os.path.join(path, name).replace(dir_path+'/', ""))
 
         return {'files': files_list}, 200
+
+
+class FileServerProxy(SecuredResource):
+    def _is_resource_uri_directory(self, uri):
+        return uri.endswith('/')
+
+    def _get_minio_bucket_files(self, prefix):
+        file_server_protocol = 'http'
+        file_server_host = 'fileserver'
+        file_server_port = '9000'
+        bucket_name = 'resources'
+        bucket_files = []
+
+        url = '{}://{}:{}/{}?prefix={}'.format(
+            file_server_protocol,
+            file_server_host,
+            file_server_port,
+            bucket_name,
+            prefix,
+        )
+        response = requests.get(url)
+
+        xml_ns = {'s3': 'http://s3.amazonaws.com/doc/2006-03-01/'}
+        xml_et = ElementTree.fromstring(response.content)
+
+        for contents in xml_et.findall('s3:Contents', xml_ns):
+            key = contents.find('s3:Key', xml_ns)
+            bucket_files.append(key.text)
+
+        return bucket_files
+
+    def _get_minio_file_response(self, uri):
+        uri = uri.replace(
+            'resources',
+            'resources-minio',
+        )
+
+        file_full_name = uri.split('/')[-1]
+        file_info = file_full_name.split('.', 1)
+        file_name = file_info[0]
+        file_extension = file_info[1] if len(file_info) > 1 else ''
+
+        response = rest_utils.make_streaming_response(
+            file_name,
+            uri,
+            file_extension,
+        )
+
+        return response
+
+    def _get_local_file_index(self, dir_path):
+        files_list = []
+
+        for path, _, files in os.walk(dir_path):
+            for name in files:
+                if not name.startswith('.'):
+                    files_list.append(
+                        os.path.join(path, name).replace(
+                            MANAGER_RESOURCES_PATH,
+                            "/resources",
+                        )
+                    )
+
+        return files_list
+
+    def _get_minio_fileserver_response(self, uri):
+        relative_path = uri.replace('/resources/', '', 1)
+        uri_is_directory = self._is_resource_uri_directory(uri)
+
+        bucket_files = self._get_minio_bucket_files(relative_path)
+
+        if not len(bucket_files):
+            return {}, 404
+
+        if uri_is_directory:
+            files_list = []
+
+            for bucket_file in bucket_files:
+                file_path = f"/resources/{bucket_file}"
+                files_list.append(file_path)
+
+            return {'files': files_list}, 200
+        else:
+            response = self._get_minio_file_response(uri)
+
+            return response
+
+    def _get_local_fileserver_response(self, uri):
+        relative_path = uri.replace('/resources/', '', 1)
+        uri_is_directory = self._is_resource_uri_directory(uri)
+
+        dir_path = os.path.join(
+            MANAGER_RESOURCES_PATH,
+            relative_path,
+        )
+
+        if uri_is_directory:
+            if not os.path.isdir(dir_path):
+                return {}, 404
+
+            files_list = self._get_local_file_index(dir_path)
+
+            return {'files': files_list}, 200
+        else:
+            if not os.path.isfile(dir_path):
+                return {}, 404
+
+            return send_file(dir_path, as_attachment=True)
+
+    def get(self, **_):
+        original_uri = request.headers['X-Original-Uri']
+
+        if not original_uri.startswith('/resources/'):
+            return {}, 404
+
+        file_server_type = config.instance.file_server_type
+
+        if file_server_type == 'minio':
+            return self._get_minio_fileserver_response(original_uri)
+
+        if file_server_type == 'local':
+            return self._get_local_fileserver_response(original_uri)
+
+        return {}, 404

@@ -126,6 +126,7 @@ class Config(object):
     ldap_attribute_group_membership = Setting(
         'ldap_attribute_group_membership')
 
+    file_server_type = Setting('file_server_type', default='local')
     file_server_root = Setting('file_server_root', default=None)
     file_server_url = Setting('file_server_url', default=None)
 

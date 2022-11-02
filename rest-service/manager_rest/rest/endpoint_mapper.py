@@ -90,6 +90,10 @@ def setup_resources(api):
         'UsersActive': 'users/active/<string:username>',
         'UsersUnlock': 'users/unlock/<string:username>',
         'FileServerAuth': 'file-server-auth',
+        'FileServerProxy': [
+            'file-server-proxy/',
+            'file-server-proxy/<path:uri>',
+        ],
         'FileServerIndex': 'file-server-index',
         'LdapAuthentication': 'ldap',
         'Secrets': 'secrets',
@@ -158,7 +162,11 @@ def setup_resources(api):
     # Set version endpoint as a non versioned endpoint
     api.add_resource(resources_v1.Version, '/api/version', endpoint='version')
     for resource, endpoint_suffix in resources_endpoints.items():
-        _set_versioned_urls(api, resource, endpoint_suffix)
+        if isinstance(endpoint_suffix, str):
+            _set_versioned_urls(api, resource, endpoint_suffix)
+        if isinstance(endpoint_suffix, list):
+            for endpoint_suffix_item in endpoint_suffix:
+                _set_versioned_urls(api, resource, endpoint_suffix_item)
 
 
 def _set_versioned_urls(api, resource_name, endpoint_suffix):
