@@ -282,7 +282,11 @@ def sortable(response_class=None):
                 for sort in sorts
             )
             if fields:
-                _validate_fields(fields, sort_params, SORT)
+                non_label_sort_params = {
+                    k: v for k, v in sort_params.items()
+                    if not k.startswith('label:')
+                }
+                _validate_fields(fields, non_label_sort_params, SORT)
             return func(sort=sort_params, *args, **kw)
         return create_sort_params
     return sortable_dec

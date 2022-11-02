@@ -160,13 +160,16 @@ class SQLStorageManager(object):
         return query
 
     @staticmethod
-    def _sort_query(query, model_class, sort=None, distinct=None,
-                    default_sorting=True):
+    def _sort_query(query, model_class, sort=None,
+                    distinct=None, default_sorting=True, sort_labels=None):
         """Add sorting clauses to the query
 
         :param query: Base SQL query
         :param sort: An optional dictionary where keys are column names to
             sort by, and values are the order (asc/desc), or callables that
+            return sort conditions
+        :param sort_labels: An optional dictionary where keys are label names
+            to sort by, and values are the order (asc/desc), or callables that
             return sort conditions
         :return: An SQLAlchemy AppenderQuery object
         """
@@ -180,6 +183,21 @@ class SQLStorageManager(object):
                     query = query.order_by(order(column))
                 else:
                     query = query.order_by(column)
+        if sort_labels:
+            labels_model = model_class.labels_model
+            for key, order in sort_labels.items():
+                ordering = (
+                    db.select(
+                        db.func.array_agg(db.text('value order by value asc'))
+                    )
+                    .where(labels_model._labeled_model_fk ==
+                           model_class._storage_id)
+                    .where(labels_model.key == key)
+                )
+                if order == 'desc':
+                    query = query.order_by(db.desc(ordering))
+                else:
+                    query = query.order_by(db.asc(ordering))
         if default_sorting:
             default_sort_column = model_class.default_sort_column()
             if default_sort_column:
@@ -374,6 +392,7 @@ class SQLStorageManager(object):
                    filters=None,
                    substr_filters=None,
                    sort=None,
+                   sort_labels=None,
                    all_tenants=None,
                    distinct=None,
                    filter_rules=None,
@@ -384,16 +403,18 @@ class SQLStorageManager(object):
         :param model_class: SQL DB table class
         :param include: An optional list of columns to include in the query
         :param filters: An optional dictionary where keys are column names to
-        filter by, and values are values applicable for those columns (or lists
-        of such values)
+           filter by, and values are values applicable for those columns (or
+           lists of such values)
         :param substr_filters: An optional dictionary similar to filters,
-                               when the results are filtered by substrings
+           when the results are filtered by substrings
         :param sort: An optional dictionary where keys are column names to
-        sort by, and values are the order (asc/desc)
+           sort by, and values are the order (asc/desc)
+        :param sort_labels: An optional dictionary where keys are label
+           names to sort by, and values are the order (asc/desc)
         :param load_relationships: automatically join all relationships
-                                   declared in model.autoload_relationships
+           declared in model.autoload_relationships
         :return: A sorted and filtered query with only the relevant
-        columns
+           columns
         """
         include, filters, substr_filters, sort, joins, distinct = \
             self._get_joins_and_converted_columns(model_class,
@@ -413,7 +434,7 @@ class SQLStorageManager(object):
                                    filter_rules,
                                    joins)
         query = self._sort_query(query, model_class, sort, distinct,
-                                 default_sorting)
+                                 default_sorting, sort_labels)
         return query
 
     def _get_columns_from_field_names(self,
@@ -631,6 +652,7 @@ class SQLStorageManager(object):
              filters=None,
              pagination=None,
              sort=None,
+             sort_labels=None,
              all_tenants=None,
              substr_filters=None,
              get_all_results=False,
@@ -648,6 +670,8 @@ class SQLStorageManager(object):
         :param pagination: An optional dict with size and offset keys
         :param sort: An optional dictionary where keys are column names to
                      sort by, and values are the order (asc/desc)
+        :param sort_labels: An optional dictionary where keys are label name
+                     to sort by, and values are the order (asc/desc)
         :param all_tenants: Include resources from all tenants associated
                             with the user
         :param substr_filters: An optional dictionary similar to filters,
@@ -674,6 +698,7 @@ class SQLStorageManager(object):
                                 filters,
                                 substr_filters,
                                 sort,
+                                sort_labels,
                                 all_tenants,
                                 distinct,
                                 filter_rules,
