@@ -14,12 +14,15 @@
 #  * limitations under the License.
 
 import os
+import requests
+import xmltodict
 from typing import Any
 
-from flask import request
+from flask import request, send_file
 from flask_restful.reqparse import Argument
 
 from cloudify.constants import MANAGER_RESOURCES_PATH
+from manager_rest import config
 from manager_rest.security import SecuredResource, premium_only
 from manager_rest.rest import rest_utils
 from manager_rest.storage import get_storage_manager, models
@@ -183,3 +186,89 @@ class FileServerIndex(SecuredResource):
                         os.path.join(path, name).replace(dir_path+'/', ""))
 
         return {'files': files_list}, 200
+
+
+class FileServerProxy(SecuredResource):
+    def get(self, **_):
+        file_server_protocol = 'http'
+        file_server_host = 'fileserver'
+        file_server_port = '9000'
+        bucket_name = 'resources'
+
+        original_uri = request.headers['X-Original-Uri']
+
+        if not original_uri.startswith('/resources/'):
+            return {}, 404
+
+        relative_path = original_uri.replace('/resources/', '', 1)
+        file_server_type = config.instance.file_server_type
+        uri_is_directory = rest_utils.is_resource_uri_directory(original_uri)
+
+        if file_server_type == 'minio':
+            url = '{}://{}:{}/{}?prefix={}'.format(
+                file_server_protocol,
+                file_server_host,
+                file_server_port,
+                bucket_name,
+                relative_path,
+            )
+            response = requests.get(url)
+            response_dict = xmltodict.parse(response.content)
+
+            if 'Contents' not in response_dict['ListBucketResult']:
+                return {}, 404
+
+            if uri_is_directory:
+                files_list = []
+
+                for file in response_dict['ListBucketResult']['Contents']:
+                    file_path = f"/resources/{file['Key']}"
+                    files_list.append(file_path)
+
+                return {'files': files_list}, 200
+            else:
+                uri = original_uri.replace(
+                    'resources',
+                    f'resources-{file_server_type}',
+                )
+
+                file_full_name = uri.split('/')[-1]
+                file_info = file_full_name.split('.', 1)
+                file_name = file_info[0]
+                file_extension = file_info[1] if len(file_info) > 1 else ''
+
+                response = rest_utils.make_streaming_response(
+                    file_name,
+                    uri,
+                    file_extension,
+                )
+
+                return response
+
+        if file_server_type == 'local':
+            dir_path = os.path.join(
+                MANAGER_RESOURCES_PATH,
+                relative_path,
+            )
+
+            if not os.path.exists(dir_path):
+                return {}, 404
+
+            if uri_is_directory:
+                files_list = []
+
+                for path, _, files in os.walk(dir_path):
+                    for name in files:
+                        if not name.startswith('.'):
+                            files_list.append(
+                                os.path.join(path, name).replace(
+                                    MANAGER_RESOURCES_PATH,
+                                    "/resources",
+                                )
+                            )
+
+                return {'files': files_list}, 200
+            else:
+                return send_file(dir_path, as_attachment=True)
+
+        return {}, 404

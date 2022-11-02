@@ -199,6 +199,8 @@ wheel==0.37.1
     # via wagon
 wtforms==3.0.1
     # via flask-wtf
+xmltodict==0.13.0
+    # via cloudify-rest-service (setup.py)
 yarl==1.8.1
     # via aiohttp
 
