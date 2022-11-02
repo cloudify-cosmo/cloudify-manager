@@ -545,6 +545,23 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
     DEPLOYMENT_ID = 'deployment'
     SITE_NAME = 'test_site'
 
+    def setUp(self):
+        super().setUp()
+        self._bp = models.Blueprint(
+            id='bp0',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+
+    def _deployment(self, **kwargs):
+        params = {
+            'blueprint': self._bp,
+            'creator': self.user,
+            'tenant': self.tenant
+        }
+        params.update(kwargs)
+        return models.Deployment(**params)
+
     def test_get_empty(self):
         result = self.client.deployments.list()
         self.assertEqual(0, len(result))
@@ -652,6 +669,31 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         self.assertEqual(2, len(deployments))
         self.assertEqual('d1', deployments[0].id)
         self.assertEqual('d0', deployments[1].id)
+
+    def test_sort_list_by_labels(self):
+        d1 = self._deployment(id='d1')
+        d2 = self._deployment(id='d2')
+        d1.labels = [
+            models.DeploymentLabel(key='x', value='a', creator=self.user),
+            models.DeploymentLabel(key='x', value='b', creator=self.user),
+            models.DeploymentLabel(key='y', value='1', creator=self.user),
+        ]
+        d2.labels = [
+            models.DeploymentLabel(key='x', value='c', creator=self.user),
+            models.DeploymentLabel(key='x', value='a', creator=self.user),
+            models.DeploymentLabel(key='y', value='0', creator=self.user),
+        ]
+        deployments = self.client.deployments.list(
+            sort=['label:x'], _include=['id', 'labels'])
+        self.assertEqual(2, len(deployments))
+        self.assertEqual('d1', deployments[0].id)
+        self.assertEqual('d2', deployments[1].id)
+
+        deployments = self.client.deployments.list(
+            sort=['label:y'], _include=['id', 'labels'])
+        self.assertEqual(2, len(deployments))
+        self.assertEqual('d2', deployments[0].id)
+        self.assertEqual('d1', deployments[1].id)
 
     def test_put_scaling_groups(self):
         _, _, _, deployment_response = self.put_deployment(

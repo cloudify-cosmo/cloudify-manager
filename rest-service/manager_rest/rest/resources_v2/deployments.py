@@ -68,6 +68,11 @@ class Deployments(resources_v1.Deployments):
         filters.update(rest_utils.licensed_environments_filter())
         filter_rules = get_filter_rules_from_filter_id(
             sm, filter_id, models.DeploymentsFilter)
+
+        sort_labels = {k.split(":", 1)[1]: v
+                       for k, v in sort.items() if k.startswith('label:')}
+        sort = {k: v for k, v in sort.items() if not k.startswith('label:')}
+
         result = sm.list(
             models.Deployment,
             include=_include,
@@ -75,6 +80,7 @@ class Deployments(resources_v1.Deployments):
             substr_filters=search,
             pagination=pagination,
             sort=sort,
+            sort_labels=sort_labels,
             all_tenants=all_tenants,
             get_all_results=get_all_results,
             filter_rules=filter_rules,
