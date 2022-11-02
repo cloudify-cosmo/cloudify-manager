@@ -195,7 +195,7 @@ werkzeug==2.2.2
     # via
     #   flask
     #   flask-login
-wheel==0.37.1
+wheel==0.38.0
     # via wagon
 wtforms==3.0.1
     # via flask-wtf
