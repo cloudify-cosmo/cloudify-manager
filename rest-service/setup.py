@@ -40,7 +40,6 @@ install_requires = [
     'retrying',
     'pydantic',
     'distro',
-    'xmltodict',
 ]
 
 

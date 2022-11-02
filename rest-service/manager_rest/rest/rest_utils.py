@@ -810,7 +810,3 @@ def remove_invalid_keys(input_dict, valid_params):
     clear = input_dict.keys() - valid_params
     for param in clear:
         input_dict.pop(param)
-
-
-def is_resource_uri_directory(uri):
-    return uri.endswith('/')
