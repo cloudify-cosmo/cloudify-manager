@@ -1,0 +1,42 @@
+tosca_definitions_version: cloudify_dsl_1_5
+
+imports:
+  - cloudify/types/types.yaml
+
+inputs:
+  a_blueprint_id:
+    type: blueprint_id
+  a_secret_key:
+    type: secret_key
+  a_string:
+    type: string
+
+node_templates:
+  test_node:
+    type: cloudify.nodes.Root
+
+workflows:
+  test_parameters:
+    mapping: scripts/workflows/test_deployment_id_parameters.py
+    parameters:
+      to_be_tested:
+        type: list
+        default: [blueprint_id, secret, secret_key, some_string, list_of_strings]
+      blueprint_id:
+        description: A blueprint identifier
+        type: blueprint_id
+        default: {get_input: a_blueprint_id}
+      secret:
+        description: A secret value to be tested
+        type: string
+        default: {get_secret: {get_input: a_secret_key}}
+      secret_key:
+        description: A secret value to be tested
+        type: secret_key
+        default: {get_input: a_secret_key}
+      some_string:
+        type: string
+        default: "lorem ipsum"
+      list_of_strings:
+        type: list
+        item_type: string

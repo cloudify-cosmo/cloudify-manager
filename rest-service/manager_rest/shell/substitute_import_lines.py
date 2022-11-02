@@ -10,7 +10,8 @@ import yaml
 
 from manager_rest.flask_utils import get_tenant_by_name, set_tenant_in_app
 from manager_rest.shell import common
-from manager_rest.storage import models, get_storage_manager
+from manager_rest.storage import models
+from manager_rest.storage.storage_manager import SQLStorageManager
 
 
 class Mapping:
@@ -165,7 +166,8 @@ def main(all_tenants, tenant_names, blueprint_ids, mapping_file):
         tenant_names = (common.DEFAULT_TENANT,)
 
     common.setup_environment()
-    sm = get_storage_manager()
+    admin = models.User.query.get(0)
+    sm = SQLStorageManager(user=admin)
     tenants = sm.list(models.Tenant, get_all_results=True) if all_tenants \
         else [get_tenant_by_name(name) for name in tenant_names]
     blueprint_filter = {'state': 'uploaded'}
@@ -175,7 +177,7 @@ def main(all_tenants, tenant_names, blueprint_ids, mapping_file):
 
     for tenant in tenants:
         set_tenant_in_app(get_tenant_by_name(tenant.name))
-        sm = get_storage_manager()
+        sm = SQLStorageManager(user=admin)
         blueprints = sm.list(
             models.Blueprint,
             filters=blueprint_filter,

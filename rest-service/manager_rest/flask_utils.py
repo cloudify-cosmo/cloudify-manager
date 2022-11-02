@@ -4,7 +4,7 @@ from flask_security import Security
 
 from manager_rest import config, utils
 from manager_rest.storage import user_datastore, db
-from manager_rest.storage.models import User, Tenant
+from manager_rest.storage.models import Tenant
 from manager_rest.config import instance as manager_config
 
 
@@ -75,19 +75,3 @@ def get_tenant_by_name(tenant_name):
             'not exist.'.format(name=tenant_name)
         )
     return tenant
-
-
-def set_admin_current_user(app):
-    """Set the admin as the current user in the flask app
-
-    :return: The admin user
-    """
-    admin = User.query.get(0)
-    # This line is necessary for the `reload_user` method - we add a mock
-    # request context to the flask stack
-    app.test_request_context().push()
-
-    # TODO RD-5685: stop using the private method
-    app.extensions['security'].login_manager._update_request_context_with_user(
-        admin)
-    return admin

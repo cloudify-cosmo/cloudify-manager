@@ -94,6 +94,37 @@ class BasicWorkflowsTest(AgentlessTestCase):
         assert all(i.runtime_properties.get('custom_workflow')
                    for i in instances)
 
+    def test_custom_workflow_intrinsic_fn_params(self):
+        self.client.secrets.create('my_secret', 's3cr3t')
+        self.client.secrets.create('your_secret', 's3cr3t')
+        dsl_path = get_resource('dsl/custom_workflow_with_intrinsic_fn.yaml')
+        blueprint_id = self.id()
+        deployment, _ = self.deploy_application(
+            dsl_path,
+            blueprint_id=blueprint_id,
+            inputs={'a_blueprint_id': blueprint_id,
+                    'a_secret_key': 'my_secret',
+                    'a_string': 'foobar'},
+            timeout_seconds=30
+        )
+        self.execute_workflow(
+            'test_parameters',
+            deployment.id,
+            parameters={
+                'secret_key': 'your_secret',
+                'some_string': {'get_input': 'a_string'},
+                'list_of_strings': [{'get_input': 'a_string'}, 'foo', 'bar']
+            }
+        )
+        instances = self.client.node_instances.list()
+        assert all(i.runtime_properties.get('tested') for i in instances)
+        rp = instances[0].runtime_properties
+        assert rp.get('blueprint_id') == blueprint_id
+        assert rp.get('secret') == 's3cr3t'
+        assert rp.get('secret_key') == 'your_secret'
+        assert rp.get('some_string') == 'foobar'
+        assert set(rp.get('list_of_strings')) == {'foobar', 'foo', 'bar'}
+
     @pytest.mark.usefixtures('testmockoperations_plugin')
     def test_dependencies_order_with_two_nodes(self):
         dsl_path = get_resource("dsl/dependencies_order_with_two_nodes.yaml")
