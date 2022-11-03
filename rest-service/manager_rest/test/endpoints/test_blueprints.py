@@ -465,3 +465,18 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         self.assertEqual(len(blueprints), 1)
         self.assertEqual(blueprints[0], bp2)
         self.assert_metadata_filtered(blueprints, 1)
+
+    def test_yamllint_no_errors(self):
+        self.put_blueprint(
+            blueprint_id='bp1',
+            blueprint_file_name='blueprint_with_workflows.yaml')
+
+    def test_yamllint_with_errors(self):
+        self.put_blueprint(
+            blueprint_id='bp2',
+            blueprint_file_name='linter_ill_formatted.yaml')
+
+    def test_yamllint_imported_with_errors(self):
+        self.put_blueprint(
+            blueprint_id='bp3',
+            blueprint_file_name='linter_import_ill_formatted.yaml')

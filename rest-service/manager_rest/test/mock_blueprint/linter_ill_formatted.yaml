@@ -1,0 +1,19 @@
+tosca_definitions_version: cloudify_dsl_1_5
+
+imports:
+    - cloudify/types/types.yaml
+
+node_types:
+    test_type:
+        derived_from: cloudify.nodes.Root
+        properties:
+            first:
+                default:
+                  user: ubuntu
+                  port: 22
+
+node_templates:
+  node1:
+    type: test_type
+    properties:
+      first: Lorem ipsum
