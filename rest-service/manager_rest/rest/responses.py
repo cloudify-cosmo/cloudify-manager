@@ -172,7 +172,7 @@ class Label:
     created_by: Optional[str] = field(default=None, compare=False)
 
     resource_fields: dict = field(
-        default_factory = lambda: LABEL_FIELDS,
+        default_factory=lambda: LABEL_FIELDS,
         compare=False, repr=False, init=False,
     )
 
