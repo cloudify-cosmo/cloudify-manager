@@ -344,7 +344,6 @@ class BlueprintsId(resources_v2.BlueprintsId):
                                       creator=creator,
                                       created_at=created_at)
 
-
         blueprint.updated_at = get_formatted_timestamp()
         return sm.update(blueprint)
 

@@ -46,6 +46,7 @@ from manager_rest.utils import (get_formatted_timestamp,
                                 validate_global_modification,
                                 validate_deployment_and_site_visibility,
                                 extract_host_agent_plugins_from_plan)
+from manager_rest.rest.responses import Label
 from manager_rest.rest.rest_utils import (
     update_inter_deployment_dependencies,
     verify_blueprint_uploaded_state,
@@ -2709,7 +2710,7 @@ class ResourceManager(object):
             if not self.is_computed_label(resource, label.key)
         }
         existing_labels = set(Label(key=label.key, value=label.value)
-                                  for label in resource.labels)
+                              for label in resource.labels)
 
         return new_labels_set - existing_labels
 
