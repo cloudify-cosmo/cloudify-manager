@@ -154,6 +154,14 @@ class Tokens(object):
         self.description = kwargs.get('description')
 
 
+# This has to be a constant because it's needed by the resource_models, and
+# won't exist on the class until instantiated.
+LABEL_FIELDS = {'key': fields.String,
+                'value': fields.String,
+                'created_at': fields.String,
+                'created_by': fields.String}
+
+
 @swagger.model
 @dataclass(kw_only=True, unsafe_hash=True)
 class Label:
@@ -164,12 +172,7 @@ class Label:
     created_by: Optional[str] = field(default=None, compare=False)
 
     resource_fields: dict = field(
-        default_factory = lambda: {
-            'key': fields.String,
-            'value': fields.String,
-            'created_at': fields.String,
-            'created_by': fields.String,
-        },
+        default_factory = lambda: LABEL_FIELDS,
         compare=False, repr=False, init=False,
     )
 
