@@ -1,3 +1,5 @@
+from dataclasses import dataclass, field
+from typing import Optional
 from flask_restful import fields
 from manager_rest.rest import swagger
 
@@ -153,36 +155,26 @@ class Tokens(object):
 
 
 @swagger.model
+@dataclass(kw_only=True, unsafe_hash=True)
 class Label:
-    resource_fields = {
-        'key': fields.String,
-        'value': fields.String,
-        'created_at': fields.String,
-        'created_by': fields.String,
-    }
+    """A blueprint or deployment label."""
+    key: str
+    value: str
+    created_at: Optional[str] = field(default=None, compare=False)
+    created_by: Optional[str] = field(default=None, compare=False)
 
-    def __hash__(self):
-        return hash((self.key, self.value))
+    resource_fields: dict = field(
+        default_factory = lambda: {
+            'key': fields.String,
+            'value': fields.String,
+            'created_at': fields.String,
+            'created_by': fields.String,
+        },
+        compare=False, repr=False, init=False,
+    )
 
-    def __eq__(self, other):
-        # This must not compare created_at and created_by or we will not
-        # detect when duplicate labels are being added
-        return (
-            self.key == other.key
-            and self.value == other.value
-        )
-
-    def __repr__(self):
-        return str(self.to_dict())
-
-    def to_dict(self):
+    def to_dict(self) -> dict:
         return {'key': self.key,
                 'value': self.value,
                 'created_at': self.created_at,
                 'created_by': self.created_by}
-
-    def __init__(self, **kwargs):
-        self.key = kwargs.get('key')
-        self.value = kwargs.get('value')
-        self.created_at = kwargs.get('created_at')
-        self.created_by = kwargs.get('created_by')
