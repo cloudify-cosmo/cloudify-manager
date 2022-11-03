@@ -4,13 +4,13 @@ imports:
   - cloudify/types/types.yaml
 
 inputs:
-    http_web_server_port:
-        default: '8080'
-        constraints:
-            - length: 4
+  http_web_server_port:
+    default: '8080'
+    constraints:
+      - length: 4
 
 node_templates:
-    http_web_server:
-        type: cloudify.nodes.WebServer
-        properties:
-            port: { get_input: http_web_server_port }
+  http_web_server:
+    type: cloudify.nodes.WebServer
+    properties:
+      port: {get_input: http_web_server_port}

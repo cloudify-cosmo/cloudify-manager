@@ -1,13 +1,13 @@
 tosca_definitions_version: cloudify_dsl_1_3
 
 node_types:
-    test_type:
-      properties:
-          key:
-            default: 'default'
+  test_type:
+    properties:
+      key:
+        default: 'default'
 imports:
-    - plugin:cloudify-diamond-plugin
+  - plugin:cloudify-diamond-plugin
 
 node_templates:
-    vm:
-        type: test_type
+  vm:
+    type: test_type

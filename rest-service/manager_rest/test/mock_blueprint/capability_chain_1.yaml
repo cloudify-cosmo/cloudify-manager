@@ -19,4 +19,4 @@ capabilities:
   chain_1_capability:
     value:
       nested:
-      - { get_attribute: [ chain_1_node, key ]}
+        - { get_attribute: [ chain_1_node, key ]}

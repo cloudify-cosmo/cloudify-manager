@@ -7,30 +7,30 @@
 tosca_definitions_version: cloudify_dsl_1_4
 
 imports:
-    - hello_world.yaml
+  - hello_world.yaml
 
 # The blueprint contains two nodes, a vm and a web server hosted in it.
 node_templates:
-    vm:
-        type: cloudify.nodes.Compute
+  vm:
+    type: cloudify.nodes.Compute
 
-    http_web_server:
-        type: cloudify.nodes.WebServer
-        properties:
-            port: 8080
-        relationships:
-            -   type: cloudify.relationships.contained_in
-                target: vm
+  http_web_server:
+    type: cloudify.nodes.WebServer
+    properties:
+      port: 8080
+    relationships:
+      - type: cloudify.relationships.contained_in
+        target: vm
 
 workflows:
-    mock_workflow:
-        mapping: default_workflows.workflows.default.install
-        parameters:
-            optional_param:
-                default: test_default_value
-            mandatory_param: {}
-            mandatory_param2: {}
-            nested_param:
-                default:
-                      key: test_key
-                      value: test_value
+  mock_workflow:
+    mapping: default_workflows.workflows.default.install
+    parameters:
+      optional_param:
+        default: test_default_value
+      mandatory_param: {}
+      mandatory_param2: {}
+      nested_param:
+        default:
+          key: test_key
+          value: test_value
