@@ -2706,21 +2706,21 @@ class ResourceManager(object):
     def get_labels_to_create(self, resource, new_labels):
         new_labels_set = {
             label for label in new_labels
-            if not self.is_computed_label(resource, label[0])
+            if not self.is_computed_label(resource, label.key)
         }
-        existing_labels = resource.labels
-        existing_labels_tup = set(
-            (label.key, label.value) for label in existing_labels)
+        existing_labels = set(Label(key=label.key, value=label.value)
+                                  for label in resource.labels)
 
-        return new_labels_set - existing_labels_tup
+        return new_labels_set - existing_labels
 
     def get_labels_to_delete(self, resource, new_labels):
         labels_to_delete = set()
         new_labels_set = set(new_labels)
         for label in resource.labels:
+            label = Label(label.key, label.value)
             if self.is_computed_label(resource, label.key):
                 continue
-            if (label.key, label.value) not in new_labels_set:
+            if label not in new_labels_set:
                 labels_to_delete.add(label)
         return labels_to_delete
 
@@ -2735,8 +2735,7 @@ class ResourceManager(object):
 
         :param labels_resource_model: A labels resource model
         :param resource: A resource element
-        :param labels_list: A list of labels of the form:
-                            [(key1, value1), (key2, value2)]
+        :param labels_list: A list of Labels
         :param creator: Specify creator (e.g. for snapshots).
         :param created_at: Specify creation time (e.g. for snapshots).
         """
@@ -2745,16 +2744,16 @@ class ResourceManager(object):
         lowercase_labels = {'csys-obj-type'}
         current_time = datetime.utcnow()
         new_labels = []
-        for key, value in labels_list:
-            if key.lower() in lowercase_labels:
-                key = key.lower()
-                value = value.lower()
-            new_labels.append({'key': key,
-                               'value': value,
-                               'created_at': created_at or current_time,
-                               'creator': creator or current_user})
+        for label in labels_list:
+            if label.key.lower() in lowercase_labels:
+                label.key = label.key.lower()
+                label.value = label.value.lower()
+            label.created_at = label.created_at or current_time
+            label.created_by = label.created_by or current_user
+            new_labels.append(label)
 
-        self.insert_labels(labels_resource_model, resource, new_labels)
+        self.insert_labels(labels_resource_model, resource,
+                           [label.to_dict() for label in new_labels])
 
     def insert_labels(self,
                       labels_resource_model,

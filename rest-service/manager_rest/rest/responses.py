@@ -153,14 +153,33 @@ class Tokens(object):
 
 
 @swagger.model
-class Label(object):
-
+class Label:
     resource_fields = {
         'key': fields.String,
         'value': fields.String,
         'created_at': fields.String,
         'created_by': fields.String,
     }
+
+    def __hash__(self):
+        return hash((self.key, self.value))
+
+    def __eq__(self, other):
+        # This must not compare created_at and created_by or we will not
+        # detect when duplicate labels are being added
+        return (
+            self.key == other.key
+            and self.value == other.value
+        )
+
+    def __repr__(self):
+        return str(self.to_dict())
+
+    def to_dict(self):
+        return {'key': self.key,
+                'value': self.value,
+                'created_at': self.created_at,
+                'created_by': self.created_by}
 
     def __init__(self, **kwargs):
         self.key = kwargs.get('key')
