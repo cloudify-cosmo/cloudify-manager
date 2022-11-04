@@ -1,11 +1,8 @@
 from dataclasses import dataclass, field
-from typing import Optional, ClassVar, Mapping, Union, TYPE_CHECKING
+from typing import Optional, ClassVar, Mapping, Union
 from flask_restful import fields
 from manager_rest.rest import swagger
-
-
-if TYPE_CHECKING:
-    from datetime import datetime
+from datetime import datetime
 
 
 @swagger.model

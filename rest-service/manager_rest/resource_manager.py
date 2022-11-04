@@ -7,7 +7,7 @@ import itertools
 from collections import defaultdict, namedtuple
 from copy import deepcopy
 from datetime import datetime
-from typing import Dict, List, Tuple, Type, TYPE_CHECKING, Union, Optional
+from typing import Dict, List, Tuple, Type, Union, Optional
 
 from flask import current_app
 from flask_security import current_user
@@ -54,6 +54,8 @@ from manager_rest.rest.rest_utils import (
 )
 from manager_rest.plugins_update.constants import STATES as PluginsUpdateStates
 
+from manager_rest.storage.resource_models_base import SQLResourceBase
+from manager_rest.storage.resource_models import LabelBase
 from manager_rest.storage import (db,
                                   get_storage_manager,
                                   models,
@@ -65,9 +67,6 @@ from . import app_context
 from . import workflow_executor
 from . import manager_exceptions
 
-if TYPE_CHECKING:
-    from manager_rest.storage.resource_models_base import SQLResourceBase
-    from manager_rest.storage.resource_models import LabelBase
 
 
 # used for keeping track how many executions are currently active, and how
