@@ -325,7 +325,7 @@ class BlueprintsId(resources_v2.BlueprintsId):
         if state == BlueprintUploadState.UPLOADED:
             if request_dict.get('labels'):
                 labels_list = [Label(**label)
-                               for label in request_dict.get('labels')]
+                               for label in request_dict['labels']]
             else:
                 labels_list = get_labels_from_plan(blueprint.plan,
                                                    constants.BLUEPRINT_LABELS)
