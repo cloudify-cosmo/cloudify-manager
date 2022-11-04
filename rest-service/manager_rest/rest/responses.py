@@ -155,7 +155,7 @@ class Tokens(object):
 
 
 @swagger.model
-@dataclass(kw_only=True, unsafe_hash=True)
+@dataclass(unsafe_hash=True)
 class Label:
     """A blueprint or deployment label."""
     key: str
