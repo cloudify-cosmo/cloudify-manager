@@ -693,3 +693,165 @@ node_templates:
         ]
         assert 'validate_agents' not in workflows
         assert 'install_new_agents' not in workflows
+
+    @pytest.mark.usefixtures('cloudmock_plugin')
+    def test_scenario_one(self):
+        bp_template = """
+tosca_definitions_version: cloudify_dsl_1_4
+
+imports:
+    - cloudify/types/types.yaml
+    - plugin:cloudmock
+
+node_types:
+    test_type:
+        derived_from: cloudify.nodes.Compute
+
+node_templates:
+    test:
+        type: cloudify.nodes.Root
+        capabilities:
+            scalable:
+                properties:
+                    default_instances: 0
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                start: {start_operation}
+                delete: {delete_operation}
+"""
+        bp1_yaml = bp_template.format(
+            start_operation='cloudmock.cloudmock.tasks.failing',
+            delete_operation='cloudmock.cloudmock.tasks.failing',
+        )
+        bp2_yaml = bp_template.format(
+            start_operation='cloudmock.cloudmock.tasks.mark_instance',
+            delete_operation='cloudmock.cloudmock.tasks.failing'
+        )
+
+        self.upload_blueprint_resource(
+            self.make_yaml_file(bp1_yaml),
+            blueprint_id='bp1',
+        )
+        self.upload_blueprint_resource(
+            self.make_yaml_file(bp2_yaml),
+            blueprint_id='bp2',
+        )
+
+        # create a deployment with a node that has 0 instances
+        dep = self.deploy(blueprint_id='bp1')
+        assert len(self.client.node_instances.list(deployment_id=dep.id)) == 0
+
+        # scale up the node, but the start operation is failing, so the scale
+        # fails as well
+        with self.assertRaises(RuntimeError):
+            self.execute_workflow('scale', dep.id, parameters={
+                'scalable_entity_name': 'test',
+                'delta': 1,
+                'rollback_if_failed': False,
+            })
+        instances = self.client.node_instances.list(deployment_id=dep.id)
+        assert len(instances) == 1
+        assert instances[0].state == 'starting'
+
+        # try to update the deployment with the blueprint for which the start
+        # operation would success. But! The delete operation still fails, so
+        # the instance cannot be uninstalled, therefore the update fails.
+        update_exc_id = self.client.deployment_updates.\
+            update_with_existing_blueprint(
+                deployment_id=dep.id,
+                blueprint_id='bp2',
+            ).execution_id
+        update_exc = self.client.executions.get(update_exc_id)
+        with self.assertRaises(RuntimeError):
+            self.wait_for_execution_to_end(update_exc)
+
+        instances = self.client.node_instances.list(deployment_id=dep.id)
+        assert len(instances) == 1
+        assert instances[0].state == 'deleting'
+
+        # in an attempt to fix the deployment state, try to do the same thing
+        # again, but with ignore_failure=True. This then does nothing, because
+        # the deployment is already updated to bp2, so everything is
+        # "already as it should be"
+        update_exc_id = self.client.deployment_updates.\
+            update_with_existing_blueprint(
+                deployment_id=dep.id,
+                blueprint_id='bp2',
+                ignore_failure=True,
+            ).execution_id
+        update_exc = self.client.executions.get(update_exc_id)
+        self.wait_for_execution_to_end(update_exc)
+
+        instances = self.client.node_instances.list(deployment_id=dep.id)
+        assert len(instances) == 1
+        assert instances[0].state == 'deleting'
+
+
+        # well, we have one node-instance that we don't know what to do with.
+        # It's invalid, but how do we delete it? Attempt to scale back down.
+        # However, this fails, because scale thinks current amount of
+        # instances is already 0.
+        # BUT THIS REALLY SHOULDN'T FAIL.
+        with self.assertRaises(RuntimeError):
+            self.execute_workflow('scale', dep.id, parameters={
+                'scalable_entity_name': 'test',
+                'delta': -1,
+            })
+
+    @pytest.mark.usefixtures('cloudmock_plugin')
+    def test_scenario_two(self):
+        bp_yaml = """
+tosca_definitions_version: cloudify_dsl_1_4
+
+imports:
+    - cloudify/types/types.yaml
+    - plugin:cloudmock
+
+node_types:
+    test_type:
+        derived_from: cloudify.nodes.Compute
+
+node_templates:
+    test:
+        type: cloudify.nodes.Root
+        capabilities:
+            scalable:
+                properties:
+                    default_instances: 0
+"""
+
+        self.upload_blueprint_resource(
+            self.make_yaml_file(bp_yaml),
+            blueprint_id='bp1',
+        )
+        self.upload_blueprint_resource(
+            self.make_yaml_file(bp_yaml),
+            blueprint_id='bp2',
+        )
+
+        # create a deployment with a node that has 0 instances
+        dep = self.deploy(blueprint_id='bp1')
+        assert len(self.client.node_instances.list(deployment_id=dep.id)) == 0
+
+        # scale it up, so now there's 1 instance
+        self.execute_workflow('scale', dep.id, parameters={
+            'scalable_entity_name': 'test',
+            'delta': 1,
+        })
+        instances = self.client.node_instances.list(deployment_id=dep.id)
+        assert len(instances) == 1
+        assert instances[0].state == 'started'
+
+        # update the deployment to a blueprint which has default_instances=0,
+        # then there's 0 instances indeed. It probably SHOULD NOT be 0, because
+        # it's only the "default".
+        update_exc_id = self.client.deployment_updates.\
+            update_with_existing_blueprint(
+                deployment_id=dep.id,
+                blueprint_id='bp2',
+            ).execution_id
+        update_exc = self.client.executions.get(update_exc_id)
+        self.wait_for_execution_to_end(update_exc)
+
+        instances = self.client.node_instances.list(deployment_id=dep.id)
+        assert len(instances) == 0
