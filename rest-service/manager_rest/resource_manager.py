@@ -7,7 +7,7 @@ import itertools
 from collections import defaultdict, namedtuple
 from copy import deepcopy
 from datetime import datetime
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Type, TYPE_CHECKING
 
 from flask import current_app
 from flask_security import current_user
@@ -64,6 +64,12 @@ from . import config
 from . import app_context
 from . import workflow_executor
 from . import manager_exceptions
+
+if TYPE_CHECKING:
+    from manager_rest.storage.resource_models_base import (
+        LabelBase,
+        SqlResourceBase,
+    )
 
 
 # used for keeping track how many executions are currently active, and how
@@ -2666,11 +2672,11 @@ class ResourceManager(object):
         workflow_executor.send_hook(event)
 
     def update_resource_labels(self,
-                               labels_resource_model,
-                               resource,
-                               new_labels,
-                               creator=None,
-                               created_at=None):
+                               labels_resource_model: Type[LabelBase],
+                               resource: SqlResourceBase,
+                               new_labels: list[Label],
+                               creator: str = None,
+                               created_at: str = None):
         """
         Updating the resource labels.
 
@@ -2692,7 +2698,7 @@ class ResourceManager(object):
                                     creator=creator,
                                     created_at=created_at)
 
-    def is_computed_label(self, resource, key):
+    def is_computed_label(self, resource: SqlResourceBase, key: str):
         """Is this label computed by the manager?
 
         Some labels aren't governed by the user, but are set by the manager
@@ -2704,7 +2710,8 @@ class ResourceManager(object):
                 return True
         return False
 
-    def get_labels_to_create(self, resource, new_labels):
+    def get_labels_to_create(self, resource: SqlResourceBase,
+                             new_labels: list[Label]):
         new_labels_set = {
             label for label in new_labels
             if not self.is_computed_label(resource, label.key)
@@ -2714,7 +2721,8 @@ class ResourceManager(object):
 
         return new_labels_set - existing_labels
 
-    def get_labels_to_delete(self, resource, new_labels):
+    def get_labels_to_delete(self, resource: SqlResourceBase,
+                             new_labels: list[Label]):
         labels_to_delete = set()
         new_labels_set = set(new_labels)
         for label in resource.labels:
@@ -2726,11 +2734,11 @@ class ResourceManager(object):
         return labels_to_delete
 
     def create_resource_labels(self,
-                               labels_resource_model,
-                               resource,
-                               labels_list,
-                               creator=None,
-                               created_at=None):
+                               labels_resource_model: Type[LabelBase],
+                               resource: SqlResourceBase,
+                               labels_list: list[Label],
+                               creator: str = None,
+                               created_at: str = None):
         """
         Populate the resource_labels table.
 
