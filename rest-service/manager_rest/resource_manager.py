@@ -7,7 +7,7 @@ import itertools
 from collections import defaultdict, namedtuple
 from copy import deepcopy
 from datetime import datetime
-from typing import Dict, List, Tuple, Type, TYPE_CHECKING
+from typing import Dict, List, Tuple, Type, TYPE_CHECKING, Union, Optional
 
 from flask import current_app
 from flask_security import current_user
@@ -2674,7 +2674,8 @@ class ResourceManager(object):
                                resource: SQLResourceBase,
                                new_labels: list[Label],
                                creator: str = None,
-                               created_at: str = None):
+                               created_at: Union[Optional[str],
+                                                 datetime] = None):
         """
         Updating the resource labels.
 
@@ -2736,7 +2737,8 @@ class ResourceManager(object):
                                resource: SQLResourceBase,
                                labels_list: list[Label],
                                creator: str = None,
-                               created_at: str = None):
+                               created_at: Union[Optional[str],
+                                                 datetime] = None):
         """
         Populate the resource_labels table.
 

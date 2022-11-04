@@ -1,7 +1,11 @@
 from dataclasses import dataclass, field
-from typing import Optional, ClassVar, Mapping
+from typing import Optional, ClassVar, Mapping, Union, TYPE_CHECKING
 from flask_restful import fields
 from manager_rest.rest import swagger
+
+
+if TYPE_CHECKING:
+    from datetime import datetime
 
 
 @swagger.model
@@ -160,7 +164,8 @@ class Label:
     """A blueprint or deployment label."""
     key: str
     value: str
-    created_at: Optional[str] = field(default=None, compare=False)
+    created_at: Union[Optional[str],
+                      datetime] = field(default=None, compare=False)
     created_by: Optional[str] = field(default=None, compare=False)
 
     resource_fields: ClassVar[Mapping] = {
