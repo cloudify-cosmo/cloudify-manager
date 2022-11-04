@@ -31,7 +31,7 @@ from dsl_parser.constraints import extract_constraints, validate_input_value
 from dsl_parser import exceptions as dsl_exceptions
 
 from manager_rest import config, manager_exceptions
-from manager_rest.rest.responses import Workflow, Label, LABEL_FIELDS
+from manager_rest.rest.responses import Workflow, Label
 from manager_rest.utils import (get_rrule,
                                 classproperty,
                                 files_in_folder)
@@ -121,7 +121,7 @@ class Blueprint(CreatedAtMixin, SQLResourceBase):
     def response_fields(cls):
         fields = super(Blueprint, cls).response_fields
         fields['labels'] = flask_fields.List(
-            flask_fields.Nested(LABEL_FIELDS))
+            flask_fields.Nested(Label.resource_fields))
         fields['upload_execution'] = flask_fields.Nested(
             Execution.resource_fields)
         return fields
@@ -535,7 +535,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         if not hasattr(cls, '_cached_deployment_fields'):
             fields = super(Deployment, cls).response_fields
             fields['labels'] = flask_fields.List(
-                flask_fields.Nested(LABEL_FIELDS))
+                flask_fields.Nested(Label.resource_fields))
             fields.pop('deployment_group_id', None)
             fields['workflows'] = flask_fields.List(
                 flask_fields.Nested(Workflow.resource_fields)
