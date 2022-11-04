@@ -322,13 +322,12 @@ class BlueprintsId(resources_v2.BlueprintsId):
                         tenant=blueprint.tenant.name)
 
         labels_list = None
-        if state == BlueprintUploadState.UPLOADED:
-            if request_dict.get('labels'):
-                labels_list = [Label(**label)
-                               for label in request_dict['labels']]
-            else:
-                labels_list = get_labels_from_plan(blueprint.plan,
-                                                   constants.BLUEPRINT_LABELS)
+        if request_dict.get('labels'):
+            labels_list = [Label(**label)
+                           for label in request_dict['labels']]
+        if state == BlueprintUploadState.UPLOADED and not labels_list:
+            labels_list = get_labels_from_plan(blueprint.plan,
+                                               constants.BLUEPRINT_LABELS)
 
         if labels_list:
             check_state = state or blueprint.state
