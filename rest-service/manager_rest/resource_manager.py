@@ -2756,7 +2756,7 @@ class ResourceManager(object):
                 label.key = label.key.lower()
                 label.value = label.value.lower()
             label.created_at = label.created_at or current_time
-            label.created_by = label.created_by or current_user
+            label.created_by = label.created_by or current_user.username
             new_labels.append(label.to_dict())
 
         self.insert_labels(labels_resource_model, resource, new_labels)
