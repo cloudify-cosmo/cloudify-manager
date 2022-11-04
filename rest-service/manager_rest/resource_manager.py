@@ -2722,10 +2722,10 @@ class ResourceManager(object):
         labels_to_delete = set()
         new_labels_set = set(new_labels)
         for label in resource.labels:
-            label = Label(label.key, label.value)
+            cmp_label = Label(label.key, label.value)
             if self.is_computed_label(resource, label.key):
                 continue
-            if label not in new_labels_set:
+            if cmp_label not in new_labels_set:
                 labels_to_delete.add(label)
         return labels_to_delete
 
