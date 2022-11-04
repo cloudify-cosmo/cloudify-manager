@@ -109,7 +109,7 @@ virtualenv==15.1.0
     # via cloudify-agent
 wagon==0.11.2
     # via cloudify-common
-wheel==0.37.1
+wheel==0.38.1
     # via wagon
 yarl==1.8.1
     # via aiohttp
