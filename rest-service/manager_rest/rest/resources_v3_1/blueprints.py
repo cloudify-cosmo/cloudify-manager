@@ -323,7 +323,7 @@ class BlueprintsId(resources_v2.BlueprintsId):
                         tenant=blueprint.tenant.name)
 
         labels_list = None
-        if request_dict.get('labels'):
+        if request_dict.get('labels') is not None:
             raw_list = request_dict['labels']
             if all(
                 'key' in label and 'value' in label
@@ -333,11 +333,11 @@ class BlueprintsId(resources_v2.BlueprintsId):
                                for label in raw_list]
             else:
                 labels_list = get_labels_list(raw_list)
-        if state == BlueprintUploadState.UPLOADED and not labels_list:
+        if state == BlueprintUploadState.UPLOADED and labels_list is None:
             labels_list = get_labels_from_plan(blueprint.plan,
                                                constants.BLUEPRINT_LABELS)
 
-        if labels_list:
+        if labels_list is not None:
             check_state = state or blueprint.state
             if check_state != BlueprintUploadState.UPLOADED:
                 raise ConflictError(
