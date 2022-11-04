@@ -28,6 +28,7 @@ from manager_rest.rest import (
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.utils import get_formatted_timestamp, remove
 from manager_rest.rest.rest_utils import (get_labels_from_plan,
+                                          get_labels_list,
                                           get_args_and_verify_arguments)
 from manager_rest.rest.responses import Label
 from manager_rest.manager_exceptions import (ConflictError,
@@ -323,8 +324,15 @@ class BlueprintsId(resources_v2.BlueprintsId):
 
         labels_list = None
         if request_dict.get('labels'):
-            labels_list = [Label(**label)
-                           for label in request_dict['labels']]
+            raw_list = request_dict['labels']
+            if all(
+                'key' in label and 'value' in label
+                for label in raw_list
+            ):
+                labels_list = [Label(**label)
+                               for label in raw_list]
+            else:
+                labels_list = get_labels_list(raw_list)
         if state == BlueprintUploadState.UPLOADED and not labels_list:
             labels_list = get_labels_from_plan(blueprint.plan,
                                                constants.BLUEPRINT_LABELS)
