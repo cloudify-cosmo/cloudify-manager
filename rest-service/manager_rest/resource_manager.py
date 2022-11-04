@@ -68,7 +68,6 @@ from . import workflow_executor
 from . import manager_exceptions
 
 
-
 # used for keeping track how many executions are currently active, and how
 # many can the group still run
 _ExecGroupStats = namedtuple('_ExecGroupStats', ['active', 'concurrency'])
