@@ -1071,13 +1071,13 @@ class DeploymentGroupsId(SecuredResource):
         deployment_ids = [d._storage_id for d in deployments]
         target_deployments = set()
         created_labels = set()
-        for key, value in labels_to_create:
+        for new_label in labels_to_create:
             if not deployment_ids:
                 existing_labels = []
             else:
                 existing_labels = sm.list(models.DeploymentLabel, filters={
-                    'key': key,
-                    'value': value,
+                    'key': new_label.key,
+                    'value': new_label.value,
                     '_labeled_model_fk': deployment_ids
                 }, get_all_results=True)
             skip_deployments = {
@@ -1087,7 +1087,7 @@ class DeploymentGroupsId(SecuredResource):
             for dep in deployments:
                 if dep._storage_id in skip_deployments:
                     continue
-                created_labels.add((key, value))
+                created_labels.add(new_label)
                 target_deployments.add(dep)
         return target_deployments, created_labels
 
