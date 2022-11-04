@@ -66,10 +66,8 @@ from . import workflow_executor
 from . import manager_exceptions
 
 if TYPE_CHECKING:
-    from manager_rest.storage.resource_models_base import (
-        LabelBase,
-        SqlResourceBase,
-    )
+    from manager_rest.storage.resource_models_base import SQLResourceBase
+    from manager_rest.storage.resource_models import LabelBase
 
 
 # used for keeping track how many executions are currently active, and how
@@ -2673,7 +2671,7 @@ class ResourceManager(object):
 
     def update_resource_labels(self,
                                labels_resource_model: Type[LabelBase],
-                               resource: SqlResourceBase,
+                               resource: SQLResourceBase,
                                new_labels: list[Label],
                                creator: str = None,
                                created_at: str = None):
@@ -2698,7 +2696,7 @@ class ResourceManager(object):
                                     creator=creator,
                                     created_at=created_at)
 
-    def is_computed_label(self, resource: SqlResourceBase, key: str):
+    def is_computed_label(self, resource: SQLResourceBase, key: str):
         """Is this label computed by the manager?
 
         Some labels aren't governed by the user, but are set by the manager
@@ -2710,7 +2708,7 @@ class ResourceManager(object):
                 return True
         return False
 
-    def get_labels_to_create(self, resource: SqlResourceBase,
+    def get_labels_to_create(self, resource: SQLResourceBase,
                              new_labels: list[Label]):
         new_labels_set = {
             label for label in new_labels
@@ -2721,7 +2719,7 @@ class ResourceManager(object):
 
         return new_labels_set - existing_labels
 
-    def get_labels_to_delete(self, resource: SqlResourceBase,
+    def get_labels_to_delete(self, resource: SQLResourceBase,
                              new_labels: list[Label]):
         labels_to_delete = set()
         new_labels_set = set(new_labels)
@@ -2735,7 +2733,7 @@ class ResourceManager(object):
 
     def create_resource_labels(self,
                                labels_resource_model: Type[LabelBase],
-                               resource: SqlResourceBase,
+                               resource: SQLResourceBase,
                                labels_list: list[Label],
                                creator: str = None,
                                created_at: str = None):
