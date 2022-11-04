@@ -1715,28 +1715,28 @@ class ResourceManager(object):
         return new_deployment
 
     @staticmethod
-    def get_deployment_parents_from_labels(labels):
+    def get_deployment_parents_from_labels(labels: list[Label]):
         parents = []
         labels = labels or []
-        for label_key, label_value in labels:
-            if label_key == 'csys-obj-parent':
-                parents.append(label_value)
+        for label in labels:
+            if label.key == 'csys-obj-parent':
+                parents.append(label.value)
         return parents
 
-    def get_object_types_from_labels(self, labels):
+    def get_object_types_from_labels(self, labels: list[Label]):
         obj_types = set()
-        for key, value in labels:
-            if key == 'csys-obj-type' and value:
-                obj_types.add(value)
+        for label in labels:
+            if label.key == 'csys-obj-type' and label.value:
+                obj_types.add(label.value)
         return obj_types
 
-    def get_deployment_object_types_from_labels(self, resource, labels):
+    def get_deployment_object_types_from_labels(self,
+                                                resource: SQLResourceBase,
+                                                labels: list[Label]):
         labels_to_add = self.get_labels_to_create(resource, labels)
         labels_to_delete = self.get_labels_to_delete(resource, labels)
         created_types = self.get_object_types_from_labels(labels_to_add)
-        delete_types = self.get_object_types_from_labels(
-            [(label.key, label.value) for label in labels_to_delete]
-        )
+        delete_types = self.get_object_types_from_labels(labels_to_delete)
         return created_types, delete_types
 
     def get_missing_deployment_parents(self, parents):
