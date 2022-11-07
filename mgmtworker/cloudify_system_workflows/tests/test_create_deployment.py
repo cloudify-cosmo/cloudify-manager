@@ -1,4 +1,3 @@
-
 import mock
 import pytest
 
@@ -103,14 +102,14 @@ def test_labels_from_plan(mock_ctx, mock_client, blueprint_plan):
 
 
 def test_labels_from_kwargs(mock_ctx, mock_client):
-    create(mock_ctx, labels=[('a', 'b')])
+    create(mock_ctx, labels=[{'key': 'a', 'value': 'b'}])
     call = mock_client.deployments.set_attributes.mock_calls[0]
     assert call.kwargs['labels'] == [{'a': 'b'}]
 
 
 def test_labels_from_plan_and_kwargs(mock_ctx, mock_client, blueprint_plan):
     blueprint_plan['labels'] = {'a': {'values': ['c']}}
-    create(mock_ctx, labels=[('a', 'b')])
+    create(mock_ctx, labels=[{'key': 'a', 'value': 'b'}])
     call = mock_client.deployments.set_attributes.mock_calls[0]
     assert len(call.kwargs['labels']) == 2
     assert {'a': 'b'} in call.kwargs['labels']
