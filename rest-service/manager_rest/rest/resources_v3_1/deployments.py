@@ -1031,8 +1031,9 @@ class DeploymentGroupsId(SecuredResource):
         rm = get_resource_manager()
         new_labels = set(rest_utils.get_labels_list(raw_labels))
         labels_to_create = rm.get_labels_to_create(group, new_labels)
-        labels_to_delete = {label for label in group.labels
-                            if label not in new_labels}
+        labels_to_delete = {
+            label for label in group.labels
+            if Label(label.key, label.value) not in new_labels}
         # Handle all created label process
         new_parents = rm.get_deployment_parents_from_labels(labels_to_create)
         changed_deps = set()
@@ -1256,7 +1257,7 @@ class DeploymentGroupsId(SecuredResource):
         new_id, is_id_unique = self._new_deployment_id(group, new_dep_spec)
         inputs = new_dep_spec.get('inputs', {})
         labels = rest_utils.get_labels_list(new_dep_spec.get('labels') or [])
-        labels.extend([Label(*label) for label in  group_labels])
+        labels.extend([Label(*label) for label in group_labels])
         deployment_inputs = (group.default_inputs or {}).copy()
         deployment_inputs.update(inputs)
         dep = rm.create_deployment(
