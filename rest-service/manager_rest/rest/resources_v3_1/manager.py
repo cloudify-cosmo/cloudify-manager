@@ -28,13 +28,13 @@ from manager_rest.rest import rest_utils
 from manager_rest.storage import get_storage_manager, models
 from manager_rest.security.authorization import (
     authorize,
-    is_user_action_allowed
+    is_user_action_allowed,
+    check_user_action_allowed,
 )
 from manager_rest.rest.rest_decorators import (
     marshal_with,
     paginate
 )
-
 try:
     from cloudify_premium import manager as manager_premium
 except ImportError:
@@ -310,3 +310,15 @@ class FileServerProxy(SecuredResource):
             return self._get_local_fileserver_response(original_uri)
 
         return {}, 404
+
+
+class MonitoringAuth(SecuredResource):
+    """Auth endpoint for monitoring.
+
+    Users who access /monitoring need to first pass through auth_request
+    proxying to here. If this returns 200, the user has full access
+    to local prometheus.
+    """
+    def get(self, **_):
+        check_user_action_allowed("monitoring")
+        return "", 200
