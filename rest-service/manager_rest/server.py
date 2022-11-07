@@ -50,7 +50,7 @@ def manager_exception(error):
         current_app.logger.debug(error)
     else:
         current_app.logger.error(error)
-    return error.to_response(), error.status_code
+    return error.to_response(), error.status_code, error.additional_headers
 
 
 @app_errors.app_errorhandler(InternalServerError)
