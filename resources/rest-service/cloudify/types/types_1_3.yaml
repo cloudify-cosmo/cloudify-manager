@@ -687,6 +687,13 @@ workflows:
   install:
     mapping: default_workflows.cloudify.plugins.workflows.install
     is_cascading: false
+    parameters:
+      type_names:
+        default: []
+      node_ids:
+        default: []
+      node_instance_ids:
+        default: []
 
   check_status:
     mapping: default_workflows.cloudify.plugins.workflows.check_status
@@ -721,6 +728,26 @@ workflows:
       ignore_failure:
         default: false
         type: boolean
+      type_names:
+        default: []
+      node_ids:
+        default: []
+      node_instance_ids:
+        default: []
+
+  reinstall:
+    mapping: default_workflows.cloudify.plugins.workflows.reinstall
+    is_cascading: false
+    parameters:
+      ignore_failure:
+        default: false
+        type: boolean
+      type_names:
+        default: []
+      node_ids:
+        default: []
+      node_instance_ids:
+        default: []
 
   start:
     mapping: default_workflows.cloudify.plugins.workflows.start
