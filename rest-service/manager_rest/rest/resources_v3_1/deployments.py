@@ -49,6 +49,7 @@ from manager_rest.rest import (
     responses_v3,
     swagger,
 )
+from manager_rest.rest.responses import Label
 from ..responses_v2 import ListResponse
 
 
@@ -1113,18 +1114,15 @@ class DeploymentGroupsId(SecuredResource):
                 )
             )
 
-    def _get_labels_from_group(self, group):
-        return [(label.key, label.value) for label in group.labels]
-
     def _process_labels_after_adding_deployments_to_group(self,
                                                           sm,
                                                           rm,
                                                           group,
                                                           deployments):
-        group_labels = self._get_labels_from_group(group)
         _target_deployments, labels_to_add = \
             self._get_deployments_and_labels_to_add(
-                sm, deployments, group_labels
+                sm, deployments, [Label(label.key, label.value)
+                                  for label in group.labels],
             )
         # Update deployment conversion which could be from service to env or
         # vice versa
