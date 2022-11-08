@@ -39,6 +39,7 @@ from manager_rest import manager_exceptions, config, app_context
 from manager_rest.utils import (parse_recurrence,
                                 is_administrator,
                                 get_formatted_timestamp)
+from manager_rest.rest.responses import Label
 
 
 states_except_private = copy.deepcopy(VisibilityState.STATES)
@@ -586,7 +587,7 @@ def get_labels_list(raw_labels_list):
         values_list = raw_value if isinstance(raw_value, list) else [raw_value]
         for value in values_list:
             parsed_key, parsed_value = parse_label(key, value)
-            labels_list.append((parsed_key, parsed_value))
+            labels_list.append(Label(key=parsed_key, value=parsed_value))
 
     test_unique_labels(labels_list)
     return labels_list
