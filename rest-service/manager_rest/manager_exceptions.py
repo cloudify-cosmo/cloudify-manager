@@ -13,12 +13,15 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import typing
+
 from flask import jsonify
 
 INTERNAL_SERVER_ERROR_CODE = 'internal_server_error'
 
 
 class ManagerException(Exception):
+    additional_headers: typing.ClassVar[dict[str, str]] = {}
     error_code = INTERNAL_SERVER_ERROR_CODE
     status_code = 500
 
@@ -150,6 +153,13 @@ class UnauthorizedError(ManagerException):
 
 class NoAuthProvided(UnauthorizedError):
     """Not authorized, because authentication was not provided."""
+
+    additional_headers: typing.ClassVar[dict[str, str]] = {
+        # if the user received this error in a browser, they'll be greeted
+        # with the basic auth prompt, rather than just an error page
+        'WWW-Authenticate': 'Basic',
+    }
+
     def __init__(self, *args, **kwargs):
         super().__init__('No authentication info provided', *args, **kwargs)
 
