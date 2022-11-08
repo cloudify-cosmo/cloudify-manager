@@ -49,6 +49,7 @@ from manager_rest.rest import (
     responses_v3,
     swagger,
 )
+from manager_rest.rest.responses import Label
 from ..responses_v2 import ListResponse
 
 
@@ -1030,17 +1031,16 @@ class DeploymentGroupsId(SecuredResource):
         rm = get_resource_manager()
         new_labels = set(rest_utils.get_labels_list(raw_labels))
         labels_to_create = rm.get_labels_to_create(group, new_labels)
-        labels_to_delete = {label for label in group.labels
-                            if (label.key, label.value) not in new_labels}
-        _labels_to_delete = [(label.key, label.value)
-                             for label in labels_to_delete]
+        labels_to_delete = {
+            label for label in group.labels
+            if Label(label.key, label.value) not in new_labels}
         # Handle all created label process
         new_parents = rm.get_deployment_parents_from_labels(labels_to_create)
         changed_deps = set()
         converted_deps = self._handle_resource_counts_after_source_conversion(
             group.deployments,
             labels_to_create,
-            _labels_to_delete
+            labels_to_delete
         )
         changed_deps |= converted_deps
         deployments, created_labels = \
@@ -1056,7 +1056,7 @@ class DeploymentGroupsId(SecuredResource):
         self._delete_deployments_labels(
             sm, group.deployments, labels_to_delete)
         deleted_parents = self._delete_parents_from_deployments_group(
-                sm, group.deployments, _labels_to_delete)
+                sm, group.deployments, labels_to_delete)
         if deleted_parents:
             changed_deps |= deleted_parents
         rm.create_resource_labels(
@@ -1071,13 +1071,13 @@ class DeploymentGroupsId(SecuredResource):
         deployment_ids = [d._storage_id for d in deployments]
         target_deployments = set()
         created_labels = set()
-        for key, value in labels_to_create:
+        for new_label in labels_to_create:
             if not deployment_ids:
                 existing_labels = []
             else:
                 existing_labels = sm.list(models.DeploymentLabel, filters={
-                    'key': key,
-                    'value': value,
+                    'key': new_label.key,
+                    'value': new_label.value,
                     '_labeled_model_fk': deployment_ids
                 }, get_all_results=True)
             skip_deployments = {
@@ -1087,7 +1087,7 @@ class DeploymentGroupsId(SecuredResource):
             for dep in deployments:
                 if dep._storage_id in skip_deployments:
                     continue
-                created_labels.add((key, value))
+                created_labels.add(new_label)
                 target_deployments.add(dep)
         return target_deployments, created_labels
 
@@ -1113,18 +1113,15 @@ class DeploymentGroupsId(SecuredResource):
                 )
             )
 
-    def _get_labels_from_group(self, group):
-        return [(label.key, label.value) for label in group.labels]
-
     def _process_labels_after_adding_deployments_to_group(self,
                                                           sm,
                                                           rm,
                                                           group,
                                                           deployments):
-        group_labels = self._get_labels_from_group(group)
         _target_deployments, labels_to_add = \
             self._get_deployments_and_labels_to_add(
-                sm, deployments, group_labels
+                sm, deployments, [Label(label.key, label.value)
+                                  for label in group.labels],
             )
         # Update deployment conversion which could be from service to env or
         # vice versa
@@ -1200,7 +1197,6 @@ class DeploymentGroupsId(SecuredResource):
                        for spec in new_deployments):
                 rm.check_blueprint_plugins_installed(
                     group.default_blueprint.plan)
-            group_labels = [(label.key, label.value) for label in group.labels]
             deployment_count = len(group.deployments)
             create_exec_group = models.ExecutionGroup(
                 id=str(uuid.uuid4()),
@@ -1213,7 +1209,7 @@ class DeploymentGroupsId(SecuredResource):
             self._prepare_sites(sm, new_deployments)
             for new_dep_spec in new_deployments:
                 dep = self._make_new_group_deployment(
-                    rm, group, new_dep_spec, deployment_count, group_labels)
+                    rm, group, new_dep_spec, deployment_count, group.labels)
                 group.deployments.append(dep)
                 create_exec_group.executions.append(dep.create_execution)
                 deployment_count += 1
@@ -1260,7 +1256,8 @@ class DeploymentGroupsId(SecuredResource):
         new_id, is_id_unique = self._new_deployment_id(group, new_dep_spec)
         inputs = new_dep_spec.get('inputs', {})
         labels = rest_utils.get_labels_list(new_dep_spec.get('labels') or [])
-        labels += group_labels
+        labels.extend(Label(key=label.key, value=label.value)
+                      for label in group_labels)
         deployment_inputs = (group.default_inputs or {}).copy()
         deployment_inputs.update(inputs)
         dep = rm.create_deployment(

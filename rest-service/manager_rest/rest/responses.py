@@ -1,5 +1,8 @@
+from dataclasses import dataclass, field, asdict
+from typing import Optional, ClassVar, Mapping
 from flask_restful import fields
 from manager_rest.rest import swagger
+from datetime import datetime
 
 
 @swagger.model
@@ -153,17 +156,20 @@ class Tokens(object):
 
 
 @swagger.model
-class Label(object):
+@dataclass(unsafe_hash=True)
+class Label:
+    """A blueprint or deployment label."""
+    key: str
+    value: str
+    created_at: Optional[str | datetime] = field(default=None, compare=False)
+    created_by: Optional[str] = field(default=None, compare=False)
 
-    resource_fields = {
+    resource_fields: ClassVar[Mapping] = {
         'key': fields.String,
         'value': fields.String,
         'created_at': fields.String,
         'created_by': fields.String,
     }
 
-    def __init__(self, **kwargs):
-        self.key = kwargs.get('key')
-        self.value = kwargs.get('value')
-        self.created_at = kwargs.get('created_at')
-        self.created_by = kwargs.get('created_by')
+    def to_dict(self) -> dict:
+        return asdict(self)
