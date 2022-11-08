@@ -1197,7 +1197,6 @@ class DeploymentGroupsId(SecuredResource):
                        for spec in new_deployments):
                 rm.check_blueprint_plugins_installed(
                     group.default_blueprint.plan)
-            group_labels = [(label.key, label.value) for label in group.labels]
             deployment_count = len(group.deployments)
             create_exec_group = models.ExecutionGroup(
                 id=str(uuid.uuid4()),
@@ -1210,7 +1209,7 @@ class DeploymentGroupsId(SecuredResource):
             self._prepare_sites(sm, new_deployments)
             for new_dep_spec in new_deployments:
                 dep = self._make_new_group_deployment(
-                    rm, group, new_dep_spec, deployment_count, group_labels)
+                    rm, group, new_dep_spec, deployment_count, group.labels)
                 group.deployments.append(dep)
                 create_exec_group.executions.append(dep.create_execution)
                 deployment_count += 1
@@ -1257,7 +1256,8 @@ class DeploymentGroupsId(SecuredResource):
         new_id, is_id_unique = self._new_deployment_id(group, new_dep_spec)
         inputs = new_dep_spec.get('inputs', {})
         labels = rest_utils.get_labels_list(new_dep_spec.get('labels') or [])
-        labels.extend([Label(*label) for label in group_labels])
+        labels.extend(Label(key=label.key, value=label.value)
+                      for label in group_labels)
         deployment_inputs = (group.default_inputs or {}).copy()
         deployment_inputs.update(inputs)
         dep = rm.create_deployment(
