@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from typing import Optional, ClassVar, Mapping
 from flask_restful import fields
 from manager_rest.rest import swagger
@@ -172,7 +172,4 @@ class Label:
     }
 
     def to_dict(self) -> dict:
-        return {'key': self.key,
-                'value': self.value,
-                'created_at': self.created_at,
-                'created_by': self.created_by}
+        return asdict(self)
