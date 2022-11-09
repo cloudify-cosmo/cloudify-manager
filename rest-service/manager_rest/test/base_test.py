@@ -273,6 +273,7 @@ class BaseServerTestCase(unittest.TestCase):
                         client.nodes.types.api = mock_http_client
                         client.deployments.scaling_groups.api = \
                             mock_http_client
+                        client.secret_providers.api = mock_http_client
 
         return client
 
