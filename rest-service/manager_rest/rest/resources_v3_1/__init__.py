@@ -28,6 +28,7 @@ from .manager import (                           # NOQA
     DBNodes,
     FileServerIndex,
     FileServerProxy,
+    MonitoringAuth,
 )
 
 from .manager_config import (                    # NOQA

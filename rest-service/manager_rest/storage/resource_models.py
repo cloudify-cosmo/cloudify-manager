@@ -773,14 +773,21 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                 parents.append(label.value)
         return parents
 
-    def make_create_environment_execution(self, inputs=None, **params):
+    def make_create_environment_execution(
+        self, inputs=None,
+        labels: Optional[list[Label]] = None,
+        **kwargs
+    ):
         if inputs is not None and self.blueprint and self.blueprint.plan:
             self._validate_inputs(inputs)
+        params = {'inputs': inputs, **kwargs}
+        if labels:
+            params['labels'] = [label.to_dict() for label in labels]
         self.create_execution = Execution(
             workflow_id='create_deployment_environment',
             deployment=self,
             status=ExecutionState.PENDING,
-            parameters={'inputs': inputs, **params},
+            parameters=params,
         )
         self.latest_execution = self.create_execution
         return self.create_execution

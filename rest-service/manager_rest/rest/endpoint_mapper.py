@@ -90,6 +90,7 @@ def setup_resources(api):
         'UsersActive': 'users/active/<string:username>',
         'UsersUnlock': 'users/unlock/<string:username>',
         'FileServerAuth': 'file-server-auth',
+        'MonitoringAuth': 'monitoring-auth',
         'FileServerProxy': [
             'file-server-proxy/',
             'file-server-proxy/<path:uri>',

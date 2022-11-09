@@ -808,7 +808,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
 
         resource_path = '/deployments/{0}'.format(deployment_id)
         workflows = self.get(resource_path).json['workflows']
-        self.assertEqual(15, len(workflows))
+        self.assertEqual(16, len(workflows))
         workflow: Optional[Dict] = next(
             (
                 workflow for workflow in workflows

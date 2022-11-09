@@ -7,7 +7,7 @@ import itertools
 from collections import defaultdict, namedtuple
 from copy import deepcopy
 from datetime import datetime
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 
 from flask import current_app
 from flask_security import current_user
@@ -46,6 +46,7 @@ from manager_rest.utils import (get_formatted_timestamp,
                                 validate_global_modification,
                                 validate_deployment_and_site_visibility,
                                 extract_host_agent_plugins_from_plan)
+from manager_rest.rest.responses import Label
 from manager_rest.rest.rest_utils import (
     update_inter_deployment_dependencies,
     verify_blueprint_uploaded_state,
@@ -53,6 +54,8 @@ from manager_rest.rest.rest_utils import (
 )
 from manager_rest.plugins_update.constants import STATES as PluginsUpdateStates
 
+from manager_rest.storage.resource_models_base import SQLResourceBase
+from manager_rest.storage.resource_models import LabelBase
 from manager_rest.storage import (db,
                                   get_storage_manager,
                                   models,
@@ -1712,28 +1715,28 @@ class ResourceManager(object):
         return new_deployment
 
     @staticmethod
-    def get_deployment_parents_from_labels(labels):
+    def get_deployment_parents_from_labels(labels: list[Label]):
         parents = []
         labels = labels or []
-        for label_key, label_value in labels:
-            if label_key == 'csys-obj-parent':
-                parents.append(label_value)
+        for label in labels:
+            if label.key == 'csys-obj-parent':
+                parents.append(label.value)
         return parents
 
-    def get_object_types_from_labels(self, labels):
+    def get_object_types_from_labels(self, labels: list[Label]):
         obj_types = set()
-        for key, value in labels:
-            if key == 'csys-obj-type' and value:
-                obj_types.add(value)
+        for label in labels:
+            if label.key == 'csys-obj-type' and label.value:
+                obj_types.add(label.value)
         return obj_types
 
-    def get_deployment_object_types_from_labels(self, resource, labels):
+    def get_deployment_object_types_from_labels(self,
+                                                resource: SQLResourceBase,
+                                                labels: list[Label]):
         labels_to_add = self.get_labels_to_create(resource, labels)
         labels_to_delete = self.get_labels_to_delete(resource, labels)
         created_types = self.get_object_types_from_labels(labels_to_add)
-        delete_types = self.get_object_types_from_labels(
-            [(label.key, label.value) for label in labels_to_delete]
-        )
+        delete_types = self.get_object_types_from_labels(labels_to_delete)
         return created_types, delete_types
 
     def get_missing_deployment_parents(self, parents):
@@ -2665,11 +2668,11 @@ class ResourceManager(object):
         workflow_executor.send_hook(event)
 
     def update_resource_labels(self,
-                               labels_resource_model,
-                               resource,
-                               new_labels,
-                               creator=None,
-                               created_at=None):
+                               labels_resource_model: type[LabelBase],
+                               resource: SQLResourceBase,
+                               new_labels: list[Label],
+                               creator: str = None,
+                               created_at: Optional[str | datetime] = None):
         """
         Updating the resource labels.
 
@@ -2691,7 +2694,7 @@ class ResourceManager(object):
                                     creator=creator,
                                     created_at=created_at)
 
-    def is_computed_label(self, resource, key):
+    def is_computed_label(self, resource: SQLResourceBase, key: str):
         """Is this label computed by the manager?
 
         Some labels aren't governed by the user, but are set by the manager
@@ -2703,40 +2706,41 @@ class ResourceManager(object):
                 return True
         return False
 
-    def get_labels_to_create(self, resource, new_labels):
+    def get_labels_to_create(self, resource: SQLResourceBase,
+                             new_labels: list[Label]):
         new_labels_set = {
             label for label in new_labels
-            if not self.is_computed_label(resource, label[0])
+            if not self.is_computed_label(resource, label.key)
         }
-        existing_labels = resource.labels
-        existing_labels_tup = set(
-            (label.key, label.value) for label in existing_labels)
+        existing_labels = set(Label(key=label.key, value=label.value)
+                              for label in resource.labels)
 
-        return new_labels_set - existing_labels_tup
+        return new_labels_set - existing_labels
 
-    def get_labels_to_delete(self, resource, new_labels):
+    def get_labels_to_delete(self, resource: SQLResourceBase,
+                             new_labels: list[Label]):
         labels_to_delete = set()
         new_labels_set = set(new_labels)
         for label in resource.labels:
+            cmp_label = Label(label.key, label.value)
             if self.is_computed_label(resource, label.key):
                 continue
-            if (label.key, label.value) not in new_labels_set:
+            if cmp_label not in new_labels_set:
                 labels_to_delete.add(label)
         return labels_to_delete
 
     def create_resource_labels(self,
-                               labels_resource_model,
-                               resource,
-                               labels_list,
-                               creator=None,
-                               created_at=None):
+                               labels_resource_model: type[LabelBase],
+                               resource: SQLResourceBase,
+                               labels_list: list[Label],
+                               creator: str = None,
+                               created_at: Optional[str | datetime] = None):
         """
         Populate the resource_labels table.
 
         :param labels_resource_model: A labels resource model
         :param resource: A resource element
-        :param labels_list: A list of labels of the form:
-                            [(key1, value1), (key2, value2)]
+        :param labels_list: A list of Labels
         :param creator: Specify creator (e.g. for snapshots).
         :param created_at: Specify creation time (e.g. for snapshots).
         """
@@ -2745,14 +2749,13 @@ class ResourceManager(object):
         lowercase_labels = {'csys-obj-type'}
         current_time = datetime.utcnow()
         new_labels = []
-        for key, value in labels_list:
-            if key.lower() in lowercase_labels:
-                key = key.lower()
-                value = value.lower()
-            new_labels.append({'key': key,
-                               'value': value,
-                               'created_at': created_at or current_time,
-                               'creator': creator or current_user})
+        for label in labels_list:
+            if label.key.lower() in lowercase_labels:
+                label.key = label.key.lower()
+                label.value = label.value.lower()
+            label.created_at = label.created_at or current_time
+            label.created_by = label.created_by or current_user.username
+            new_labels.append(label.to_dict())
 
         self.insert_labels(labels_resource_model, resource, new_labels)
 

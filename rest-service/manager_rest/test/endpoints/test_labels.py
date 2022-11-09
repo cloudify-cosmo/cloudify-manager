@@ -406,12 +406,26 @@ class BlueprintsLabelsTestCase(LabelsBaseTestCase):
         blueprint = self.put_blueprint(
             blueprint_id='bp1',
             blueprint_file_name='blueprint_with_labels_1.yaml',
+        )
+        expected_bp_labels = [
+            {'bp_key1': 'BP_key1_val1'},
+            {'bp_key2': 'bp_key2_val1'}, {'bp_key2': 'bp_key2_val2'},
+        ]
+
+        self.assert_resource_labels(blueprint.labels, expected_bp_labels)
+
+    def test_create_blueprint_labels_with_overrides(self):
+        blueprint = self.put_blueprint(
+            blueprint_id='bp1',
+            blueprint_file_name='blueprint_with_labels_1.yaml',
             labels=[{'bp_KEY1': 'bp_key1_val1'},
                     {'bp_key2': 'bp_key2_val1'},
-                    {'new_bp_key': 'NEW_BP_value'}])
+                    {'new_bp_key': 'NEW_BP_value'}],
+        )
         expected_bp_labels = [
-            {'bp_key1': 'BP_key1_val1'}, {'bp_key1': 'bp_key1_val1'},
-            {'bp_key2': 'bp_key2_val1'}, {'bp_key2': 'bp_key2_val2'},
-            {'new_bp_key': 'NEW_BP_value'}
+            {'bp_key1': 'bp_key1_val1'},
+            {'bp_key2': 'bp_key2_val1'},
+            {'new_bp_key': 'NEW_BP_value'},
         ]
+
         self.assert_resource_labels(blueprint.labels, expected_bp_labels)

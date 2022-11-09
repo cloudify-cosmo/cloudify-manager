@@ -751,6 +751,19 @@ workflows:
     is_cascading: false
     availability_rules:
       node_instances_active: ['none', 'partial']
+    parameters:
+      type_names:
+        type: list
+        item_type: node_type
+        default: []
+      node_ids:
+        type: list
+        item_type: node_id
+        default: []
+      node_instance_ids:
+        type: list
+        item_type: node_instance
+        default: []
 
   check_status:
     mapping: default_workflows.cloudify.plugins.workflows.check_status
@@ -803,6 +816,40 @@ workflows:
       ignore_failure:
         default: false
         type: boolean
+      type_names:
+        type: list
+        item_type: node_type
+        default: []
+      node_ids:
+        type: list
+        item_type: node_id
+        default: []
+      node_instance_ids:
+        type: list
+        item_type: node_instance
+        default: []
+
+  reinstall:
+    mapping: default_workflows.cloudify.plugins.workflows.reinstall
+    is_cascading: false
+    availability_rules:
+      node_instances_active: [ 'all', 'partial' ]
+    parameters:
+      ignore_failure:
+        default: false
+        type: boolean
+      type_names:
+        type: list
+        item_type: node_type
+        default: []
+      node_ids:
+        type: list
+        item_type: node_id
+        default: []
+      node_instance_ids:
+        type: list
+        item_type: node_instance
+        default: []
 
   start:
     mapping: default_workflows.cloudify.plugins.workflows.start
