@@ -5,9 +5,11 @@ Revises: 272e61bf5f4a
 Create Date: 2022-10-13 12:23:56.327514
 
 """
+from datetime import datetime
 from alembic import op
 import sqlalchemy as sa
-from manager_rest.storage.models_base import JSONString
+from sqlalchemy.dialects import postgresql
+from manager_rest.storage.models_base import JSONString, UTCDateTime
 
 # revision identifiers, used by Alembic.
 revision = 'edd6d829a209'
@@ -25,12 +27,18 @@ config_table = sa.table(
     sa.Column('scope', sa.Text),
 )
 
+users_table = sa.table(
+    'users',
+    sa.Column('created_at', UTCDateTime),
+)
+
 
 def upgrade():
     add_p_to_pickle_columns()
     add_json_columns()
     upgrade_users_roles_constraints()
     drop_service_management_config()
+    add_users_created_at_index()
 
 
 def downgrade():
@@ -38,6 +46,7 @@ def downgrade():
     remove_json_columns()
     remove_p_from_pickle_columns()
     add_service_management_config()
+    drop_users_created_at_index()
 
 
 # Upgrade functions
@@ -459,3 +468,27 @@ def add_service_management_config():
             },
         ]
     )
+
+
+def add_users_created_at_index():
+    op.execute(
+        users_table
+        .update()
+        .where(users_table.c.created_at.is_(None))
+        .values(created_at=datetime.utcnow())
+    )
+    op.alter_column('users', 'created_at',
+               existing_type=postgresql.TIMESTAMP(),
+               nullable=False)
+    op.create_index(
+        op.f('users_created_at_idx'),
+        'users',
+        ['created_at'],
+        unique=False,
+    )
+
+def drop_users_created_at_index():
+    op.drop_index(op.f('users_created_at_idx'), table_name='users')
+    op.alter_column('users', 'created_at',
+               existing_type=postgresql.TIMESTAMP(),
+               nullable=True)
