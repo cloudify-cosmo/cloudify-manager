@@ -69,6 +69,12 @@ class LabelsBaseTestCase(base_test.BaseServerTestCase):
         resource = self.put_resource_with_labels(labels)
         self.assert_resource_labels(resource.labels, [{'key': '\u00d3'}])
 
+    def test_creation_success_with_latitude_longitude_labels(self):
+        labels = [{'csys-location-lat': '90.0'},
+                  {'csys-location-long': '-180'}]
+        resource = self.put_resource_with_labels(labels)
+        self.assert_resource_labels(resource.labels, labels)
+
     def test_update_resource_labels(self):
         resource = self.put_resource_with_labels(self.LABELS)
         updated_res = self.update_resource_labels(resource.id,
@@ -102,6 +108,24 @@ class LabelsBaseTestCase(base_test.BaseServerTestCase):
                                error_msg,
                                self.put_resource_with_labels,
                                labels=[{'csys-blah': 'val1'}])
+
+    def test_invalid_latitude_label(self):
+        error_msg = '400: Invalid latitude'
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_msg,
+                               self.put_resource_with_labels,
+                               labels=[{'csys-location-lat': '91'}])
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_msg,
+                               self.put_resource_with_labels,
+                               labels=[{'csys-location-lat': 'asdf'}])
+
+    def test_invalid_longitude_label(self):
+        error_msg = '400: Invalid longitude'
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_msg,
+                               self.put_resource_with_labels,
+                               labels=[{'csys-location-long': '-180.5'}])
 
     def test_creation_failure_with_invalid_label_value(self):
         err_labels = [{'key': 'test\n'}, {'key': 'test\t'}, {'key': 't,es t"'}]
