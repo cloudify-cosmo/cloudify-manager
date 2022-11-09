@@ -477,9 +477,11 @@ def add_users_created_at_index():
         .where(users_table.c.created_at.is_(None))
         .values(created_at=datetime.utcnow())
     )
-    op.alter_column('users', 'created_at',
-               existing_type=postgresql.TIMESTAMP(),
-               nullable=False)
+    op.alter_column(
+        'users', 'created_at',
+        existing_type=postgresql.TIMESTAMP(),
+        nullable=False,
+    )
     op.create_index(
         op.f('users_created_at_idx'),
         'users',
@@ -487,8 +489,11 @@ def add_users_created_at_index():
         unique=False,
     )
 
+
 def drop_users_created_at_index():
     op.drop_index(op.f('users_created_at_idx'), table_name='users')
-    op.alter_column('users', 'created_at',
-               existing_type=postgresql.TIMESTAMP(),
-               nullable=True)
+    op.alter_column(
+        'users', 'created_at',
+        existing_type=postgresql.TIMESTAMP(),
+        nullable=True,
+    )
