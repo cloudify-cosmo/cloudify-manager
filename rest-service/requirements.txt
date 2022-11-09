@@ -187,7 +187,7 @@ typing-extensions==4.3.0
     # via pydantic
 urllib3==1.26.12
     # via requests
-wagon==0.11.2
+wagon==0.12.0
     # via
     #   cloudify-common
     #   cloudify-rest-service (setup.py)

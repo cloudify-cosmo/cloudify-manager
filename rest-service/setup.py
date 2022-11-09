@@ -25,7 +25,7 @@ install_requires = [
     'requests>=2.27.1,<3',
     'PyYAML',
     'psutil>5,<6',
-    'wagon>0.10',
+    'wagon>=0.12',
     'python-dateutil>=2.8.1,<3',
     'pika',
     'cffi>=1.14,<1.15',
