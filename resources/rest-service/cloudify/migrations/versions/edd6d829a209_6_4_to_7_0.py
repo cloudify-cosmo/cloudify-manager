@@ -7,7 +7,12 @@ Create Date: 2022-10-13 12:23:56.327514
 """
 from alembic import op
 import sqlalchemy as sa
-from manager_rest.storage.models_base import JSONString
+from sqlalchemy.dialects import postgresql
+from manager_rest.storage.models_base import (
+    JSONString,
+    UTCDateTime,
+)
+
 
 # revision identifiers, used by Alembic.
 revision = 'edd6d829a209'
@@ -31,6 +36,7 @@ def upgrade():
     add_json_columns()
     upgrade_users_roles_constraints()
     drop_service_management_config()
+    create_secret_provide_table()
 
 
 def downgrade():
@@ -38,6 +44,7 @@ def downgrade():
     remove_json_columns()
     remove_p_from_pickle_columns()
     add_service_management_config()
+    drop_secret_provider_table()
 
 
 # Upgrade functions
@@ -459,3 +466,59 @@ def add_service_management_config():
             },
         ]
     )
+
+
+def create_secret_provide_table():
+    op.create_table(
+        'secret_provider',
+        sa.Column('created_at', UTCDateTime(), nullable=False),
+        sa.Column('_storage_id', sa.Integer(), autoincrement=True,
+                  nullable=False),
+        sa.Column('id', sa.Text(), nullable=True),
+        sa.Column('visibility',
+                  postgresql.ENUM(name='visibility_states',
+                                  create_type=False),
+                  nullable=True),
+        sa.Column('name', sa.Text(), nullable=False),
+        sa.Column('type', sa.Text(), nullable=False),
+        sa.Column('connection_parameters', JSONString(),
+                  nullable=True),
+        sa.Column('updated_at', UTCDateTime(), nullable=True),
+        sa.Column('_tenant_id', sa.Integer(), nullable=False),
+        sa.Column('_creator_id', sa.Integer(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ['_creator_id'], ['users.id'],
+            name=op.f('secret_provider__creator_id_fkey'),
+            ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(
+            ['_tenant_id'], ['tenants.id'],
+            name=op.f('secret_provider__tenant_id_fkey'),
+            ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint('_storage_id',
+                                name=op.f('secret_provider_pkey'))
+    )
+    op.create_index(
+        op.f('secret_provider__creator_id_idx'), 'secret_provider',
+        ['_creator_id'], unique=False)
+    op.create_index(op.f('secret_provider__tenant_id_idx'), 'secret_provider',
+                    ['_tenant_id'], unique=False)
+    op.create_index(op.f('secret_provider_created_at_idx'), 'secret_provider',
+                    ['created_at'], unique=False)
+    op.create_index(op.f('secret_provider_id_idx'), 'secret_provider', ['id'],
+                    unique=False)
+    op.create_index(op.f('secret_provider_visibility_idx'), 'secret_provider',
+                    ['visibility'], unique=False)
+
+
+def drop_secret_provider_table():
+    op.drop_index(op.f('secret_provider_visibility_idx'),
+                  table_name='secret_provider')
+    op.drop_index(op.f('secret_provider_id_idx'),
+                  table_name='secret_provider')
+    op.drop_index(op.f('secret_provider_created_at_idx'),
+                  table_name='secret_provider')
+    op.drop_index(op.f('secret_provider__tenant_id_idx'),
+                  table_name='secret_provider')
+    op.drop_index(op.f('secret_provider__creator_id_idx'),
+                  table_name='secret_provider')
+    op.drop_table('secret_provider')
