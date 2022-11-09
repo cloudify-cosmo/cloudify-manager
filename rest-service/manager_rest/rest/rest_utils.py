@@ -629,6 +629,25 @@ def parse_label(label_key, label_value):
             f'internal use. Allowed `{RESERVED_PREFIX}` prefixed labels '
             f'are: {allowed_cfy_labels}')
 
+    if parsed_label_key == 'csys-location-lat':
+        try:
+            latitude = float(parsed_label_value)
+            if not -90.0 <= latitude <= 90.0:
+                raise ValueError
+        except ValueError:
+            raise manager_exceptions.BadParametersError(
+                f"Invalid latitude `{parsed_label_value}`. Must be a number "
+                f"between -90 and 90")
+    elif parsed_label_key == 'csys-location-long':
+        try:
+            longitude = float(parsed_label_value)
+            if not -180.0 <= longitude <= 180.0:
+                raise ValueError
+        except ValueError:
+            raise manager_exceptions.BadParametersError(
+                f"Invalid longitude `{parsed_label_value}`. Must be a number "
+                f"between -180 and 180")
+
     return parsed_label_key, parsed_label_value
 
 
