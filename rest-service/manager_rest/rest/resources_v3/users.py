@@ -71,16 +71,22 @@ class Users(SecuredMultiTenancyResource):
                     'optional': True,
                 },
                 'created_at': {'type': str, 'optional': True},
+                'last_login_at': {'type': str, 'optional': True},
+                'first_login_at': {'type': str, 'optional': True},
             }
         )
         is_prehashed = rest_utils.verify_and_convert_bool(
             'is_prehashed', request_dict.pop('is_prehashed', False))
 
-        created_at = None
-        if request_dict.get('created_at'):
-            check_user_action_allowed('set_timestamp', None, True)
-            created_at = rest_utils.parse_datetime_string(
-                request_dict.pop('created_at'))
+        timestamps = {}
+        set_timestamp_checked = False
+        for timestamp in 'created_at', 'first_login_at', 'last_login_at':
+            if request_dict.get(timestamp):
+                if not set_timestamp_checked:
+                    check_user_action_allowed('set_timestamp', None, True)
+                    set_timestamp_checked = True
+                timestamps[timestamp] = rest_utils.parse_datetime_string(
+                    request_dict.pop(timestamp))
 
         # The password shouldn't be validated here
         password = request_dict.pop('password')
@@ -94,7 +100,9 @@ class Users(SecuredMultiTenancyResource):
             password,
             role,
             is_prehashed=is_prehashed,
-            created_at=created_at,
+            created_at=timestamps.get('created_at'),
+            first_login_at=timestamps.get('first_login_at'),
+            last_login_at=timestamps.get('last_login_at'),
         )
 
 
