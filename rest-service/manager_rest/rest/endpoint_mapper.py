@@ -158,8 +158,8 @@ def setup_resources(api):
         'CapabilitiesSearches': 'searches/capabilities',
         'ScalingGroupsSearches': 'searches/scaling-groups',
         'CommunityContacts': 'contacts',
-        'SecretProvider': [
-            'secret-provider',
+        'SecretsProvider': [
+            'secrets-providers',
         ]
     }
 

@@ -332,8 +332,8 @@ class Secret(CreatedAtMixin, SQLResourceBase):
         return ['key']
 
 
-class SecretProvider(CreatedAtMixin, SQLResourceBase):
-    __tablename__ = 'secret_provider'
+class SecretsProvider(CreatedAtMixin, SQLResourceBase):
+    __tablename__ = 'secrets_providers'
 
     name = db.Column(db.Text, nullable=False)
     type = db.Column(db.Text, nullable=False)
