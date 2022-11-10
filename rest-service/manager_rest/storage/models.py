@@ -52,6 +52,7 @@ from .resource_models import (
     DeploymentModificationState,
     DeploymentUpdateStep,
     Secret,
+    SecretsProvider,
     Agent,
     Operation,
     TasksGraph,

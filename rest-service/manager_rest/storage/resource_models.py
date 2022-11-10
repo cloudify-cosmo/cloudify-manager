@@ -332,6 +332,15 @@ class Secret(CreatedAtMixin, SQLResourceBase):
         return ['key']
 
 
+class SecretsProvider(CreatedAtMixin, SQLResourceBase):
+    __tablename__ = 'secrets_providers'
+
+    name = db.Column(db.Text, nullable=False)
+    type = db.Column(db.Text, nullable=False)
+    connection_parameters = db.Column(JSONString, nullable=True)
+    updated_at = db.Column(UTCDateTime)
+
+
 class Site(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'sites'
     __table_args__ = (

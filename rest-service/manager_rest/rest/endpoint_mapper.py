@@ -158,6 +158,9 @@ def setup_resources(api):
         'CapabilitiesSearches': 'searches/capabilities',
         'ScalingGroupsSearches': 'searches/scaling-groups',
         'CommunityContacts': 'contacts',
+        'SecretsProvider': [
+            'secrets-providers',
+        ]
     }
 
     # Set version endpoint as a non versioned endpoint

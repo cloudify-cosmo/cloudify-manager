@@ -114,3 +114,6 @@ class SecuredResource(Resource):
 
 class MissingPremiumFeatureResource(Resource):
     method_decorators = [_abort_on_premium_missing]
+
+    def get(self):
+        pass

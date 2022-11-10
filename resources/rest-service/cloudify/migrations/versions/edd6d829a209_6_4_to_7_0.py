@@ -9,7 +9,12 @@ from datetime import datetime
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
-from manager_rest.storage.models_base import JSONString, UTCDateTime
+
+from manager_rest.storage.models_base import (
+    JSONString,
+    UTCDateTime,
+)
+
 
 # revision identifiers, used by Alembic.
 revision = 'edd6d829a209'
@@ -39,6 +44,7 @@ def upgrade():
     upgrade_users_roles_constraints()
     drop_service_management_config()
     add_users_created_at_index()
+    create_secrets_providers_table()
 
 
 def downgrade():
@@ -47,6 +53,7 @@ def downgrade():
     remove_p_from_pickle_columns()
     add_service_management_config()
     drop_users_created_at_index()
+    drop_secrets_providers_table()
 
 
 # Upgrade functions
@@ -468,6 +475,135 @@ def add_service_management_config():
             },
         ]
     )
+
+
+def create_secrets_providers_table():
+    op.create_table(
+        'secrets_providers',
+        sa.Column(
+            'created_at',
+            UTCDateTime(),
+            nullable=False,
+        ),
+        sa.Column(
+            '_storage_id',
+            sa.Integer(),
+            autoincrement=True,
+            nullable=False,
+        ),
+        sa.Column(
+            'id',
+            sa.Text(),
+            nullable=True,
+        ),
+        sa.Column(
+            'visibility',
+            postgresql.ENUM(
+                name='visibility_states',
+                create_type=False,
+            ),
+            nullable=True,
+        ),
+        sa.Column(
+            'name',
+            sa.Text(),
+            nullable=False,
+        ),
+        sa.Column(
+            'type',
+            sa.Text(),
+            nullable=False,
+        ),
+        sa.Column(
+            'connection_parameters',
+            JSONString(),
+            nullable=True,
+        ),
+        sa.Column(
+            'updated_at',
+            UTCDateTime(),
+            nullable=True,
+        ),
+        sa.Column(
+            '_tenant_id',
+            sa.Integer(),
+            nullable=False,
+        ),
+        sa.Column(
+            '_creator_id',
+            sa.Integer(),
+            nullable=False,
+        ),
+        sa.ForeignKeyConstraint(
+            ['_creator_id'],
+            ['users.id'],
+            name=op.f('secrets_providers__creator_id_fkey'),
+            ondelete='CASCADE',
+        ),
+        sa.ForeignKeyConstraint(
+            ['_tenant_id'],
+            ['tenants.id'],
+            name=op.f('secrets_providers__tenant_id_fkey'),
+            ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint(
+            '_storage_id',
+            name=op.f('secrets_providers_pkey'),
+        ),
+    )
+    op.create_index(
+        op.f('secrets_providers__creator_id_idx'),
+        'secrets_providers',
+        ['_creator_id'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('secrets_providers__tenant_id_idx'),
+        'secrets_providers',
+        ['_tenant_id'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('secrets_providers_created_at_idx'),
+        'secrets_providers',
+        ['created_at'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('secrets_providers_id_idx'),
+        'secrets_providers',
+        ['id'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('secrets_providers_visibility_idx'),
+        'secrets_providers',
+        ['visibility'],
+        unique=False,
+    )
+
+
+def drop_secrets_providers_table():
+    op.drop_index(
+        op.f('secrets_providers_visibility_idx'),
+        table_name='secrets_providers',
+    )
+    op.drop_index(
+        op.f('secrets_providers_id_idx'),
+        table_name='secrets_providers',
+    )
+    op.drop_index(
+        op.f('secrets_providers_created_at_idx'),
+        table_name='secrets_providers',
+    )
+    op.drop_index(
+        op.f('secrets_providers__tenant_id_idx'),
+        table_name='secrets_providers',
+    )
+    op.drop_index(
+        op.f('secrets_providers__creator_id_idx'),
+        table_name='secrets_providers',
+    )
+    op.drop_table('secrets_providers')
 
 
 def add_users_created_at_index():

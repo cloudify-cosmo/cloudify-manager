@@ -141,3 +141,7 @@ from .workflows import (  # NOQA
 from .community_contacts import (  # NOQA
     CommunityContacts,
 )
+
+from .secrets_provider import (  # NOQA
+    SecretsProvider,
+)
