@@ -796,19 +796,12 @@ class UploadedPluginsManager(UploadedDataManager):
 
     @staticmethod
     def _load_plugin_package_json(wagon_source):
-        # Disable validation for now - seems to break in certain
-        # circumstances.
-        # if wagon.validate(wagon_source):
-        #     # wagon returns a list of validation issues.
-        #     raise manager_exceptions.InvalidPluginError(
-        #         'the provided wagon can not be read.')
-
         try:
             return wagon.show(wagon_source)
-        except wagon.WagonError as e:
+        except (wagon.WagonError, tarfile.ReadError, zipfile.BadZipFile) as e:
             raise manager_exceptions.InvalidPluginError(
-                'The provided wagon archive can not be read.\n{0}'
-                .format(str(e)))
+                'The provided wagon archive can not be read.\n{0}: {1}'
+                .format(type(e).__name__, e))
 
     def _load_plugin_extras(self, archive_dir):
         result = {'blueprint_labels': None,
