@@ -16,8 +16,7 @@ from manager_rest.security.authorization import (
     check_user_action_allowed,
 )
 from manager_rest.resource_manager import get_resource_manager
-from manager_rest.upload_manager import (UploadedBlueprintsManager,
-                                         UploadedBlueprintsValidator)
+from manager_rest import upload_manager
 from manager_rest.rest import (
     rest_utils,
     resources_v1,
@@ -76,10 +75,10 @@ class BlueprintsIcon(SecuredResource):
         # Get the blueprint to verify if it exists (in the current context)
         blueprint = get_storage_manager().get(models.Blueprint, blueprint_id)
         if request.data:
-            UploadedBlueprintsManager().update_icon_file(
+            upload_manager.update_blueprint_icon_file(
                 blueprint.tenant_name, blueprint_id)
         else:
-            UploadedBlueprintsManager().remove_icon_file(
+            upload_manager.remove_blueprint_icon_file(
                 blueprint.tenant_name, blueprint_id)
         return blueprint
 
@@ -171,23 +170,23 @@ class BlueprintsId(resources_v2.BlueprintsId):
                         'blueprint with id={0} already exists on tenant {1} '
                         'or with global visibility'.format(blueprint_id,
                                                            current_tenant))
-        response = UploadedBlueprintsManager().\
-            receive_uploaded_data(data_id=blueprint_id,
-                                  visibility=visibility,
-                                  override_failed=override_failed,
-                                  labels=labels,
-                                  created_at=created_at,
-                                  owner=created_by,
-                                  private_resource=private_resource,
-                                  application_file_name=application_file_name,
-                                  skip_execution=skip_execution,
-                                  state=state,
-                                  blueprint_url=blueprint_url)
+        blueprint = upload_manager.upload_blueprint(
+            data_id=blueprint_id,
+            visibility=visibility,
+            override_failed=override_failed,
+            labels=labels,
+            created_at=created_at,
+            owner=created_by,
+            private_resource=private_resource,
+            application_file_name=application_file_name,
+            skip_execution=skip_execution,
+            state=state,
+            blueprint_url=blueprint_url,
+        )
         if not async_upload:
             sm = get_storage_manager()
-            blueprint, _ = response
-            response = rest_utils.get_uploaded_blueprint(sm, blueprint)
-        return response
+            blueprint = rest_utils.get_uploaded_blueprint(sm, blueprint)
+        return blueprint, 201
 
     @swagger.operation(
         responseClass=models.Blueprint,
@@ -309,7 +308,7 @@ class BlueprintsId(resources_v2.BlueprintsId):
             # On finalizing the blueprint upload, extract archive to file
             # server
             if state == BlueprintUploadState.UPLOADED:
-                UploadedBlueprintsManager(). \
+                upload_manager. \
                     extract_blueprint_archive_to_file_server(
                         blueprint_id=blueprint_id,
                         tenant=blueprint.tenant.name)
@@ -317,7 +316,7 @@ class BlueprintsId(resources_v2.BlueprintsId):
             # If failed for any reason, cleanup the blueprint archive from
             # server
             elif state in BlueprintUploadState.FAILED_STATES:
-                UploadedBlueprintsManager(). \
+                upload_manager. \
                     cleanup_blueprint_archive_from_file_server(
                         blueprint_id=blueprint_id,
                         tenant=blueprint.tenant.name)
@@ -385,7 +384,7 @@ class BlueprintsIdValidate(BlueprintsId):
         application_file_name = args.pop('application_file_name', '')
         blueprint_archive_url = args.pop('blueprint_archive_url', None)
 
-        return UploadedBlueprintsValidator().\
+        return upload_manager.UploadedBlueprintsValidator().\
             receive_uploaded_data(data_id=blueprint_id,
                                   visibility=visibility,
                                   application_file_name=application_file_name,
@@ -402,5 +401,5 @@ class BlueprintsIdArchive(resources_v1.BlueprintsIdArchive):
         a system workflow, to the manager's file server
         This method is for internal use only.
         """
-        UploadedBlueprintsManager(). \
+        upload_manager. \
             upload_archive_to_file_server(blueprint_id=blueprint_id)

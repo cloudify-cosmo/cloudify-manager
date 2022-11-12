@@ -21,7 +21,7 @@ from manager_rest.rest import swagger
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.resource_manager import get_resource_manager
-from manager_rest.upload_manager import UploadedBlueprintsManager
+from manager_rest import upload_manager
 from manager_rest.storage import (get_storage_manager,
                                   models)
 from manager_rest.rest.rest_decorators import marshal_with
@@ -154,7 +154,8 @@ class BlueprintsId(SecuredResource):
         Upload a blueprint (id specified)
         """
         validate_inputs({'blueprint_id': blueprint_id})
-        return UploadedBlueprintsManager().receive_uploaded_data(blueprint_id)
+        blueprint = upload_manager.upload_blueprint(blueprint_id)
+        return blueprint, 201
 
     @swagger.operation(
         responseClass=models.Blueprint,
