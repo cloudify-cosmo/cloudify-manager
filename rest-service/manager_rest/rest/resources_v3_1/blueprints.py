@@ -273,7 +273,6 @@ class BlueprintsId(resources_v2.BlueprintsId):
             'upload_execution': {'type': str, 'optional': True},
         }
         request_dict = rest_utils.get_json_and_verify_params(request_schema)
-
         created_at = creator = None
         if request_dict.get('created_at'):
             check_user_action_allowed('set_timestamp', None, True)
@@ -292,10 +291,16 @@ class BlueprintsId(resources_v2.BlueprintsId):
         sm = get_storage_manager()
         rm = get_resource_manager()
         blueprint = sm.get(models.Blueprint, blueprint_id)
-
         # if finished blueprint validation - cleanup DB entry
         # and uploaded blueprints folder
         if blueprint.state == BlueprintUploadState.VALIDATING:
+            # unattach .upload_execution from the blueprint before deleting it
+            # so that the execution is not deleted via cascade (the user still
+            # needs to be able to fetch the execution & logs to view the
+            # results of validation)
+            blueprint.upload_execution = None
+            sm.update(blueprint)
+
             uploaded_blueprint_path = join(
                 config.instance.file_server_root,
                 FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
@@ -409,6 +414,8 @@ class BlueprintsIdValidate(BlueprintsId):
         """
         Validate a blueprint (id specified)
         """
+        rm = get_resource_manager()
+        sm = get_storage_manager()
         args = None
         form_params = request.form.get('params')
         if form_params:
@@ -422,13 +429,39 @@ class BlueprintsIdValidate(BlueprintsId):
             rest_utils.validate_visibility(
                 visibility, valid_values=VisibilityState.STATES)
         application_file_name = args.pop('application_file_name', '')
-        blueprint_archive_url = args.pop('blueprint_archive_url', None)
+        blueprint_url = args.pop('blueprint_archive_url', None)
 
-        return upload_manager.UploadedBlueprintsValidator().\
-            receive_uploaded_data(data_id=blueprint_id,
-                                  visibility=visibility,
-                                  application_file_name=application_file_name,
-                                  blueprint_url=blueprint_archive_url)
+        with sm.transaction():
+            blueprint = models.Blueprint(
+                plan=None,
+                id=blueprint_id,
+                description=None,
+                main_file_name=None,
+                visibility=None,
+                state=BlueprintUploadState.VALIDATING,
+            )
+
+            sm.put(blueprint)
+            blueprint.upload_execution, messages = rm.upload_blueprint(
+                blueprint_id,
+                application_file_name,
+                blueprint_url,
+                config.instance.file_server_root,     # for the import resolver
+                config.instance.marketplace_api_url,  # for the import resolver
+                validate_only=True,
+            )
+
+        try:
+            if not blueprint_url:
+                upload_manager.upload_blueprint_archive_to_file_server(
+                    blueprint_id)
+            workflow_executor.execute_workflow(messages)
+        except Exception as e:
+            sm.sm.delete(blueprint)
+            upload_manager.cleanup_blueprint_archive_from_file_server(
+                blueprint_id, current_tenant.name)
+            raise
+        return blueprint, 201
 
 
 class BlueprintsIdArchive(resources_v1.BlueprintsIdArchive):

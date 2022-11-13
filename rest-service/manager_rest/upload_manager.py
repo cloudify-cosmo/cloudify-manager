@@ -15,7 +15,6 @@ from setuptools import archive_util
 from flask import request, current_app
 from flask_restful.reqparse import Argument
 from flask_restful.inputs import boolean
-from urllib.parse import quote as unquote
 
 from cloudify.models_states import SnapshotState, BlueprintUploadState
 from manager_rest.manager_exceptions import ArchiveTypeError
@@ -28,7 +27,7 @@ from manager_rest.dsl_back_compat import create_bc_plugin_yaml
 from manager_rest.archiving import get_archive_type
 from manager_rest.security.authorization import check_user_action_allowed
 from manager_rest.storage.models import Blueprint, Plugin
-from manager_rest import config, chunked, manager_exceptions, workflow_executor
+from manager_rest import config, chunked, manager_exceptions
 from manager_rest.utils import (mkdirs,
                                 get_formatted_timestamp,
                                 current_tenant,
@@ -500,71 +499,6 @@ def _process_blueprint_plugins(file_server_root, blueprint_id):
         final_zip_name = '{0}.zip'.format(os.path.basename(plugin_dir))
         target_zip_path = os.path.join(plugins_directory, final_zip_name)
         _zip_dir(plugin_dir, target_zip_path)
-
-
-class UploadedBlueprintsValidator(UploadedDataManager):
-    def _get_kind(self):
-        return 'blueprint'
-
-    def _get_target_dir_path(self):
-        return os.path.join(
-            FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER, current_tenant.name)
-
-    def _get_archive_type(self, archive_path):
-        return get_archive_type(archive_path)
-
-    def receive_uploaded_data(
-        self, data_id=None, visibility=None, override_failed=False,
-        labels=None, created_at=None, owner=None, private_resource=None,
-        application_file_name='', skip_execution=None, state=None,
-        blueprint_url=None
-    ):
-        validated_blueprint = self._prepare_and_process_doc(
-            data_id, visibility, blueprint_url,
-            application_file_name, override_failed)
-        return validated_blueprint, 201
-
-    def _prepare_and_process_doc(self,
-                                 data_id,
-                                 visibility,
-                                 blueprint_url,
-                                 application_file_name,
-                                 override_failed_blueprint,
-                                 **kwargs):
-        application_file_name = unquote(application_file_name)
-        # Put a temporary blueprint entry in DB
-        rm = get_resource_manager()
-        now = get_formatted_timestamp()
-        temp_blueprint = rm.sm.put(Blueprint(
-            plan=None,
-            id=data_id,
-            description=None,
-            created_at=now,
-            updated_at=now,
-            main_file_name=None,
-            visibility=None,
-            state=BlueprintUploadState.VALIDATING
-        ))
-
-        if not blueprint_url:
-            upload_blueprint_archive_to_file_server(data_id)
-
-        try:
-            temp_blueprint.upload_execution, messages = rm.upload_blueprint(
-                data_id,
-                application_file_name,
-                blueprint_url,
-                config.instance.file_server_root,     # for the import resolver
-                config.instance.marketplace_api_url,  # for the import resolver
-                validate_only=True,
-            )
-            workflow_executor.execute_workflow(messages)
-        except manager_exceptions.ExistingRunningExecutionError:
-            rm.sm.delete(temp_blueprint)
-            cleanup_blueprint_archive_from_file_server(
-                data_id, current_tenant.name)
-            raise
-        return temp_blueprint
 
 
 class UploadedPluginsManager(UploadedDataManager):
