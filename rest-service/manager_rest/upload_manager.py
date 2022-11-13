@@ -325,15 +325,20 @@ def _save_file_from_chunks(archive_target_path, data_type):
 
 def upload_blueprint_archive_to_file_server(blueprint_id):
     file_server_root = config.instance.file_server_root
-    archive_target_path = tempfile.mktemp()
+
+    archive_target_path = os.path.join(
+        file_server_root,
+        FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
+        '.uploading',
+        current_tenant.name,
+        blueprint_id,
+    )
+    os.makedirs(os.path.dirname(archive_target_path), exist_ok=True)
     _save_file_locally_and_extract_inputs(
         archive_target_path,
         None,
         'blueprint')
-    target_dir_path = os.path.join(
-        FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
-        current_tenant.name,
-    )
+
     try:
         archive_type = get_archive_type(archive_target_path)
     except ArchiveTypeError:
@@ -342,16 +347,15 @@ def upload_blueprint_archive_to_file_server(blueprint_id):
             'Supported formats are: {0}'.format(
                 SUPPORTED_ARCHIVE_TYPES))
 
-    _move_archive_to_uploaded_dir(
-        blueprint_id,
+    target_path = os.path.join(
         file_server_root,
-        archive_target_path,
-        'blueprint',
-        target_dir_path,
-        archive_type,
+        FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
+        current_tenant.name,
+        blueprint_id,
+        f'{blueprint_id}.{archive_type}',
     )
-
-    remove(archive_target_path)
+    os.makedirs(os.path.dirname(target_path), exist_ok=True)
+    shutil.move(archive_target_path, target_path)
 
 
 def cleanup_blueprint_archive_from_file_server(blueprint_id, tenant):
