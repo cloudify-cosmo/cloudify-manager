@@ -98,6 +98,17 @@ def _get_deployment_labels(new_labels, plan_labels):
     return [{k: v} for k, v in labels]
 
 
+def _evaluate_inputs_constraints(ctx, client, plan):
+    for in_key, in_val in plan.get('inputs', {}).items():
+        for constraint in in_val.get('constraints', {}):
+            if 'valid_values' in constraint:
+                evaluated_values = client.evaluate.functions(
+                    ctx.deployment.id, {},
+                    {'valid_values': constraint['valid_values']},
+                )['payload']['valid_values']
+            constraint['valid_values'] = evaluated_values
+
+
 @workflow
 def create(ctx, labels=None, inputs=None, skip_plugins_validation=False,
            display_name=None, **_):
@@ -105,6 +116,9 @@ def create(ctx, labels=None, inputs=None, skip_plugins_validation=False,
     bp = client.blueprints.get(ctx.blueprint.id)
     plan_node_ids = [n['id'] for n in bp.plan.get('nodes', [])]
     existing_ni_ids = get_instance_ids_by_node_ids(client, plan_node_ids)
+
+    _evaluate_inputs_constraints(ctx, client, bp.plan)
+
     deployment_plan = tasks.prepare_deployment_plan(
         bp.plan,
         inputs=inputs,
