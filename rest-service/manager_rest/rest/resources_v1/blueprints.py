@@ -15,15 +15,23 @@
 #
 
 import os
+import traceback
 
-from manager_rest import config, manager_exceptions
+from cloudify.models_states import BlueprintUploadState
+
+from manager_rest import (
+    config,
+    manager_exceptions,
+    upload_manager,
+    workflow_executor,
+)
 from manager_rest.rest import swagger
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.resource_manager import get_resource_manager
-from manager_rest import upload_manager
 from manager_rest.storage import (get_storage_manager,
                                   models)
+from manager_rest.utils import current_tenant
 from manager_rest.rest.rest_decorators import marshal_with
 from manager_rest.rest.rest_utils import (make_streaming_response,
                                           validate_inputs)
@@ -150,11 +158,45 @@ class BlueprintsId(SecuredResource):
     @authorize('blueprint_upload')
     @marshal_with(models.Blueprint)
     def put(self, blueprint_id, **kwargs):
-        """
-        Upload a blueprint (id specified)
-        """
+        """Upload a blueprint (id specified)"""
+        rm = get_resource_manager()
+        sm = get_storage_manager()
+
         validate_inputs({'blueprint_id': blueprint_id})
-        blueprint = upload_manager.upload_blueprint(blueprint_id)
+
+        rm = get_resource_manager()
+
+        blueprint = models.Blueprint(
+            plan=None,
+            id=blueprint_id,
+            description=None,
+            main_file_name='',
+            state=BlueprintUploadState.UPLOADING,
+        )
+
+        upload_manager.upload_blueprint_archive_to_file_server(
+            blueprint_id)
+        sm.put(blueprint)
+
+        try:
+            blueprint.upload_execution, messages = rm.upload_blueprint(
+                blueprint_id,
+                '',
+                None,
+                config.instance.file_server_root,     # for the import resolver
+                config.instance.marketplace_api_url,  # for the import resolver
+                labels=None,
+            )
+            sm.update(blueprint)
+            workflow_executor.execute_workflow(messages)
+        except manager_exceptions.ExistingRunningExecutionError as e:
+            blueprint.state = BlueprintUploadState.FAILED_UPLOADING
+            blueprint.error = str(e)
+            blueprint.error_traceback = traceback.format_exc()
+            sm.update(blueprint)
+            upload_manager.cleanup_blueprint_archive_from_file_server(
+                blueprint_id, current_tenant.name)
+            raise
         return blueprint, 201
 
     @swagger.operation(

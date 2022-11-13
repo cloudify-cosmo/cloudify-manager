@@ -1,5 +1,7 @@
-from os.path import join
 import json
+import traceback
+from os.path import join
+from urllib.parse import quote as unquote
 
 from flask import request
 
@@ -16,7 +18,7 @@ from manager_rest.security.authorization import (
     check_user_action_allowed,
 )
 from manager_rest.resource_manager import get_resource_manager
-from manager_rest import upload_manager
+from manager_rest import upload_manager, workflow_executor, manager_exceptions
 from manager_rest.rest import (
     rest_utils,
     resources_v1,
@@ -25,7 +27,7 @@ from manager_rest.rest import (
     swagger,
 )
 from manager_rest.storage import models, get_storage_manager
-from manager_rest.utils import get_formatted_timestamp, remove
+from manager_rest.utils import get_formatted_timestamp, remove, current_tenant
 from manager_rest.rest.rest_utils import (get_labels_from_plan,
                                           get_labels_list,
                                           get_args_and_verify_arguments)
@@ -90,6 +92,8 @@ class BlueprintsId(resources_v2.BlueprintsId):
         """
         Upload a blueprint (id specified)
         """
+        rm = get_resource_manager()
+        sm = get_storage_manager()
         rest_utils.validate_inputs({'blueprint_id': blueprint_id})
 
         args = None
@@ -142,21 +146,80 @@ class BlueprintsId(resources_v2.BlueprintsId):
 
         # Fail fast if trying to upload a duplicate blueprint.
         # Allow overriding an existing blueprint which failed to upload
-        current_tenant = request.headers.get('tenant')
-        override_failed = False
+        if failed_bp := self._failed_blueprint(blueprint_id, visibility):
+            get_storage_manager().delete(failed_bp)
 
+        visibility = rm.get_resource_visibility(
+            models.Blueprint, blueprint_id, visibility, private_resource)
+
+        application_file_name = unquote(application_file_name)
+        state = state or BlueprintUploadState.PENDING
+        # Put a new blueprint entry in DB
+        now = get_formatted_timestamp()
+
+        blueprint = models.Blueprint(
+            plan=None,
+            id=blueprint_id,
+            description=None,
+            created_at=created_at or now,
+            updated_at=now,
+            main_file_name=application_file_name,
+            visibility=visibility,
+            state=state,
+        )
+        if created_by:
+            blueprint.creator = created_by
+
+        sm.put(blueprint)
+
+        if not blueprint_url:
+            blueprint.state = BlueprintUploadState.UPLOADING
+            sm.update(blueprint)
+            upload_manager.upload_blueprint_archive_to_file_server(
+                blueprint_id)
+
+        if skip_execution:
+            return blueprint, 201
+
+        try:
+            blueprint.upload_execution, messages = rm.upload_blueprint(
+                blueprint_id,
+                application_file_name,
+                blueprint_url,
+                config.instance.file_server_root,     # for the import resolver
+                config.instance.marketplace_api_url,  # for the import resolver
+                labels=labels,
+            )
+            sm.update(blueprint)
+            workflow_executor.execute_workflow(messages)
+        except manager_exceptions.ExistingRunningExecutionError as e:
+            blueprint.state = BlueprintUploadState.FAILED_UPLOADING
+            blueprint.error = str(e)
+            blueprint.error_traceback = traceback.format_exc()
+            sm.update(blueprint)
+            upload_manager.cleanup_blueprint_archive_from_file_server(
+                blueprint_id, current_tenant.name)
+            raise
+
+        if not async_upload:
+            blueprint = rest_utils.get_uploaded_blueprint(sm, blueprint)
+        return blueprint, 201
+
+    def _failed_blueprint(self, blueprint_id, visibility):
+        current_tenant = request.headers.get('tenant')
         if visibility == VisibilityState.GLOBAL:
+            # TODO shouldn't this need an all_tenants=True or the like?
             existing_duplicates = get_storage_manager().list(
                 models.Blueprint, filters={'id': blueprint_id})
             if existing_duplicates:
                 if existing_duplicates[0].state in \
                         BlueprintUploadState.FAILED_STATES:
-                    override_failed = True
-                else:
-                    raise ConflictError(
-                        "Can't set or create the resource `{0}`, its "
-                        "visibility can't be global because it also exists in "
-                        "other tenants".format(blueprint_id))
+                    return existing_duplicates[0]
+                raise ConflictError(
+                    f"Can't set or create the resource `{blueprint_id}`, its "
+                    "visibility can't be global because it also exists in "
+                    "other tenants"
+                )
         else:
             existing_duplicates = get_storage_manager().list(
                 models.Blueprint, filters={'id': blueprint_id,
@@ -164,29 +227,11 @@ class BlueprintsId(resources_v2.BlueprintsId):
             if existing_duplicates:
                 if existing_duplicates[0].state in \
                         BlueprintUploadState.FAILED_STATES:
-                    override_failed = True
-                else:
-                    raise ConflictError(
-                        'blueprint with id={0} already exists on tenant {1} '
-                        'or with global visibility'.format(blueprint_id,
-                                                           current_tenant))
-        blueprint = upload_manager.upload_blueprint(
-            data_id=blueprint_id,
-            visibility=visibility,
-            override_failed=override_failed,
-            labels=labels,
-            created_at=created_at,
-            owner=created_by,
-            private_resource=private_resource,
-            application_file_name=application_file_name,
-            skip_execution=skip_execution,
-            state=state,
-            blueprint_url=blueprint_url,
-        )
-        if not async_upload:
-            sm = get_storage_manager()
-            blueprint = rest_utils.get_uploaded_blueprint(sm, blueprint)
-        return blueprint, 201
+                    return existing_duplicates[0]
+                raise ConflictError(
+                    f'blueprint with id={blueprint_id} already exists on '
+                    f'tenant {current_tenant} or with global visibility'
+                )
 
     @swagger.operation(
         responseClass=models.Blueprint,

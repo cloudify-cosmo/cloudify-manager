@@ -10,7 +10,6 @@ import shutil
 import zipfile
 import tempfile
 import requests
-import traceback
 
 from setuptools import archive_util
 from flask import request, current_app
@@ -370,75 +369,6 @@ def cleanup_blueprint_archive_from_file_server(blueprint_id, tenant):
                         FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
                         tenant,
                         blueprint_id))
-
-
-def upload_blueprint(
-    data_id=None, visibility=None, override_failed=False,
-    labels=None, created_at=None, owner=None, private_resource=None,
-    application_file_name='', skip_execution=None, state=None,
-    blueprint_url=None
-):
-    visibility = get_resource_manager().get_resource_visibility(
-        Blueprint, data_id, visibility, private_resource)
-
-    application_file_name = unquote(application_file_name)
-    state = state or BlueprintUploadState.PENDING
-    # Put a new blueprint entry in DB
-    now = get_formatted_timestamp()
-    rm = get_resource_manager()
-    if override_failed:
-        new_blueprint = rm.sm.get(Blueprint, data_id)
-        new_blueprint.plan = None
-        new_blueprint.description = None
-        new_blueprint.created_at = now
-        new_blueprint.updated_at = now
-        new_blueprint.main_file_name = application_file_name
-        new_blueprint.visibility = visibility
-        new_blueprint.state = state
-        rm.sm.update(new_blueprint)
-    else:
-        blueprint = Blueprint(
-            plan=None,
-            id=data_id,
-            description=None,
-            created_at=created_at or now,
-            updated_at=now,
-            main_file_name=application_file_name,
-            visibility=visibility,
-            state=state,
-        )
-        if owner:
-            blueprint.creator = owner
-        new_blueprint = rm.sm.put(blueprint)
-
-    if not blueprint_url:
-        new_blueprint.state = BlueprintUploadState.UPLOADING
-        rm.sm.update(new_blueprint)
-        upload_blueprint_archive_to_file_server(data_id)
-
-    if skip_execution:
-        return new_blueprint
-
-    try:
-        new_blueprint.upload_execution, messages = rm.upload_blueprint(
-            data_id,
-            application_file_name,
-            blueprint_url,
-            config.instance.file_server_root,     # for the import resolver
-            config.instance.marketplace_api_url,  # for the import resolver
-            labels=labels,
-        )
-        rm.sm.update(new_blueprint)
-        workflow_executor.execute_workflow(messages)
-    except manager_exceptions.ExistingRunningExecutionError as e:
-        new_blueprint.state = BlueprintUploadState.FAILED_UPLOADING
-        new_blueprint.error = str(e)
-        new_blueprint.error_traceback = traceback.format_exc()
-        rm.sm.update(new_blueprint)
-        cleanup_blueprint_archive_from_file_server(
-            data_id, current_tenant.name)
-        raise
-    return new_blueprint
 
 
 def update_blueprint_icon_file(self, tenant_name, blueprint_id):
