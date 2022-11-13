@@ -166,19 +166,15 @@ class BlueprintsId(SecuredResource):
 
         rm = get_resource_manager()
 
-        blueprint = models.Blueprint(
-            plan=None,
-            id=blueprint_id,
-            description=None,
-            main_file_name='',
-            state=BlueprintUploadState.UPLOADING,
-        )
-
-        upload_manager.upload_blueprint_archive_to_file_server(
-            blueprint_id)
-        sm.put(blueprint)
-
-        try:
+        with sm.transaction():
+            blueprint = models.Blueprint(
+                plan=None,
+                id=blueprint_id,
+                description=None,
+                main_file_name='',
+                state=BlueprintUploadState.UPLOADING,
+            )
+            sm.put(blueprint)
             blueprint.upload_execution, messages = rm.upload_blueprint(
                 blueprint_id,
                 '',
@@ -188,6 +184,10 @@ class BlueprintsId(SecuredResource):
                 labels=None,
             )
             sm.update(blueprint)
+
+        try:
+            upload_manager.upload_blueprint_archive_to_file_server(
+                blueprint_id)
             workflow_executor.execute_workflow(messages)
         except manager_exceptions.ExistingRunningExecutionError as e:
             blueprint.state = BlueprintUploadState.FAILED_UPLOADING

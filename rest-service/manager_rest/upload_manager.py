@@ -326,42 +326,32 @@ def _save_file_from_chunks(archive_target_path, data_type):
 def upload_blueprint_archive_to_file_server(blueprint_id):
     file_server_root = config.instance.file_server_root
     archive_target_path = tempfile.mktemp()
+    _save_file_locally_and_extract_inputs(
+        archive_target_path,
+        None,
+        'blueprint')
+    target_dir_path = os.path.join(
+        FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
+        current_tenant.name,
+    )
     try:
-        _save_file_locally_and_extract_inputs(
-            archive_target_path,
-            None,
-            'blueprint')
-        target_dir_path = os.path.join(
-            FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
-            current_tenant.name,
-        )
-        try:
-            archive_type = get_archive_type(archive_target_path)
-        except ArchiveTypeError:
-            raise manager_exceptions.BadParametersError(
-                'Blueprint archive is of an unrecognized format. '
-                'Supported formats are: {0}'.format(
-                    SUPPORTED_ARCHIVE_TYPES))
+        archive_type = get_archive_type(archive_target_path)
+    except ArchiveTypeError:
+        raise manager_exceptions.BadParametersError(
+            'Blueprint archive is of an unrecognized format. '
+            'Supported formats are: {0}'.format(
+                SUPPORTED_ARCHIVE_TYPES))
 
-        _move_archive_to_uploaded_dir(
-            blueprint_id,
-            file_server_root,
-            archive_target_path,
-            'blueprint',
-            target_dir_path,
-            archive_type,
-        )
-    except Exception as e:
-        sm = get_resource_manager().sm
-        blueprint = sm.get(Blueprint, blueprint_id)
-        blueprint.state = BlueprintUploadState.FAILED_UPLOADING
-        blueprint.error = str(e)
-        sm.update(blueprint)
-        cleanup_blueprint_archive_from_file_server(
-            blueprint_id, blueprint.tenant.name)
-        raise
-    finally:
-        remove(archive_target_path)
+    _move_archive_to_uploaded_dir(
+        blueprint_id,
+        file_server_root,
+        archive_target_path,
+        'blueprint',
+        target_dir_path,
+        archive_type,
+    )
+
+    remove(archive_target_path)
 
 
 def cleanup_blueprint_archive_from_file_server(blueprint_id, tenant):
