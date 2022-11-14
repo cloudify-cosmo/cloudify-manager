@@ -100,13 +100,12 @@ def _get_deployment_labels(new_labels, plan_labels):
 
 def _evaluate_inputs_constraints(ctx, client, plan):
     for in_key, in_val in plan.get('inputs', {}).items():
-        for constraint in in_val.get('constraints', {}):
+        for constraint in in_val.get('constraints', []):
             if 'valid_values' in constraint:
-                evaluated_values = client.evaluate.functions(
+                constraint['valid_values'] = client.evaluate.functions(
                     ctx.deployment.id, {},
                     {'valid_values': constraint['valid_values']},
                 )['payload']['valid_values']
-            constraint['valid_values'] = evaluated_values
 
 
 @workflow
