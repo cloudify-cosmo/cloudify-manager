@@ -39,8 +39,6 @@ cloudify-common @ https://github.com/cloudify-cosmo/cloudify-common/archive/mast
     #   cloudify-mgmtworker (setup.py)
 cryptography==38.0.1
     # via cloudify-mgmtworker (setup.py)
-decorator==5.1.1
-    # via networkx
 distro==1.7.0
     # via cloudify-common
 fasteners==0.17.3
@@ -63,7 +61,7 @@ multidict==6.0.2
     # via
     #   aiohttp
     #   yarl
-networkx==1.11
+networkx==2.8.8
     # via cloudify-common
 packaging==17.1
     # via
