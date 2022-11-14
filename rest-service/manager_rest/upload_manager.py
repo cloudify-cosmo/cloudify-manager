@@ -42,6 +42,7 @@ from manager_rest.rest.rest_utils import (
     valid_user,
 )
 
+UPLOADING_FOLDER_NAME = '.uploading'
 _PRIVATE_RESOURCE = 'private_resource'
 _VISIBILITY = 'visibility'
 
@@ -328,7 +329,7 @@ def upload_blueprint_archive_to_file_server(blueprint_id):
     archive_target_path = os.path.join(
         file_server_root,
         FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
-        '.uploading',
+        UPLOADING_FOLDER_NAME,
         current_tenant.name,
         blueprint_id,
     )
@@ -499,6 +500,227 @@ def _process_blueprint_plugins(file_server_root, blueprint_id):
         final_zip_name = '{0}.zip'.format(os.path.basename(plugin_dir))
         target_zip_path = os.path.join(plugins_directory, final_zip_name)
         _zip_dir(plugin_dir, target_zip_path)
+
+
+def _verify_plugin_archive(archive_path):
+    wagons = files_in_folder(archive_path, '*.wgn')
+    yamls = files_in_folder(archive_path, '*.yaml')
+    if len(wagons) != 1 or len(yamls) < 1:
+        raise RuntimeError("Archive must include one wgn file "
+                           "and at least one yaml file")
+    return wagons[0], yamls
+
+
+def _load_plugin_package_json(wagon_source):
+    try:
+        return wagon.show(wagon_source)
+    except (wagon.WagonError, tarfile.ReadError, zipfile.BadZipFile) as e:
+        raise manager_exceptions.InvalidPluginError(
+            'The provided wagon archive can not be read.\n{0}: {1}'
+            .format(type(e).__name__, e))
+
+
+def _is_wagon_file(file_path):
+    try:
+        _load_plugin_package_json(file_path)
+    except Exception:
+        return False
+    else:
+        return True
+
+
+def _load_plugin_extras(filenames):
+    result = {'blueprint_labels': None,
+              'labels': None,
+              'resource_tags': None}
+    filename = _choose_plugin_yaml(filenames)
+    if not filename:
+        return result
+
+    with open(filename, 'r') as fh:
+        try:
+            plugin_yaml = yaml.safe_load(fh) or {}
+        except yaml.YAMLError as e:
+            raise manager_exceptions.InvalidPluginError(
+                f"The provided plugin's description ({filename}) "
+                f"can not be read.\n{e}")
+    result['blueprint_labels'] = _retrieve_labels(
+        plugin_yaml.get('blueprint_labels'))
+    result['labels'] = _retrieve_labels(plugin_yaml.get('labels'))
+    result['resource_tags'] = plugin_yaml.get('resource_tags')
+    return result
+
+
+def _plugin_yaml_filename(archive_dir):
+    filenames = (files_in_folder(archive_dir, '*.yaml') or
+                 files_in_folder(archive_dir, '*.yml') or
+                 files_in_folder(archive_dir, '*.YAML') or
+                 files_in_folder(archive_dir, '*.YML'))
+    if not filenames:
+        return None
+    for fn in filenames:
+        if 'plugin.' in fn.lower():
+            return fn
+    return filenames[0]
+
+
+def _choose_plugin_yaml(filenames):
+    if not filenames:
+        return None
+    for fn in filenames:
+        if 'plugin.' in fn.lower():
+            return fn
+    return filenames[0]
+
+
+def _unpack_caravan(path, directory):
+    if not tarfile.is_tarfile(path):
+        return None
+
+    try:
+        with tarfile.open(path) as caravan:
+            root_path = caravan.getmembers()[0].path
+            caravan.extractall(directory)
+    except tarfile.ReadError:
+        return None
+
+    with open(os.path.join(directory, root_path, 'METADATA')) as f:
+        return json.load(f), root_path
+
+
+def _store_plugin(plugin_id, wagon_path, yaml_paths):
+    wagon_info = {
+        'id': plugin_id,
+        'blueprint_labels': None,
+        'labels': None,
+        'resource_tags': None,
+    }
+
+    wagon_info.update(_load_plugin_package_json(wagon_path))
+    wagon_info.update(_load_plugin_extras(yaml_paths))
+
+    plugin_dir = os.path.dirname(wagon_path)
+    if yaml_paths:
+        yaml_paths += create_bc_plugin_yaml(yaml_paths, plugin_dir)
+
+    source_path = os.path.join(
+        config.instance.file_server_root,
+        FILE_SERVER_PLUGINS_FOLDER,
+        UPLOADING_FOLDER_NAME,
+        plugin_id,
+    )
+    target_path = os.path.join(
+        config.instance.file_server_root,
+        FILE_SERVER_PLUGINS_FOLDER,
+        plugin_id,
+    )
+    os.makedirs(target_path, exist_ok=True)
+    shutil.move(
+        wagon_path,
+        os.path.join(target_path, wagon_info['archive_name']),
+    )
+    for yaml_path in yaml_paths:
+        shutil.move(
+            yaml_path,
+            os.path.join(target_path, os.path.basename(yaml_path)),
+        )
+    os.chmod(target_path, 0o777)
+    return wagon_info
+
+
+def is_caravan(path):
+    if not tarfile.is_tarfile(path):
+        return False
+
+    with tarfile.open(path) as caravan:
+        members = caravan.getmembers()
+        if not members:
+            return False
+        root_dir = members[0]
+        try:
+            caravan.getmember(os.path.join(root_dir.path, 'METADATA'))
+        except KeyError:
+            return False
+        else:
+            return True
+
+
+def is_wagon(path):
+    if zipfile.is_zipfile(path):
+        with zipfile.ZipFile(path) as zf:
+            return wagon.METADATA_FILE_NAME in zf.namelist()
+    elif tarfile.is_tarfile(path):
+        with tarfile.open(path) as tf:
+            try:
+                tf.getmember(wagons.METADATA_FILE_NAME)
+            except KeyError:
+                return False
+            else:
+                return True
+    else:
+        return False
+
+
+def upload_plugin(data_id=None, **kwargs):
+    data_id = data_id or request.args.get('id') or str(uuid.uuid4())
+
+    plugin_dir = os.path.join(
+        config.instance.file_server_root,
+        FILE_SERVER_PLUGINS_FOLDER,
+        UPLOADING_FOLDER_NAME,
+        data_id,
+    )
+    archive_target_path = os.path.join(plugin_dir, 'plugin')
+    os.makedirs(plugin_dir, exist_ok=True)
+    _save_file_locally_and_extract_inputs(
+        archive_target_path,
+        'plugin_archive_url',
+        'plugin',
+    )
+
+    plugins = []
+    if is_caravan(archive_target_path):
+        metadata, root_path = _unpack_caravan(archive_target_path, plugin_dir)
+        for wagon_path, yaml_path in metadata.items():
+            wagon_path = os.path.join(
+                plugin_dir,
+                root_path,
+                wagon_path,
+            )
+            yaml_path = os.path.join(
+                plugin_dir,
+                root_path,
+                yaml_path,
+            )
+            plugin_desc = (
+                str(uuid.uuid4()),
+                wagon_path,
+                [yaml_path],
+            )
+            plugins.append(plugin_desc)
+    elif _is_wagon_file(archive_target_path):
+        plugins = [(data_id, archive_target_path, [])]
+    elif zipfile.is_zipfile(archive_target_path):
+        plugin_dir = os.path.dirname(archive_target_path)
+        archive_name = unzip(
+            archive_target_path,
+            destination=plugin_dir,
+            logger=current_app.logger)
+        wagons = files_in_folder(plugin_dir, '*.wgn')
+        yamls = files_in_folder(plugin_dir, '*.yaml')
+        if len(wagons) != 1 or len(yamls) < 1:
+            raise manager_exceptions.InvalidPluginError(
+                "Archive must include one wgn file "
+                "and at least one yaml file"
+            )
+        plugins = [(data_id, wagons[0], yamls)]
+    else:
+        raise manager_exceptions.InvalidPluginError(
+            'input can be only a wagon or a zip file.')
+
+    for plugin_id, wagon, yamls in plugins:
+        yield _store_plugin(plugin_id, wagon, yamls)
+    return
 
 
 class UploadedPluginsManager(UploadedDataManager):

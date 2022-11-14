@@ -20,6 +20,8 @@ import tarfile
 import zipfile
 from datetime import datetime, timedelta
 
+import wagon
+
 from manager_rest.storage import db, models
 from manager_rest.test.base_test import BaseServerTestCase
 
@@ -296,8 +298,6 @@ class PluginsTest(BaseServerTestCase):
         }
         with mock.patch('wagon.show', side_effect=[
             plugin1_desc,
-            plugin1_desc,
-            plugin2_desc,
             plugin2_desc,
         ]):
             response = self.client.plugins.upload(caravan_path)
@@ -409,3 +409,51 @@ blueprint_labels:
             with self.assertRaises(exceptions.CloudifyClientError) as cm:
                 self.client.plugins.upload(plugin_with_labels)
         assert cm.exception.status_code == 400
+
+    def test_plugin_upload_created_wagon(self):
+        setup_py_code = """
+from setuptools import setup
+setup(
+    name='test_plugin',
+    version='0.0.1',
+)
+"""
+        plugin_yaml_code = """
+plugins:
+    test_plugin:
+        package_name: test_plugin
+        package_version: 0.0.1
+"""
+        plugin_source = os.path.join(self.tmpdir, 'test-plugin')
+        os.makedirs(plugin_source)
+        with open(os.path.join(plugin_source, 'setup.py'), 'w') as f:
+            f.write(setup_py_code)
+        plugin_archive = wagon.create(
+            source=plugin_source,
+            archive_destination_dir=self.tmpdir,
+        )
+        yaml_path = os.path.join(self.tmpdir, 'plugin.yaml')
+        with open(yaml_path, 'w') as f:
+            f.write(plugin_yaml_code)
+        zip_path = os.path.join(self.tmpdir, 'plugin.zip')
+        with zipfile.ZipFile(zip_path, 'w') as zf:
+            zf.write(plugin_archive, arcname=os.path.basename(plugin_archive))
+            zf.write(yaml_path, arcname=os.path.basename(yaml_path))
+        uploaded_plugin = self.client.plugins.upload(zip_path)
+        downloaded_wgn_path = os.path.join(
+            self.tmpdir, 'downloaded-plugin.wgn')
+        self.client.plugins.download(
+            uploaded_plugin.id,
+            downloaded_wgn_path,
+        )
+        with open(downloaded_wgn_path, 'rb') as downloaded_wagon, \
+                open(plugin_archive, 'rb') as original_wagon:
+            assert downloaded_wagon.read() == original_wagon.read()
+
+        downloaded_yaml_path = os.path.join(self.tmpdir, 'downloaded-plugin.yaml')
+        self.client.plugins.download_yaml(
+            uploaded_plugin.id,
+            downloaded_yaml_path,
+        )
+        with open(downloaded_yaml_path) as downloaded_yaml:
+            assert downloaded_yaml.read() == plugin_yaml_code

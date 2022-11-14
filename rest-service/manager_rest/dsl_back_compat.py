@@ -5,12 +5,12 @@ import yaml
 from dsl_parser.constants import OBJECT_BASED_TYPES
 
 
-def create_bc_plugin_yaml(yamls, archive_target_path, logger):
+def create_bc_plugin_yaml(yamls, archive_target_path):
     if not yamls:
         raise RuntimeError("At least one yaml file must be provided")
 
     if any(filename.endswith('_1_3.yaml') for filename in yamls):
-        return None, None
+        return []
 
     # take the first yaml file - this is the default behaviour
     with open(yamls[0]) as fh:
@@ -57,12 +57,13 @@ def create_bc_plugin_yaml(yamls, archive_target_path, logger):
             modifications_required |= True
 
     if modifications_required:
+        target_yaml = os.path.join(archive_target_path, 'plugin_1_3.yaml')
         save_bc_plugin_yaml(
-            os.path.join(archive_target_path, 'plugin_1_3.yaml'),
-            plugin_yaml
+            target_yaml,
+            plugin_yaml,
         )
-        logger.info('backward compatible plugin yaml created')
-
+        return [target_yaml]
+    return []
 
 def save_bc_plugin_yaml(file_path, plugin_yaml):
     with open(file_path, 'w') as fh:

@@ -456,7 +456,7 @@ class BlueprintsIdValidate(BlueprintsId):
                 upload_manager.upload_blueprint_archive_to_file_server(
                     blueprint_id)
             workflow_executor.execute_workflow(messages)
-        except Exception as e:
+        except Exception:
             sm.sm.delete(blueprint)
             upload_manager.cleanup_blueprint_archive_from_file_server(
                 blueprint_id, current_tenant.name)
