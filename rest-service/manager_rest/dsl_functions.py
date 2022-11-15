@@ -132,6 +132,10 @@ class FunctionEvaluationStorage(object):
 
     def get_input(self, input_name):
         deployment = self.sm.get(Deployment, self._deployment_id)
+        if not deployment.inputs:
+            raise FunctionsEvaluationError(
+                'Inputs are not yet evaluated for deployment '
+                '`{}`'.format(self._deployment_id))
         return deployment.inputs[input_name]
 
     def get_node(self, node_id):

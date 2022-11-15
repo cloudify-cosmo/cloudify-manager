@@ -98,14 +98,20 @@ def _get_deployment_labels(new_labels, plan_labels):
     return [{k: v} for k, v in labels]
 
 
-def _evaluate_inputs_constraints(ctx, client, plan):
-    for in_key, in_val in plan.get('inputs', {}).items():
-        for constraint in in_val.get('constraints', []):
-            if 'valid_values' in constraint:
-                constraint['valid_values'] = client.evaluate.functions(
-                    ctx.deployment.id, {},
-                    {'valid_values': constraint['valid_values']},
-                )['payload']['valid_values']
+def _evaluate_inputs(ctx, client, plan):
+    if 'inputs' in plan:
+        try:
+            plan['inputs'] = client.evaluate.functions(
+                ctx.deployment.id, {},
+                plan['inputs'],
+            )['payload']
+        except CloudifyClientError as e:
+            if e.status_code == 500:
+                raise ValueError(
+                    "Error evaluating deployment inputs. This could happen "
+                    "if the inputs contain an intrinsic function which "
+                    "requires the deployment to be parsed. {}".format(e))
+            raise
 
 
 @workflow
@@ -115,8 +121,7 @@ def create(ctx, labels=None, inputs=None, skip_plugins_validation=False,
     bp = client.blueprints.get(ctx.blueprint.id)
     plan_node_ids = [n['id'] for n in bp.plan.get('nodes', [])]
     existing_ni_ids = get_instance_ids_by_node_ids(client, plan_node_ids)
-
-    _evaluate_inputs_constraints(ctx, client, bp.plan)
+    _evaluate_inputs(ctx, client, bp.plan)
 
     deployment_plan = tasks.prepare_deployment_plan(
         bp.plan,
