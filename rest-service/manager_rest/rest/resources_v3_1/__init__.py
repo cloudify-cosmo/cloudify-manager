@@ -144,4 +144,5 @@ from .community_contacts import (  # NOQA
 
 from .secrets_provider import (  # NOQA
     SecretsProvider,
+    SecretsProviderKey,
 )
