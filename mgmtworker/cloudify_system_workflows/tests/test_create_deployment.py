@@ -114,3 +114,54 @@ def test_labels_from_plan_and_kwargs(mock_ctx, mock_client, blueprint_plan):
     assert len(call.kwargs['labels']) == 2
     assert {'a': 'b'} in call.kwargs['labels']
     assert {'a': 'c'} in call.kwargs['labels']
+
+
+def test_inputs(mock_ctx, mock_client, blueprint_plan):
+    def parse_inputs(obj):
+        if 'a' in obj:  # we're in the inputs section
+            assert obj['a']['constraints'][0]['valid_values'] == \
+                   ['x', {'get_secret': 's1'}]
+            assert obj['b']['constraints'][0]['valid_values'] == \
+                   [{'get_secret': 's1'}, {'get_secret': 's2'}]
+            assert obj['c']['default'] == {'concat': ['hello ', 'world']}
+
+            # Mock parse values
+            obj['a']['constraints'][0]['valid_values'] = ['x', 'y']
+            obj['b']['constraints'][0]['valid_values'] = ['y', 'z']
+            obj['c']['default'] = 'hello world'
+        return obj
+
+    blueprint_plan['inputs'] = {
+        'a': {
+            'type': 'string',
+            'constraints': [{
+                'valid_values': [
+                    'x',
+                    {'get_secret': 's1'},
+                ]
+            }]
+        },
+        'b': {
+            'type': 'string',
+            'constraints': [{
+                'valid_values': [
+                    {'get_secret': 's1'},
+                    {'get_secret': 's2'},
+                ]
+            }]
+        },
+        'c': {
+            'type': 'string',
+            'default': {'concat': ['hello ', 'world']}
+        }
+    }
+
+    mock_client.evaluate.functions = lambda dep, ctx, obj: {
+        'payload': parse_inputs(obj)
+    }
+    create(mock_ctx, inputs={'a': 'x', 'b': 'z'})
+    call = mock_client.deployments.set_attributes.mock_calls[0]
+    assert len(call.kwargs['inputs']) == 3
+    assert call.kwargs['inputs'].get('a') == 'x'
+    assert call.kwargs['inputs'].get('b') == 'z'
+    assert call.kwargs['inputs'].get('c') == 'hello world'
