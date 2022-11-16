@@ -316,6 +316,7 @@ class Secret(CreatedAtMixin, SQLResourceBase):
     value = db.Column(db.Text)
     updated_at = db.Column(UTCDateTime)
     is_hidden_value = db.Column(db.Boolean, nullable=False, default=False)
+    schema = db.Column(JSONString, nullable=False)
 
     @hybrid_property
     def key(self):
