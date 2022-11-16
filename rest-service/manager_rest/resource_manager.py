@@ -2960,6 +2960,7 @@ def create_secret(key, secret, tenant, created_at=None,
     new_secret = models.Secret(
         id=key,
         value=encrypt(secret['value']),
+        schema=secret['schema'],
         created_at=created_at or timestamp,
         updated_at=updated_at or timestamp,
         visibility=secret['visibility'],

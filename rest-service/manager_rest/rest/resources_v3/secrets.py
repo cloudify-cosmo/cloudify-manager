@@ -1,3 +1,6 @@
+import json
+import jsonschema
+
 from typing import Dict, List, Any, Iterable
 
 from flask import request
@@ -49,6 +52,9 @@ class SecretsKey(SecuredResource):
                 raise manager_exceptions.InvalidFernetTokenFormatError(
                     "The Secret value for key `{}` is malformed, "
                     "please recreate the secret".format(key))
+            # Decode secret by JSON schema, if applicable
+            if secret.schema.get('type') != 'string':
+                secret_dict['value'] = json.loads(secret_dict['value'])
         return secret_dict
 
     @authorize('secret_create')
@@ -107,8 +113,22 @@ class SecretsKey(SecuredResource):
     def _get_secret_params(key):
         rest_utils.validate_inputs({'key': key})
         request_dict = rest_utils.get_json_and_verify_params({
-            'value': {'type': str}
+            'value': {},
+            'schema': {'type': dict, 'optional': True}
         })
+        value = request_dict['value']
+        schema = request_dict.get('schema', {'type': 'string'})
+        try:
+            jsonschema.validate(value, schema)
+        except jsonschema.ValidationError as e:
+            raise manager_exceptions.ConflictError(
+                f'Error validating secret value: {e.args[0]}')
+        except jsonschema.SchemaError as e:
+            raise manager_exceptions.BadParametersError(
+                f'Invalid secret JSON schema {schema}: {e.args[0]}')
+        if not isinstance(value, str):
+            value = json.dumps(value)
+
         update_if_exists = rest_utils.verify_and_convert_bool(
             'update_if_exists',
             request_dict.get('update_if_exists', False),
@@ -128,7 +148,8 @@ class SecretsKey(SecuredResource):
         )
 
         secret_params = {
-            'value': request_dict['value'],
+            'value': value,
+            'schema': schema,
             'update_if_exists': update_if_exists,
             'visibility': visibility,
             'is_hidden_value': is_hidden_value
@@ -178,6 +199,17 @@ class SecretsKey(SecuredResource):
         })
         value = request_dict.get('value')
         if value:
+            secret_type = secret.schema.get('type')
+            if secret_type != 'string':
+                try:
+                    jsonschema.validate(json.loads(value), secret.schema)
+                except jsonschema.ValidationError as e:
+                    raise manager_exceptions.ConflictError(
+                        f'Error validating secret value: {e.args[0]}')
+                except json.decoder.JSONDecodeError as e:
+                    raise manager_exceptions.BadParametersError(
+                        f'Error decoding JSON string "{value}" as '
+                        f'type "{secret_type}": {e.args[0]}')
             secret.value = encrypt(value)
 
     def _update_owner(self, secret):

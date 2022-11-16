@@ -648,4 +648,3 @@ def add_secrets_schema():
 
 def drop_secrets_schema():
     op.drop_column('secrets', 'schema')
-
