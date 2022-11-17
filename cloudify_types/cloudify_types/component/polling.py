@@ -146,7 +146,7 @@ def is_deployment_execution_at_state(client,
             'Execution id was not found for deployment "{0}"'.format(
                 dep_id))
 
-    execution_get_args = ['status', 'workflow_id',
+    execution_get_args = ['status', 'workflow_id', 'status_display',
                           'created_at', 'ended_at', 'id']
 
     execution = client.executions.get(execution_id=execution_id,
