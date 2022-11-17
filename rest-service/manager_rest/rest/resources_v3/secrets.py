@@ -52,6 +52,8 @@ class SecretsKey(SecuredResource):
                 raise manager_exceptions.InvalidFernetTokenFormatError(
                     "The Secret value for key `{}` is malformed, "
                     "please recreate the secret".format(key))
+        if secret.schema:
+            secret_dict['value'] = json.loads(secret_dict['value'])
         return secret_dict
 
     @authorize('secret_create')
@@ -191,18 +193,14 @@ class SecretsKey(SecuredResource):
 
     def _update_value(self, secret):
         request_dict = rest_utils.get_json_and_verify_params({
-            'value': {}
+            'value': {'optional': True}
         })
         value = request_dict.get('value')
         if not value:
             return
         if secret.schema:
             try:
-                jsonschema.validate(json.loads(value), secret.schema)
-            except json.decoder.JSONDecodeError:
-                raise manager_exceptions.ConflictError(
-                    f'Error validating secret value: \'{value}\' is not of'
-                    f' type \'{secret.schema.get("type")}\'')
+                jsonschema.validate(value, secret.schema)
             except jsonschema.ValidationError as e:
                 raise manager_exceptions.ConflictError(
                     f'Error validating secret value: {e}')
