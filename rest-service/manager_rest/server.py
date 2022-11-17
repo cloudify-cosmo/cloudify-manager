@@ -205,7 +205,8 @@ class CloudifyFlaskApp(Flask):
         the tables if necessary
         """
         self.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-            'pool_size': 1
+            'pool_size': 1,
+            'client_encoding': 'utf-8',
         }
         self.update_db_uri()
         self.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
