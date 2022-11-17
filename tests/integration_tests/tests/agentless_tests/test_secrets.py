@@ -34,6 +34,50 @@ class SecretsTest(AgentlessTestCase):
         self.assertEqual(received_secret.key, new_secret.key)
         self.assertEqual(received_secret.value, 'test_value')
 
+    def test_create_array_secret(self):
+        new_secret = self.client.secrets.create(
+            'test_key', '["a", "b", "c"]', schema={'type': 'array'})
+        received_secret = self.client.secrets.get(new_secret.key)
+        self.assertEqual(received_secret.key, new_secret.key)
+        self.assertEqual(received_secret.value, ["a", "b", "c"])
+
+    def test_create_object_secret(self):
+        new_secret = self.client.secrets.create(
+            'test_key', {"a": 1, "b": 2}, schema={'type': 'object'})
+        received_secret = self.client.secrets.get(new_secret.key)
+        self.assertEqual(received_secret.key, new_secret.key)
+        self.assertEqual(received_secret.value, {"a": 1, "b": 2})
+
+    def test_create_secret_schema_value_not_json(self):
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            'Error decoding secret value:.* not of type \'object\'',
+            self.client.secrets.create,
+            'test_key',
+            'a string',
+            schema={'type': 'object'}
+        )
+
+    def test_create_secret_schema_type_mismatch(self):
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            'Error validating secret value:.* not of type \'object\'',
+            self.client.secrets.create,
+            'test_key',
+            ["a", "b", "c"],
+            schema={'type': 'object'}
+        )
+
+    def test_create_secret_schema_validation_error(self):
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            'Error validating secret value:.* greater than the maximum',
+            self.client.secrets.create,
+            'test_key',
+            20.5,
+            schema={'type': 'number', 'maximum': 20}
+        )
+
     def test_update_encrypted_secret(self):
         key = 'test_key'
         self.client.secrets.create(key, 'test_value')

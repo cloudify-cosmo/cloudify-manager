@@ -52,9 +52,6 @@ class SecretsKey(SecuredResource):
                 raise manager_exceptions.InvalidFernetTokenFormatError(
                     "The Secret value for key `{}` is malformed, "
                     "please recreate the secret".format(key))
-            # Decode secret by JSON schema, if applicable
-            if secret.schema.get('type') != 'string':
-                secret_dict['value'] = json.loads(secret_dict['value'])
         return secret_dict
 
     @authorize('secret_create')
@@ -195,21 +192,24 @@ class SecretsKey(SecuredResource):
 
     def _update_value(self, secret):
         request_dict = rest_utils.get_json_and_verify_params({
-            'value': {'type': str, 'optional': True}
+            'value': {}
         })
         value = request_dict.get('value')
         if value:
             secret_type = secret.schema.get('type')
-            if secret_type != 'string':
+            _value = value
+            if secret_type != 'string' and isinstance(value, str):
                 try:
-                    jsonschema.validate(json.loads(value), secret.schema)
-                except jsonschema.ValidationError as e:
+                    _value = json.loads(value)
+                except json.decoder.JSONDecodeError:
                     raise manager_exceptions.ConflictError(
-                        f'Error validating secret value: {e.args[0]}')
-                except json.decoder.JSONDecodeError as e:
-                    raise manager_exceptions.BadParametersError(
-                        f'Error decoding JSON string "{value}" as '
-                        f'type "{secret_type}": {e.args[0]}')
+                        f'Error validating secret value: \'{value}\' is not of'
+                        f' type \'{secret_type}\'')
+            try:
+                jsonschema.validate(_value, secret.schema)
+            except jsonschema.ValidationError as e:
+                raise manager_exceptions.ConflictError(
+                    f'Error validating secret value: {e.args[0]}')
             secret.value = encrypt(value)
 
     def _update_owner(self, secret):
