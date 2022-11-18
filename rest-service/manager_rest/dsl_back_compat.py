@@ -2,7 +2,7 @@ import os
 
 import yaml
 
-from dsl_parser.constants import TYPES_BASED_ON_DB_ENTITIES
+from dsl_parser.constants import OBJECT_BASED_TYPES
 
 
 def create_bc_plugin_yaml(yamls, archive_target_path, logger):
@@ -34,7 +34,7 @@ def create_bc_plugin_yaml(yamls, archive_target_path, logger):
         for path, element in nodes.items():
             if not element or not isinstance(element, dict):
                 continue
-            if element.get('type') in TYPES_BASED_ON_DB_ENTITIES:
+            if element.get('type') in OBJECT_BASED_TYPES:
                 _substitute_tree_node(
                     plugin_yaml, path + ('type', ), 'string')
                 _remove_tree_node(

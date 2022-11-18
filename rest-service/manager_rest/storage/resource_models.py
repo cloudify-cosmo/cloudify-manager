@@ -26,7 +26,7 @@ from cloudify.models_states import (AgentState,
                                     DeploymentState)
 from cloudify.cryptography_utils import decrypt
 from dsl_parser.constants import (WORKFLOW_PLUGINS_TO_INSTALL,
-                                  TYPES_BASED_ON_DB_ENTITIES)
+                                  OBJECT_BASED_TYPES)
 from dsl_parser.constraints import extract_constraints, validate_input_value
 from dsl_parser import exceptions as dsl_exceptions
 
@@ -1327,7 +1327,7 @@ class Execution(CreatedAtMixin, SQLResourceBase):
                 continue
             param_type = param.get('type')
             param_item_type = param.get('item_type')
-            if param_type not in TYPES_BASED_ON_DB_ENTITIES \
+            if param_type not in OBJECT_BASED_TYPES \
                     and not constraints:
                 continue
             try:
