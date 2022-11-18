@@ -45,6 +45,9 @@ class GetValuesWithStorageManager:
             return {n.type for n in self.get_node_types(value, **params)}
         elif data_type == 'node_instance':
             return {n.id for n in self.get_node_instances(value, **params)}
+        elif data_type == 'operation_name':
+            return {op['name']
+                    for op in self.get_operation_names(value, **params)}
         raise NotImplementedError("Getter function not defined for "
                                   f"data type '{data_type}'")
 
@@ -335,6 +338,47 @@ class GetValuesWithStorageManager:
             filter_rules=filter_rules
         )
 
+    def get_operation_names(self, operation_name,
+                            deployment_id=None,
+                            valid_values=None,
+                            operation_name_specs=None):
+        if not deployment_id:
+            raise BadParametersError(
+                "You should provide 'deployment_id' when getting operation "
+                "names.  Make sure you have `deployment_id` constraint "
+                "declared for your 'operation_name' parameter.")
+
+        filter_rules = {}
+
+        nodes = self.sm.list(
+            Node,
+            include=['id'],
+            filters={'deployment_id': str(deployment_id)},
+            filter_rules=filter_rules,
+            get_all_results=True,
+        )
+
+        results = []
+        for node in nodes:
+            if not node.operations:
+                continue
+            for name, operation_specs in node.operations.items():
+                if operation_name_matches(
+                    name,
+                    operation_name,
+                    valid_values=valid_values,
+                    operation_name_specs=operation_name_specs,
+                ):
+                    results.append({
+                        'deployment_id': node.id,
+                        'name': name,
+                        'inputs': operation_specs.get('inputs'),
+                        'operation': operation_specs.get('operation'),
+                        'plugin': operation_specs.get('plugin'),
+                    })
+
+        return results
+
     def update_deployment_id_constraint(self, data_type, **kwargs):
         if data_type not in TYPES_WHICH_REQUIRE_DEPLOYMENT_ID_CONSTRAINT:
             return kwargs
@@ -399,6 +443,35 @@ def scaling_group_name_matches(scaling_group_name, search_value,
             return False
     if search_value:
         return scaling_group_name == search_value
+
+    return True
+
+
+def operation_name_matches(operation_name, search_value,
+                           valid_values=None,
+                           operation_name_specs=None):
+    if operation_name_specs:
+        for operator, value in operation_name_specs.items():
+            if operator == 'contains':
+                if value not in operation_name:
+                    return False
+            elif operator == 'starts_with':
+                if not operation_name.startswith(str(value)):
+                    return False
+            elif operator == 'ends_with':
+                if not operation_name.endswith(str(value)):
+                    return False
+            elif operator == 'equals_to':
+                if operation_name != str(value):
+                    return False
+            else:
+                raise NotImplementedError('Unknown operation name '
+                                          f'pattern operator: {operator}')
+    if valid_values:
+        if operation_name not in valid_values:
+            return False
+    if search_value:
+        return operation_name == search_value
 
     return True
 
