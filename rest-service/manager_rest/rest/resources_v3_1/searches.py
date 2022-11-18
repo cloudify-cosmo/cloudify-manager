@@ -200,11 +200,14 @@ class NodesSearches(ResourceSearches):
     def post(self, _include=None, pagination=None, sort=None,
              all_tenants=None, search=None, **kwargs):
         """List Nodes using filter rules or DSL constraints"""
-        deployment_id, _ = retrieve_deployment_id_and_constraints(
+        deployment_id, constraints = retrieve_deployment_id_and_constraints(
             dep_id_required=True)
         filters = {'deployment_id': deployment_id}
+        rf = 'operation_name' if 'operation_name_specs' in constraints \
+            else 'id'
         return super().post(models.Node, None, _include, filters, pagination,
-                            sort, all_tenants, search, None, **kwargs)
+                            sort, all_tenants, search, None,
+                            resource_field=rf, **kwargs)
 
 
 class NodeTypesSearches(ResourceSearches):

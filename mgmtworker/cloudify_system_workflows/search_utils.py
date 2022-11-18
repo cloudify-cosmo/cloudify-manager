@@ -31,6 +31,9 @@ class GetValuesWithRest:
             return {n.type for n in self.get_node_types(value, **kwargs)}
         elif data_type == 'node_instance':
             return {n.id for n in self.get_node_instances(value, **kwargs)}
+        elif data_type == 'operation_name':
+            return set(self.get_operation_names(value, **kwargs))
+
         raise NotImplementedError("Getter function not defined for "
                                   f"data type '{data_type}'")
 
@@ -123,6 +126,34 @@ class GetValuesWithRest:
                                                _get_all_results=True,
                                                constraints=kwargs)
 
+    def get_operation_names(self, operation_name, **kwargs):
+        try:
+            deployment_id = kwargs.pop('deployment_id')
+        except KeyError:
+            raise NonRecoverableError(
+                "You should provide 'deployment_id' when getting operation "
+                "names.  Make sure you have `deployment_id` constraint "
+                "declared for your 'operation_name' parameter.")
+
+        nodes = self.client.nodes.list(
+            deployment_id=deployment_id,
+            _include=['operations'],
+            _get_all_results=True,
+            constraints=kwargs
+        )
+        results = []
+        for node in nodes:
+            for name, operation_specs in node['operations'].items():
+                if operation_name_matches(
+                    name,
+                    operation_name,
+                    valid_values=kwargs.get('valid_values'),
+                    operation_name_specs=kwargs.get('operation_name_specs'),
+                ):
+                    results.append(name)
+
+        return results
+
 
 def get_instance_ids_by_node_ids(client, node_ids):
     ni_ids = defaultdict(set)
@@ -138,3 +169,32 @@ def get_instance_ids_by_node_ids(client, node_ids):
         else:
             break
     return ni_ids
+
+
+def operation_name_matches(operation_name, search_value,
+                           valid_values=None,
+                           operation_name_specs=None):
+    if operation_name_specs:
+        for operator, value in operation_name_specs.items():
+            if operator == 'contains':
+                if value not in operation_name:
+                    return False
+            elif operator == 'starts_with':
+                if not operation_name.startswith(str(value)):
+                    return False
+            elif operator == 'ends_with':
+                if not operation_name.endswith(str(value)):
+                    return False
+            elif operator == 'equals_to':
+                if operation_name != str(value):
+                    return False
+            else:
+                raise NotImplementedError('Unknown operation name '
+                                          f'pattern operator: {operator}')
+    if valid_values:
+        if operation_name not in valid_values:
+            return False
+    if search_value:
+        return operation_name == search_value
+
+    return True
