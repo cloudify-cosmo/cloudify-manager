@@ -114,16 +114,15 @@ class SecretsKey(SecuredResource):
             'schema': {'type': dict, 'optional': True}
         })
         value = request_dict['value']
-        schema = request_dict.get('schema', {'type': 'string'})
-        try:
-            jsonschema.validate(value, schema)
-        except jsonschema.ValidationError as e:
-            raise manager_exceptions.ConflictError(
-                f'Error validating secret value: {e.args[0]}')
-        except jsonschema.SchemaError as e:
-            raise manager_exceptions.BadParametersError(
-                f'Invalid secret JSON schema {schema}: {e.args[0]}')
-        if not isinstance(value, str):
+        if schema := request_dict.get('schema'):
+            try:
+                jsonschema.validate(value, schema)
+            except jsonschema.ValidationError as e:
+                raise manager_exceptions.ConflictError(
+                    f'Error validating secret value: {e}')
+            except jsonschema.SchemaError as e:
+                raise manager_exceptions.BadParametersError(
+                    f'Invalid secret JSON schema {schema}: {e}')
             value = json.dumps(value)
 
         update_if_exists = rest_utils.verify_and_convert_bool(
@@ -195,22 +194,19 @@ class SecretsKey(SecuredResource):
             'value': {}
         })
         value = request_dict.get('value')
-        if value:
-            secret_type = secret.schema.get('type')
-            _value = value
-            if secret_type != 'string' and isinstance(value, str):
-                try:
-                    _value = json.loads(value)
-                except json.decoder.JSONDecodeError:
-                    raise manager_exceptions.ConflictError(
-                        f'Error validating secret value: \'{value}\' is not of'
-                        f' type \'{secret_type}\'')
+        if not value:
+            return
+        if secret.schema:
             try:
-                jsonschema.validate(_value, secret.schema)
+                jsonschema.validate(json.loads(value), secret.schema)
+            except json.decoder.JSONDecodeError:
+                raise manager_exceptions.ConflictError(
+                    f'Error validating secret value: \'{value}\' is not of'
+                    f' type \'{secret.schema.get("type")}\'')
             except jsonschema.ValidationError as e:
                 raise manager_exceptions.ConflictError(
-                    f'Error validating secret value: {e.args[0]}')
-            secret.value = encrypt(value)
+                    f'Error validating secret value: {e}')
+        secret.value = encrypt(value)
 
     def _update_owner(self, secret):
         request_dict = rest_utils.get_json_and_verify_params({

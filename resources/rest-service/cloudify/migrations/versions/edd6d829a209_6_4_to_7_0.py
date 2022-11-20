@@ -639,11 +639,7 @@ def drop_users_created_at_index():
 
 def add_secrets_schema():
     op.add_column('secrets',
-                  sa.Column('schema',
-                            JSONString(),
-                            nullable=False,
-                            server_default='{"type": "string"}')
-                  )
+                  sa.Column('schema', JSONString(), nullable=True))
 
 
 def drop_secrets_schema():

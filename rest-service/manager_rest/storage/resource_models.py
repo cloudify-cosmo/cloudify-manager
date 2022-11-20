@@ -326,6 +326,7 @@ class Secret(CreatedAtMixin, SQLResourceBase):
     def resource_fields(cls):
         fields = super(Secret, cls).resource_fields
         fields['key'] = fields.pop('id')
+        fields['value'] = flask_fields.Raw
         return fields
 
     @classproperty
