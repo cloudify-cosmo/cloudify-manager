@@ -45,6 +45,7 @@ def upgrade():
     drop_service_management_config()
     add_users_created_at_index()
     create_secrets_providers_table()
+    add_secrets_schema()
 
 
 def downgrade():
@@ -54,6 +55,7 @@ def downgrade():
     add_service_management_config()
     drop_users_created_at_index()
     drop_secrets_providers_table()
+    drop_secrets_schema()
 
 
 # Upgrade functions
@@ -633,3 +635,12 @@ def drop_users_created_at_index():
         existing_type=postgresql.TIMESTAMP(),
         nullable=True,
     )
+
+
+def add_secrets_schema():
+    op.add_column('secrets',
+                  sa.Column('schema', JSONString(), nullable=True))
+
+
+def drop_secrets_schema():
+    op.drop_column('secrets', 'schema')
