@@ -26,6 +26,8 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 from manager_rest.test import base_test
 
 CREDENTIALS_PERMISSION = 'tenant_rabbitmq_credentials'
+INCLUDE_CREDS = ['name', 'rabbitmq_username',
+                 'rabbitmq_password', 'rabbitmq_vhost']
 
 
 @pytest.mark.skipif(
@@ -34,11 +36,40 @@ CREDENTIALS_PERMISSION = 'tenant_rabbitmq_credentials'
            'installed. Premium tests are in cloudify-premium.'
 )
 class TenantsCommunityTestCase(base_test.BaseServerTestCase):
-    def test_list_tenants(self):
-        """Listing tenants is allowed on community."""
-        result = self.client.tenants.list()
+    def _check_list_no_queue_creds(self, include=None):
+        if include:
+            result = self.client.tenants.list(_include=include)
+        else:
+            result = self.client.tenants.list()
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]['name'], constants.DEFAULT_TENANT_NAME)
+        for key in ['username', 'password', 'vhost']:
+            self.assertIsNone(result[0]['rabbitmq_' + key])
+
+    def test_list_tenants_no_queue_details(self):
+        """Don't return queue creds by default."""
+        self._check_tenant_no_queue_creds()
+
+    def test_list_tenants_no_queue_permission(self):
+        """Without the relevant permission return empty rabbit details."""
+        with patch(
+            'manager_rest.rest.resources_v3.tenants.is_user_action_allowed',
+            return_value=False,
+        ) as mock_check:
+            self._check_tenant_no_queue_creds(INCLUDE_CREDS)
+            mock_check.assert_called_once_with(
+                'tenant_rabbitmq_credentials',
+                constants.DEFAULT_TENANT_NAME,
+            )
+
+    def test_list_tenants_with_queue_permission(self):
+        result = self.client.tenants.list(_include=INCLUDE_CREDS)
+        self.assertEqual(len(result), 1)
+        result = result[0]
+        self.assertEqual(result['name'], constants.DEFAULT_TENANT_NAME)
+        assert result['rabbitmq_username'] == 'rabbitmq_user_default_tenant'
+        assert result['rabbitmq_vhost'] == 'rabbitmq_vhost_default_tenant'
+        assert not result['rabbitmq_password'].startswith('gAAA')
 
     def test_get_tenant_no_permission(self):
         """Getting a tenant without the credentials permission, gives
