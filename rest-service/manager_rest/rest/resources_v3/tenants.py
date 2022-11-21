@@ -124,22 +124,19 @@ class TenantsId(SecuredMultiTenancyResource):
 
         On community, only getting the default tenant is allowed.
         """
-        if multi_tenancy:
-            rest_utils.validate_inputs({'tenant_name': tenant_name})
-            return multi_tenancy.get_tenant(tenant_name)
+        rest_utils.validate_inputs({'tenant_name': tenant_name})
+        if tenant_name != constants.DEFAULT_TENANT_NAME and not multi_tenancy:
+            raise MissingPremiumPackage()
+        tenant = get_storage_manager().get(
+            models.Tenant,
+            None,
+            filters={'name': tenant_name})
+        if is_user_action_allowed(
+                'tenant_rabbitmq_credentials', tenant_name):
+            tenant.rabbitmq_password = decrypt(tenant.rabbitmq_password)
         else:
-            if tenant_name != constants.DEFAULT_TENANT_NAME:
-                raise MissingPremiumPackage()
-            tenant = get_storage_manager().get(
-                models.Tenant,
-                None,
-                filters={'name': tenant_name})
-            if is_user_action_allowed(
-                    'tenant_rabbitmq_credentials', tenant_name):
-                tenant.rabbitmq_password = decrypt(tenant.rabbitmq_password)
-            else:
-                _clear_tenant_rabbit_creds(tenant)
-            return tenant
+            _clear_tenant_rabbit_creds(tenant)
+        return tenant
 
     @authorize('tenant_delete')
     def delete(self, tenant_name, multi_tenancy):
