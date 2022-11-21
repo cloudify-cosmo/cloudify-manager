@@ -180,21 +180,22 @@ def operation_name_matches(operation_name, search_value,
     """
     if operation_name_specs:
         for operator, value in operation_name_specs.items():
-            if operator == 'contains':
-                if value not in operation_name:
-                    return False
-            elif operator == 'starts_with':
-                if not operation_name.startswith(str(value)):
-                    return False
-            elif operator == 'ends_with':
-                if not operation_name.endswith(str(value)):
-                    return False
-            elif operator == 'equals_to':
-                if operation_name != str(value):
-                    return False
-            else:
-                raise NotImplementedError('Unknown operation name '
-                                          f'pattern operator: {operator}')
+            match operator:
+                case 'contains':
+                    if value not in operation_name:
+                        return False
+                case 'starts_with':
+                    if not operation_name.startswith(str(value)):
+                        return False
+                case 'ends_with':
+                    if not operation_name.endswith(str(value)):
+                        return False
+                case 'equals_to':
+                    if operation_name != str(value):
+                        return False
+                case _:
+                    raise NotImplementedError('Unknown operation name '
+                                              f'pattern operator: {operator}')
     if valid_values:
         if operation_name not in valid_values:
             return False
