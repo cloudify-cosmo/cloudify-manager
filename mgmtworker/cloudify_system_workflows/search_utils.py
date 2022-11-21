@@ -31,11 +31,6 @@ class GetValuesWithRest:
             return {n.type for n in self.get_node_types(value, **kwargs)}
         elif data_type == 'node_instance':
             return {n.id for n in self.get_node_instances(value, **kwargs)}
-        elif data_type == 'operation_name':
-            return {name
-                    for op in self.get_operation_names(value, **kwargs)
-                    for name in op.operations.keys()}
-
         raise NotImplementedError("Getter function not defined for "
                                   f"data type '{data_type}'")
 
@@ -127,20 +122,6 @@ class GetValuesWithRest:
                                                _include=['id'],
                                                _get_all_results=True,
                                                constraints=kwargs)
-
-    def get_operation_names(self, operation_name, **kwargs):
-        try:
-            deployment_id = kwargs.pop('deployment_id')
-        except KeyError:
-            raise NonRecoverableError(
-                "You should provide 'deployment_id' when getting operation "
-                "names.  Make sure you have `deployment_id` constraint "
-                "declared for your 'operation_name' parameter.")
-
-        return self.client.nodes.list(deployment_id=deployment_id,
-                                      _include=['operations'],
-                                      _get_all_results=True,
-                                      constraints=kwargs)
 
 
 def get_instance_ids_by_node_ids(client, node_ids):
