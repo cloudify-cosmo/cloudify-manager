@@ -99,12 +99,27 @@ def _get_deployment_labels(new_labels, plan_labels):
 
 
 def _evaluate_inputs(ctx, client, plan):
+    """Mutate the plan by evaluating inputs (if any)
+
+    This only evaluates inputs constraints. Other input attributes
+    (specifically: the default) need to not be evaluated here, because
+    they support lazy-evaluation.
+    """
     if 'inputs' in plan:
+        input_constraints = {
+            inp_name: constraints
+            for inp_name, inp in plan['inputs'].items()
+            if (constraints := inp and inp.get('constraints'))
+        }
+        if not input_constraints:
+            return
         try:
-            plan['inputs'] = client.evaluate.functions(
+            evaluated_constraints = client.evaluate.functions(
                 ctx.deployment.id, {},
-                plan['inputs'],
-            )['payload']
+                {
+                    'input_constraints': input_constraints,
+                }
+            )['payload']['input_constraints']
         except CloudifyClientError as e:
             if e.status_code == 500:
                 raise ValueError(
@@ -112,6 +127,8 @@ def _evaluate_inputs(ctx, client, plan):
                     "if the inputs contain an intrinsic function which "
                     "requires the deployment to be parsed. {}".format(e))
             raise
+        for inp_name, inp_constraints in evaluated_constraints.items():
+            plan['inputs'][inp_name]['constraints'] = inp_constraints
 
 
 @workflow
