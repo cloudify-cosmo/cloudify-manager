@@ -68,8 +68,8 @@ class Tenants(TenantsListResource):
 
         if (
             _include is not None
-            and any([f'rabbitmq_{attr}' in _include
-                     for attr in ['password', 'username', 'vhost']])
+            and any(f'rabbitmq_{attr}' in _include
+                    for attr in ['password', 'username', 'vhost'])
         ):
             for tenant in tenants:
                 if is_user_action_allowed('tenant_rabbitmq_credentials',
