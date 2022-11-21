@@ -992,7 +992,6 @@ class TestOperationNameType(AgentlessTestCase, DataBasedTypes):
             blueprint_id='bp',
             blueprint_file_name='blueprint_with_operation_name_data_type.yaml'
         )
-        # self.setup_valid_secrets()
 
     @staticmethod
     def get_inputs(**kwargs):
