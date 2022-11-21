@@ -55,18 +55,6 @@ class UserResponse(BaseResponse):
 
 @swagger.model
 class TenantResponse(BaseResponse):
-
-    resource_fields = {
-        'name': fields.String,
-        'groups': fields.Raw,
-        'users': fields.Raw,
-        'user_roles': fields.Raw
-    }
-
-
-@swagger.model
-class TenantDetailsResponse(BaseResponse):
-
     resource_fields = {
         'name': fields.String,
         'groups': fields.Raw,
