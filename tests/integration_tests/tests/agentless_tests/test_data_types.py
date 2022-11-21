@@ -978,3 +978,75 @@ class TestListTypes(AgentlessTestCase, DataBasedTypes):
             },
         )
         self.wait_for_execution_to_end(test_execution)
+
+
+class TestOperationNameType(AgentlessTestCase, DataBasedTypes):
+    def setUp(self):
+        super().setUp()
+        self.upload_blueprint(
+            blueprint_id='bp-basic',
+            blueprint_file_name='blueprint_with_two_nodes.yaml',
+        )
+        self.client.deployments.create('bp-basic', 'dep-basic')
+        self.upload_blueprint(
+            blueprint_id='bp',
+            blueprint_file_name='blueprint_with_operation_name_data_type.yaml'
+        )
+
+    @staticmethod
+    def get_inputs(**kwargs):
+        inputs = {'input_a': 'cloudify.interfaces.lifecycle.configure',
+                  'input_b': 'update_postapply'}
+        inputs.update(kwargs)
+        return inputs
+
+    @staticmethod
+    def get_params(**kwargs):
+        params = {'param_a': 'cloudify.interfaces.lifecycle.configure',
+                  'param_b': 'update_postapply'}
+        params.update(kwargs)
+        return params
+
+    def test_successful(self):
+        self.client.deployments.create(
+            'bp', 'dep', inputs=self.get_inputs())
+        install_execution = self.client.executions.create('dep', 'install')
+        self.wait_for_execution_to_end(install_execution)
+        test_execution = self.client.executions.create(
+            'dep', 'test_parameters', parameters=self.get_params())
+        self.wait_for_execution_to_end(test_execution)
+
+    def test_input_errors(self):
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            r'^400:.+ConstraintException:.+input_a.+name_pattern',
+            self.client.deployments.create,
+            'bp', 'dep',
+            inputs=self.get_inputs(input_a='check_drift'),
+        )
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            r'^400:.+ConstraintException:.+input_b.+does not match',
+            self.client.deployments.create,
+            'bp', 'dep',
+            inputs=self.get_inputs(input_b='nonexistent_operation_name'),
+        )
+
+    def test_param_errors(self):
+        self.client.deployments.create(
+            'bp', 'dep', inputs=self.get_inputs())
+
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            r'^400:.+Parameter.+constraints:.+param_a.+name_pattern',
+            self.client.executions.create,
+            'dep', 'test_parameters',
+            parameters=self.get_params(param_a='second_noe'),
+        )
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            r'^400:.+Parameter.+constraints:.+param_b.+does not match',
+            self.client.executions.create,
+            'dep', 'test_parameters',
+            parameters=self.get_params(param_b='op-name-that-does-not-exist'),
+        )

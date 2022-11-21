@@ -2121,7 +2121,7 @@ class Node(SQLResourceBase):
 
     @classproperty
     def allowed_filter_attrs(cls):
-        return ['id', 'type']
+        return ['id', 'type', 'operation_name']
 
     def to_dict(self, suppress_error=False):
         # some usages of the dict want 'name' instead of 'id' (notably,

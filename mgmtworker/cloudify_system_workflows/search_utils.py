@@ -31,6 +31,9 @@ class GetValuesWithRest:
             return {n.type for n in self.get_node_types(value, **kwargs)}
         elif data_type == 'node_instance':
             return {n.id for n in self.get_node_instances(value, **kwargs)}
+        elif data_type == 'operation_name':
+            return set(self.get_operation_names(value, **kwargs))
+
         raise NotImplementedError("Getter function not defined for "
                                   f"data type '{data_type}'")
 
@@ -57,9 +60,8 @@ class GetValuesWithRest:
             deployment_id = kwargs.pop('deployment_id')
         except KeyError:
             raise NonRecoverableError(
-                "You should provide 'deployment_id' when getting capability "
-                "values.  Make sure you have `deployment_id` constraint "
-                "declared for your 'capability_value' input.")
+                "Parameters of type 'capability_value' require the "
+                f"'deployment_id' constraint ({capability_value}).")
         return self.client.deployments.capabilities.list(
             deployment_id,
             _search=capability_value,
@@ -71,9 +73,8 @@ class GetValuesWithRest:
             deployment_id = kwargs.pop('deployment_id')
         except KeyError:
             raise NonRecoverableError(
-                "You should provide 'deployment_id' when getting scaling "
-                "groups.  Make sure you have `deployment_id` constraint "
-                "declared for your 'scaling_group' parameter.")
+                "Parameters of type 'scaling_group' require the "
+                f"'deployment_id' constraint ({scaling_group}).")
         return self.client.deployments.scaling_groups.list(
             deployment_id=deployment_id,
             _search=scaling_group,
@@ -86,9 +87,8 @@ class GetValuesWithRest:
             deployment_id = kwargs.pop('deployment_id')
         except KeyError:
             raise NonRecoverableError(
-                "You should provide 'deployment_id' when getting node id-s. "
-                "Make sure you have `deployment_id` constraint declared for "
-                "your 'node_id' input.")
+                "Parameters of type 'node_id' require the "
+                f"'deployment_id' constraint ({node_id}).")
         return self.client.nodes.list(node_id=node_id,
                                       deployment_id=deployment_id,
                                       _include=['id'],
@@ -100,9 +100,8 @@ class GetValuesWithRest:
             deployment_id = kwargs.pop('deployment_id')
         except KeyError:
             raise NonRecoverableError(
-                "You should provide 'deployment_id' when getting node "
-                "types.  Make sure you have `deployment_id` constraint "
-                "declared for your 'node_type' parameter.")
+                "Parameters of type 'node_type' require the "
+                f"'deployment_id' constraint ({node_type}).")
         return self.client.nodes.types.list(deployment_id=deployment_id,
                                             type=node_type,
                                             _include=['type'],
@@ -114,14 +113,39 @@ class GetValuesWithRest:
             deployment_id = kwargs.pop('deployment_id')
         except KeyError:
             raise NonRecoverableError(
-                "You should provide 'deployment_id' when getting node "
-                "instances.  Make sure you have `deployment_id` constraint "
-                "declared for your 'node_instance' parameter.")
+                "Parameters of type 'node_instance' require the "
+                f"'deployment_id' constraint ({node_instance}).")
         return self.client.node_instances.list(deployment_id=deployment_id,
                                                id=node_instance,
                                                _include=['id'],
                                                _get_all_results=True,
                                                constraints=kwargs)
+
+    def get_operation_names(self, operation_name, **kwargs):
+        try:
+            deployment_id = kwargs.pop('deployment_id')
+        except KeyError:
+            raise NonRecoverableError(
+                "Parameters of type 'operation_name' require the "
+                f"'deployment_id' constraint ({operation_name}).")
+        nodes = self.client.nodes.list(
+            deployment_id=deployment_id,
+            _include=['operations'],
+            _get_all_results=True,
+            constraints=kwargs
+        )
+        results = []
+        for node in nodes:
+            for name, operation_specs in node['operations'].items():
+                if operation_name_matches(
+                    name,
+                    operation_name,
+                    valid_values=kwargs.get('valid_values'),
+                    operation_name_specs=kwargs.get('operation_name_specs'),
+                ):
+                    results.append(name)
+
+        return results
 
 
 def get_instance_ids_by_node_ids(client, node_ids):
@@ -138,3 +162,44 @@ def get_instance_ids_by_node_ids(client, node_ids):
         else:
             break
     return ni_ids
+
+
+def operation_name_matches(operation_name, search_value,
+                           valid_values=None,
+                           operation_name_specs=None):
+    """Verify if operation_name matches the constraints.
+
+    :param operation_name: name of an operation to test.
+    :param search_value: value of an input/parameter of type operation_name,
+                         if provided, must exactly match `operation_name`.
+    :param valid_values: a list of allowed values for the `operation_name`.
+    :param operation_name_specs: a dictionary describing a name_pattern
+                                 constraint for `operation_name`.
+    :return: `True` if `operation_name` matches the constraints provided with
+             the other three parameters.
+    """
+    if operation_name_specs:
+        for operator, value in operation_name_specs.items():
+            match operator:
+                case 'contains':
+                    if value not in operation_name:
+                        return False
+                case 'starts_with':
+                    if not operation_name.startswith(str(value)):
+                        return False
+                case 'ends_with':
+                    if not operation_name.endswith(str(value)):
+                        return False
+                case 'equals_to':
+                    if operation_name != str(value):
+                        return False
+                case _:
+                    raise NotImplementedError('Unknown operation name '
+                                              f'pattern operator: {operator}')
+    if valid_values:
+        if operation_name not in valid_values:
+            return False
+    if search_value:
+        return operation_name == search_value
+
+    return True
