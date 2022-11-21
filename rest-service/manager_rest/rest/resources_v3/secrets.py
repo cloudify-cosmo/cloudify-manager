@@ -1,3 +1,6 @@
+import json
+import jsonschema
+
 from typing import Dict, List, Any, Iterable
 
 from flask import request
@@ -49,6 +52,8 @@ class SecretsKey(SecuredResource):
                 raise manager_exceptions.InvalidFernetTokenFormatError(
                     "The Secret value for key `{}` is malformed, "
                     "please recreate the secret".format(key))
+        if secret.schema:
+            secret_dict['value'] = json.loads(secret_dict['value'])
         return secret_dict
 
     @authorize('secret_create')
@@ -107,8 +112,21 @@ class SecretsKey(SecuredResource):
     def _get_secret_params(key):
         rest_utils.validate_inputs({'key': key})
         request_dict = rest_utils.get_json_and_verify_params({
-            'value': {'type': str}
+            'value': {},
+            'schema': {'type': dict, 'optional': True}
         })
+        value = request_dict['value']
+        if schema := request_dict.get('schema'):
+            try:
+                jsonschema.validate(value, schema)
+            except jsonschema.ValidationError as e:
+                raise manager_exceptions.ConflictError(
+                    f'Error validating secret value: {e}')
+            except jsonschema.SchemaError as e:
+                raise manager_exceptions.BadParametersError(
+                    f'Invalid secret JSON schema {schema}: {e}')
+            value = json.dumps(value)
+
         update_if_exists = rest_utils.verify_and_convert_bool(
             'update_if_exists',
             request_dict.get('update_if_exists', False),
@@ -128,7 +146,8 @@ class SecretsKey(SecuredResource):
         )
 
         secret_params = {
-            'value': request_dict['value'],
+            'value': value,
+            'schema': schema,
             'update_if_exists': update_if_exists,
             'visibility': visibility,
             'is_hidden_value': is_hidden_value
@@ -174,11 +193,18 @@ class SecretsKey(SecuredResource):
 
     def _update_value(self, secret):
         request_dict = rest_utils.get_json_and_verify_params({
-            'value': {'type': str, 'optional': True}
+            'value': {'optional': True}
         })
         value = request_dict.get('value')
-        if value:
-            secret.value = encrypt(value)
+        if not value:
+            return
+        if secret.schema:
+            try:
+                jsonschema.validate(value, secret.schema)
+            except jsonschema.ValidationError as e:
+                raise manager_exceptions.ConflictError(
+                    f'Error validating secret value: {e}')
+        secret.value = encrypt(value)
 
     def _update_owner(self, secret):
         request_dict = rest_utils.get_json_and_verify_params({
