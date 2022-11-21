@@ -167,6 +167,17 @@ def get_instance_ids_by_node_ids(client, node_ids):
 def operation_name_matches(operation_name, search_value,
                            valid_values=None,
                            operation_name_specs=None):
+    """Verify if operation_name matches the constraints.
+
+    :param operation_name: name of an operation to test.
+    :param search_value: value of an input/parameter of type operation_name,
+                         if provided, must exactly match `operation_name`.
+    :param valid_values: a list of allowed values for the `operation_name`.
+    :param operation_name_specs: a dictionary describing a name_pattern
+                                 constraint for `operation_name`.
+    :return: `True` if `operation_name` matches the constraints provided with
+             the other three parameters.
+    """
     if operation_name_specs:
         for operator, value in operation_name_specs.items():
             if operator == 'contains':
