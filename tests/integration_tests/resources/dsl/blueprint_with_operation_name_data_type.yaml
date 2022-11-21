@@ -1,0 +1,43 @@
+tosca_definitions_version: cloudify_dsl_1_5
+
+imports:
+  - cloudify/types/types.yaml
+
+inputs:
+  input_a:
+    type: operation_name
+    constraints:
+      - deployment_id: dep-basic
+      - name_pattern:
+          starts_with: cloudify
+          contains: lifecycle
+      - valid_values:
+          - cloudify.interfaces.lifecycle.configure
+          - cloudify.interfaces.lifecycle.create
+          - cloudify.interfaces.lifecycle.delete
+          - cloudify.interfaces.lifecycle.heal
+  input_b:
+    type: operation_name
+    constraints:
+      - deployment_id: dep-basic
+
+workflows:
+  test_parameters:
+    mapping: file:///dev/null
+    parameters:
+      param_a:
+        type: operation_name
+        constraints:
+          - deployment_id: dep-basic
+          - name_pattern:
+              starts_with: cloudify
+              contains: lifecycle
+          - valid_values:
+              - cloudify.interfaces.lifecycle.configure
+              - cloudify.interfaces.lifecycle.create
+              - cloudify.interfaces.lifecycle.delete
+              - cloudify.interfaces.lifecycle.heal
+      param_b:
+        type: operation_name
+        constraints:
+          - deployment_id: dep-basic
