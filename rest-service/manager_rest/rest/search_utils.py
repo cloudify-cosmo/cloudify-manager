@@ -2,7 +2,7 @@ from collections import defaultdict
 from copy import copy
 from typing import List, Dict, Any
 
-from dsl_parser.constants import TYPES_WHICH_REQUIRE_DEPLOYMENT_ID_CONSTRAINT
+from dsl_parser.constants import ID_CONSTRAINT_TYPES
 from dsl_parser.utils import get_function
 
 from manager_rest.manager_exceptions import BadParametersError
@@ -24,29 +24,29 @@ class GetValuesWithStorageManager:
         return bool(self.current_deployment_id)
 
     def get(self, data_type, value, **kwargs):
-        params = self.update_deployment_id_constraint(data_type, **kwargs)
+        kwargs = self.update_deployment_id_constraint(data_type, **kwargs)
         if data_type == 'blueprint_id':
-            return {b.id for b in self.get_blueprints(value, **params)}
+            return {b.id for b in self.get_blueprints(value, **kwargs)}
         elif data_type == 'deployment_id':
-            return {d.id for d in self.get_deployments(value, **params)}
+            return {d.id for d in self.get_deployments(value, **kwargs)}
         elif data_type == 'secret_key':
-            return {s.key for s in self.get_secrets(value, **params)}
+            return {s.key for s in self.get_secrets(value, **kwargs)}
         elif data_type == 'capability_value':
             return {cap_details['value']
-                    for dep_cap in self.get_capability_values(value, **params)
+                    for dep_cap in self.get_capability_values(value, **kwargs)
                     for cap in dep_cap['capabilities']
                     for cap_details in cap.values()}
         elif data_type == 'scaling_group':
             return {sg['name']
-                    for sg in self.get_scaling_groups(value, **params)}
+                    for sg in self.get_scaling_groups(value, **kwargs)}
         elif data_type == 'node_id':
-            return {n.id for n in self.get_nodes(value, **params)}
+            return {n.id for n in self.get_nodes(value, **kwargs)}
         elif data_type == 'node_type':
-            return {n.type for n in self.get_node_types(value, **params)}
+            return {n.type for n in self.get_node_types(value, **kwargs)}
         elif data_type == 'node_instance':
-            return {n.id for n in self.get_node_instances(value, **params)}
+            return {n.id for n in self.get_node_instances(value, **kwargs)}
         elif data_type == 'operation_name':
-            return set(self.get_operation_names(value, **params))
+            return set(self.get_operation_names(value, **kwargs))
         raise NotImplementedError("Getter function not defined for "
                                   f"data type '{data_type}'")
 
@@ -382,7 +382,7 @@ class GetValuesWithStorageManager:
         return results
 
     def update_deployment_id_constraint(self, data_type, **kwargs):
-        if data_type not in TYPES_WHICH_REQUIRE_DEPLOYMENT_ID_CONSTRAINT:
+        if data_type not in ID_CONSTRAINT_TYPES:
             return kwargs
         params = copy(kwargs)
         if 'deployment_id' not in kwargs:

@@ -855,7 +855,7 @@ class TestListTypes(AgentlessTestCase, DataBasedTypes):
         )
         self.assertRaisesRegex(
             CloudifyClientError,
-            r"^400:.+Input 'nodes_list'.+lacks 'deployment_id'",
+            r"^400:.+input 'nodes_list' does not match",
             self.client.deployments.create,
             'bp', 'dep1',
             inputs={
