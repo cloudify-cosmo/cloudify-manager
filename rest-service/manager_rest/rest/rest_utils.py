@@ -511,9 +511,20 @@ def _add_new_consumer_labels(sm, source_id, consumer_labels_to_add):
 
 
 def _evaluate_target_func(target_dep_func, source_dep_id):
+    if not target_dep_func:
+        return target_dep_func
+    context = None
+    # 7.0.0+ IDDs are of the form {'function': func, 'context': {}},
+    # but pre-7.0.0 (un-migrated snapshots?) there's only func
+    if 'function' in target_dep_func and 'context' in target_dep_func:
+        context = target_dep_func['context']
+        target_dep_func = target_dep_func['function']
     if get_function(target_dep_func):
         evaluated_func = evaluate_intrinsic_functions(
-            {'target_deployment': target_dep_func}, source_dep_id)
+            {'target_deployment': target_dep_func},
+            source_dep_id,
+            context=context,
+        )
         return evaluated_func.get('target_deployment')
 
     return target_dep_func

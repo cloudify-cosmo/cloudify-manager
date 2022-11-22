@@ -108,8 +108,16 @@ def _prepare(deployment_plan: dsl_models.Plan,
     local_tenant_name = tenant_name if ext_client else None
 
     local_dependencies, external_dependencies = [], []
-    for func_id, deployment_id_func in new_dependencies.items():
-        target_deployment_id, target_deployment_func = deployment_id_func
+    for dependency in new_dependencies:
+        func_id = dependency['function_identifier']
+
+        target_deployment_id, target_deployment_func = \
+            dependency['target_deployment']
+        if target_deployment_func:
+            target_deployment_func = {
+                'function': target_deployment_func,
+                'context': dependency.get('context', {}),
+            }
         if ext_client:
             local_dependencies += [
                 create_deployment_dependency(
