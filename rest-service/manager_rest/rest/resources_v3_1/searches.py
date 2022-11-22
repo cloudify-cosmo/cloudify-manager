@@ -200,8 +200,9 @@ class NodesSearches(ResourceSearches):
     def post(self, _include=None, pagination=None, sort=None,
              all_tenants=None, search=None, **kwargs):
         """List Nodes using filter rules or DSL constraints"""
-        deployment_id, constraints = retrieve_deployment_id_and_constraints(
-            dep_id_required=True)
+        blueprint_id, deployment_id, constraints = \
+            retrieve_constraints(id_required=True)
+
         filters = {'deployment_id': deployment_id}
         rf = 'operation_name' if 'operation_name_specs' in constraints \
             else 'id'
@@ -221,8 +222,8 @@ class NodeTypesSearches(ResourceSearches):
     def post(self, _include=None, pagination=None, sort=None,
              all_tenants=None, search=None, **kwargs):
         """List Nodes using filter rules or DSL constraints"""
-        deployment_id, constraints = retrieve_deployment_id_and_constraints(
-            dep_id_required=True)
+        blueprint_id, deployment_id, constraints = \
+            retrieve_constraints(id_required=True)
         if 'name_pattern' in constraints:
             constraints['type_specs'] = constraints.pop('name_pattern')
         if 'valid_values' in constraints:
@@ -247,7 +248,7 @@ class NodeInstancesSearches(ResourceSearches):
     def post(self, _include=None, pagination=None, sort=None,
              all_tenants=None, search=None, **kwargs):
         """List NodeInstances using filter rules"""
-        deployment_id, constraints = retrieve_deployment_id_and_constraints()
+        _, deployment_id, constraints = retrieve_constraints()
         if 'name_pattern' in constraints:
             constraints['id_specs'] = constraints.pop('name_pattern')
         args = rest_utils.get_args_and_verify_arguments([
@@ -333,8 +334,7 @@ class CapabilitiesSearches(ResourceSearches):
     def post(self, search=None, _include=None,
              pagination=None, all_tenants=None, **kwargs):
         """List capabilities using DSL constraints"""
-        deployment_id, constraints = \
-            retrieve_deployment_id_and_constraints(dep_id_required=True)
+        _, deployment_id, constraints = retrieve_constraints(id_required=True)
         if 'name_pattern' in constraints:
             constraints['capability_key_specs'] = \
                 constraints.pop('name_pattern')
@@ -438,8 +438,8 @@ class ScalingGroupsSearches(ResourceSearches):
     @rest_decorators.all_tenants
     def post(self, _include=None, pagination=None, all_tenants=None, **kwargs):
         """List scaling groups using DSL constraints"""
-        deployment_id, constraints = \
-            retrieve_deployment_id_and_constraints(dep_id_required=True)
+        blueprint_id, deployment_id, constraints = \
+            retrieve_constraints(id_required=True)
         if 'name_pattern' in constraints:
             constraints['scaling_group_name_specs'] = \
                 constraints.pop('name_pattern')
@@ -485,9 +485,10 @@ class ScalingGroupsSearches(ResourceSearches):
         )
 
 
-def retrieve_deployment_id_and_constraints(dep_id_required=False):
+def retrieve_constraints(id_required=False):
     args = rest_utils.get_args_and_verify_arguments([
         Argument('deployment_id', required=False),
+        Argument('blueprint_id', required=False),
     ])
     request_dict = rest_utils.get_json_and_verify_params(
         {'constraints': {'optional': True, 'type': dict}})
@@ -496,14 +497,24 @@ def retrieve_deployment_id_and_constraints(dep_id_required=False):
         raise manager_exceptions.BadParametersError(
             "You should provide either a valid 'deployment_id' parameter "
             "or have a 'deployment_id' key in the constraints, not both.")
+    if args.get('blueprint_id') and 'blueprint_id' in constraints:
+        raise manager_exceptions.BadParametersError(
+            "You should provide either a valid 'blueprint_id' parameter "
+            "or have a 'blueprint_id' key in the constraints, not both.")
     deployment_id = args.get('deployment_id') \
         or constraints.get('deployment_id')
-    # A deployment ID is necessary if constraints are provided
-    if (constraints or dep_id_required) and not deployment_id:
+    blueprint_id = args.get('blueprint_id') \
+        or constraints.get('blueprint_id')
+    if (constraints or id_required) \
+            and not deployment_id and not blueprint_id:
         raise manager_exceptions.BadParametersError(
-            "Please provide a valid 'deployment_id' parameter or have "
-            "a 'deployment_id' key in the constraints.")
-    return deployment_id, constraints
+            "Please provide a valid 'blueprint_id' or 'deployment_id' "
+            "parameter or have a relevant key in the constraints.")
+    if blueprint_id and deployment_id:
+        raise manager_exceptions.BadParametersError(
+            "You should provide either 'blueprint_id' or 'deployment_id' "
+            "constraints, not both.")
+    return blueprint_id, deployment_id, constraints
 
 
 def capability_matches(capability_key, capability, constraints, search_value):
