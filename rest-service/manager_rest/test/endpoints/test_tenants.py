@@ -68,7 +68,7 @@ class TenantsCommunityTestCase(base_test.BaseServerTestCase):
 
         with patch(
             'manager_rest.rest.resources_v3.tenants.is_user_action_allowed',
-            return_value=False,
+            return_value=True,
         ) as mock_check:
             result = self.client.tenants.list(_include=INCLUDE_CREDS)
 
