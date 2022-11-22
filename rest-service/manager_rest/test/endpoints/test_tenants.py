@@ -28,6 +28,7 @@ from manager_rest.test import base_test
 CREDENTIALS_PERMISSION = 'tenant_rabbitmq_credentials'
 INCLUDE_CREDS = ['name', 'rabbitmq_username',
                  'rabbitmq_password', 'rabbitmq_vhost']
+TEST_PASSWORD = 'password1234'
 
 
 @pytest.mark.skipif(
@@ -63,13 +64,27 @@ class TenantsCommunityTestCase(base_test.BaseServerTestCase):
             )
 
     def test_list_tenants_with_queue_permission(self):
-        result = self.client.tenants.list(_include=INCLUDE_CREDS)
+        self.tenant.rabbitmq_password = encrypt(TEST_PASSWORD)
+
+        with patch(
+            'manager_rest.rest.resources_v3.tenants.is_user_action_allowed',
+            return_value=False,
+        ) as mock_check:
+            result = self.client.tenants.list(_include=INCLUDE_CREDS)
+
+        mock_check.assert_called_once_with(
+            'tenant_rabbitmq_credentials',
+            constants.DEFAULT_TENANT_NAME,
+        )
+
         self.assertEqual(len(result), 1)
         result = result[0]
         self.assertEqual(result['name'], constants.DEFAULT_TENANT_NAME)
-        assert result['rabbitmq_username'] == 'rabbitmq_user_default_tenant'
-        assert result['rabbitmq_vhost'] == 'rabbitmq_vhost_default_tenant'
-        assert not result['rabbitmq_password'].startswith('gAAA')
+
+        assert result['name'] == constants.DEFAULT_TENANT_NAME
+        assert result['rabbitmq_username'] == self.tenant.rabbitmq_username
+        assert result['rabbitmq_vhost'] == self.tenant.rabbitmq_vhost
+        assert result['rabbitmq_password'] == TEST_PASSWORD
 
     def test_get_tenant_no_permission(self):
         """Getting a tenant without the credentials permission, gives
@@ -93,8 +108,7 @@ class TenantsCommunityTestCase(base_test.BaseServerTestCase):
         """Getting a tenant with the credentials permission, the full
         tenant details, including the rabbitmq credentials.
         """
-        password = 'password1234'
-        self.tenant.rabbitmq_password = encrypt(password)
+        self.tenant.rabbitmq_password = encrypt(TEST_PASSWORD)
 
         with patch(
             'manager_rest.rest.resources_v3.tenants.is_user_action_allowed',
@@ -110,7 +124,7 @@ class TenantsCommunityTestCase(base_test.BaseServerTestCase):
         assert result['name'] == constants.DEFAULT_TENANT_NAME
         assert result['rabbitmq_username'] == self.tenant.rabbitmq_username
         assert result['rabbitmq_vhost'] == self.tenant.rabbitmq_vhost
-        assert result['rabbitmq_password'] == password
+        assert result['rabbitmq_password'] == TEST_PASSWORD
 
     def test_get_nondefault_tenant(self):
         """Getting tenants other than default_tenant is disallowed on
