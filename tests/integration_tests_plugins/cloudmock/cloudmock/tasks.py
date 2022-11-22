@@ -18,7 +18,7 @@ import time
 from cloudify.decorators import operation, workflow
 from cloudify.exceptions import NonRecoverableError
 from cloudify.manager import get_rest_client
-from cloudify import ctx
+from cloudify import ctx, constants
 
 
 RUNNING = 'running'
@@ -230,3 +230,13 @@ def maybe_failing(ctx, **kwargs):
     """Fail only if the fail flag is set"""
     if ctx.instance.runtime_properties.get('fail'):
         raise NonRecoverableError('Error')
+
+
+@operation
+def store_inputs(ctx, **kwargs):
+    """Store inputs of this operation in the instance's runtime properties"""
+    if ctx.type == constants.RELATIONSHIP_INSTANCE:
+        instance = ctx.source.instance
+    else:
+        instance = ctx.instance
+    instance.runtime_properties.update(kwargs)
