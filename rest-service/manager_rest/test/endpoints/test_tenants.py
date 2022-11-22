@@ -18,6 +18,7 @@ import pytest
 from mock import patch
 
 from manager_rest import constants, premium_enabled
+from manager_rest.constants import DEFAULT_TENANT_NAME
 from manager_rest.storage import models
 
 from cloudify.cryptography_utils import encrypt
@@ -43,7 +44,7 @@ class TenantsCommunityTestCase(base_test.BaseServerTestCase):
         else:
             result = self.client.tenants.list()
         self.assertEqual(len(result), 1)
-        self.assertEqual(result[0]['name'], constants.DEFAULT_TENANT_NAME)
+        self.assertEqual(result[0]['name'], DEFAULT_TENANT_NAME)
         for key in ['username', 'password', 'vhost']:
             self.assertIsNone(result[0]['rabbitmq_' + key])
 
@@ -59,8 +60,7 @@ class TenantsCommunityTestCase(base_test.BaseServerTestCase):
         ) as mock_check:
             self._check_list_no_queue_creds(INCLUDE_CREDS)
             mock_check.assert_called_once_with(
-                'tenant_rabbitmq_credentials',
-                constants.DEFAULT_TENANT_NAME,
+                'tenant_rabbitmq_credentials', DEFAULT_TENANT_NAME,
             )
 
     def test_list_tenants_with_queue_permission(self):
@@ -73,15 +73,14 @@ class TenantsCommunityTestCase(base_test.BaseServerTestCase):
             result = self.client.tenants.list(_include=INCLUDE_CREDS)
 
         mock_check.assert_called_once_with(
-            'tenant_rabbitmq_credentials',
-            constants.DEFAULT_TENANT_NAME,
+            'tenant_rabbitmq_credentials', DEFAULT_TENANT_NAME,
         )
 
         self.assertEqual(len(result), 1)
         result = result[0]
-        self.assertEqual(result['name'], constants.DEFAULT_TENANT_NAME)
+        self.assertEqual(result['name'], DEFAULT_TENANT_NAME)
 
-        assert result['name'] == constants.DEFAULT_TENANT_NAME
+        assert result['name'] == DEFAULT_TENANT_NAME
         assert result['rabbitmq_username'] == self.tenant.rabbitmq_username
         assert result['rabbitmq_vhost'] == self.tenant.rabbitmq_vhost
         assert result['rabbitmq_password'] == TEST_PASSWORD
@@ -94,13 +93,12 @@ class TenantsCommunityTestCase(base_test.BaseServerTestCase):
             'manager_rest.rest.resources_v3.tenants.is_user_action_allowed',
             return_value=False,
         ) as mock_check:
-            result = self.client.tenants.get(constants.DEFAULT_TENANT_NAME)
+            result = self.client.tenants.get(DEFAULT_TENANT_NAME)
 
         mock_check.assert_called_once_with(
-            'tenant_rabbitmq_credentials',
-            constants.DEFAULT_TENANT_NAME,
+            'tenant_rabbitmq_credentials', DEFAULT_TENANT_NAME,
         )
-        self.assertEqual(result['name'], constants.DEFAULT_TENANT_NAME)
+        self.assertEqual(result['name'], DEFAULT_TENANT_NAME)
         for key in ['username', 'password', 'vhost']:
             self.assertIsNone(result['rabbitmq_' + key])
 
@@ -114,14 +112,13 @@ class TenantsCommunityTestCase(base_test.BaseServerTestCase):
             'manager_rest.rest.resources_v3.tenants.is_user_action_allowed',
             return_value=True,
         ) as mock_check:
-            result = self.client.tenants.get(constants.DEFAULT_TENANT_NAME)
+            result = self.client.tenants.get(DEFAULT_TENANT_NAME)
 
         mock_check.assert_called_once_with(
-            'tenant_rabbitmq_credentials',
-            constants.DEFAULT_TENANT_NAME,
+            'tenant_rabbitmq_credentials', DEFAULT_TENANT_NAME,
         )
 
-        assert result['name'] == constants.DEFAULT_TENANT_NAME
+        assert result['name'] == DEFAULT_TENANT_NAME
         assert result['rabbitmq_username'] == self.tenant.rabbitmq_username
         assert result['rabbitmq_vhost'] == self.tenant.rabbitmq_vhost
         assert result['rabbitmq_password'] == TEST_PASSWORD
