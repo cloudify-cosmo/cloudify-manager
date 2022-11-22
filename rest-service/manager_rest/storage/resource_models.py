@@ -303,6 +303,15 @@ class _PluginState(SQLModelBase):
         return db.relationship('Agent', lazy='joined')
 
 
+class SecretsProvider(CreatedAtMixin, SQLResourceBase):
+    __tablename__ = 'secrets_providers'
+
+    name = db.Column(db.Text, nullable=False)
+    type = db.Column(db.Text, nullable=False)
+    connection_parameters = db.Column(JSONString, nullable=True)
+    updated_at = db.Column(UTCDateTime)
+
+
 class Secret(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'secrets'
     __table_args__ = (
@@ -317,6 +326,7 @@ class Secret(CreatedAtMixin, SQLResourceBase):
     updated_at = db.Column(UTCDateTime)
     is_hidden_value = db.Column(db.Boolean, nullable=False, default=False)
     schema = db.Column(JSONString, nullable=True)
+    _secrets_provider_fk = foreign_key(SecretsProvider._storage_id)
 
     @hybrid_property
     def key(self):
@@ -327,20 +337,23 @@ class Secret(CreatedAtMixin, SQLResourceBase):
         fields = super(Secret, cls).resource_fields
         fields['key'] = fields.pop('id')
         fields['value'] = flask_fields.Raw
+        fields['provider_name'] = flask_fields.String()
+
         return fields
 
     @classproperty
     def allowed_filter_attrs(cls):
-        return ['key']
+        return ['key', 'provider_name']
 
+    @declared_attr
+    def provider(cls):
+        return one_to_many_relationship(
+            cls,
+            SecretsProvider,
+            cls._secrets_provider_fk,
+        )
 
-class SecretsProvider(CreatedAtMixin, SQLResourceBase):
-    __tablename__ = 'secrets_providers'
-
-    name = db.Column(db.Text, nullable=False)
-    type = db.Column(db.Text, nullable=False)
-    connection_parameters = db.Column(JSONString, nullable=True)
-    updated_at = db.Column(UTCDateTime)
+    provider_name = association_proxy('provider', 'name')
 
 
 class Site(CreatedAtMixin, SQLResourceBase):

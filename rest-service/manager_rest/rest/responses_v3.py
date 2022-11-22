@@ -30,6 +30,7 @@ class SecretsListResponse(BaseResponse):
         'tenant_name': fields.String,
         'created_by': fields.String,
         'is_hidden_value': fields.Boolean,
+        'provider_name': fields.String,
     }
 
 

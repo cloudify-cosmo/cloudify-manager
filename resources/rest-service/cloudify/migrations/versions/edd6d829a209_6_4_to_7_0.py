@@ -46,6 +46,7 @@ def upgrade():
     add_users_created_at_index()
     create_secrets_providers_table()
     add_secrets_schema()
+    add_secrets_provider_relationship()
 
 
 def downgrade():
@@ -56,6 +57,7 @@ def downgrade():
     drop_users_created_at_index()
     drop_secrets_providers_table()
     drop_secrets_schema()
+    drop_secrets_provider_relationship()
 
 
 # Upgrade functions
@@ -644,3 +646,58 @@ def add_secrets_schema():
 
 def drop_secrets_schema():
     op.drop_column('secrets', 'schema')
+
+
+def add_secrets_provider_relationship():
+    op.add_column(
+        'secrets',
+        sa.Column(
+            '_secrets_provider_fk',
+            sa.Integer(),
+            nullable=False,
+        ),
+    )
+    op.create_index(
+        op.f(
+            'secrets__secrets_provider_fk_idx',
+        ),
+        'secrets',
+        [
+            '_secrets_provider_fk',
+        ],
+        unique=False,
+    )
+    op.create_foreign_key(
+        op.f(
+            'secrets__secrets_provider_fk_fkey',
+        ),
+        'secrets',
+        'secrets_providers',
+        [
+            '_secrets_provider_fk',
+        ],
+
+        [
+            '_storage_id',
+        ],
+        ondelete='CASCADE',
+    )
+
+
+def drop_secrets_provider_relationship():
+    op.drop_constraint(
+        op.f(
+            'secrets__secrets_provider_fk_fkey'
+        ), 'secrets',
+        type_='foreignkey',
+    )
+    op.drop_index(
+        op.f(
+            'secrets__secrets_provider_fk_idx',
+        ),
+        table_name='secrets',
+    )
+    op.drop_column(
+        'secrets',
+        '_secrets_provider_fk',
+    )
