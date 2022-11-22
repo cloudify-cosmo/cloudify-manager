@@ -48,7 +48,7 @@ class TenantsCommunityTestCase(base_test.BaseServerTestCase):
 
     def test_list_tenants_no_queue_details(self):
         """Don't return queue creds by default."""
-        self._check_tenant_no_queue_creds()
+        self._check_list_no_queue_creds()
 
     def test_list_tenants_no_queue_permission(self):
         """Without the relevant permission return empty rabbit details."""
@@ -56,7 +56,7 @@ class TenantsCommunityTestCase(base_test.BaseServerTestCase):
             'manager_rest.rest.resources_v3.tenants.is_user_action_allowed',
             return_value=False,
         ) as mock_check:
-            self._check_tenant_no_queue_creds(INCLUDE_CREDS)
+            self._check_list_no_queue_creds(INCLUDE_CREDS)
             mock_check.assert_called_once_with(
                 'tenant_rabbitmq_credentials',
                 constants.DEFAULT_TENANT_NAME,
