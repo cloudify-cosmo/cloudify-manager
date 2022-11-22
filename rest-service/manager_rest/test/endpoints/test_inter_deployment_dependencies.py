@@ -678,8 +678,10 @@ class InterDeploymentDependenciesTest(BaseServerTestCase):
         self._assert_dependency_values(static_dependency,
                                        static_target_deployment,
                                        resource_id)
-        self.assertEqual(target_deployment_func,
-                         {'get_secret': 'shared2_key'})
+        self.assertEqual(
+            target_deployment_func['function'],
+            {'get_secret': 'shared2_key'},
+        )
 
     @staticmethod
     def _get_target_deployment_func(dependencies_list):
