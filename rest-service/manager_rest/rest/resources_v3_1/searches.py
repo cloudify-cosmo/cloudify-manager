@@ -252,6 +252,15 @@ class NodeTypesSearches(ResourceSearches):
             retrieve_constraints(id_required=True)
         if 'name_pattern' in constraints:
             constraints['type_specs'] = constraints.pop('name_pattern')
+
+        if blueprint_id:
+            sm = get_storage_manager()
+            blueprint = sm.get(models.Blueprint, blueprint_id,
+                               all_tenants=all_tenants)
+            return self.node_types_from_plan(blueprint,
+                                             search['type'],
+                                             constraints)
+
         if 'valid_values' in constraints:
             constraints['valid_values'] = extend_node_type_valid_values(
                 deployment_id, constraints['valid_values'])
@@ -260,6 +269,26 @@ class NodeTypesSearches(ResourceSearches):
                             sort, all_tenants, search, None,
                             constraints=constraints,
                             resource_field='type', **kwargs)
+
+    @staticmethod
+    def node_types_from_plan(blueprint, search_value, constraints):
+        results, filtered = [], 0
+        for node in blueprint.plan['nodes']:
+            if node_type_matches(node, search_value, **constraints):
+                results.append(node)
+            else:
+                filtered += 1
+        return ListResponse(
+            items=results,
+            metadata={
+                'filtered': filtered,
+                'pagination': {
+                    'offset': 0,
+                    'size': len(results),
+                    'total': len(results) + filtered,
+                }
+            }
+        )
 
 
 class NodeInstancesSearches(ResourceSearches):
@@ -656,5 +685,52 @@ def node_id_matches(node_id, search_value, valid_values=None, id_specs=None):
             return False
     if search_value:
         return node_id == search_value
+
+    return True
+
+
+def node_type_matches(node, search_value, valid_values=None, type_specs=None):
+    """Verify if node_type matches the constraints.
+
+    :param node: node to test (whole dict).
+    :param search_value: value of an input/parameter of type node_type,
+                         if provided, must exactly match `node_type`.
+    :param valid_values: a list of allowed values for the `node_type`.
+    :param type_specs: a dictionary describing a name_pattern constraint
+                       for `node_type`.
+    :return: `True` if `node_type` matches the constraints provided with
+             the other three parameters.
+    """
+    node_type = node['type']
+    if type_specs:
+        for operator, value in type_specs.items():
+            match operator:
+                case 'contains':
+                    if value not in node_type:
+                        return False
+                case 'starts_with':
+                    if not node_type.startswith(str(value)):
+                        return False
+                case 'ends_with':
+                    if not node_type.endswith(str(value)):
+                        return False
+                case 'equals_to':
+                    if node_type != str(value):
+                        return False
+                case _:
+                    raise NotImplementedError('Unknown operation name '
+                                              f'pattern operator: {operator}')
+    if valid_values:
+        valid_values_with_children = set(valid_values)
+        for value in valid_values:
+            if value not in valid_values_with_children:
+                continue
+            th = node['type_hierarchy']
+            if value in th:
+                valid_values_with_children.update(th[th.index(value):])
+        if node_type not in valid_values_with_children:
+            return False
+    if search_value:
+        return node_type == search_value
 
     return True
