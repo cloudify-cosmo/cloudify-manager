@@ -203,12 +203,38 @@ class NodesSearches(ResourceSearches):
         blueprint_id, deployment_id, constraints = \
             retrieve_constraints(id_required=True)
 
+        if blueprint_id:
+            sm = get_storage_manager()
+            blueprint = sm.get(models.Blueprint, blueprint_id,
+                               all_tenants=all_tenants)
+            return self.nodes_from_plan(blueprint, search, constraints)
+
         filters = {'deployment_id': deployment_id}
         rf = 'operation_name' if 'operation_name_specs' in constraints \
             else 'id'
         return super().post(models.Node, None, _include, filters, pagination,
                             sort, all_tenants, search, None,
                             resource_field=rf, **kwargs)
+
+    @staticmethod
+    def nodes_from_plan(blueprint, search_value, constraints):
+        results, filtered = [], 0
+        for node in blueprint.plan['nodes']:
+            if node_id_matches(node['id'], search_value, **constraints):
+                results.append(node)
+            else:
+                filtered += 1
+        return ListResponse(
+            items=results,
+            metadata={
+                'filtered': filtered,
+                'pagination': {
+                    'offset': 0,
+                    'size': len(results),
+                    'total': len(results),
+                }
+            }
+        )
 
 
 class NodeTypesSearches(ResourceSearches):
@@ -593,3 +619,42 @@ def extend_node_type_valid_values(deployment_id, valid_values):
             th = node.type_hierarchy
             results.update(th[th.index(value):])
     return list(results)
+
+
+def node_id_matches(node_id, search_value, valid_values=None, id_specs=None):
+    """Verify if node_id matches the constraints.
+
+    :param node_id: identifier (a name) of a node to test.
+    :param search_value: value of an input/parameter of type node_id,
+                         if provided, must exactly match `node_id`.
+    :param valid_values: a list of allowed values for the `node_id`.
+    :param id_specs: a dictionary describing a name_pattern constraint
+                     for `node_id`.
+    :return: `True` if `node_id` matches the constraints provided with
+             the other three parameters.
+    """
+    if id_specs:
+        for operator, value in id_specs.items():
+            match operator:
+                case 'contains':
+                    if value not in node_id:
+                        return False
+                case 'starts_with':
+                    if not node_id.startswith(str(value)):
+                        return False
+                case 'ends_with':
+                    if not node_id.endswith(str(value)):
+                        return False
+                case 'equals_to':
+                    if node_id != str(value):
+                        return False
+                case _:
+                    raise NotImplementedError('Unknown operation name '
+                                              f'pattern operator: {operator}')
+    if valid_values:
+        if node_id not in valid_values:
+            return False
+    if search_value:
+        return node_id == search_value
+
+    return True
