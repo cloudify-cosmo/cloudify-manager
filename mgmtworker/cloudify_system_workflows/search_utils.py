@@ -1,17 +1,24 @@
 from collections import defaultdict
+from copy import copy
 
 from cloudify.exceptions import NonRecoverableError
+from dsl_parser.constants import BLUEPRINT_OR_DEPLOYMENT_ID_CONSTRAINT_TYPES
 
 
 class GetValuesWithRest:
-    def __init__(self, client):
+    def __init__(self, client, blueprint_id=None):
         self.client = client
+        self.blueprint_id = blueprint_id
+
+    def has_blueprint_id(self):
+        return bool(self.blueprint_id)
 
     @staticmethod
     def has_deployment_id():
         return False
 
     def get(self, data_type, value, **kwargs):
+        kwargs = self.update_blueprint_id_constraint(data_type, **kwargs)
         if data_type == 'blueprint_id':
             return {b.id for b in self.get_blueprints(value, **kwargs)}
         elif data_type == 'deployment_id':
@@ -146,6 +153,14 @@ class GetValuesWithRest:
                     results.append(name)
 
         return results
+
+    def update_blueprint_id_constraint(self, data_type, **kwargs):
+        if data_type not in BLUEPRINT_OR_DEPLOYMENT_ID_CONSTRAINT_TYPES:
+            return kwargs
+        params = copy(kwargs)
+        if 'blueprint_id' not in kwargs and 'deployment_id' not in kwargs:
+            params['blueprint_id'] = self.blueprint_id
+        return params
 
 
 def get_instance_ids_by_node_ids(client, node_ids):

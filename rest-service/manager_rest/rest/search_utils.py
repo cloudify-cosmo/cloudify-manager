@@ -20,6 +20,10 @@ class GetValuesWithStorageManager:
         self.sm = sm
         self.current_deployment_id = current_deployment_id
 
+    @staticmethod
+    def has_blueprint_id():
+        return False
+
     def has_deployment_id(self):
         return bool(self.current_deployment_id)
 
