@@ -2973,7 +2973,8 @@ def create_secret(key, secret, tenant, created_at=None,
         updated_at=updated_at or timestamp,
         visibility=secret['visibility'],
         is_hidden_value=secret['is_hidden_value'],
-        tenant=tenant
+        tenant=tenant,
+        provider=secret.get('provider'),
     )
     if creator:
         new_secret.creator = creator
