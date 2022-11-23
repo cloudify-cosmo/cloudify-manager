@@ -311,10 +311,6 @@ class SecretsProvider(CreatedAtMixin, SQLResourceBase):
     connection_parameters = db.Column(JSONString, nullable=True)
     updated_at = db.Column(UTCDateTime)
 
-    @hybrid_property
-    def key(self):
-        return self.name
-
 
 class Secret(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'secrets'
