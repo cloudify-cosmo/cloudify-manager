@@ -498,9 +498,18 @@ class ScalingGroupsSearches(ResourceSearches):
         if 'name_pattern' in constraints:
             constraints['scaling_group_name_specs'] = \
                 constraints.pop('name_pattern')
-        args = rest_utils.get_args_and_verify_arguments([
+        search_value = rest_utils.get_args_and_verify_arguments([
             Argument('_search', required=False),
-        ])
+        ]).get('_search')
+
+        if blueprint_id:
+            sm = get_storage_manager()
+            blueprint = sm.get(models.Blueprint, blueprint_id,
+                               all_tenants=all_tenants)
+            return self.build_response(blueprint.plan['scaling_groups'],
+                                       search_value,
+                                       constraints)
+
         get_all_results = rest_utils.verify_and_convert_bool(
             '_get_all_results',
             request.args.get('_get_all_results', False)
@@ -514,29 +523,33 @@ class ScalingGroupsSearches(ResourceSearches):
             all_tenants=all_tenants,
             get_all_results=get_all_results,
         )
-        metadata = deployments.metadata
+        return self.build_response({k: v for dep in deployments
+                                    for k, v in dep.scaling_groups.items()},
+                                   search_value,
+                                   constraints)
 
-        results, filtered_out = [], 0
-        for dep in deployments:
-            if not dep.scaling_groups:
-                continue
-            for name, scaling_group in dep.scaling_groups.items():
-                if scaling_group_name_matches(
-                        name, constraints, args.get('_search')):
-                    results.append({
-                        'deployment_id': dep.id,
-                        'name': name,
-                        'members': scaling_group.get('members'),
-                        'properties': scaling_group.get('properties'),
-                    })
-                else:
-                    filtered_out += 1
-
-        metadata['filtered'] = filtered_out
-        metadata['pagination']['total'] = len(results) + filtered_out
+    @staticmethod
+    def build_response(scaling_groups, search_value, constraints):
+        results, filtered = [], 0
+        for name, specs in scaling_groups.items():
+            if scaling_group_name_matches(name, search_value, **constraints):
+                results.append({
+                    'name': name,
+                    'members': specs.get('members'),
+                    'properties': specs.get('properties'),
+                })
+            else:
+                filtered += 1
         return ListResponse(
             items=results,
-            metadata=metadata
+            metadata={
+                'filtered': filtered,
+                'pagination': {
+                    'offset': 0,
+                    'size': len(results),
+                    'total': len(results) + filtered,
+                }
+            }
         )
 
 
@@ -601,29 +614,41 @@ def capability_matches(capability_key, capability, constraints, search_value):
     return True
 
 
-def scaling_group_name_matches(scaling_group_name, constraints, search_value):
-    for constraint, specification in constraints.items():
-        if constraint == 'scaling_group_name_specs':
-            for operator, value in specification.items():
-                if operator == 'contains':
+def scaling_group_name_matches(scaling_group_name,
+                               search_value,
+                               valid_values=None,
+                               scaling_group_name_specs=None):
+    """Verify if scaling_group_name matches the constraints.
+    :param scaling_group_name: name of a scaling group to test.
+    :param search_value: value of an input/parameter of type node_id,
+                         if provided, must exactly match `node_id`.
+    :param valid_values: a list of allowed values for the `node_id`.
+    :param scaling_group_name_specs: a dictionary describing a name_pattern
+                                     constraint for `scaling_group_name`.
+    :return: `True` if `scaling_group_name` matches the constraints provided
+             with the other three parameters.
+    """
+    if scaling_group_name_specs:
+        for operator, value in scaling_group_name_specs.items():
+            match operator:
+                case 'contains':
                     if value not in scaling_group_name:
                         return False
-                elif operator == 'starts_with':
+                case 'starts_with':
                     if not scaling_group_name.startswith(str(value)):
                         return False
-                elif operator == 'ends_with':
+                case 'ends_with':
                     if not scaling_group_name.endswith(str(value)):
                         return False
-                elif operator == 'equals_to':
+                case 'equals_to':
                     if scaling_group_name != str(value):
                         return False
-                else:
+                case _:
                     raise NotImplementedError('Unknown scaling group name '
                                               f'pattern operator: {operator}')
-        elif constraint == 'valid_values':
-            if scaling_group_name not in specification:
-                return False
-
+    if valid_values:
+        if scaling_group_name not in valid_values:
+            return False
     if search_value:
         return scaling_group_name == search_value
 
