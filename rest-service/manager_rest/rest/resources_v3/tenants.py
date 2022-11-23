@@ -14,7 +14,7 @@ from manager_rest.security import (MissingPremiumFeatureResource,
                                    allow_on_community,
                                    is_user_action_allowed)
 from .. import rest_decorators, rest_utils
-from ..responses_v3 import TenantResponse, TenantDetailsResponse
+from ..responses_v3 import TenantResponse
 
 from cloudify.cryptography_utils import decrypt
 
@@ -55,21 +55,45 @@ class Tenants(TenantsListResource):
             request.args.get('_get_all_results', False)
         )
         if multi_tenancy:
-            return multi_tenancy.list_tenants(_include,
-                                              filters,
-                                              pagination,
-                                              sort,
-                                              search,
-                                              get_all_results)
+            tenants = multi_tenancy.list_tenants(_include,
+                                                 filters,
+                                                 pagination,
+                                                 sort,
+                                                 search,
+                                                 get_all_results)
+        else:
+            # In community edition we have only the `default_tenant`, so it
+            # should be safe to return it like this
+            tenants = get_storage_manager().list(models.Tenant)
 
-        # In community edition we have only the `default_tenant`, so it
-        # should be safe to return it like this
-        return get_storage_manager().list(models.Tenant)
+        if (
+            _include is not None
+            and any(f'rabbitmq_{attr}' in _include
+                    for attr in ['password', 'username', 'vhost'])
+        ):
+            for tenant in tenants:
+                if is_user_action_allowed('tenant_rabbitmq_credentials',
+                                          tenant.name):
+                    if 'rabbitmq_password' in _include:
+                        tenant.rabbitmq_password = decrypt(
+                            tenant.rabbitmq_password)
+                else:
+                    _clear_tenant_rabbit_creds(tenant)
+        else:
+            for tenant in tenants:
+                _clear_tenant_rabbit_creds(tenant)
+        return tenants
+
+
+def _clear_tenant_rabbit_creds(tenant):
+    tenant.rabbitmq_password = None
+    tenant.rabbitmq_username = None
+    tenant.rabbitmq_vhost = None
 
 
 class TenantsId(SecuredMultiTenancyResource):
     @authorize('tenant_create')
-    @rest_decorators.marshal_with(TenantDetailsResponse)
+    @rest_decorators.marshal_with(TenantResponse)
     def post(self, tenant_name, multi_tenancy):
         """
         Create a tenant
@@ -93,31 +117,26 @@ class TenantsId(SecuredMultiTenancyResource):
             request_dict.get('rabbitmq_password'))
 
     @authorize('tenant_get', get_tenant_from='param')
-    @rest_decorators.marshal_with(TenantDetailsResponse)
+    @rest_decorators.marshal_with(TenantResponse)
     @allow_on_community
     def get(self, tenant_name, multi_tenancy=None):
         """Get details for a single tenant
 
         On community, only getting the default tenant is allowed.
         """
-        if multi_tenancy:
-            rest_utils.validate_inputs({'tenant_name': tenant_name})
-            return multi_tenancy.get_tenant(tenant_name)
+        rest_utils.validate_inputs({'tenant_name': tenant_name})
+        if tenant_name != constants.DEFAULT_TENANT_NAME and not multi_tenancy:
+            raise MissingPremiumPackage()
+        tenant = get_storage_manager().get(
+            models.Tenant,
+            None,
+            filters={'name': tenant_name})
+        if is_user_action_allowed(
+                'tenant_rabbitmq_credentials', tenant_name):
+            tenant.rabbitmq_password = decrypt(tenant.rabbitmq_password)
         else:
-            if tenant_name != constants.DEFAULT_TENANT_NAME:
-                raise MissingPremiumPackage()
-            tenant = get_storage_manager().get(
-                models.Tenant,
-                None,
-                filters={'name': tenant_name})
-            if is_user_action_allowed(
-                    'tenant_rabbitmq_credentials', tenant_name):
-                tenant.rabbitmq_password = decrypt(tenant.rabbitmq_password)
-            else:
-                tenant.rabbitmq_username = None
-                tenant.rabbitmq_password = None
-                tenant.rabbitmq_vhost = None
-            return tenant
+            _clear_tenant_rabbit_creds(tenant)
+        return tenant
 
     @authorize('tenant_delete')
     def delete(self, tenant_name, multi_tenancy):
