@@ -654,7 +654,7 @@ def add_secrets_provider_relationship():
         sa.Column(
             '_secrets_provider_fk',
             sa.Integer(),
-            nullable=False,
+            nullable=True,
         ),
     )
     op.create_index(

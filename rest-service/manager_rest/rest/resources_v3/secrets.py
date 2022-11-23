@@ -111,11 +111,19 @@ class SecretsKey(SecuredResource):
     @staticmethod
     def _get_secret_params(key):
         rest_utils.validate_inputs({'key': key})
-        request_dict = rest_utils.get_json_and_verify_params({
-            'value': {},
-            'schema': {'type': dict, 'optional': True},
-            'provider': {'type': str},
-        })
+        request_dict = rest_utils.get_json_and_verify_params(
+            {
+                'value': {},
+                'schema': {
+                    'type': dict,
+                    'optional': True,
+                },
+                'provider': {
+                    'type': str,
+                    'optional': True,
+                },
+            },
+        )
         value = request_dict['value']
         if schema := request_dict.get('schema'):
             try:
@@ -146,14 +154,14 @@ class SecretsKey(SecuredResource):
             visibility_param
         )
 
-        provider_name = request_dict.get('provider')
-        provider = models.SecretsProvider.query.filter_by(
-            name=provider_name,
-        ).first()
+        provider = None
 
-        if not provider:
-            raise manager_exceptions.BadParametersError(
-                f'The Secrets Provider does not exist: {provider_name}',
+        if provider_name := request_dict.get('provider'):
+            storage_manager = get_storage_manager()
+
+            provider = storage_manager.get(
+                models.SecretsProvider,
+                provider_name,
             )
 
         secret_params = {
