@@ -135,10 +135,13 @@ class ResourceManager(object):
             with self.sm.transaction():
                 execution = self.sm.get(
                     models.Execution, execution_id, locking=True)
-                override_status = self._update_finished_execution_dependencies(
-                    execution)
+                override_status, override_error = \
+                    self._update_finished_execution_dependencies(
+                        execution)
                 if override_status is not None:
                     status = override_status
+                if override_error is not None:
+                    error = override_error
 
         affected_parent_deployments = set()
         execution = self.sm.get(models.Execution, execution_id)
@@ -492,25 +495,30 @@ class ResourceManager(object):
         if execution._deployment_fk:
             deployment = execution.deployment
         else:
-            return
+            return None, None
 
         workflow_id = execution.workflow_id
         if workflow_id == 'delete_deployment_environment':
-            return
+            return None, None
 
         try:
             update_inter_deployment_dependencies(self.sm, deployment)
         except Exception as e:
             now = datetime.utcnow()
+            error_message = (
+                'Failed updating dependencies of deployment '
+                f'{deployment.id}: {e}'
+            )
             new_log = models.Log(
                 reported_timestamp=now,
                 timestamp=now,
                 execution=execution,
-                message=f'Failed updating dependencies of deployment '
-                        f'{deployment.id}: {e}'
+                message=error_message,
+                level='error',
             )
             self.sm.put(new_log)
-            return ExecutionState.FAILED
+            return ExecutionState.FAILED, error_message
+        return None, None
 
     def _validate_execution_update(self, current_status, future_status):
         if current_status in ExecutionState.END_STATES:
