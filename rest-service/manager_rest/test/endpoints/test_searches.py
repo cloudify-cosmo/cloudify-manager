@@ -765,24 +765,23 @@ class SearchesTestCase(base_test.BaseServerTestCase):
 
     def test_scaling_groups_search_by_params(self):
         bp, _ = self._create_deployment('d1', scaling_groups={
-            "first": {"members": ["node1"], "properties": {}},
-            "second": {"members": ["node2"], "properties": {}},
-            "other": {"members": ["node3, node4"], "properties": {}},
+            "first1": {"members": ["node1"], "properties": {}},
+            "second1": {"members": ["node2"], "properties": {}},
+            "other1": {"members": ["node3, node4"], "properties": {}},
         })
         self._create_deployment('d2', bp=bp, scaling_groups={
-            "first": {"members": ["node1"], "properties": {}},
-            "second": {"members": ["node2"], "properties": {}},
-            "third": {"members": ["node3"], "properties": {}},
+            "first2": {"members": ["node1"], "properties": {}},
+            "second2": {"members": ["node2"], "properties": {}},
+            "third2": {"members": ["node3"], "properties": {}},
         })
 
         search = self.client.deployments.scaling_groups.list(
             deployment_id='d1')
-        assert {sg.name for sg in search} == {'first', 'second', 'other'}
+        assert {sg.name for sg in search} == {'first1', 'second1', 'other1'}
 
         search = self.client.deployments.scaling_groups.list(
-            deployment_id='d2', _search='first')
-        assert [(sg.deployment_id, sg.name) for sg in search] == \
-               [('d2', 'first')]
+            deployment_id='d2', _search='first2')
+        assert [sg.name for sg in search] == ['first2']
 
         search = self.client.deployments.scaling_groups.list(
             deployment_id='deployment-which-does-not-exist')

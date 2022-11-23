@@ -1,17 +1,24 @@
 from collections import defaultdict
+from copy import copy
 
 from cloudify.exceptions import NonRecoverableError
+from dsl_parser.constants import BLUEPRINT_OR_DEPLOYMENT_ID_CONSTRAINT_TYPES
 
 
 class GetValuesWithRest:
-    def __init__(self, client):
+    def __init__(self, client, blueprint_id=None):
         self.client = client
+        self.blueprint_id = blueprint_id
+
+    def has_blueprint_id(self):
+        return bool(self.blueprint_id)
 
     @staticmethod
     def has_deployment_id():
         return False
 
     def get(self, data_type, value, **kwargs):
+        kwargs = self.update_blueprint_id_constraint(data_type, **kwargs)
         if data_type == 'blueprint_id':
             return {b.id for b in self.get_blueprints(value, **kwargs)}
         elif data_type == 'deployment_id':
@@ -69,13 +76,15 @@ class GetValuesWithRest:
             constraints=kwargs)
 
     def get_scaling_groups(self, scaling_group, **kwargs):
-        try:
-            deployment_id = kwargs.pop('deployment_id')
-        except KeyError:
+        blueprint_id = kwargs.pop('blueprint_id', None)
+        deployment_id = kwargs.pop('deployment_id', None)
+        if blueprint_id is None and deployment_id is None:
             raise NonRecoverableError(
                 "Parameters of type 'scaling_group' require the "
-                f"'deployment_id' constraint ({scaling_group}).")
+                "'deployment_id' or 'blueprint_id' constraint "
+                f"({scaling_group}).")
         return self.client.deployments.scaling_groups.list(
+            blueprint_id=blueprint_id,
             deployment_id=deployment_id,
             _search=scaling_group,
             _include=['name'],
@@ -83,27 +92,29 @@ class GetValuesWithRest:
             constraints=kwargs)
 
     def get_nodes(self, node_id, **kwargs):
-        try:
-            deployment_id = kwargs.pop('deployment_id')
-        except KeyError:
+        blueprint_id = kwargs.pop('blueprint_id', None)
+        deployment_id = kwargs.pop('deployment_id', None)
+        if blueprint_id is None and deployment_id is None:
             raise NonRecoverableError(
-                "Parameters of type 'node_id' require the "
-                f"'deployment_id' constraint ({node_id}).")
+                f"Parameters of type 'node_id' require the 'deployment_id' "
+                f"or 'blueprint_id' constraint ({node_id}).")
         return self.client.nodes.list(node_id=node_id,
+                                      blueprint_id=blueprint_id,
                                       deployment_id=deployment_id,
                                       _include=['id'],
                                       _get_all_results=True,
                                       constraints=kwargs)
 
     def get_node_types(self, node_type, **kwargs):
-        try:
-            deployment_id = kwargs.pop('deployment_id')
-        except KeyError:
+        blueprint_id = kwargs.pop('blueprint_id', None)
+        deployment_id = kwargs.pop('deployment_id', None)
+        if blueprint_id is None and deployment_id is None:
             raise NonRecoverableError(
-                "Parameters of type 'node_type' require the "
-                f"'deployment_id' constraint ({node_type}).")
-        return self.client.nodes.types.list(deployment_id=deployment_id,
-                                            type=node_type,
+                f"Parameters of type 'node_type' require the 'deployment_id' "
+                f"or 'blueprint_id' constraint ({node_type}).")
+        return self.client.nodes.types.list(blueprint_id=blueprint_id,
+                                            deployment_id=deployment_id,
+                                            node_type=node_type,
                                             _include=['type'],
                                             _get_all_results=True,
                                             constraints=kwargs)
@@ -122,13 +133,15 @@ class GetValuesWithRest:
                                                constraints=kwargs)
 
     def get_operation_names(self, operation_name, **kwargs):
-        try:
-            deployment_id = kwargs.pop('deployment_id')
-        except KeyError:
+        blueprint_id = kwargs.pop('blueprint_id', None)
+        deployment_id = kwargs.pop('deployment_id', None)
+        if blueprint_id is None and deployment_id is None:
             raise NonRecoverableError(
                 "Parameters of type 'operation_name' require the "
-                f"'deployment_id' constraint ({operation_name}).")
+                "'deployment_id' or 'blueprint_id' constraint "
+                f"({operation_name}).")
         nodes = self.client.nodes.list(
+            blueprint_id=blueprint_id,
             deployment_id=deployment_id,
             _include=['operations'],
             _get_all_results=True,
@@ -146,6 +159,14 @@ class GetValuesWithRest:
                     results.append(name)
 
         return results
+
+    def update_blueprint_id_constraint(self, data_type, **kwargs):
+        if data_type not in BLUEPRINT_OR_DEPLOYMENT_ID_CONSTRAINT_TYPES:
+            return kwargs
+        params = copy(kwargs)
+        if 'blueprint_id' not in kwargs and 'deployment_id' not in kwargs:
+            params['blueprint_id'] = self.blueprint_id
+        return params
 
 
 def get_instance_ids_by_node_ids(client, node_ids):
