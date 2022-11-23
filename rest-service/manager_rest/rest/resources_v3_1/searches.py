@@ -220,7 +220,7 @@ class NodesSearches(ResourceSearches):
     def nodes_from_plan(blueprint, search_value, constraints):
         results, filtered = [], 0
         for node in blueprint.plan['nodes']:
-            if node_id_matches(node['id'], search_value, **constraints):
+            if node_matches(node, search_value, **constraints):
                 results.append(node)
             else:
                 filtered += 1
@@ -231,7 +231,7 @@ class NodesSearches(ResourceSearches):
                 'pagination': {
                     'offset': 0,
                     'size': len(results),
-                    'total': len(results),
+                    'total': len(results) + filtered,
                 }
             }
         )
@@ -650,41 +650,52 @@ def extend_node_type_valid_values(deployment_id, valid_values):
     return list(results)
 
 
-def node_id_matches(node_id, search_value, valid_values=None, id_specs=None):
-    """Verify if node_id matches the constraints.
+def node_matches(node, search_value, valid_values=None,
+                 id_specs=None, operation_name_specs=None):
+    """Verify if node matches the constraints. If id_specs is set node['id']
+    will be tested, if operation_name_specs - these will be node['operation']
+    keys (i.e. operation names).
 
-    :param node_id: identifier (a name) of a node to test.
-    :param search_value: value of an input/parameter of type node_id,
-                         if provided, must exactly match `node_id`.
-    :param valid_values: a list of allowed values for the `node_id`.
+    :param node: a node to test.
+    :param search_value: value of an input/parameter, if provided, must match
+                         node['id'] or one of the operation names.
+    :param valid_values: a list of allowed values either.
     :param id_specs: a dictionary describing a name_pattern constraint
-                     for `node_id`.
-    :return: `True` if `node_id` matches the constraints provided with
-             the other three parameters.
+                     for node['id'].
+    :param operation_name_specs: a dictionary describing a name_pattern
+                                 constraint for one of the operation names.
+    :return: `True` if `node` matches the constraints provided with the other
+             parameters.
     """
     if id_specs:
         for operator, value in id_specs.items():
             match operator:
                 case 'contains':
-                    if value not in node_id:
+                    if value not in node['id']:
                         return False
                 case 'starts_with':
-                    if not node_id.startswith(str(value)):
+                    if not node['id'].startswith(str(value)):
                         return False
                 case 'ends_with':
-                    if not node_id.endswith(str(value)):
+                    if not node['id'].endswith(str(value)):
                         return False
                 case 'equals_to':
-                    if node_id != str(value):
+                    if node['id'] != str(value):
                         return False
                 case _:
                     raise NotImplementedError('Unknown operation name '
                                               f'pattern operator: {operator}')
     if valid_values:
-        if node_id not in valid_values:
+        if id_specs and node['id'] not in valid_values:
+            return False
+        if operation_name_specs and all(op not in valid_values
+                                        for op in node['operations'].keys()):
             return False
     if search_value:
-        return node_id == search_value
+        if id_specs:
+            return node['id'] == search_value
+        if operation_name_specs:
+            return any(op == search_value for op in node['operations'].keys())
 
     return True
 
