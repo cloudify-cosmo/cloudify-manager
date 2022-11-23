@@ -555,6 +555,13 @@ def _evaluate_target_func(target_dep_func, source_dep_id):
 def _get_deployment_from_target_func(sm, target_dep_func, source_dep_id):
     target_dep_id = _evaluate_target_func(target_dep_func, source_dep_id)
     if target_dep_id:
+        if not isinstance(target_dep_id, str):
+            # raise early so that we don't try to pass a non-str to the db,
+            # which would cause a completely unreadable db-side error
+            raise ValueError(
+                f'function {target_dep_func} must return a string, but it '
+                f'returned {target_dep_id} ({type(target_dep_id)})'
+            )
         return sm.get(models.Deployment, target_dep_id, fail_silently=True,
                       all_tenants=True)
 
