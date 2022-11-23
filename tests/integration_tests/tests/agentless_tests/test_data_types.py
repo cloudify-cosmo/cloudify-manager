@@ -506,6 +506,40 @@ class TestNodeIdType(AgentlessTestCase, DataBasedTypes):
         )
 
 
+class TestNodeIdTypeByBlueprintId(AgentlessTestCase, DataBasedTypes):
+    def setUp(self):
+        super().setUp()
+        self.upload_blueprint(
+            blueprint_id='bp',
+            blueprint_file_name='inputs_rely_on_blueprint_id.yaml',
+        )
+
+    def test_successful(self):
+        inputs = {'a_node_id': 'node2',
+                  'a_node_type': 'type1',
+                  'a_scaling_group': 'first_node',
+                  'a_operation_name': 'cloudify.interfaces.lifecycle.create'}
+        self.client.deployments.create('bp', 'dep', inputs=inputs)
+        dep = self.client.deployments.get('dep')
+        assert dep.inputs['a_node_id'] == inputs['a_node_id']
+
+    def test_invalid_value(self):
+        inputs = {'a_node_id': 'node3',
+                  'a_node_type': 'type1',
+                  'a_scaling_group': 'first_node',
+                  'a_operation_name': 'cloudify.interfaces.lifecycle.create'}
+        with self.assertRaisesRegex(CloudifyClientError, 'a_node_id'):
+            self.client.deployments.create('bp', 'dep', inputs=inputs)
+
+    def test_missing_node_value(self):
+        inputs = {'a_node_id': 'not-a-node1',
+                  'a_node_type': 'type1',
+                  'a_scaling_group': 'first_node',
+                  'a_operation_name': 'cloudify.interfaces.lifecycle.create'}
+        with self.assertRaisesRegex(CloudifyClientError, 'a_node_id'):
+            self.client.deployments.create('bp', 'dep', inputs=inputs)
+
+
 class TestNodeTypeType(AgentlessTestCase, DataBasedTypes):
     def setUp(self):
         super().setUp()
@@ -593,6 +627,49 @@ class TestNodeTypeType(AgentlessTestCase, DataBasedTypes):
             'dep', 'test_parameters',
             parameters=self.get_params(c='type-that-does-not-exist'),
         )
+
+
+class TestNodeTypeTypeByBlueprintId(AgentlessTestCase, DataBasedTypes):
+    def setUp(self):
+        super().setUp()
+        self.upload_blueprint(
+            blueprint_id='bp',
+            blueprint_file_name='inputs_rely_on_blueprint_id.yaml',
+        )
+
+    def test_successful(self):
+        inputs = {'a_node_id': 'node1',
+                  'a_node_type': 'type1',
+                  'a_scaling_group': 'first_node',
+                  'a_operation_name': 'cloudify.interfaces.lifecycle.create'}
+        self.client.deployments.create('bp', 'dep', inputs=inputs)
+        dep = self.client.deployments.get('dep')
+        assert dep.inputs['a_node_type'] == inputs['a_node_type']
+
+    def test_successful_type_inheritance(self):
+        inputs = {'a_node_id': 'node1',
+                  'a_node_type': 'child1',
+                  'a_scaling_group': 'first_node',
+                  'a_operation_name': 'cloudify.interfaces.lifecycle.create'}
+        self.client.deployments.create('bp', 'dep', inputs=inputs)
+        dep = self.client.deployments.get('dep')
+        assert dep.inputs['a_node_type'] == inputs['a_node_type']
+
+    def test_invalid_value(self):
+        inputs = {'a_node_id': 'node1',
+                  'a_node_type': 'type3',
+                  'a_scaling_group': 'first_node',
+                  'a_operation_name': 'cloudify.interfaces.lifecycle.create'}
+        with self.assertRaisesRegex(CloudifyClientError, 'a_node_type'):
+            self.client.deployments.create('bp', 'dep', inputs=inputs)
+
+    def test_missing_node_value(self):
+        inputs = {'a_node_id': 'node1',
+                  'a_node_type': 'not-a-type1',
+                  'a_scaling_group': 'first_node',
+                  'a_operation_name': 'cloudify.interfaces.lifecycle.create'}
+        with self.assertRaisesRegex(CloudifyClientError, 'a_node_type'):
+            self.client.deployments.create('bp', 'dep', inputs=inputs)
 
 
 class TestNodeInstanceType(AgentlessTestCase, DataBasedTypes):
@@ -757,6 +834,40 @@ class TestScalingGroupType(AgentlessTestCase, DataBasedTypes):
             'dep', 'test_parameters',
             parameters=self.get_params(b='scaling-group-that-does-not-exist'),
         )
+
+
+class TestScalingGroupTypeByBlueprintId(AgentlessTestCase, DataBasedTypes):
+    def setUp(self):
+        super().setUp()
+        self.upload_blueprint(
+            blueprint_id='bp',
+            blueprint_file_name='inputs_rely_on_blueprint_id.yaml',
+        )
+
+    def test_successful(self):
+        inputs = {'a_node_id': 'node1',
+                  'a_node_type': 'type1',
+                  'a_scaling_group': 'first_node',
+                  'a_operation_name': 'cloudify.interfaces.lifecycle.create'}
+        self.client.deployments.create('bp', 'dep', inputs=inputs)
+        dep = self.client.deployments.get('dep')
+        assert dep.inputs['a_node_id'] == inputs['a_node_id']
+
+    def test_invalid_value(self):
+        inputs = {'a_node_id': 'node1',
+                  'a_node_type': 'type1',
+                  'a_scaling_group': 'children',
+                  'a_operation_name': 'cloudify.interfaces.lifecycle.create'}
+        with self.assertRaisesRegex(CloudifyClientError, 'a_scaling_group'):
+            self.client.deployments.create('bp', 'dep', inputs=inputs)
+
+    def test_missing_node_value(self):
+        inputs = {'a_node_id': 'node1',
+                  'a_node_type': 'type1',
+                  'a_scaling_group': 'non-existent-group',
+                  'a_operation_name': 'cloudify.interfaces.lifecycle.create'}
+        with self.assertRaisesRegex(CloudifyClientError, 'a_scaling_group'):
+            self.client.deployments.create('bp', 'dep', inputs=inputs)
 
 
 class TestListTypes(AgentlessTestCase, DataBasedTypes):
@@ -1050,3 +1161,37 @@ class TestOperationNameType(AgentlessTestCase, DataBasedTypes):
             'dep', 'test_parameters',
             parameters=self.get_params(param_b='op-name-that-does-not-exist'),
         )
+
+
+class TestOperationNameTypeByBlueprintId(AgentlessTestCase, DataBasedTypes):
+    def setUp(self):
+        super().setUp()
+        self.upload_blueprint(
+            blueprint_id='bp',
+            blueprint_file_name='inputs_rely_on_blueprint_id.yaml',
+        )
+
+    def test_successful(self):
+        inputs = {'a_node_id': 'node1',
+                  'a_node_type': 'type1',
+                  'a_scaling_group': 'first_node',
+                  'a_operation_name': 'cloudify.interfaces.lifecycle.create'}
+        self.client.deployments.create('bp', 'dep', inputs=inputs)
+        dep = self.client.deployments.get('dep')
+        assert dep.inputs['a_node_id'] == inputs['a_node_id']
+
+    def test_invalid_value(self):
+        inputs = {'a_node_id': 'node1',
+                  'a_node_type': 'type1',
+                  'a_scaling_group': 'first_node',
+                  'a_operation_name': 'check_drift'}
+        with self.assertRaisesRegex(CloudifyClientError, 'a_operation_name'):
+            self.client.deployments.create('bp', 'dep', inputs=inputs)
+
+    def test_missing_node_value(self):
+        inputs = {'a_node_id': 'node1',
+                  'a_node_type': 'type1',
+                  'a_scaling_group': 'first_node',
+                  'a_operation_name': 'cloudify.nonexistent.operation'}
+        with self.assertRaisesRegex(CloudifyClientError, 'a_operation_name'):
+            self.client.deployments.create('bp', 'dep', inputs=inputs)
