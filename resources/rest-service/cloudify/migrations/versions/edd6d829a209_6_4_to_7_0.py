@@ -55,9 +55,9 @@ def downgrade():
     remove_p_from_pickle_columns()
     add_service_management_config()
     drop_users_created_at_index()
+    drop_secrets_provider_relationship()
     drop_secrets_providers_table()
     drop_secrets_schema()
-    drop_secrets_provider_relationship()
 
 
 # Upgrade functions
