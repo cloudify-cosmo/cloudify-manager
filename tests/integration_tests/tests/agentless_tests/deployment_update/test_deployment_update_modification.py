@@ -541,3 +541,126 @@ workflows:
         assert cm.exception.error_code == 'unavailable_workflow_error'
         self._do_update(deployment.id, BLUEPRINT_ID)
         self.execute_workflow('wf1', deployment.id)  # doesn't throw
+
+    def test_parent_child(self):
+        env_bp = """
+tosca_definitions_version: cloudify_dsl_1_5
+imports:
+    - cloudify/types/types.yaml
+inputs:
+    inp1: {}
+capabilities:
+    cap1:
+        value: {get_input: inp1}
+    cap2:
+        value: other value
+"""
+        srv_bp = """
+tosca_definitions_version: cloudify_dsl_1_5
+imports:
+    - cloudify/types/types.yaml
+inputs:
+    inp1: {}
+outputs:
+    out1:
+        value:
+            get_capability:
+                - {get_label: [csys-obj-parent, 0]}
+                - {get_input: inp1}
+"""
+        self.upload_blueprint_resource(
+            self.make_yaml_file(env_bp),
+            blueprint_id='bp1',
+        )
+        self.upload_blueprint_resource(
+            self.make_yaml_file(srv_bp),
+            blueprint_id='bp2',
+        )
+        dep1 = self.deploy(
+            blueprint_id='bp1',
+            deployment_id='d1',
+            deployment_labels=[{'csys-obj-type': 'environment'}],
+            inputs={'inp1': 'capability value'},
+        )
+        dep2 = self.deploy(
+            blueprint_id='bp2',
+            deployment_id='d2',
+            deployment_labels=[{'csys-obj-parent': 'd1'}],
+            inputs={'inp1': 'cap1'},
+            runtime_only_evaluation=True,
+        )
+        outs = self.client.deployments.outputs.get(dep2.id).outputs
+        assert outs['out1'] == 'capability value'
+
+        new_inputs = {'inp1': 'capability2 value'}
+        with self.assertRaisesRegex(
+            CloudifyClientError,
+            'existing installations'
+        ):
+            self._do_update(dep1.id, inputs=new_inputs)
+        self._do_update(dep1.id, inputs=new_inputs, force=True)
+        outs = self.client.deployments.outputs.get(dep2.id).outputs
+        assert outs['out1'] == 'capability2 value'
+        self._do_update(dep2.id, inputs={'inp1': 'cap2'})
+        outs = self.client.deployments.outputs.get(dep2.id).outputs
+        assert outs['out1'] == 'other value'
+
+    def test_environment_sharedresource(self):
+        env_bp = """
+tosca_definitions_version: cloudify_dsl_1_5
+imports:
+  - cloudify/types/types.yaml
+capabilities:
+  cap1:
+    value: value1
+  cap2:
+    value: value2
+"""
+        srv_bp = """
+tosca_definitions_version: cloudify_dsl_1_5
+imports:
+  - cloudify/types/types.yaml
+inputs:
+    inp1: {}
+
+node_templates:
+  env:
+    type: cloudify.nodes.SharedResource
+    properties:
+      resource_config:
+        deployment:
+          id: { get_label: [csys-obj-parent, 0] }
+outputs:
+    out1:
+        value: {get_capability: [d1, {get_input: inp1} ]}
+"""
+        self.upload_blueprint_resource(
+            self.make_yaml_file(env_bp),
+            blueprint_id='bp1',
+        )
+        self.upload_blueprint_resource(
+            self.make_yaml_file(srv_bp),
+            blueprint_id='bp2',
+        )
+        dep1 = self.deploy(
+            blueprint_id='bp1',
+            deployment_id='d1',
+            deployment_labels=[{'csys-obj-type': 'environment'}],
+        )
+        self.execute_workflow('install', dep1.id)
+        dep2 = self.deploy(
+            blueprint_id='bp2',
+            deployment_id='d2',
+            deployment_labels=[{'csys-obj-parent': 'd1'}],
+            inputs={'inp1': 'cap1'},
+            runtime_only_evaluation=True,
+        )
+        self.execute_workflow('install', dep2.id)
+
+        outs = self.client.deployments.outputs.get(dep2.id).outputs
+        assert outs['out1'] == 'value1'
+
+        self._do_update(dep2.id, inputs={'inp1': 'cap2'})
+
+        outs = self.client.deployments.outputs.get(dep2.id).outputs
+        assert outs['out1'] == 'value2'
