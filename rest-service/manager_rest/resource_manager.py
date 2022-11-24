@@ -2600,17 +2600,6 @@ class ResourceManager(object):
                 execution.workflow_id, execution.deployment.id,
                 formatted_dependencies)
             return
-        # If part of a deployment update - mark the update as failed
-        if execution.workflow_id in ('update', 'csys_new_deployment_update'):
-            dep_update = self.sm.get(
-                models.DeploymentUpdate,
-                None,
-                filters={'deployment_id': execution.deployment.id,
-                         'state': UpdateStates.UPDATING}
-            )
-            if dep_update:
-                dep_update.state = UpdateStates.FAILED
-                self.sm.update(dep_update)
         raise manager_exceptions.DependentExistsError(
             f"Can't execute workflow `{execution.workflow_id}` on deployment "
             f"{execution.deployment.id} - existing installations depend "
