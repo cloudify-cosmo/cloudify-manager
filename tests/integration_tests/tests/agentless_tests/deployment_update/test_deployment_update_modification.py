@@ -459,14 +459,14 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('modify_description')
 
-        self.assertRegexpMatches(deployment['description'], 'old description')
+        assert deployment['description'].strip() == 'old description'
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
         wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
         self._do_update(deployment.id, BLUEPRINT_ID)
 
         deployment = self.client.deployments.get(deployment.id)
-        self.assertRegexpMatches(deployment['description'], 'new description')
+        assert deployment['description'].strip() == 'new description'
 
     def test_modify_inputs_ops_order(self):
         """Verify that update workflow executes uninstall and install."""

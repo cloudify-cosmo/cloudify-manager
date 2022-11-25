@@ -51,12 +51,17 @@ class TestPermissions(base_test.BaseServerTestCase):
         assert permission_name not in {p['permission'] for p in retrieved}
 
     def test_put_already_existing(self):
-        role = models.Role.query.first()
-        permission = role.permissions[0]
+        role = models.Role(
+            name='test-role',
+            type='tenant_role',
+        )
+        test_permission = 'test-permission'
+        role.permissions.append(models.Permission(name=test_permission))
+        db.session.add(role)
         with pytest.raises(CloudifyClientError) as cm:
             self.client.permissions.add(
                 role=role.name,
-                permission=permission.name,
+                permission=test_permission,
             )
         assert cm.value.status_code == 409
 
