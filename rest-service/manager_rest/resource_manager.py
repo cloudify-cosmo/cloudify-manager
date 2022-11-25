@@ -305,7 +305,7 @@ class ResourceManager(object):
 
         except Exception as e:
             execution.status = ExecutionState.FAILED
-            execution.error = str(e)
+            execution.error = f'Error dequeueing execution: {e}'
             return False, []
         else:
             flag_modified(execution, 'parameters')
@@ -1170,7 +1170,7 @@ class ResourceManager(object):
             except Exception as e:
                 errors.append(e)
                 exc.status = ExecutionState.FAILED
-                exc.error = str(e)
+                exc.error = f'Error preparing execution: {e}'
                 self.sm.update(exc)
                 continue
 
