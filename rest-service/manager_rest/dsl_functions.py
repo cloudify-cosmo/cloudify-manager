@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import hvac
 
 from collections import namedtuple
 
@@ -101,11 +102,71 @@ def evaluate_deployment_capabilities(deployment_id):
         raise DeploymentCapabilitiesEvaluationError(str(e))
 
 
-def get_secret_method(secret_key):
-    sm = get_storage_manager()
+def get_secret_method(secret_key, sm=None):
+    if sm is None:
+        sm = get_storage_manager()
+
     secret = sm.get(Secret, secret_key)
-    decrypted_value = cryptography_utils.decrypt(secret.value)
+
+    if secret.provider:
+        decrypted_value = get_secret_from_provider(secret)
+    else:
+        decrypted_value = cryptography_utils.decrypt(secret.value)
+
     return SecretType(secret_key, decrypted_value)
+
+
+def get_secret_from_provider(secret):
+    provider = secret.provider
+
+    if provider.type == 'local':
+        encrypted_value = secret.value
+        decrypted_value = cryptography_utils.decrypt(encrypted_value)
+
+        return decrypted_value
+    elif provider.type == 'vault':
+        decrypted_value = _get_secret_from_vault(
+            provider.connection_parameters['url'],
+            provider.connection_parameters['token'],
+            provider.connection_parameters['path'],
+            secret.key,
+        )
+
+        return decrypted_value
+    else:
+        raise ValueError(
+            f'Secrets Provider is not supported: {provider.type}',
+        )
+
+
+def _get_secret_from_vault(url, token, path, key):
+    path_details = _get_vault_path_details(
+        url,
+        token,
+        path,
+    )
+
+    if key not in path_details['data']['data']:
+        raise ValueError(
+            f'Secret {key} does not exist in Vault provider',
+        )
+
+    secret_value = path_details['data']['data'][key]
+
+    return secret_value
+
+
+def _get_vault_path_details(url, token, path):
+    client = hvac.Client(
+        url=url,
+        token=token,
+    )
+
+    response = client.secrets.kv.read_secret_version(
+        path=path,
+    )
+
+    return response
 
 
 class FunctionEvaluationStorage(object):

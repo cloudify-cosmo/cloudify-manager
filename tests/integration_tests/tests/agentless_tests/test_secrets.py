@@ -37,6 +37,17 @@ class SecretsTest(AgentlessTestCase):
         self.client.secrets.create('port', '8080')
         deployment, _ = self.deploy_application(dsl_path)
 
+        nodes = self.client.nodes.list(
+            deployment_id=deployment.id,
+        )
+        assert nodes[0].properties['port'] == {'get_secret': 'port'}
+
+        nodes = self.client.nodes.list(
+            deployment_id=deployment.id,
+            evaluate_functions=True,
+        )
+        assert nodes[0].properties['port'] == '8080'
+
     def test_secret_export_not_authorized(self):
         self.client.secrets.create('key', 'value')
         self.client.users.create('user', 'password', 'default')
