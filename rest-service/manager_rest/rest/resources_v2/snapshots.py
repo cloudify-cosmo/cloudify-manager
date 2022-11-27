@@ -25,7 +25,7 @@ from manager_rest.security.authorization import authorize
 from manager_rest.rest import rest_decorators, rest_utils, swagger
 from manager_rest.storage import get_storage_manager, models
 from manager_rest.resource_manager import get_resource_manager
-from manager_rest.upload_manager import UploadedSnapshotsManager
+from manager_rest.upload_manager import upload_snapshot
 from manager_rest.constants import (FILE_SERVER_SNAPSHOTS_FOLDER,
                                     FILE_SERVER_RESOURCES_FOLDER)
 
@@ -199,7 +199,11 @@ class SnapshotsIdArchive(SecuredResource):
     @authorize('snapshot_upload')
     @rest_decorators.marshal_with(models.Snapshot)
     def put(self, snapshot_id):
-        return UploadedSnapshotsManager().receive_uploaded_data(snapshot_id)
+        upload_snapshot(snapshot_id)
+        return get_resource_manager().create_snapshot_model(
+            snapshot_id,
+            status=SnapshotState.UPLOADED,
+        ), 201
 
     @swagger.operation(
         nickname='downloadSnapshot',

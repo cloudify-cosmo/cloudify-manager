@@ -323,6 +323,32 @@ def _save_file_from_chunks(archive_target_path, data_type):
             f.write(buffered_chunked)
 
 
+def upload_snapshot(snapshot_id):
+    file_server_root = config.instance.file_server_root
+
+    upload_path = os.path.join(
+        file_server_root,
+        FILE_SERVER_SNAPSHOTS_FOLDER,
+        UPLOADING_FOLDER_NAME,
+        snapshot_id,
+    )
+    os.makedirs(os.path.dirname(upload_path), exist_ok=True)
+    _save_file_locally_and_extract_inputs(
+        upload_path,
+        'snapshot_archive_url',
+        'snapshot',
+    )
+
+    target_path = os.path.join(
+        file_server_root,
+        FILE_SERVER_SNAPSHOTS_FOLDER,
+        snapshot_id,
+        f'{snapshot_id}.zip',
+    )
+    os.makedirs(os.path.dirname(target_path), exist_ok=True)
+    shutil.move(upload_path, target_path)
+
+
 def upload_blueprint_archive_to_file_server(blueprint_id):
     file_server_root = config.instance.file_server_root
 
