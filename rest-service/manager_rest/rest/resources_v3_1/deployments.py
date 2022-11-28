@@ -1412,7 +1412,7 @@ class DeploymentGroupsId(SecuredResource):
 
 def _create_inter_deployment_dependency(
         source_deployment: Optional[models.Deployment],
-        dependency: models.InterDeploymentDependencies,
+        dependency: dict,
         sm) -> models.InterDeploymentDependencies:
     now = utils.get_formatted_timestamp()
 
@@ -1426,7 +1426,8 @@ def _create_inter_deployment_dependency(
         target_deployment = None
 
     if target_deployment and source_deployment:
-        if target_deployment in source_deployment.get_ancestors(locking=False)\
+        target_dependencies = target_deployment.get_dependencies(locking=False)
+        if source_deployment in target_dependencies\
                 or target_deployment == source_deployment:
             raise manager_exceptions.ConflictError(
                 f'Cyclic dependency between {source_deployment} and '

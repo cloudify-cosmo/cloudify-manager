@@ -70,14 +70,13 @@ class DeploymentUpdate(SecuredResource):
     def _initiate(self, deployment_id):
         sm = get_storage_manager()
         rm = get_resource_manager()
-
         preview = verify_and_convert_bool(
             'preview', request.json.get('preview', False))
         runtime_eval = request.json.get('runtime_only_evaluation')
         force = verify_and_convert_bool(
             'force', request.json.get('force', False))
 
-        with sm.transaction():
+        with sm.transaction() as tx:
             blueprint, inputs, reinstall_list = \
                 self._get_and_validate_blueprint_and_inputs(deployment_id,
                                                             request.json)
@@ -131,21 +130,27 @@ class DeploymentUpdate(SecuredResource):
                 allow_custom_parameters=True,
             )
             sm.put(update_exec)
-            dep_up.execution = update_exec
-            sm.put(dep_up)
-            dep_up.set_deployment(deployment)
-            messages = rm.prepare_executions(
-                [update_exec],
-                allow_overlapping_running_wf=True,
-                force=force,
-            )
             if current_execution and \
                     current_execution.workflow_id == 'csys_update_deployment':
                 # if we're created from a update_deployment workflow, join its
                 # exec-groups, for easy tracking
                 for exec_group in current_execution.execution_groups:
                     exec_group.executions.append(update_exec)
-                db.session.commit()
+            dep_up.execution = update_exec
+            sm.put(dep_up)
+            dep_up.set_deployment(deployment)
+            try:
+                messages = rm.prepare_executions(
+                    [update_exec],
+                    allow_overlapping_running_wf=True,
+                    force=force,
+                )
+            except manager_exceptions.DependentExistsError:
+                dep_up.state = STATES.FAILED
+                sm.update(dep_up)
+                tx.force_commit = True
+                raise
+
         workflow_executor.execute_workflow(messages)
         if preview:
             wait_for_execution(sm, dep_up.execution.id)

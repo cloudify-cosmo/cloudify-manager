@@ -607,7 +607,18 @@ class InterDeploymentDependenciesTest(BaseServerTestCase):
         self.dependency = create_deployment_dependency(
             self.dependency_creator,
             self.source_deployment,
-            self.target_deployment)
+            self.target_deployment,
+        )
+        self.reverse_dependency = create_deployment_dependency(
+            self.dependency_creator,
+            self.target_deployment,
+            self.source_deployment,
+        )
+        self.self_dependency = create_deployment_dependency(
+            self.dependency_creator,
+            self.source_deployment,
+            self.source_deployment,
+        )
         self.put_mock_deployments(self.source_deployment,
                                   self.target_deployment)
 
@@ -760,3 +771,28 @@ class InterDeploymentDependenciesTest(BaseServerTestCase):
             **create_deployment_dependency('sharedresource.mynode', '4', '0'))
         self.client.inter_deployment_dependencies.create(
             **create_deployment_dependency('capability.ip', '5', '4'))
+
+    def test_create_conflict_cyclic(self):
+        self.client.inter_deployment_dependencies.create(**self.dependency)
+        with self.assertRaisesRegex(CloudifyClientError, 'cyclic') as cm:
+            self.client.inter_deployment_dependencies.create(
+                **self.reverse_dependency)
+        assert cm.exception.status_code == 409
+
+    def test_createmany_conflict_cyclic(self):
+        self.client.inter_deployment_dependencies.create(**self.dependency)
+        with self.assertRaisesRegex(CloudifyClientError, 'Cyclic') as cm:
+            self.client.inter_deployment_dependencies.create_many(
+                source_deployment_id=self.source_deployment,
+                inter_deployment_dependencies=[self.reverse_dependency],
+            )
+        assert cm.exception.status_code == 409
+
+    def test_createmany_conflict_self(self):
+        # a deployment can't have a dependency to itself
+        with self.assertRaisesRegex(CloudifyClientError, 'Cyclic') as cm:
+            self.client.inter_deployment_dependencies.create_many(
+                source_deployment_id=self.source_deployment,
+                inter_deployment_dependencies=[self.self_dependency],
+            )
+        assert cm.exception.status_code == 409

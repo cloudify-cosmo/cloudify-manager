@@ -569,10 +569,10 @@ def retrieve_constraints(id_required=False):
         raise manager_exceptions.BadParametersError(
             "You should provide either a valid 'blueprint_id' parameter "
             "or have a 'blueprint_id' key in the constraints, not both.")
-    deployment_id = args.get('deployment_id') \
-        or constraints.get('deployment_id')
-    blueprint_id = args.get('blueprint_id') \
-        or constraints.get('blueprint_id')
+    deployment_id = \
+        args.get('deployment_id') or constraints.pop('deployment_id', None)
+    blueprint_id = \
+        args.get('blueprint_id') or constraints.pop('blueprint_id', None)
     if (constraints or id_required) \
             and not deployment_id and not blueprint_id:
         raise manager_exceptions.BadParametersError(
