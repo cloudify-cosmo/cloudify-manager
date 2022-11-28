@@ -93,6 +93,7 @@ class SecretsKey(SecuredResource):
         self._update_visibility(secret)
         self._update_value(secret)
         self._update_owner(secret)
+        self._update_provider(secret)
         secret.updated_at = utils.get_formatted_timestamp()
         return get_storage_manager().update(secret, validate_global=True)
 
@@ -237,6 +238,24 @@ class SecretsKey(SecuredResource):
         creator = rest_utils.valid_user(request_dict.get('creator'))
         if creator:
             secret.creator = creator
+
+    @staticmethod
+    def _update_provider(secret):
+        request_dict = rest_utils.get_json_and_verify_params({
+            'provider': {'type': str, 'optional': True}
+        })
+        provider_name = request_dict.get('provider')
+        if not provider_name:
+            return
+
+        storage_manager = get_storage_manager()
+
+        provider = storage_manager.get(
+            models.SecretsProvider,
+            provider_name,
+        )
+
+        secret.provider = provider
 
 
 class Secrets(SecuredResource):
