@@ -65,6 +65,7 @@ def create_bc_plugin_yaml(yamls, archive_target_path):
         return [target_yaml]
     return []
 
+
 def save_bc_plugin_yaml(file_path, plugin_yaml):
     with open(file_path, 'w') as fh:
         yaml.safe_dump(plugin_yaml, fh)

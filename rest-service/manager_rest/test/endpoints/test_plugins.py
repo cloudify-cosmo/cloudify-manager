@@ -450,7 +450,8 @@ plugins:
                 open(plugin_archive, 'rb') as original_wagon:
             assert downloaded_wagon.read() == original_wagon.read()
 
-        downloaded_yaml_path = os.path.join(self.tmpdir, 'downloaded-plugin.yaml')
+        downloaded_yaml_path = os.path.join(
+            self.tmpdir, 'downloaded-plugin.yaml')
         self.client.plugins.download_yaml(
             uploaded_plugin.id,
             downloaded_yaml_path,

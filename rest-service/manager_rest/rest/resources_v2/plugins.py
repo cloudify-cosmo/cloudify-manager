@@ -123,7 +123,8 @@ class Plugins(SecuredResource):
                 distribution_release=build_props.get('distribution_release'),
                 wheels=wagon_info.get('wheels') or [],
                 excluded_wheels=wagon_info.get('excluded_wheels'),
-                supported_py_versions=wagon_info.get('supported_python_versions'),
+                supported_py_versions=wagon_info.get(
+                    'supported_python_versions'),
                 uploaded_at=args.uploaded_at or datetime.utcnow(),
                 visibility=visibility,
                 blueprint_labels=wagon_info.get('blueprint_labels'),
