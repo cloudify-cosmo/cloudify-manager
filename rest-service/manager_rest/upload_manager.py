@@ -201,16 +201,7 @@ def _save_file_from_chunks(archive_target_path, data_type):
             f.write(buffered_chunked)
 
 
-def upload_snapshot(snapshot_id):
-    file_server_root = config.instance.file_server_root
-
-    upload_path = os.path.join(
-        file_server_root,
-        FILE_SERVER_SNAPSHOTS_FOLDER,
-        UPLOADING_FOLDER_NAME,
-        snapshot_id,
-    )
-    os.makedirs(os.path.dirname(upload_path), exist_ok=True)
+def _do_upload_snapshot(snapshot_id, upload_path):
     _save_file_locally_and_extract_inputs(
         upload_path,
         'snapshot_archive_url',
@@ -218,7 +209,7 @@ def upload_snapshot(snapshot_id):
     )
 
     target_path = os.path.join(
-        file_server_root,
+        config.instance.file_server_root,
         FILE_SERVER_SNAPSHOTS_FOLDER,
         snapshot_id,
         f'{snapshot_id}.zip',
@@ -227,24 +218,28 @@ def upload_snapshot(snapshot_id):
     shutil.move(upload_path, target_path)
 
 
-def upload_blueprint_archive_to_file_server(blueprint_id):
-    file_server_root = config.instance.file_server_root
-
-    archive_target_path = os.path.join(
-        file_server_root,
-        FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
+def upload_snapshot(snapshot_id):
+    upload_path = os.path.join(
+        config.instance.file_server_root,
+        FILE_SERVER_SNAPSHOTS_FOLDER,
         UPLOADING_FOLDER_NAME,
-        current_tenant.name,
-        blueprint_id,
+        snapshot_id,
     )
-    os.makedirs(os.path.dirname(archive_target_path), exist_ok=True)
+    os.makedirs(os.path.dirname(upload_path), exist_ok=True)
+    try:
+        return _do_upload_snapshot(snapshot_id, upload_path)
+    finally:
+        shutil.rmtree(upload_path, ignore_errors=True)
+
+
+def _do_upload_blueprint(blueprint_id, upload_path):
     _save_file_locally_and_extract_inputs(
-        archive_target_path,
+        upload_path,
         None,
         'blueprint')
 
     try:
-        archive_type = get_archive_type(archive_target_path)
+        archive_type = get_archive_type(upload_path)
     except ArchiveTypeError:
         raise manager_exceptions.BadParametersError(
             'Blueprint archive is of an unrecognized format. '
@@ -252,14 +247,29 @@ def upload_blueprint_archive_to_file_server(blueprint_id):
                 SUPPORTED_ARCHIVE_TYPES))
 
     target_path = os.path.join(
-        file_server_root,
+        config.instance.file_server_root,
         FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
         current_tenant.name,
         blueprint_id,
         f'{blueprint_id}.{archive_type}',
     )
     os.makedirs(os.path.dirname(target_path), exist_ok=True)
-    shutil.move(archive_target_path, target_path)
+    shutil.move(upload_path, target_path)
+
+
+def upload_blueprint_archive_to_file_server(blueprint_id):
+    upload_path = os.path.join(
+        config.instance.file_server_root,
+        FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
+        UPLOADING_FOLDER_NAME,
+        current_tenant.name,
+        blueprint_id,
+    )
+    os.makedirs(os.path.dirname(upload_path), exist_ok=True)
+    try:
+        return _do_upload_blueprint(blueprint_id, upload_path)
+    finally:
+        shutil.rmtree(upload_path, ignore_errors=True)
 
 
 def cleanup_blueprint_archive_from_file_server(blueprint_id, tenant):
@@ -498,7 +508,7 @@ def _store_plugin(plugin_id, wagon_path, yaml_paths):
             yaml_path,
             os.path.join(target_path, os.path.basename(yaml_path)),
         )
-    os.chmod(target_path, 0o777)
+    os.chmod(target_path, 0o755)
     return wagon_info
 
 
@@ -519,17 +529,8 @@ def is_caravan(path):
             return True
 
 
-def upload_plugin(data_id=None, **kwargs):
-    data_id = data_id or request.args.get('id') or str(uuid.uuid4())
-
-    plugin_dir = os.path.join(
-        config.instance.file_server_root,
-        FILE_SERVER_PLUGINS_FOLDER,
-        UPLOADING_FOLDER_NAME,
-        data_id,
-    )
+def _do_upload_plugin(data_id, plugin_dir):
     archive_target_path = os.path.join(plugin_dir, 'plugin')
-    os.makedirs(plugin_dir, exist_ok=True)
     _save_file_locally_and_extract_inputs(
         archive_target_path,
         'plugin_archive_url',
@@ -577,9 +578,27 @@ def upload_plugin(data_id=None, **kwargs):
         raise manager_exceptions.InvalidPluginError(
             'input can be only a wagon or a zip file.')
 
+    wagons = []
     for plugin_id, wagon_path, yamls in plugins:
-        yield _store_plugin(plugin_id, wagon_path, yamls)
-    return
+        wagon_info = _store_plugin(plugin_id, wagon_path, yamls)
+        wagons.append(wagon_info)
+    return wagons
+
+
+def upload_plugin(data_id=None, **kwargs):
+    data_id = data_id or request.args.get('id') or str(uuid.uuid4())
+
+    upload_path = os.path.join(
+        config.instance.file_server_root,
+        FILE_SERVER_PLUGINS_FOLDER,
+        UPLOADING_FOLDER_NAME,
+        data_id,
+    )
+    os.makedirs(upload_path, exist_ok=True)
+    try:
+        return _do_upload_plugin(data_id, upload_path)
+    finally:
+        shutil.rmtree(upload_path, ignore_errors=True)
 
 
 def _retrieve_labels(labels):
