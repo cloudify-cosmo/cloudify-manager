@@ -305,7 +305,7 @@ class ResourceManager(object):
 
         except Exception as e:
             execution.status = ExecutionState.FAILED
-            execution.error = str(e)
+            execution.error = f'Error dequeueing execution: {e}'
             return False, []
         else:
             flag_modified(execution, 'parameters')
@@ -1170,7 +1170,7 @@ class ResourceManager(object):
             except Exception as e:
                 errors.append(e)
                 exc.status = ExecutionState.FAILED
-                exc.error = str(e)
+                exc.error = f'Error preparing execution: {e}'
                 self.sm.update(exc)
                 continue
 
@@ -1746,41 +1746,6 @@ class ResourceManager(object):
         created_types = self.get_object_types_from_labels(labels_to_add)
         delete_types = self.get_object_types_from_labels(labels_to_delete)
         return created_types, delete_types
-
-    def get_missing_deployment_parents(self, parents):
-        if not parents:
-            return
-        result = self.sm.list(
-            models.Deployment,
-            include=['id'],
-            filters={'id': lambda col: col.in_(parents)},
-            get_all_results=True,
-        ).items
-        _existing_parents = [_parent.id for _parent in result]
-        missing_parents = set(parents) - set(_existing_parents)
-        return missing_parents
-
-    def verify_deployment_parents_existence(self, parents, resource_id,
-                                            resource_type):
-        missing_parents = self.get_missing_deployment_parents(parents)
-        if missing_parents:
-            raise manager_exceptions.DeploymentParentNotFound(
-                '{0} {1}: is referencing deployments'
-                ' using label `csys-obj-parent` that does not exist, '
-                'make sure that deployment(s) {2} exist before creating '
-                '{3}'.format(resource_type.capitalize(),
-                             resource_id,
-                             ','.join(missing_parents), resource_type)
-            )
-
-    def verify_attaching_deployment_to_parents(self, dep, parents):
-        self.verify_deployment_parents_existence(parents, dep, 'deployment')
-        dependent_ids = [d.id for d in dep.get_all_dependents()]
-        for parent_id in parents:
-            if parent_id in dependent_ids:
-                raise manager_exceptions.ConflictError(
-                    f'cyclic dependency between {dep.id} and {parent_id}'
-                )
 
     def add_deployment_to_labels_graph(self, deployments, parent_ids):
         if not deployments or not parent_ids:
@@ -2600,17 +2565,6 @@ class ResourceManager(object):
                 execution.workflow_id, execution.deployment.id,
                 formatted_dependencies)
             return
-        # If part of a deployment update - mark the update as failed
-        if execution.workflow_id in ('update', 'csys_new_deployment_update'):
-            dep_update = self.sm.get(
-                models.DeploymentUpdate,
-                None,
-                filters={'deployment_id': execution.deployment.id,
-                         'state': UpdateStates.UPDATING}
-            )
-            if dep_update:
-                dep_update.state = UpdateStates.FAILED
-                self.sm.update(dep_update)
         raise manager_exceptions.DependentExistsError(
             f"Can't execute workflow `{execution.workflow_id}` on deployment "
             f"{execution.deployment.id} - existing installations depend "
