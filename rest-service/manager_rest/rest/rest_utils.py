@@ -411,10 +411,11 @@ def update_deployment_dependencies_from_plan(deployment_id,
 
     new_dependencies = deployment_plan.setdefault(
         INTER_DEPLOYMENT_FUNCTIONS, [])
+    new_dependencies = _normalize_plan_dependencies(
+        new_dependencies, dep_plan_filter_func)
     source_deployment = storage_manager.get(models.Deployment,
                                             deployment_id,
                                             all_tenants=True)
-    dependents = source_deployment.get_all_dependents()
     for idd in new_dependencies:
         dependency_creator = idd['function_identifier']
         target_deployment_id, target_deployment_func = idd['target_deployment']
@@ -450,10 +451,6 @@ def update_deployment_dependencies_from_plan(deployment_id,
                 or not hasattr(curr_target_deployment, 'id')):
             continue
             # upcoming: handle the case of external dependencies
-        if target_deployment._storage_id in dependents:
-            raise manager_exceptions.ConflictError(
-                f'cyclic dependency between {source_deployment.id} '
-                f'and {target_deployment.id}')
 
 
 def update_inter_deployment_dependencies(sm, deployment):

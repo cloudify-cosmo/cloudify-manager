@@ -56,11 +56,10 @@ from .relationships import (
     one_to_many_relationship,
     many_to_many_relationship
 )
-from manager_rest.storage.storage_manager import get_storage_manager
+from manager_rest.storage.storage_manager import SQLStorageManager
 
 if TYPE_CHECKING:
     from manager_rest.resource_manager import ResourceManager
-    from manager_rest.storage.storage_manager import SQLStorageManager
     hybrid_property = property
 else:
     from sqlalchemy.ext.hybrid import hybrid_property
@@ -1112,13 +1111,13 @@ class BlueprintsFilter(FilterBase):
     )
 
 
-def evaluate_workflow_parameters(deployment_id: str, parameters: dict):
+def evaluate_workflow_parameters(sm, deployment_id: str, parameters: dict):
     # Keep this import line here because of circular dependencies
     from manager_rest.dsl_functions import evaluate_intrinsic_functions
 
     to_evaluate = {k: v for k, v in parameters.items()
                    if isinstance(v, (list, dict))}
-    evaluated = evaluate_intrinsic_functions(to_evaluate, deployment_id)
+    evaluated = evaluate_intrinsic_functions(to_evaluate, deployment_id, sm=sm)
     parameters.update(evaluated)
 
 
@@ -1318,7 +1317,8 @@ class Execution(CreatedAtMixin, SQLResourceBase):
         for name, param in workflow_parameters.items():
             if 'default' in param:
                 parameters.setdefault(name, param['default'])
-        evaluate_workflow_parameters(deployment.id, parameters)
+        evaluate_sm = SQLStorageManager(user=self.creator, tenant=self.tenant)
+        evaluate_workflow_parameters(evaluate_sm, deployment.id, parameters)
 
         wrong_types = {}
         for name, param in workflow_parameters.items():
@@ -1349,8 +1349,10 @@ class Execution(CreatedAtMixin, SQLResourceBase):
                     and not constraints:
                 continue
             try:
-                getter = GetValuesWithStorageManager(get_storage_manager(),
-                                                     deployment.id)
+                getter = GetValuesWithStorageManager(
+                    evaluate_sm,
+                    deployment.id,
+                )
                 validate_input_value(name, constraints, parameters[name],
                                      param_type, param_item_type, getter)
             except (dsl_exceptions.DSLParsingException,
