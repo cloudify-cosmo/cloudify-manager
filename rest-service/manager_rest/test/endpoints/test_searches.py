@@ -787,6 +787,41 @@ class SearchesTestCase(base_test.BaseServerTestCase):
             deployment_id='deployment-which-does-not-exist')
         assert [sg.name for sg in search] == []
 
+    def test_scaling_groups_search_deployment_id_behaviour(self):
+        bp, _ = self._create_deployment('d1', scaling_groups={
+            "first1": {"members": ["node1"], "properties": {}},
+            "second1": {"members": ["node2"], "properties": {}},
+            "other1": {"members": ["node3, node4"], "properties": {}},
+        })
+        self._create_deployment('d2', bp=bp, scaling_groups={
+            "first2": {"members": ["node1"], "properties": {}},
+            "second2": {"members": ["node2"], "properties": {}},
+            "third2": {"members": ["node3"], "properties": {}},
+        })
+
+        with self.assertRaises(CloudifyClientError) as cm:
+            self.client.deployments.scaling_groups.list(
+                deployment_id='d1',
+                constraints={'deployment_id': 'd1'}
+            )
+        assert cm.exception.error_code == 'bad_parameters_error'
+        assert 'not both' in str(cm.exception)
+
+        with self.assertRaises(CloudifyClientError) as cm:
+            self.client.deployments.scaling_groups.list(
+                deployment_id='d1',
+                constraints={'deployment_id': ''}
+            )
+        assert cm.exception.error_code == 'bad_parameters_error'
+        assert 'not both' in str(cm.exception)
+
+        search = self.client.deployments.scaling_groups.list(
+            deployment_id='',
+            constraints={'deployment_id': 'd1'},
+            _search='other1'
+        )
+        assert [sg.name for sg in search] == ['other1']
+
     def test_scaling_groups_search_by_name_pattern_constraints(self):
         bp, _ = self._create_deployment('d1', scaling_groups={
             "first": {"members": ["node1"], "properties": {}},

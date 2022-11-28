@@ -62,9 +62,15 @@ def evaluate_node_instance(instance):
         raise FunctionsEvaluationError(str(e))
 
 
-def evaluate_intrinsic_functions(payload, deployment_id, context=None):
+def evaluate_intrinsic_functions(
+    payload,
+    deployment_id,
+    context=None,
+    sm=None,
+):
     context = context or {}
-    sm = get_storage_manager()
+    if sm is None:
+        sm = get_storage_manager()
     sm.get(Deployment, deployment_id, include=['id'])
     storage = FunctionEvaluationStorage(deployment_id, sm)
 
@@ -228,7 +234,8 @@ class FunctionEvaluationStorage(object):
         capability = evaluate_intrinsic_functions(
             payload=capability,
             deployment_id=shared_dep_id,
-            context={EVAL_FUNCS_PATH_PREFIX_KEY: CAPABILITIES}
+            context={EVAL_FUNCS_PATH_PREFIX_KEY: CAPABILITIES},
+            sm=self.sm,
         )['value']
         return self._get_capability_by_path(capability, capability_path)
 

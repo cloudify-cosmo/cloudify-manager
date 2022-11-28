@@ -411,10 +411,11 @@ def update_deployment_dependencies_from_plan(deployment_id,
 
     new_dependencies = deployment_plan.setdefault(
         INTER_DEPLOYMENT_FUNCTIONS, [])
+    new_dependencies = _normalize_plan_dependencies(
+        new_dependencies, dep_plan_filter_func)
     source_deployment = storage_manager.get(models.Deployment,
                                             deployment_id,
                                             all_tenants=True)
-    dependents = source_deployment.get_all_dependents()
     for idd in new_dependencies:
         dependency_creator = idd['function_identifier']
         target_deployment_id, target_deployment_func = idd['target_deployment']
@@ -450,10 +451,6 @@ def update_deployment_dependencies_from_plan(deployment_id,
                 or not hasattr(curr_target_deployment, 'id')):
             continue
             # upcoming: handle the case of external dependencies
-        if target_deployment._storage_id in dependents:
-            raise manager_exceptions.ConflictError(
-                f'cyclic dependency between {source_deployment.id} '
-                f'and {target_deployment.id}')
 
 
 def update_inter_deployment_dependencies(sm, deployment):
@@ -555,6 +552,13 @@ def _evaluate_target_func(target_dep_func, source_dep_id):
 def _get_deployment_from_target_func(sm, target_dep_func, source_dep_id):
     target_dep_id = _evaluate_target_func(target_dep_func, source_dep_id)
     if target_dep_id:
+        if not isinstance(target_dep_id, str):
+            # raise early so that we don't try to pass a non-str to the db,
+            # which would cause a completely unreadable db-side error
+            raise ValueError(
+                f'function {target_dep_func} must return a string, but it '
+                f'returned {target_dep_id} ({type(target_dep_id)})'
+            )
         return sm.get(models.Deployment, target_dep_id, fail_silently=True,
                       all_tenants=True)
 
