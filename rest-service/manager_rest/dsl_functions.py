@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import hvac
+import requests
 
 from collections import namedtuple
 
@@ -163,16 +163,14 @@ def _get_secret_from_vault(url, token, path, key):
 
 
 def _get_vault_path_details(url, token, path):
-    client = hvac.Client(
-        url=url,
-        token=token,
+    response = requests.get(
+        f'{url}/v1/secret/data/{path}',
+        headers={
+            "X-Vault-Token": token,
+        }
     )
 
-    response = client.secrets.kv.read_secret_version(
-        path=path,
-    )
-
-    return response
+    return response.json()
 
 
 class FunctionEvaluationStorage(object):
