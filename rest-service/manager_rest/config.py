@@ -129,6 +129,9 @@ class Config(object):
     file_server_type = Setting('file_server_type', default='local')
     file_server_root = Setting('file_server_root', default=None)
     file_server_url = Setting('file_server_url', default=None)
+    s3_server_url = Setting('s3_server_url', default='http://fileserver:9000')
+    s3_resources_bucket = Setting('s3_resources_bucket', default='resources')
+    s3_client_timeout = Setting('s3_client_timeout', default=15.0)
 
     maintenance_folder = Setting('maintenance_folder')
     rest_service_log_level = Setting('rest_service_log_level')
