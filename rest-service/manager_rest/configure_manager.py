@@ -48,13 +48,6 @@ def dict_merge(target, source):
     return target
 
 
-def _generate_password(length=12):
-    chars = string.ascii_lowercase + string.ascii_uppercase + string.digits
-    password = ''.join(random.choice(chars) for _ in range(length))
-
-    return password
-
-
 def _get_admin_username(user_config):
     try:
         admin_username = user_config['manager']['security']['admin_username']
@@ -179,7 +172,7 @@ def _create_admin_user(user_config):
     or use defaults if not provided.
     """
     admin_username = _get_admin_username(user_config)
-    admin_password = _get_admin_password(user_config) or _generate_password()
+    admin_password = _get_admin_password(user_config) or 'admin'
 
     admin_role = models.Role.query.filter_by(name='sys_admin').first()
     if not admin_role:
