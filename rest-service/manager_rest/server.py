@@ -16,7 +16,10 @@ from werkzeug.exceptions import InternalServerError
 from pydantic import ValidationError
 
 
-from manager_rest import config, premium_enabled, manager_exceptions
+from manager_rest import (config,
+                          premium_enabled,
+                          manager_exceptions,
+                          upload_manager)
 from manager_rest.storage import db, user_datastore, models
 from manager_rest.security.user_handler import user_loader
 from manager_rest.security import audit
@@ -131,6 +134,13 @@ def query_service_settings():
         current_app.logger.setLevel(config.instance.rest_service_log_level)
 
 
+def init_storage_client():
+    """Set up a storage client used by upload_manager."""
+    if 'storage_client' not in current_app.extensions:
+        current_app.extensions['storage_client'] = \
+            upload_manager.init_storage_client(config.instance)
+
+
 class CloudifyFlaskApp(Flask):
     def __init__(self, load_config=True):
         _detect_debug_environment()
@@ -157,6 +167,7 @@ class CloudifyFlaskApp(Flask):
 
         self.before_request(log_request)
         self.before_request(query_service_settings)
+        self.before_request(init_storage_client)
         self.before_request(maintenance_mode_handler)
         self.after_request(log_response)
         self.before_request(audit.reset)
