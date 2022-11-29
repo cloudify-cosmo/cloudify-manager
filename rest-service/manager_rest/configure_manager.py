@@ -2,9 +2,7 @@ import argparse
 import datetime
 import logging
 import os
-import random
 import socket
-import string
 import sys
 import time
 import yaml
