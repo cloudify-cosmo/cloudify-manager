@@ -23,9 +23,4 @@ RUN --mount=type=cache,target=/root/.cache \
       -r mgmtworker/requirements.txt \
       mgmtworker/
 
-ENTRYPOINT ["python", "-m", "mgmtworker.worker"]
-CMD [\
-  "--queue", "cloudify.management",\
-  "--max-workers", "10",\
-  "--hooks-queue", "cloudify-hooks"\
-]
+ENTRYPOINT /opt/mgmtworker/docker/entrypoint.sh
