@@ -116,7 +116,7 @@ services:
       - ssl:/etc/cloudify/ssl:ro
       - mgmtworker_workdir:/mgmtworker
     entrypoint: /opt/rest-service/docker/entrypoint_config.sh
-    restart: unless-stopped
+    restart: on-failure
 
 networks:
   cloudify:
