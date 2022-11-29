@@ -26,6 +26,8 @@ from manager_rest.utils import (mkdirs,
                                 remove)
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.constants import (SUPPORTED_ARCHIVE_TYPES)
+from manager_rest.upload_manager.storage import storage_client
+
 from manager_rest.upload_manager.utils import (
     base_archive_filename,
     extract_file_to_file_server,
@@ -48,15 +50,12 @@ def _do_upload_snapshot(snapshot_id, upload_path):
         'snapshot_archive_url',
         'snapshot',
     )
-
     target_path = os.path.join(
-        config.instance.file_server_root,
         FILE_SERVER_SNAPSHOTS_FOLDER,
         snapshot_id,
         f'{snapshot_id}.zip',
     )
-    os.makedirs(os.path.dirname(target_path), exist_ok=True)
-    shutil.move(upload_path, target_path)
+    storage_client().save(upload_path, target_path)
 
 
 def upload_snapshot(snapshot_id):
@@ -88,14 +87,12 @@ def _do_upload_blueprint(blueprint_id, upload_path):
                 SUPPORTED_ARCHIVE_TYPES)) from exc
 
     target_path = os.path.join(
-        config.instance.file_server_root,
         FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
         current_tenant.name,
         blueprint_id,
         f'{blueprint_id}.{archive_type}',
     )
-    os.makedirs(os.path.dirname(target_path), exist_ok=True)
-    shutil.move(upload_path, target_path)
+    storage_client().save(upload_path, target_path)
 
 
 def upload_blueprint_archive_to_file_server(blueprint_id):
@@ -134,15 +131,16 @@ def remove_blueprint_icon_file(tenant_name, blueprint_id):
 
 
 def _set_blueprints_icon(tenant_name, blueprint_id, icon_path=None):
-    blueprint_icon_path = os.path.join(config.instance.file_server_root,
-                                       FILE_SERVER_BLUEPRINTS_FOLDER,
-                                       tenant_name,
-                                       blueprint_id,
-                                       BLUEPRINT_ICON_FILENAME)
+    blueprint_icon_path = os.path.join(
+        FILE_SERVER_BLUEPRINTS_FOLDER,
+        tenant_name,
+        blueprint_id,
+        BLUEPRINT_ICON_FILENAME,
+    )
     if icon_path:
-        shutil.move(icon_path, blueprint_icon_path)
+        storage_client().save(icon_path, blueprint_icon_path)
     else:
-        os.remove(blueprint_icon_path)
+        storage_client().remove(blueprint_icon_path)
 
 
 def _update_blueprint_archive(tenant_name, blueprint_id):
@@ -273,21 +271,18 @@ def _store_plugin(plugin_id, wagon_path, yaml_paths):
         yaml_paths += create_bc_plugin_yaml(yaml_paths, plugin_dir)
 
     target_path = os.path.join(
-        config.instance.file_server_root,
         FILE_SERVER_PLUGINS_FOLDER,
         plugin_id,
     )
-    os.makedirs(target_path, exist_ok=True)
-    shutil.move(
+    storage_client().save(
         wagon_path,
-        os.path.join(target_path, wagon_info['archive_name']),
+        os.path.join(target_path, wagon_info['archive_name'])
     )
     for yaml_path in yaml_paths:
-        shutil.move(
+        storage_client().save(
             yaml_path,
             os.path.join(target_path, os.path.basename(yaml_path)),
         )
-    os.chmod(target_path, 0o755)
     return wagon_info
 
 
