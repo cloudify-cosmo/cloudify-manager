@@ -81,11 +81,11 @@ def _do_upload_blueprint(blueprint_id, upload_path):
 
     try:
         archive_type = get_archive_type(upload_path)
-    except ArchiveTypeError:
+    except ArchiveTypeError as exc:
         raise manager_exceptions.BadParametersError(
             'Blueprint archive is of an unrecognized format. '
             'Supported formats are: {0}'.format(
-                SUPPORTED_ARCHIVE_TYPES))
+                SUPPORTED_ARCHIVE_TYPES)) from exc
 
     target_path = os.path.join(
         config.instance.file_server_root,
@@ -120,15 +120,15 @@ def cleanup_blueprint_archive_from_file_server(blueprint_id, tenant):
                         blueprint_id))
 
 
-def update_blueprint_icon_file(self, tenant_name, blueprint_id):
-    icon_tmp_path = tempfile.mktemp()
+def update_blueprint_icon_file(tenant_name, blueprint_id):
+    icon_tmp_path = tempfile.mkstemp()
     save_file_content(icon_tmp_path, 'blueprint_icon')
     _set_blueprints_icon(tenant_name, blueprint_id, icon_tmp_path)
     remove(icon_tmp_path)
     _update_blueprint_archive(tenant_name, blueprint_id)
 
 
-def remove_blueprint_icon_file(self, tenant_name, blueprint_id):
+def remove_blueprint_icon_file(tenant_name, blueprint_id):
     _set_blueprints_icon(tenant_name, blueprint_id)
     _update_blueprint_archive(tenant_name, blueprint_id)
 
@@ -228,10 +228,10 @@ def extract_blueprint_archive_to_file_server(blueprint_id, tenant):
     bp_from = os.path.join(file_server_root, app_dir)
     bp_dir = os.path.join(tenant_dir, blueprint_id)
     try:
-        # use os.rename - bp_from is already in file_server_root, ie.
+        # use os.rename - bp_from is already in file_server_root, i.e.
         # same filesystem as the target dir
         os.rename(bp_from, bp_dir)
-    except OSError as e:  # eg. directory not empty
+    except OSError as e:  # e.g. directory not empty
         shutil.rmtree(bp_from)
         raise manager_exceptions.ConflictError(str(e))
     _process_blueprint_plugins(file_server_root, blueprint_id)
@@ -364,7 +364,7 @@ def _do_upload_plugin(data_id, plugin_dir):
     return wagons
 
 
-def upload_plugin(data_id=None, **kwargs):
+def upload_plugin(data_id=None, **_):
     data_id = data_id or request.args.get('id') or str(uuid.uuid4())
 
     upload_path = os.path.join(
