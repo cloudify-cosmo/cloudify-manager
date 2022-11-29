@@ -51,4 +51,6 @@ RUN mkdir -p \
       /opt/manager \
       /run/cloudify-restservice
 
+ADD https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager-install/master/cfy_manager/components/restservice/config/license_key.pem.pub /opt/manager/license_key.pem.pub
+
 ENTRYPOINT /opt/rest-service/docker/entrypoint.sh
