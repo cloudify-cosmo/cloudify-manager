@@ -185,19 +185,14 @@ def extract_blueprint_archive_to_file_server(blueprint_id, tenant):
     sm = get_resource_manager().sm
     file_server_root = config.instance.file_server_root
     local_path = os.path.join(
-        config.instance.file_server_root,
         FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
         tenant,
         blueprint_id)
-    for arc_type in SUPPORTED_ARCHIVE_TYPES:
-        # attempting to find the archive file on the file system
-        local_file_path = os.path.join(
-            local_path,
-            '{0}.{1}'.format(blueprint_id, arc_type)
-        )
-        if os.path.isfile(local_file_path):
-            break
-    else:
+    blueprint_file_path = storage_client().find(
+        os.path.join(local_path, blueprint_id),
+        SUPPORTED_ARCHIVE_TYPES,
+    )
+    if not blueprint_file_path:
         error_msg = "Could not find blueprint's archive; " \
                     "Blueprint ID: {0}".format(blueprint_id)
         blueprint = sm.get(Blueprint, blueprint_id)
@@ -207,8 +202,9 @@ def extract_blueprint_archive_to_file_server(blueprint_id, tenant):
         sm.update(blueprint)
         raise manager_exceptions.NotFoundError(error_msg)
     try:
-        app_dir = extract_file_to_file_server(local_file_path,
-                                              file_server_root)
+        with storage_client().get(blueprint_file_path) as local_file_name:
+            app_dir = extract_file_to_file_server(local_file_name,
+                                                  file_server_root)
     except Exception as e:
         blueprint = sm.get(Blueprint, blueprint_id)
         blueprint.state = \

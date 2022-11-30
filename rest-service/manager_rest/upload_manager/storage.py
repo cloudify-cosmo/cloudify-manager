@@ -1,7 +1,9 @@
 import os
 import shutil
+import tempfile
 from xml.etree import ElementTree
 
+from contextlib import contextmanager
 import requests
 from flask import current_app
 
@@ -12,6 +14,14 @@ class StorageClient:
     """StorageClient is a base class for storage clients"""
     def __init__(self, base_uri: str):
         self.base_uri = base_uri
+
+    def find(self, path: str, suffixes=None):
+        """Return a path to a existing file specified by path and suffixes"""
+        raise NotImplementedError('Should be implemented in subclasses')
+
+    def get(self, path: str):
+        """Return a path to local copy of a file specified by path"""
+        raise NotImplementedError('Should be implemented in subclasses')
 
     def list(self, path: str):
         """List files in the path location"""
@@ -28,6 +38,28 @@ class StorageClient:
 
 class LocalStorageClient(StorageClient):
     """LocalStorageClient implements storage methods for local filesystem"""
+    def find(self, path: str, suffixes=None):
+        """Get a file by its path"""
+        full_path = os.path.join(self.base_uri, path)
+        if os.path.isfile(full_path):
+            return path
+        if not suffixes:
+            raise manager_exceptions.NotFoundError(
+                f'Could not find file: {path}')
+
+        if not full_path.endswith('.'):
+            full_path += '.'
+        for sfx in suffixes:
+            if os.path.isfile(f'{full_path}{sfx}'):
+                return f'{path}{sfx}'
+        raise manager_exceptions.NotFoundError(
+            f'Could not find any file: {path}{{{",".join(suffixes)}}}')
+
+    @contextmanager
+    def get(self, path: str):
+        """Return a path to local copy of a file specified by path"""
+        yield path
+
     def list(self, path: str):
         # list all files in path and its subdirectories, but not path
         full_path = os.path.join(self.base_uri, path)
@@ -62,6 +94,35 @@ class S3StorageClient(StorageClient):
         super().__init__(base_uri)
         self.bucket_name = bucket_name
         self.req_timeout = req_timeout
+
+    def find(self, path: str, suffixes=None):
+        prefix, _, file_name = path.rpartition('/')
+        files_in_prefix = list(self.list(prefix))
+
+        if file_name in files_in_prefix:
+            return path
+        if not suffixes:
+            raise manager_exceptions.NotFoundError(
+                f'Could not find file: {path}')
+
+        if not path.endswith('.'):
+            path += '.'
+        for sfx in suffixes:
+            if f'{path}{sfx}' in files_in_prefix:
+                return f'{path}{sfx}'
+        raise manager_exceptions.NotFoundError(
+            f'Could not find any file: {path}{{{",".join(suffixes)}}}')
+
+    @contextmanager
+    def get(self, path: str):
+        response = requests.get(
+            os.path.join(self.server_url, path),
+            timeout=self.req_timeout
+        )
+        with tempfile.NamedTemporaryFile() as fp:
+            fp.write(response.content)
+            fp.seek(0)
+            yield fp.name
 
     def list(self, path: str):
         params = {}
