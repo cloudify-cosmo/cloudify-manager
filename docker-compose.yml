@@ -78,13 +78,11 @@ services:
 
   postgresql:
     container_name: postgresql
-    image: postgres
+    build: service_containers/postgresql
     environment:
       POSTGRES_DB: cloudify_db
       POSTGRES_USER: cloudify
       POSTGRES_PASSWORD: cloudify
-    volumes:
-      - ./packaging/db-schema.sql:/docker-entrypoint-initdb.d/schema.sql
     networks:
       - cloudify
     restart: unless-stopped
@@ -118,7 +116,7 @@ services:
       - ssl:/etc/cloudify/ssl:ro
       - mgmtworker_workdir:/mgmtworker
     entrypoint: /opt/rest-service/docker/entrypoint_config.sh
-    restart: unless-stopped
+    restart: on-failure
 
 networks:
   cloudify:

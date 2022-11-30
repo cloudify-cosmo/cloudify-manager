@@ -5,7 +5,6 @@ Revises: 272e61bf5f4a
 Create Date: 2022-10-13 12:23:56.327514
 
 """
-from datetime import datetime
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
@@ -615,7 +614,7 @@ def add_users_created_at_index():
         users_table
         .update()
         .where(users_table.c.created_at.is_(None))
-        .values(created_at=datetime.utcnow())
+        .values(created_at=sa.func.now())
     )
     op.alter_column(
         'users', 'created_at',

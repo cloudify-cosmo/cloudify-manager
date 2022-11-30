@@ -17,8 +17,6 @@ server {
   ssl_certificate     /etc/cloudify/ssl/cloudify_external_cert.pem;
   ssl_certificate_key /etc/cloudify/ssl/cloudify_external_key.pem;
 
-  add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-
   include "/etc/nginx/conf.d/logs-conf.cloudify";
 
   # Serves the Rest Service (backed by the cloudify-rest upstream).
@@ -28,29 +26,16 @@ server {
   include "/etc/nginx/conf.d/fileserver.cloudify";
 }
 
-
-
+# like the above, but on 80, without ssl. While still in development, we'd like
+# this easy mode of accessing the manager (especially using cfy).
 server {
-  listen 80;
-
-  server_name _;
-
-  # For REST API requests, return HTTP 400.
-  # We don't want to automatically redirect API requests which
-  # may contain sensitive info.
-
-  location ~ ^/api/ {
-    return 400 '{"message": "SSL must be used for API access on SSL-enabled managers.", "error_code": "SSL_REQUIRED"}';
-  }
-
-  # Other than API requests, and unless otherwise noted: redirect
-  # to HTTPS using HTTP code 308 to preserve the request's body.
-
-  location / {
-    return 308 https://$host$request_uri;
-  }
-
+  listen              80;
+  server_name         _;
+  include "/etc/nginx/conf.d/logs-conf.cloudify";
+  include "/etc/nginx/conf.d/rest-location.cloudify";
+  include "/etc/nginx/conf.d/fileserver.cloudify";
 }
+
 # REST and UI internal server - always SSL enabled
 server {
   # server listening for internal requests
