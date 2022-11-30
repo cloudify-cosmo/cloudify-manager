@@ -115,7 +115,7 @@ class UserGroupsId(SecuredMultiTenancyResource):
 class UserGroupsUsers(SecuredMultiTenancyResource):
     @authorize('user_group_add_user')
     @rest_decorators.marshal_with(GroupResponse)
-    @rest_decorators.no_external_authenticator('add user to group')
+    @rest_decorators.check_external_authenticator('add user to group')
     def put(self, multi_tenancy):
         """
         Add a user to a group

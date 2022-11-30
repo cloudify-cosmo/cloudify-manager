@@ -151,7 +151,7 @@ class TenantsId(SecuredMultiTenancyResource):
 class TenantUsers(SecuredMultiTenancyResource):
     @authorize('tenant_add_user', get_tenant_from='data')
     @rest_decorators.marshal_with(TenantResponse)
-    @rest_decorators.no_external_authenticator('add user to tenant')
+    @rest_decorators.check_external_authenticator('add user to tenant')
     def put(self, multi_tenancy):
         """
         Add a user to a tenant
@@ -184,7 +184,7 @@ class TenantUsers(SecuredMultiTenancyResource):
 
     @authorize('tenant_update_user', get_tenant_from='data')
     @rest_decorators.marshal_with(TenantResponse)
-    @rest_decorators.no_external_authenticator('update user in tenant')
+    @rest_decorators.check_external_authenticator('update user in tenant')
     def patch(self, multi_tenancy):
         """Update role in user tenant association."""
         request_dict = rest_utils.get_json_and_verify_params(
@@ -210,7 +210,7 @@ class TenantUsers(SecuredMultiTenancyResource):
         )
 
     @authorize('tenant_remove_user', get_tenant_from='data')
-    @rest_decorators.no_external_authenticator('remove user from tenant')
+    @rest_decorators.check_external_authenticator('remove user from tenant')
     def delete(self, multi_tenancy):
         """
         Remove a user from a tenant

@@ -53,7 +53,7 @@ class Users(SecuredMultiTenancyResource):
 
     @authorize('user_create')
     @rest_decorators.marshal_with(UserResponse)
-    @rest_decorators.no_external_authenticator('create user')
+    @rest_decorators.check_external_authenticator('create user')
     def put(self, multi_tenancy):
         """
         Create a user
