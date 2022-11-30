@@ -218,11 +218,6 @@ class FileServerProxy(SecuredResource):
         return bucket_files
 
     def _get_s3_file_response(self, uri):
-        uri = uri.replace(
-            'resources',
-            'resources-s3',
-        )
-
         file_full_name = uri.split('/')[-1]
         file_info = file_full_name.split('.', 1)
         file_name = file_info[0]
@@ -230,10 +225,11 @@ class FileServerProxy(SecuredResource):
 
         response = rest_utils.make_streaming_response(
             file_name,
-            uri,
+            # the /resources-s3/ prefix in here, must match the location
+            # of the s3 fileserver in nginx
+            '/resources-s3/' + uri,
             file_extension,
         )
-
         return response
 
     def _get_local_file_index(self, dir_path):
@@ -296,6 +292,8 @@ class FileServerProxy(SecuredResource):
             return send_file(dir_path, as_attachment=True)
 
     def get(self, uri=None, **_):
+        file_server_type = config.instance.file_server_type
+
         if uri:
             resource_uri = uri
         else:
@@ -306,7 +304,6 @@ class FileServerProxy(SecuredResource):
 
             resource_uri = original_uri
 
-        file_server_type = config.instance.file_server_type
 
         if file_server_type == 's3':
             return self._get_s3_fileserver_response(resource_uri)

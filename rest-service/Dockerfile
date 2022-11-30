@@ -30,18 +30,18 @@ RUN mkdir -p -m 0600 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
 
 WORKDIR /opt
 
-COPY . rest-service
+COPY requirements.txt requirements.txt
+COPY requirements_ssh.txt requirements_ssh.txt
 
 RUN --mount=type=cache,target=/root/.cache \
     pip install \
       --upgrade pip \
-      -r rest-service/requirements.txt \
-      rest-service/ \
-      gunicorn
+      gunicorn \
+      -r requirements.txt
 
 RUN --mount=type=ssh \
     pip install \
-    -r rest-service/requirements_ssh.txt
+    -r requirements_ssh.txt
 
 RUN mkdir /src
 COPY docker/cloudify.pth /usr/local/lib/python3.10/site-packages/cloudify.pth
@@ -52,5 +52,10 @@ RUN mkdir -p \
       /run/cloudify-restservice
 
 ADD https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager-install/master/cfy_manager/components/restservice/config/license_key.pem.pub /opt/manager/license_key.pem.pub
+
+COPY . rest-service
+
+RUN --mount=type=cache,target=/root/.cache \
+    pip install rest-service/
 
 ENTRYPOINT /opt/rest-service/docker/entrypoint.sh
