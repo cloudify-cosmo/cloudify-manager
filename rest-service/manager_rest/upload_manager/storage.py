@@ -13,7 +13,7 @@ class StorageClient:
     def __init__(self, base_uri: str):
         self.base_uri = base_uri
 
-    def files(self, path: str):
+    def list(self, path: str):
         """List files in the path location"""
         raise NotImplementedError('Should be implemented in subclasses')
 
@@ -28,7 +28,7 @@ class StorageClient:
 
 class LocalStorageClient(StorageClient):
     """LocalStorageClient implements storage methods for local filesystem"""
-    def files(self, path: str):
+    def list(self, path: str):
         # list all files in path and its subdirectories, but not path
         full_path = os.path.join(self.base_uri, path)
         return (
@@ -63,7 +63,7 @@ class S3StorageClient(StorageClient):
         self.bucket_name = bucket_name
         self.req_timeout = req_timeout
 
-    def files(self, path: str):
+    def list(self, path: str):
         params = {}
         if path:
             params.update({'prefix': path})
@@ -119,7 +119,7 @@ def init_storage_client(config):
 def list_dir(path: str):
     """List files in path using current storage client"""
     client = storage_client()
-    return client.files(path)
+    return client.list(path)
 
 
 def storage_client() -> StorageClient:
