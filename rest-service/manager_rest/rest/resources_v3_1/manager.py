@@ -295,19 +295,24 @@ class FileServerProxy(SecuredResource):
 
             return send_file(dir_path, as_attachment=True)
 
-    def get(self, **_):
-        original_uri = request.headers['X-Original-Uri']
+    def get(self, uri=None, **_):
+        if uri:
+            resource_uri = uri
+        else:
+            original_uri = request.headers['X-Original-Uri']
 
-        if not original_uri.startswith('/resources/'):
-            return {}, 404
+            if not original_uri.startswith('/resources/'):
+                return {}, 404
+
+            resource_uri = original_uri
 
         file_server_type = config.instance.file_server_type
 
         if file_server_type == 's3':
-            return self._get_s3_fileserver_response(original_uri)
+            return self._get_s3_fileserver_response(resource_uri)
 
         if file_server_type == 'local':
-            return self._get_local_fileserver_response(original_uri)
+            return self._get_local_fileserver_response(resource_uri)
 
         return {}, 404
 
