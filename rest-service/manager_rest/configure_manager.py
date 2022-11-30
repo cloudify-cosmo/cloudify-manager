@@ -219,6 +219,15 @@ def _setup_user_tenant_assoc(admin_user, default_tenant):
         db.session.add(user_tenant_association)
 
 
+def _create_provider_context():
+    pc = models.ProviderContext(
+        id='CONTEXT',
+        name='provider',
+        context={},
+    )
+    db.session.add(pc)
+
+
 def configure(user_config):
     """Configure the manager based on the provided config"""
     _register_rabbitmq_brokers(user_config)
@@ -238,6 +247,8 @@ def configure(user_config):
 
     if need_assoc:
         _setup_user_tenant_assoc(admin_user, default_tenant)
+
+    _create_provider_context()
 
     db.session.commit()
 
