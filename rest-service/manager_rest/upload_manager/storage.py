@@ -1,3 +1,4 @@
+import itertools
 import os
 import shutil
 import tempfile
@@ -47,27 +48,26 @@ class LocalStorageClient(StorageClient):
             raise manager_exceptions.NotFoundError(
                 f'Could not find file: {path}')
 
-        if not full_path.endswith('.'):
-            full_path += '.'
         for sfx in suffixes:
-            if os.path.isfile(f'{full_path}{sfx}'):
-                return f'{path}{sfx}'
+            if os.path.isfile(f'{full_path}.{sfx}'):
+                return f'{path}.{sfx}'
         raise manager_exceptions.NotFoundError(
             f'Could not find any file: {path}{{{",".join(suffixes)}}}')
 
     @contextmanager
     def get(self, path: str):
         """Return a path to local copy of a file specified by path"""
-        yield path
+        yield os.path.join(self.base_uri, path)
 
     def list(self, path: str):
         # list all files in path and its subdirectories, but not path
-        full_path = os.path.join(self.base_uri, path)
-        return (
-            f[0][len(full_path)+1:]
-            for f in os.walk(full_path)
-            if len(f[0]) > len(full_path)+1
-        )
+        list_root = os.path.join(self.base_uri, path)
+        elements = []
+        for dirpath, dirnames, filenames in os.walk(list_root):
+            prefix = os.path.relpath(dirpath, list_root)
+            for child in itertools.chain(dirnames, filenames):
+                elements.append(os.path.join(prefix, child))
+        return elements
 
     def put(self, src_path: str, dst_path: str):
         full_dst_path = os.path.join(self.base_uri, dst_path)

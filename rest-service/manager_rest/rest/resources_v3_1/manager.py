@@ -304,7 +304,6 @@ class FileServerProxy(SecuredResource):
 
             resource_uri = original_uri
 
-
         if file_server_type == 's3':
             return self._get_s3_fileserver_response(resource_uri)
 
