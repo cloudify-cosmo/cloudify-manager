@@ -1332,3 +1332,216 @@ class ExecutionQueueingTests(BaseServerTestCase):
         # hopefully we didn't dequeue anything from the "started" groups!
         for exc in dequeued:
             assert all(gr in queued_groups for gr in exc.execution_groups)
+
+
+class TestExecutionCascading(BaseServerTestCase):
+    def _deployment(self, **kwargs):
+        dep_kwargs = {
+            'blueprint': self.bp,
+            'workflows': {
+                'cascading': {'operation': '', 'is_cascading': True},
+                'noncascading': {'operation': '', 'is_cascading': False},
+            },
+            'creator': self.user,
+            'tenant': self.tenant,
+        }
+        dep_kwargs.update(kwargs)
+        return models.Deployment(**dep_kwargs)
+
+    def _node(self, **kwargs):
+        node_kwargs = {
+            'deploy_number_of_instances': 1,
+            'planned_number_of_instances': 1,
+            'max_number_of_instances': 1,
+            'min_number_of_instances': 1,
+            'number_of_instances': 1,
+            'type': 'cloudify.nodes.Component',
+            'type_hierarchy': [
+                'cloudify.nodes.Root',
+                'cloudify.nodes.Component',
+            ],
+            'creator': self.user,
+            'tenant': self.tenant,
+        }
+        node_kwargs.update(kwargs)
+        return models.Node(**node_kwargs)
+
+    def _instance(self, **kwargs):
+        instance_kwargs = {
+            'state': 'started',
+            'creator': self.user,
+            'tenant': self.tenant,
+        }
+        instance_kwargs.update(kwargs)
+        return models.NodeInstance(**instance_kwargs)
+
+    def setUp(self):
+        super().setUp()
+        self.bp = models.Blueprint(
+            id='bp1',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        self.base_dep = self._deployment(id='base')
+        self.component1 = self._deployment(id='component1')
+        self.component2 = self._deployment(id='component2')
+        self.component3 = self._deployment(id='component3')
+        self.all_deployments = [
+            self.base_dep,
+            self.component1,
+            self.component2,
+            self.component3,
+        ]
+
+        self.node1 = self._node(id='node1', deployment=self.base_dep)
+
+        self.node1_instance1 = self._instance(
+            id='node1_1',
+            node=self.node1,
+            runtime_properties={
+                'deployment': {'id': self.component1.id},
+            },
+        )
+        self.node1_instance2 = self._instance(
+            id='node1_2',
+            node=self.node1,
+            runtime_properties={
+                'deployment': {'id': self.component2.id},
+            },
+        )
+
+        self.node2 = self._node(
+            id='node2',
+            deployment=self.base_dep,
+            type='derived_type',
+            type_hierarchy=[
+                'cloudify.nodes.Root',
+                'cloudify.nodes.Component',
+                'derived_type',
+            ],
+        )
+
+        # node with 0 instances
+        self.node3 = self._node(
+            id='node3',
+            deployment=self.base_dep,
+        )
+
+        self.node2_instance1 = self._instance(
+            id='node2_1',
+            node=self.node2,
+            runtime_properties={
+                'deployment': {'id': self.component3.id},
+            },
+        )
+        # duplicated component id
+        self.node2_instance2 = self._instance(
+            id='node2_2',
+            node=self.node2,
+            runtime_properties={
+                'deployment': {'id': self.component3.id},
+            },
+        )
+
+        self.non_component_node = self._node(
+            id='node3',
+            deployment=self.base_dep,
+            type='cloudify.nodes.Root',
+            type_hierarchy=['cloudify.nodes.Root'],
+        )
+        self.non_component_instance = self._instance(
+            id='node3_1',
+            node=self.non_component_node,
+        )
+
+    def test_execution_start_noncascading(self):
+        """Noncascading workflow only runs an execution on the main deployment
+
+        No execution is started on the component deployments, because this
+        workflow is not cascading.
+        """
+        self.client.executions.start(self.base_dep.id, 'noncascading')
+        executions = self.client.executions.list()
+        assert len(executions) == 1
+        assert {e.deployment_id for e in executions} == {self.base_dep.id}
+
+    def test_execution_start_cascading(self):
+        """Cascading workflow runs an execution on all component deployments
+
+        An execution is started on the main deployment, and also on component
+        deployments.
+        """
+        self.client.executions.start(self.base_dep.id, 'cascading')
+        executions = self.client.executions.list()
+        assert len(executions) == 4
+        assert {e.deployment_id for e in executions} == {
+            self.base_dep.id,
+            self.component1.id,
+            self.component2.id,
+            self.component3.id,
+        }
+
+    def test_cancel_cascades(self):
+        """Cancelling an execution on the main deployment, cancels all.
+
+        Note: there's no difference between cascading and non-cascading
+        executions for cancel. The running execution of all component
+        deployments is cancelled.
+        """
+        for dep in self.all_deployments:
+            models.Execution(
+                id=f'{dep.id}_exc',
+                workflow_id='cascading',
+                status=ExecutionState.STARTED,
+                deployment=dep,
+                creator=self.user,
+                tenant=self.tenant,
+            )
+
+        execs = self.client.executions.list(deployment_id=self.base_dep.id)
+        assert len(execs) == 1
+        base_dep_exc = execs[0]
+        self.client.executions.cancel(base_dep_exc.id)
+
+        executions = self.client.executions.list()
+        assert len(executions) == 4
+        assert {e.status for e in executions} == {ExecutionState.CANCELLING}
+
+    def test_resume_cascades(self):
+        """Resuming an execution, resumes the most recent one in components.
+
+        Component deployments have their most recent execution resumed as well,
+        but not older executions.
+        """
+        old_executions = []
+        new_executions = []
+        for ix, exc_batch in enumerate([old_executions, new_executions]):
+            for dep in self.all_deployments:
+                exc = models.Execution(
+                    id=f'{dep.id}_exc_{ix}',
+                    workflow_id='noncascading',
+                    parameters={},
+                    status=ExecutionState.CANCELLED,
+                    deployment=dep,
+                    creator=self.user,
+                    tenant=self.tenant,
+                )
+                exc_batch.append(exc)
+
+        _, newer_exec = self.client.executions.list(
+            deployment_id=self.base_dep.id,
+            _sort='created_at'
+        )
+        self.client.executions.resume(newer_exec.id)
+
+        for dep in self.all_deployments:
+            execs = self.client.executions.list(
+                deployment_id=dep.id,
+                _sort='created_at'
+            )
+            assert len(execs) == 2
+            assert execs[0].status == ExecutionState.CANCELLED
+            # actual status depends on the mocking; probably TERMINATED
+            # (but if we change the mocks, maybe PENDING). Either way, not
+            # CANCELLED anymore.
+            assert execs[1].status != ExecutionState.CANCELLED
