@@ -980,7 +980,7 @@ def _sort_events(events_call_list):
         ])
 
     return sorted(events_call_list,
-                  key=lambda x: (x.events, x.logs))
+                  key=lambda x: json.dumps(x.kwargs, sort_keys=True))
 
 
 def _check_calls(client, tenant, tempdir):
