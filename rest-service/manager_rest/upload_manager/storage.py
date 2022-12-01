@@ -52,7 +52,7 @@ class LocalStorageClient(StorageClient):
             full_path += '.'
         for sfx in suffixes:
             if os.path.isfile(f'{full_path}{sfx}'):
-                return f'{path}{sfx}'
+                return f'{full_path}{sfx}'
         raise manager_exceptions.NotFoundError(
             f'Could not find any file: {path}{{{",".join(suffixes)}}}')
 
