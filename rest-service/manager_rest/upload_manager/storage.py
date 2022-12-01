@@ -48,18 +48,16 @@ class LocalStorageClient(StorageClient):
             raise manager_exceptions.NotFoundError(
                 f'Could not find file: {path}')
 
-        if not full_path.endswith('.'):
-            full_path += '.'
         for sfx in suffixes:
-            if os.path.isfile(f'{full_path}{sfx}'):
-                return f'{full_path}{sfx}'
+            if os.path.isfile(f'{full_path}.{sfx}'):
+                return f'{path}.{sfx}'
         raise manager_exceptions.NotFoundError(
             f'Could not find any file: {path}{{{",".join(suffixes)}}}')
 
     @contextmanager
     def get(self, path: str):
         """Return a path to local copy of a file specified by path"""
-        yield path
+        yield os.path.join(self.base_uri, path)
 
     def list(self, path: str):
         # list all files in path and its subdirectories, but not path
