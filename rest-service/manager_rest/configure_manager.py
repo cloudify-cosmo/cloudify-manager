@@ -219,12 +219,18 @@ def _setup_user_tenant_assoc(admin_user, default_tenant):
         db.session.add(user_tenant_association)
 
 
-def _create_provider_context():
-    pc = models.ProviderContext(
-        id='CONTEXT',
-        name='provider',
-        context={},
+def _create_provider_context(user_config):
+    pc = (
+        models.ProviderContext.query
+        .filter_by(id='CONTEXT')
+        .first()
     )
+    if pc is None:
+        pc = models.ProviderContext(
+            id='CONTEXT',
+            name='provider',
+        )
+    pc.context = user_config.get('provider_context') or {}
     db.session.add(pc)
 
 
@@ -248,7 +254,7 @@ def configure(user_config):
     if need_assoc:
         _setup_user_tenant_assoc(admin_user, default_tenant)
 
-    _create_provider_context()
+    _create_provider_context(user_config)
 
     db.session.commit()
 
