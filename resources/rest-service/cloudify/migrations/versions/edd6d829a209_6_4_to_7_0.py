@@ -46,9 +46,11 @@ def upgrade():
     create_secrets_providers_table()
     add_secrets_schema()
     add_secrets_provider_relationship()
+    add_s3_client_config()
 
 
 def downgrade():
+    drop_s3_client_config()
     downgrade_users_roles_constraints()
     remove_json_columns()
     remove_p_from_pickle_columns()
@@ -58,8 +60,6 @@ def downgrade():
     drop_secrets_providers_table()
     drop_secrets_schema()
 
-
-# Upgrade functions
 
 def add_p_to_pickle_columns():
     op.alter_column('blueprints',
@@ -276,8 +276,6 @@ def upgrade_users_roles_constraints():
                           'users_roles', 'users', ['user_id'], ['id'],
                           ondelete='CASCADE')
 
-
-# Downgrade functions
 
 def remove_p_from_pickle_columns():
     op.alter_column('blueprints',
@@ -700,3 +698,42 @@ def drop_secrets_provider_relationship():
         'secrets',
         '_secrets_provider_fk',
     )
+
+
+def add_s3_client_config():
+    op.bulk_insert(
+        config_table,
+        [
+            {
+                'name': 's3_server_url',
+                'value': 'http://fileserver:9000',
+                'scope': 'rest',
+                'schema': {'type': 'string'},
+                'is_editable': True,
+            },
+            {
+                'name': 's3_resources_bucket',
+                'value': 'resources',
+                'scope': 'rest',
+                'schema': {'type': 'string'},
+                'is_editable': True,
+            },
+            {
+                'name': 's3_client_timeout',
+                'value': 5.0,
+                'scope': 'rest',
+                'schema': {'type': 'float'},
+                'is_editable': True,
+            },
+        ]
+    )
+
+
+def drop_s3_client_config():
+    for key in ['s3_server_url', 's3_resources_bucket', 's3_client_timeout']:
+        op.execute(
+            config_table.delete().where(
+                (config_table.c.name == op.inline_literal(key))
+                & (config_table.c.scope == op.inline_literal('rest'))
+            )
+        )

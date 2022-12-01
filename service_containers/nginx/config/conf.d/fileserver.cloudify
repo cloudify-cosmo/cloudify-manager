@@ -18,7 +18,7 @@ location /resources-auth {
     proxy_set_header X-Original-Method $request_method;
 }
 
-location /resources-minio {
+location /resources-s3 {
     internal;
 
     proxy_set_header X-Real-IP $remote_addr;

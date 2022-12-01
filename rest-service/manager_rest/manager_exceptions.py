@@ -450,3 +450,8 @@ class BadFilterRule(ManagerException):
 class NotListeningLDAPServer(ManagerException):
     error_code = 'not_running_ldap_server'
     status_code = 500
+
+
+class UnsupportedFileServerType(ManagerException):
+    error_code = 'unsupported_file_server_type'
+    status_code = 500

@@ -289,7 +289,6 @@ class BlueprintsId(resources_v2.BlueprintsId):
                 "Unknown parameters: {}".format(','.join(invalid_params))
             )
         sm = get_storage_manager()
-        rm = get_resource_manager()
         blueprint = sm.get(models.Blueprint, blueprint_id)
         # if finished blueprint validation - cleanup DB entry
         # and uploaded blueprints folder

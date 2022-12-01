@@ -192,7 +192,7 @@ class FileServerProxy(SecuredResource):
     def _is_resource_uri_directory(self, uri):
         return uri.endswith('/')
 
-    def _get_minio_bucket_files(self, prefix):
+    def _get_s3_bucket_files(self, prefix):
         file_server_protocol = 'http'
         file_server_host = 'fileserver'
         file_server_port = '9000'
@@ -217,12 +217,7 @@ class FileServerProxy(SecuredResource):
 
         return bucket_files
 
-    def _get_minio_file_response(self, uri):
-        uri = uri.replace(
-            'resources',
-            'resources-minio',
-        )
-
+    def _get_s3_file_response(self, uri):
         file_full_name = uri.split('/')[-1]
         file_info = file_full_name.split('.', 1)
         file_name = file_info[0]
@@ -230,10 +225,11 @@ class FileServerProxy(SecuredResource):
 
         response = rest_utils.make_streaming_response(
             file_name,
-            uri,
+            # the /resources-s3/ prefix in here, must match the location
+            # of the s3 fileserver in nginx
+            '/resources-s3/' + uri,
             file_extension,
         )
-
         return response
 
     def _get_local_file_index(self, dir_path):
@@ -251,11 +247,11 @@ class FileServerProxy(SecuredResource):
 
         return files_list
 
-    def _get_minio_fileserver_response(self, uri):
+    def _get_s3_fileserver_response(self, uri):
         relative_path = uri.replace('/resources/', '', 1)
         uri_is_directory = self._is_resource_uri_directory(uri)
 
-        bucket_files = self._get_minio_bucket_files(relative_path)
+        bucket_files = self._get_s3_bucket_files(relative_path)
 
         if not len(bucket_files):
             return {}, 404
@@ -269,7 +265,7 @@ class FileServerProxy(SecuredResource):
 
             return {'files': files_list}, 200
         else:
-            response = self._get_minio_file_response(uri)
+            response = self._get_s3_file_response(uri)
 
             return response
 
@@ -295,19 +291,24 @@ class FileServerProxy(SecuredResource):
 
             return send_file(dir_path, as_attachment=True)
 
-    def get(self, **_):
-        original_uri = request.headers['X-Original-Uri']
-
-        if not original_uri.startswith('/resources/'):
-            return {}, 404
-
+    def get(self, uri=None, **_):
         file_server_type = config.instance.file_server_type
 
-        if file_server_type == 'minio':
-            return self._get_minio_fileserver_response(original_uri)
+        if uri:
+            resource_uri = uri
+        else:
+            original_uri = request.headers['X-Original-Uri']
+
+            if not original_uri.startswith('/resources/'):
+                return {}, 404
+
+            resource_uri = original_uri
+
+        if file_server_type == 's3':
+            return self._get_s3_fileserver_response(resource_uri)
 
         if file_server_type == 'local':
-            return self._get_local_fileserver_response(original_uri)
+            return self._get_local_fileserver_response(resource_uri)
 
         return {}, 404
 

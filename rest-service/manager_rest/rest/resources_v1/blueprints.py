@@ -52,30 +52,26 @@ class BlueprintsIdArchive(SecuredResource):
         Download blueprint's archive
         """
         blueprint = get_storage_manager().get(models.Blueprint, blueprint_id)
-
-        for arc_type in SUPPORTED_ARCHIVE_TYPES:
-            # attempting to find the archive file on the file system
-            local_path = os.path.join(
-                config.instance.file_server_root,
-                FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
-                blueprint.tenant.name,
-                blueprint.id,
-                '{0}.{1}'.format(blueprint.id, arc_type))
-
-            if os.path.isfile(local_path):
-                archive_type = arc_type
-                break
-        else:
-            raise manager_exceptions.NotFoundError(
-                "Could not find blueprint's archive; Blueprint ID: {0}"
-                .format(blueprint.id))
-
-        blueprint_path = '{0}/{1}/{2}/{3}/{3}.{4}'.format(
-            FILE_SERVER_RESOURCES_FOLDER,
+        path = os.path.join(
             FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
             blueprint.tenant.name,
             blueprint.id,
-            archive_type)
+        )
+        archive_type = None
+        for archive_file_name in upload_manager.list_dir(path):
+            for arc_type in SUPPORTED_ARCHIVE_TYPES:
+                if archive_file_name.endswith(f'{blueprint.id}.{arc_type}'):
+                    archive_type = arc_type
+                    break
+            if archive_type:
+                break
+        else:
+            raise manager_exceptions.NotFoundError(
+                'Could not find blueprint\'s archive; '
+                f'Blueprint ID: {blueprint.id}')
+
+        blueprint_path = f'{FILE_SERVER_RESOURCES_FOLDER}/' +\
+                         f'{path}/{blueprint.id}.{archive_type}'
 
         return make_streaming_response(
             blueprint.id,
