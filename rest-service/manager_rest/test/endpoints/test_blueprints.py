@@ -223,7 +223,6 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         )
         self.client.blueprints.upload(bp_path, 'b0', skip_execution=True)
 
-        bp = self.client.blueprints.get('b0')
         assert not self.client.executions.list(workflow_id='upload_blueprint')
 
         outfile = os.path.join(self.tmpdir, 'skip-execution-blueprint')

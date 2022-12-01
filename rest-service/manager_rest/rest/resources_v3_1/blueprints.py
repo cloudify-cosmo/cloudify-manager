@@ -176,9 +176,10 @@ class BlueprintsId(resources_v2.BlueprintsId):
                     blueprint_id,
                     application_file_name,
                     blueprint_url,
-                    config.instance.file_server_root,     # for the import resolver
-                    config.instance.marketplace_api_url,  # for the import resolver
                     labels=labels,
+                    # for the import resolver
+                    file_server_root=config.instance.file_server_root,
+                    marketplace_api_url=config.instance.marketplace_api_url,
                 )
             else:
                 messages = []
