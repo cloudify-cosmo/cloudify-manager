@@ -171,23 +171,25 @@ class BlueprintsId(resources_v2.BlueprintsId):
             if not blueprint_url:
                 blueprint.state = BlueprintUploadState.UPLOADING
 
-            if skip_execution:
-                return blueprint, 201
-
-            blueprint.upload_execution, messages = rm.upload_blueprint(
-                blueprint_id,
-                application_file_name,
-                blueprint_url,
-                config.instance.file_server_root,     # for the import resolver
-                config.instance.marketplace_api_url,  # for the import resolver
-                labels=labels,
-            )
+            if not skip_execution:
+                blueprint.upload_execution, messages = rm.upload_blueprint(
+                    blueprint_id,
+                    application_file_name,
+                    blueprint_url,
+                    config.instance.file_server_root,     # for the import resolver
+                    config.instance.marketplace_api_url,  # for the import resolver
+                    labels=labels,
+                )
+            else:
+                messages = []
+                async_upload = True
 
         try:
             if not blueprint_url:
                 upload_manager.upload_blueprint_archive_to_file_server(
                     blueprint_id)
-            workflow_executor.execute_workflow(messages)
+            if messages:
+                workflow_executor.execute_workflow(messages)
         except Exception as e:
             blueprint.state = BlueprintUploadState.FAILED_UPLOADING
             blueprint.error = str(e)
@@ -196,6 +198,7 @@ class BlueprintsId(resources_v2.BlueprintsId):
             upload_manager.cleanup_blueprint_archive_from_file_server(
                 blueprint_id, current_tenant.name)
             raise
+
         if not async_upload:
             return rest_utils.get_uploaded_blueprint(sm, blueprint)
         return blueprint, 201

@@ -216,6 +216,21 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         self.assertEqual('b1', blueprints[0].id)
         self.assertEqual('b0', blueprints[1].id)
 
+    def test_upload_skip_execution(self):
+        bp_path = os.path.join(
+            self.get_blueprint_path('mock_blueprint'),
+            'blueprint_with_inputs.yaml',
+        )
+        self.client.blueprints.upload(bp_path, 'b0', skip_execution=True)
+
+        bp = self.client.blueprints.get('b0')
+        assert not self.client.executions.list(workflow_id='upload_blueprint')
+
+        outfile = os.path.join(self.tmpdir, 'skip-execution-blueprint')
+        self.addCleanup(self.quiet_delete, outfile)
+        self.client.blueprints.download('b0', output_file=outfile)
+        assert os.path.exists(outfile)
+
     def test_blueprint_download_progress(self):
         tmp_dir = '/tmp/tmp_upload_blueprint'
         tmp_local_path = '/tmp/blueprint.bl'
