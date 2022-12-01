@@ -1323,13 +1323,17 @@ class ResourceManager(object):
             node_instance_filter = self.create_filters_dict(
                 deployment_id=deployment_id, node_id=component)
 
-            node_instance = self.sm.list(
+            node_instance_list = self.sm.list(
                 models.NodeInstance,
                 filters=node_instance_filter,
                 get_all_results=True,
                 include=['runtime_properties',
                          'id']
-            ).items[0]
+            )
+            if not node_instance_list:
+                # possible if ServiceComponent instance count is 0
+                return []
+            node_instance = node_instance_list.items[0]
 
             component_deployment_props = node_instance.runtime_properties.get(
                 'deployment', {})
