@@ -1,3 +1,4 @@
+import json
 import mock
 import os
 import shutil
@@ -967,6 +968,21 @@ def _assert_tenant_restores(clients, tempdir):
         _check_calls(clients[tenant], tenant, tempdir)
 
 
+def _sort_events(events_call_list):
+    for call in events_call_list:
+        call.kwargs['logs'] = sorted([
+            json.dumps(item, sort_keys=True)
+            for item in call.kwargs['logs']
+        ])
+        call.kwargs['events'] = sorted([
+            json.dumps(item, sort_keys=True)
+            for item in call.kwargs['events']
+        ])
+
+    return sorted(events_call_list,
+                  key=lambda x: (x.events, x.logs))
+
+
 def _check_calls(client, tenant, tempdir):
     for group in EXPECTED_CALLS:
         group_client = getattr(client, group)
@@ -976,9 +992,17 @@ def _check_calls(client, tenant, tempdir):
             call_client = getattr(group_client, call)
             if not any([expected_calls, call_client.call_args_list]):
                 continue
-            sort_key = EXPECTED_CALLS[group][call]['sort_key']
-            expected = sorted(expected_calls,
-                              key=lambda x: getattr(x, sort_key))
+
+            if group == 'events':
+                expected = _sort_events(expected_calls)
+                results = _sort_events(call_client.call_args_list)
+            else:
+                sort_key = EXPECTED_CALLS[group][call]['sort_key']
+                expected = sorted(expected_calls,
+                                  key=lambda x: getattr(x, sort_key))
+                results = sorted(call_client.call_args_list,
+                                 key=lambda x: getattr(x, sort_key))
+
             if group == 'plugins' and call == 'upload':
                 for item in expected:
                     item.kwargs['plugin_path'] = item.kwargs[
@@ -987,8 +1011,7 @@ def _check_calls(client, tenant, tempdir):
                 for item in expected:
                     item.kwargs['archive_location'] = item.kwargs[
                         'archive_location'].format(tempdir=tempdir)
-            results = sorted(call_client.call_args_list,
-                             key=lambda x: getattr(x, sort_key))
+
             if tenant:
                 print(f'Checking calls to {group}.{call} for {tenant}')
             else:
