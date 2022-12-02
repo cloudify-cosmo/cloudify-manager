@@ -167,8 +167,7 @@ def _update_blueprint_archive(tenant_name, blueprint_id):
         os.path.join(archive_dir, blueprint_id),
         SUPPORTED_ARCHIVE_TYPES
     )
-    base_filename = base_archive_filename(archive_filename)
-    new_archive_path = os.path.join(archive_dir, f'{base_filename}.tar.gz')
+    new_archive_path = base_archive_filename(archive_filename) + '.tar.gz'
 
     # Copy blueprint's files to local temporary directory
     with tempfile.TemporaryDirectory(dir=file_server_root) as tmpdir:
@@ -180,6 +179,9 @@ def _update_blueprint_archive(tenant_name, blueprint_id):
             dst_file_path = os.path.join(tmpdir, 'blueprint', file_rel_path)
 
             with storage_client().get(src_file_path) as tmp_file_name:
+                dst_dir_path = os.path.dirname(file_rel_path)
+                if dst_dir_path:
+                    mkdirs(os.path.join(tmpdir, 'blueprint', dst_dir_path))
                 shutil.copy2(tmp_file_name, dst_file_path)
 
         with tempfile.NamedTemporaryFile(dir=file_server_root) as fh:
@@ -223,16 +225,14 @@ def extract_blueprint_archive_to_file_server(blueprint_id, tenant):
         raise e
 
     tenant_dir = os.path.join(
-        file_server_root,
         FILE_SERVER_BLUEPRINTS_FOLDER,
         tenant)
-    mkdirs(tenant_dir)
     bp_from = os.path.join(file_server_root, app_dir)
     bp_dir = os.path.join(tenant_dir, blueprint_id)
     try:
         # use os.rename - bp_from is already in file_server_root, i.e.
         # same filesystem as the target dir
-        os.rename(bp_from, bp_dir)
+        storage_client().put(bp_from, bp_dir)
     except OSError as e:  # e.g. directory not empty
         shutil.rmtree(bp_from)
         raise manager_exceptions.ConflictError(str(e))
