@@ -870,6 +870,15 @@ def mock_manager_restoring():
         yield mock_mgr_restoring
 
 
+@pytest.fixture
+def mock_manager_finished_restoring():
+    with mock.patch(
+        'cloudify_system_workflows.snapshots.snapshot_restore'
+        '.SnapshotRestore._mark_manager_finished_restoring',
+    ) as mock_mgr_finished_restoring:
+        yield mock_mgr_finished_restoring
+
+
 class FakeZipFile:
     def __init__(self, snapshot_path, _mode):
         self._snapshot_path = snapshot_path
@@ -917,7 +926,8 @@ def mock_no_rmtree():
 
 def test_restore_snapshot(mock_ctx, mock_get_client, mock_zipfile,
                           mock_manager_restoring, mock_mkdir,
-                          mock_no_rmtree):
+                          mock_no_rmtree,
+                          mock_manager_finished_restoring):
     snap_id = 'testsnapshot'
 
     tempdir = mkdtemp('-test-snap-restore-data')
@@ -953,6 +963,7 @@ def test_restore_snapshot(mock_ctx, mock_get_client, mock_zipfile,
         mock_manager_restoring.assert_called_once_with()
         _assert_mgmt_restores(snap_res._client)
         _assert_tenant_restores(snap_res._tenant_clients, tempdir)
+        mock_manager_finished_restoring.assert_called_once_with()
     finally:
         shutil.rmtree(tempdir)
 

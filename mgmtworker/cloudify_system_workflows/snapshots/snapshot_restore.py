@@ -616,7 +616,9 @@ class SnapshotRestore(object):
 
             shutil.rmtree(self._get_snapshot_dir())
         finally:
-            if not new_snapshot:
+            if new_snapshot:
+                self._mark_manager_finished_restoring()
+            else:
                 self._trigger_post_restore_commands()
             ctx.logger.info('Removing temp dir: {0}'.format(self._tempdir))
             shutil.rmtree(self._tempdir)
@@ -1212,7 +1214,13 @@ class SnapshotRestore(object):
     def _mark_manager_restoring():
         with open(SNAPSHOT_RESTORE_FLAG_FILE, 'a'):
             os.utime(SNAPSHOT_RESTORE_FLAG_FILE, None)
-        ctx.logger.debug('Marked manager is snapshot restoring with file:'
+        ctx.logger.debug('Marked manager snapshot restoring with file:'
+                         ' {0}'.format(SNAPSHOT_RESTORE_FLAG_FILE))
+
+    @staticmethod
+    def _mark_manager_finished_restoring():
+        os.unlink(SNAPSHOT_RESTORE_FLAG_FILE)
+        ctx.logger.debug('Cleared manager snapshot restoring file:'
                          ' {0}'.format(SNAPSHOT_RESTORE_FLAG_FILE))
 
 
