@@ -1296,11 +1296,13 @@ class ResourceManager(object):
         return wf_id == 'uninstall_plugin'
 
     def _retrieve_components_from_deployment(self, deployment_id_filter):
-        return [node.id for node in
-                self.sm.list(models.Node,
-                             include=['type_hierarchy', 'id'],
-                             filters=deployment_id_filter,
-                             get_all_results=True)
+        nodes = self.sm.list(
+            models.Node,
+            include=['type_hierarchy', 'id'],
+            filters=deployment_id_filter,
+            get_all_results=True,
+        )
+        return [node.id for node in nodes
                 if 'cloudify.nodes.Component' in node.type_hierarchy]
 
     def _retrieve_all_components_dep_ids(self, components_ids, deployment_id):
@@ -1309,23 +1311,20 @@ class ResourceManager(object):
             node_instance_filter = self.create_filters_dict(
                 deployment_id=deployment_id, node_id=component)
 
-            node_instance = self.sm.list(
+            for node_instance in self.sm.list(
                 models.NodeInstance,
                 filters=node_instance_filter,
                 get_all_results=True,
-                include=['runtime_properties',
-                         'id']
-            ).items[0]
-
-            component_deployment_props = node_instance.runtime_properties.get(
-                'deployment', {})
-
-            # This runtime property is set when a Component node is starting
-            # install workflow.
-            component_deployment_id = component_deployment_props.get(
-                'id', None)
-            if component_deployment_id:
-                components_deployment_ids.append(component_deployment_id)
+                include=['runtime_properties', 'id'],
+            ):
+                runtime_props = node_instance.runtime_properties
+                try:
+                    # this is set in Component's create operation
+                    component_dep_id = runtime_props['deployment']['id']
+                except KeyError:
+                    component_dep_id = None
+                if component_dep_id:
+                    components_deployment_ids.append(component_dep_id)
         return components_deployment_ids
 
     def _retrieve_all_component_executions(self, components_deployment_ids):
