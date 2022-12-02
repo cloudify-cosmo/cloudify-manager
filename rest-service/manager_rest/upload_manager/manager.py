@@ -34,8 +34,9 @@ from manager_rest.upload_manager.utils import (
     is_wagon_file,
     load_plugin_extras,
     load_plugin_package_json,
-    save_file_content,
-    save_file_locally_and_extract_inputs,
+    save_file_from_chunks,
+    save_files_multipart,
+    save_file_from_url,
     unpack_caravan,
     zip_dir,
 )
@@ -118,11 +119,20 @@ def cleanup_blueprint_archive_from_file_server(blueprint_id, tenant):
 
 
 def update_blueprint_icon_file(tenant_name, blueprint_id):
-    icon_tmp_path = tempfile.mkstemp()
-    save_file_content(icon_tmp_path, 'blueprint_icon')
-    _set_blueprints_icon(tenant_name, blueprint_id, icon_tmp_path)
-    remove(icon_tmp_path)
+    with tempfile.NamedTemporaryFile() as fh:
+        save_file_content(fh.name, 'blueprint_icon')
+        _set_blueprints_icon(tenant_name, blueprint_id, fh.name)
     _update_blueprint_archive(tenant_name, blueprint_id)
+
+
+def save_file_content(archive_target_path, data_type):
+    if 'blueprint_archive' in request.files:
+        raise manager_exceptions.BadParametersError(
+            "Can't pass {0} both as URL via request body and multi-form"
+            .format(data_type))
+    uploaded_file_data = request.data
+    with open(archive_target_path, 'wb') as fh:
+        fh.write(uploaded_file_data)
 
 
 def remove_blueprint_icon_file(tenant_name, blueprint_id):
@@ -145,40 +155,38 @@ def _set_blueprints_icon(tenant_name, blueprint_id, icon_path=None):
 
 def _update_blueprint_archive(tenant_name, blueprint_id):
     file_server_root = config.instance.file_server_root
-    blueprint_dir = os.path.join(
-        file_server_root,
-        FILE_SERVER_BLUEPRINTS_FOLDER,
-        tenant_name,
-        blueprint_id)
     archive_dir = os.path.join(
-        file_server_root,
         FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
         tenant_name,
         blueprint_id)
-    # Filename will be like [BLUEPRINT_ID].tar.gz or [BLUEPRINT_ID].zip
-    archive_filename = [fn for fn in os.listdir(archive_dir)
-                        if fn.startswith(blueprint_id)][0]
+    blueprint_dir = os.path.join(
+        FILE_SERVER_BLUEPRINTS_FOLDER,
+        tenant_name,
+        blueprint_id)
+    archive_filename = storage_client().find(
+        os.path.join(archive_dir, blueprint_id),
+        SUPPORTED_ARCHIVE_TYPES
+    )
     base_filename = base_archive_filename(archive_filename)
-    orig_archive_path = os.path.join(archive_dir, archive_filename)
     new_archive_path = os.path.join(archive_dir, f'{base_filename}.tar.gz')
+
+    # Copy blueprint's files to local temporary directory
     with tempfile.TemporaryDirectory(dir=file_server_root) as tmpdir:
-        # Copy blueprint files into `[tmpdir]/blueprint` directory
         os.chdir(tmpdir)
         os.mkdir('blueprint')
-        for filename in os.listdir(blueprint_dir):
-            srcname = os.path.join(blueprint_dir, filename)
-            dstname = os.path.join(tmpdir, 'blueprint', filename)
-            if os.path.isdir(srcname):
-                shutil.copytree(srcname, dstname)
-            else:
-                shutil.copy2(srcname, dstname)
-        # Create a new archive and substitute the old one
+        for src_file_path in storage_client().list(blueprint_dir):
+            file_rel_path = \
+                src_file_path.replace(blueprint_dir, '').lstrip('/')
+            dst_file_path = os.path.join(tmpdir, 'blueprint', file_rel_path)
+
+            with storage_client().get(src_file_path) as tmp_file_name:
+                shutil.copy2(tmp_file_name, dst_file_path)
+
         with tempfile.NamedTemporaryFile(dir=file_server_root) as fh:
             with tarfile.open(fh.name, "w:gz") as tar_handle:
                 tar_handle.add('blueprint')
-            shutil.copy2(fh.name, new_archive_path)
-            os.remove(orig_archive_path)
-        os.chmod(new_archive_path, 0o644)
+            storage_client().delete(archive_filename)
+            storage_client().put(fh.name, new_archive_path)
 
 
 def extract_blueprint_archive_to_file_server(blueprint_id, tenant):
@@ -369,3 +377,36 @@ def upload_plugin(data_id=None, **_):
         return _do_upload_plugin(data_id, upload_path)
     finally:
         shutil.rmtree(upload_path, ignore_errors=True)
+
+
+def save_file_locally_and_extract_inputs(archive_target_path,
+                                         url_key,
+                                         data_type='unknown'):
+    """
+    Retrieves the file specified by the request to the local machine.
+
+    :param archive_target_path: the target of the archive
+    :param data_type: the kind of the data (e.g. 'blueprint')
+    :param url_key: if the data is passed as a url to an online resource,
+    the url_key specifies what header points to the requested url.
+    :return: None
+    """
+    inputs = {}
+    # Handling importing blueprint through url
+    if url_key in request.args:
+        save_file_from_url(archive_target_path,
+                           request.args[url_key],
+                           data_type)
+    # handle receiving chunked blueprint
+    elif 'Transfer-Encoding' in request.headers:
+        save_file_from_chunks(archive_target_path, data_type)
+    # handler receiving entire content through data
+    elif request.data:
+        save_file_content(archive_target_path, data_type)
+
+    # handle inputs from form-data (for both the blueprint and inputs
+    # in body in form-data format)
+    if request.files:
+        inputs = save_files_multipart(archive_target_path)
+
+    return inputs
