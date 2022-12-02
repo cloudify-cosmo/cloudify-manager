@@ -25,6 +25,7 @@ from collections import Counter
 from integration_tests.framework import utils
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
+from integration_tests.framework.flask_utils import reset_storage
 
 from cloudify.snapshots import STATES
 from cloudify.models_states import AgentState
@@ -260,6 +261,15 @@ class TestSnapshot(AgentlessTestCase):
             snapshot_id, False)
         self.wait_for_execution_to_end(snapshot_create_execution)
 
+        downloaded_snapshot = os.path.join(self.workdir, 'snapshot.zip')
+        self.client.snapshots.download(
+            snapshot_id,
+            output_file=downloaded_snapshot,
+        )
+
+        reset_storage(self.env.container_id)
+
+        self.client.snapshots.upload(downloaded_snapshot, snapshot_id)
         self.client.snapshots.restore(snapshot_id)
         self.client.maintenance_mode.activate()
         self._wait_for_restore_marker_file_to_be_created()
@@ -283,11 +293,20 @@ class TestSnapshot(AgentlessTestCase):
         self.wait_for_execution_to_end(snapshot_create_execution)
         self.wait_for_execution_to_end(exc)
 
+        downloaded_snapshot = os.path.join(self.workdir, 'snapshot.zip')
+        self.client.snapshots.download(
+            snapshot_id,
+            output_file=downloaded_snapshot,
+        )
+
+        reset_storage(self.env.container_id)
+
+        self.client.snapshots.upload(downloaded_snapshot, snapshot_id)
         self.client.maintenance_mode.activate()
-        self.client.snapshots.restore(
-            snapshot_id, force=True)
+        self.client.snapshots.restore(snapshot_id)
         self.wait_for_snapshot_restore_to_end()
         self.client.maintenance_mode.deactivate()
+
         self._assert_execution_dequeued_and_started(exc.id)
 
     @retrying.retry(wait_fixed=500, stop_max_attempt_number=10)
