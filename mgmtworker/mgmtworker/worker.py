@@ -147,6 +147,7 @@ class MgmtworkerServiceTaskConsumer(ServiceTaskConsumer):
             '/opt/mgmtworker/env/plugins/{tenant}',
             '/opt/manager/resources/blueprints/{tenant}',
             '/opt/manager/resources/uploaded-blueprints/{tenant}',
+            '/opt/manager/resources/uploaded-blueprints/.uploading/{tenant}',
             '/opt/manager/resources/deployments/{tenant}',
         ]
 
