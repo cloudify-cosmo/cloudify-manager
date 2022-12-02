@@ -1,0 +1,1 @@
+[{"created_at": "2022-11-25T15:14:24.522Z", "id": "fakecloudfilter", "visibility": "tenant", "value": [{"key": "cloudtype", "values": ["fakecloud"], "operator": "any_of", "type": "label"}], "created_by": "admin"}]

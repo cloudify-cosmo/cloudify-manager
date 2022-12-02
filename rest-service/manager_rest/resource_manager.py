@@ -15,6 +15,7 @@ from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import text
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy import or_ as sql_or, and_ as sql_and
+from sqlalchemy.dialects.postgresql import JSONB
 
 from cloudify.constants import TERMINATED_STATES as TERMINATED_TASK_STATES
 from cloudify.cryptography_utils import encrypt
@@ -35,6 +36,7 @@ from dsl_parser import constants, tasks
 from manager_rest import premium_enabled
 from manager_rest.maintenance import get_maintenance_state
 from manager_rest.constants import (
+    COMPONENT_TYPE,
     DEFAULT_TENANT_NAME,
     FILE_SERVER_BLUEPRINTS_FOLDER,
     FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
@@ -1309,39 +1311,6 @@ class ResourceManager(object):
         """
         return wf_id == 'uninstall_plugin'
 
-    def _retrieve_components_from_deployment(self, deployment_id_filter):
-        return [node.id for node in
-                self.sm.list(models.Node,
-                             include=['type_hierarchy', 'id'],
-                             filters=deployment_id_filter,
-                             get_all_results=True)
-                if 'cloudify.nodes.Component' in node.type_hierarchy]
-
-    def _retrieve_all_components_dep_ids(self, components_ids, deployment_id):
-        components_deployment_ids = []
-        for component in components_ids:
-            node_instance_filter = self.create_filters_dict(
-                deployment_id=deployment_id, node_id=component)
-
-            node_instance = self.sm.list(
-                models.NodeInstance,
-                filters=node_instance_filter,
-                get_all_results=True,
-                include=['runtime_properties',
-                         'id']
-            ).items[0]
-
-            component_deployment_props = node_instance.runtime_properties.get(
-                'deployment', {})
-
-            # This runtime property is set when a Component node is starting
-            # install workflow.
-            component_deployment_id = component_deployment_props.get(
-                'id', None)
-            if component_deployment_id:
-                components_deployment_ids.append(component_deployment_id)
-        return components_deployment_ids
-
     def _retrieve_all_component_executions(self, components_deployment_ids):
         executions = []
         for deployment_id in components_deployment_ids:
@@ -1359,12 +1328,34 @@ class ResourceManager(object):
         return executions
 
     def _find_all_components_deployment_id(self, deployment_id):
-        deployment_id_filter = self.create_filters_dict(
-            deployment_id=deployment_id)
-        components_node_ids = self._retrieve_components_from_deployment(
-            deployment_id_filter)
-        return self._retrieve_all_components_dep_ids(components_node_ids,
-                                                     deployment_id)
+        runtime_props_col = db.cast(
+            models.NodeInstance.runtime_properties, JSONB)
+        node_type_hierarchy_col = db.cast(models.Node.type_hierarchy, JSONB)
+
+        # select ni.runtime_props['deployment']['id'] for all NIs of all
+        # nodes that have Component in their type_hierarchy, for the given
+        # deployment
+        query = (
+            db.session.query(
+                runtime_props_col['deployment']['id'].label('deployment_id'),
+            )
+            .join(models.Node)
+            .join(models.Deployment)
+            .filter(
+                # has_key is the postgres array-contains `?` operator
+                # (it is not py2's dict.has_key, so let's NOQA this, because
+                # otherwise flake8 will think it is)
+                node_type_hierarchy_col.has_key(COMPONENT_TYPE)  # noqa
+            )
+            .filter(models.Deployment.id == deployment_id)
+            .distinct()
+        )
+        component_deployment_ids = [
+            row.deployment_id
+            for row in query.all()
+            if row.deployment_id
+        ]
+        return component_deployment_ids
 
     def _find_all_components_executions(self, deployment_id):
         components_deployment_ids = self._find_all_components_deployment_id(
