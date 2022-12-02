@@ -75,6 +75,7 @@ def _do_check_drift(ctx, instances):
     graph = workflows._make_check_drift_graph(
         ctx, node_instance_ids={ni.id for ni in instances},
         name='update_check_drift',
+        run_by_dependency_order=True,
         ignore_failure=True,
     )
     graph.execute()
