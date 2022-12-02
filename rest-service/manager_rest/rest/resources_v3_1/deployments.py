@@ -54,7 +54,6 @@ from ..responses_v2 import ListResponse
 
 
 SHARED_RESOURCE_TYPE = 'cloudify.nodes.SharedResource'
-COMPONENT_TYPE = 'cloudify.nodes.Component'
 EXTERNAL_SOURCE = 'external_source'
 EXTERNAL_TARGET = 'external_target'
 
