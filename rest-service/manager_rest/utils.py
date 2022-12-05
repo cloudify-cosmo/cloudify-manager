@@ -61,17 +61,6 @@ def is_sanity_mode():
     return os.path.isfile(constants.SANITY_MODE_FILE_PATH)
 
 
-
-def mkdirs(folder_path):
-    try:
-        makedirs(folder_path)
-    except OSError as exc:
-        if exc.errno == errno.EEXIST and path.isdir(folder_path):
-            pass
-        else:
-            raise
-
-
 def create_filter_params_list_description(parameters, list_type):
     return [{'name': filter_val,
              'description': 'List {type} matching the \'{filter}\' '
