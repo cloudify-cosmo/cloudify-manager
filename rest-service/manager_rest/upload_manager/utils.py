@@ -70,7 +70,7 @@ def extract_file_to_file_server(archive_path, destination_root):
         shutil.rmtree(tempdir)
 
 
-def _save_file_from_url(archive_target_path, url, data_type):
+def save_file_from_url(archive_target_path, url, data_type):
     if request.data or \
         'Transfer-Encoding' in request.headers or \
             'blueprint_archive' in request.files:
@@ -89,17 +89,7 @@ def _save_file_from_url(archive_target_path, url, data_type):
             "Cannot fetch {0}: {1}".format(url, e))
 
 
-def save_file_content(archive_target_path, data_type):
-    if 'blueprint_archive' in request.files:
-        raise manager_exceptions.BadParametersError(
-            "Can't pass {0} both as URL via request body and multi-form"
-            .format(data_type))
-    uploaded_file_data = request.data
-    with open(archive_target_path, 'wb') as f:
-        f.write(uploaded_file_data)
-
-
-def _save_files_multipart(archive_target_path):
+def save_files_multipart(archive_target_path):
     inputs = {}
     for file_key in request.files:
         if file_key == 'inputs':
@@ -138,40 +128,7 @@ def _save_bytes(content, target_path=None):
             f.write(content.read())
 
 
-def save_file_locally_and_extract_inputs(archive_target_path,
-                                         url_key,
-                                         data_type='unknown'):
-    """
-    Retrieves the file specified by the request to the local machine.
-
-    :param archive_target_path: the target of the archive
-    :param data_type: the kind of the data (e.g. 'blueprint')
-    :param url_key: if the data is passed as a url to an online resource,
-    the url_key specifies what header points to the requested url.
-    :return: None
-    """
-    inputs = {}
-    # Handling importing blueprint through url
-    if url_key in request.args:
-        _save_file_from_url(archive_target_path,
-                            request.args[url_key],
-                            data_type)
-    # handle receiving chunked blueprint
-    elif 'Transfer-Encoding' in request.headers:
-        _save_file_from_chunks(archive_target_path, data_type)
-    # handler receiving entire content through data
-    elif request.data:
-        save_file_content(archive_target_path, data_type)
-
-    # handle inputs from form-data (for both the blueprint and inputs
-    # in body in form-data format)
-    if request.files:
-        inputs = _save_files_multipart(archive_target_path)
-
-    return inputs
-
-
-def _save_file_from_chunks(archive_target_path, data_type):
+def save_file_from_chunks(archive_target_path, data_type):
     if request.data or 'blueprint_archive' in request.files:
         raise manager_exceptions.BadParametersError(
             "Can pass {0} as only one of: request body, multi-form or "
@@ -267,8 +224,9 @@ def _flatten_labels_dict(labels):
 
 
 def base_archive_filename(archive_filename):
+    filename = archive_filename
     while True:
-        filename, _, ext = archive_filename.rpartition('.')
+        filename, _, ext = filename.rpartition('.')
         if ext in ['tar', 'tgz', 'zip']:
             return filename
         if ext in ['bz2', 'gz', 'lzma', 'xz']:

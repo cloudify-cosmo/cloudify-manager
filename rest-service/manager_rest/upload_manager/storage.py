@@ -2,9 +2,9 @@ import itertools
 import os
 import shutil
 import tempfile
+from contextlib import contextmanager
 from xml.etree import ElementTree
 
-from contextlib import contextmanager
 import requests
 from flask import current_app
 
@@ -141,19 +141,44 @@ class S3StorageClient(StorageClient):
             yield key.text
 
     def put(self, src_path: str, dst_path: str):
+        if os.path.isfile(src_path):
+            return self._put_file(src_path, dst_path)
+
+        src_files = set()
+        for dir_path, _, file_names in os.walk(src_path):
+            for name in file_names:
+                src_files.add(
+                    os.path.relpath(os.path.join(dir_path, name), src_path))
+
+        for file_name in src_files:
+            self._put_file(
+                os.path.join(src_path, file_name),
+                os.path.join(dst_path, file_name)
+            )
+
+    def _put_file(self, src_path: str, dst_path: str):
         with open(src_path, 'rb') as data:
-            # do we need a multipart upload maybe?
-            requests.put(
+            res = requests.put(
                 f'{self.server_url}/{dst_path}',
                 data=data,
                 timeout=self.req_timeout,
             )
+            if res.status_code >= 400:
+                raise manager_exceptions.FileServerException(
+                    f'Error uploading {src_path} to {dst_path}: '
+                    f'HTTP status code {res.status_code}'
+                )
 
     def delete(self, path: str):
-        requests.delete(
+        res = requests.delete(
             f'{self.server_url}/{path}',
             timeout=self.req_timeout,
         )
+        if res.status_code >= 400:
+            raise manager_exceptions.FileServerException(
+                f'Error deleting: {path}: '
+                f'HTTP status code {res.status_code}'
+            )
 
     @property
     def server_url(self):

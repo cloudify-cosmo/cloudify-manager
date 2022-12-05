@@ -455,3 +455,8 @@ class NotListeningLDAPServer(ManagerException):
 class UnsupportedFileServerType(ManagerException):
     error_code = 'unsupported_file_server_type'
     status_code = 500
+
+
+class FileServerException(ManagerException):
+    error_code = 'file_server_exception'
+    status_code = 500
