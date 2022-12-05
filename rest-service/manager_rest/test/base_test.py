@@ -424,22 +424,6 @@ class BaseServerTestCase(unittest.TestCase):
         fd, cls.tmp_conf_file = tempfile.mkstemp(prefix='conf-file-')
         os.close(fd)
 
-    @staticmethod
-    def _set_hash_mechanism_to_plaintext():
-        """
-        Hashing is the most time consuming task we perform during unittesets,
-        so we will not encrypt user passwords during tests, as this should
-        be tested elsewhere more in depth
-        """
-        security = server.app.extensions['security']
-        security.password_hash = 'plaintext'
-        security.hashing_schemes = ['plaintext']
-        record = security.pwd_context._config._records[('plaintext', None)]
-        security.pwd_context._config._records[(None, None)] = record
-        security.hashing_context._config._records[(None, None)] = record
-        security.hashing_context._config._records[('plaintext', None)] = record
-        security.hashing_context._config.schemes = ('plaintext',)
-
     @classmethod
     def _handle_flask_app_and_db(cls):
         """Set up Flask app context, and handle DB related tasks
