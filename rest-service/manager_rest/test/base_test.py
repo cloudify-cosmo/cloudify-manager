@@ -136,7 +136,6 @@ class TestClient(FlaskClient):
         return super(TestClient, self).open(*args, **kwargs)
 
 
-
 def copy_resources(file_server_root):
     resources_path = os.path.normpath(os.path.join(
         # rest-service/manager-rest/tests/

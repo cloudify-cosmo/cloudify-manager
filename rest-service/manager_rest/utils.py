@@ -1,14 +1,12 @@
 import os
 import re
 import glob
-import errno
 import shutil
 import zipfile
 import tempfile
 from dateutil import rrule
 from base64 import b64encode
 from datetime import datetime
-from os import path, makedirs
 from dateutil import parser as date_parser
 
 from flask import g

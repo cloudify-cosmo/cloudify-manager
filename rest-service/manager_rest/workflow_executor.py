@@ -4,15 +4,10 @@ from flask import current_app
 from flask_security import current_user
 
 from cloudify import logs
-from cloudify.amqp_client import get_client, SendHandler
+from cloudify.amqp_client import SendHandler
 from cloudify.models_states import PluginInstallationState
-from cloudify.constants import (
-    MGMTWORKER_QUEUE,
-    BROKER_PORT_SSL,
-    EVENTS_EXCHANGE_NAME,
-)
+from cloudify.constants import MGMTWORKER_QUEUE, EVENTS_EXCHANGE_NAME
 
-from manager_rest import config
 from manager_rest.storage import get_storage_manager, models
 from manager_rest.utils import current_tenant, get_amqp_client
 
