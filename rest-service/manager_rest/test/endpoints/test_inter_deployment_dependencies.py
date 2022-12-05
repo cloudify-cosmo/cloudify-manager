@@ -599,6 +599,26 @@ class TestUpdateIDDs(_DependencyTestUtils, BaseServerTestCase):
 
 
 class InterDeploymentDependenciesTest(BaseServerTestCase):
+    def _blueprint(self, **kwargs):
+        blueprint_params = {
+            'id': str(uuid.uuid4()),
+            'plan': {},
+            'creator': self.user,
+            'tenant': self.tenant,
+        }
+        blueprint_params.update(kwargs)
+        return models.Blueprint(**blueprint_params)
+
+    def _deployment(self, **kwargs):
+        deployment_params = {
+            'id': str(uuid.uuid4()),
+            'blueprint': self.bp,
+            'creator': self.user,
+            'tenant': self.tenant,
+        }
+        deployment_params.update(kwargs)
+        return models.Deployment(**deployment_params)
+
     def setUp(self):
         super(InterDeploymentDependenciesTest, self).setUp()
         self.dependency_creator = 'dependency_creator'
@@ -619,8 +639,9 @@ class InterDeploymentDependenciesTest(BaseServerTestCase):
             self.source_deployment,
             self.source_deployment,
         )
-        self.put_mock_deployments(self.source_deployment,
-                                  self.target_deployment)
+        self.bp = self._blueprint()
+        self._deployment(id=self.source_deployment)
+        self._deployment(id=self.target_deployment)
 
     def test_adds_dependency_and_retrieves_it(self):
         dependency = self.client.inter_deployment_dependencies.create(
@@ -756,9 +777,8 @@ class InterDeploymentDependenciesTest(BaseServerTestCase):
                                            'infra'))
 
     def _populate_dependencies_table(self):
-        self.put_mock_deployments('0', '1')
-        self.put_mock_deployments('2', '3')
-        self.put_mock_deployments('4', '5')
+        for mock_dep_id in ('0', '1', '2', '3', '4', '5'):
+            self._deployment(id=mock_dep_id)
         self.client.inter_deployment_dependencies.create(
             **create_deployment_dependency('sample.vm', '1', '0'))
         self.client.inter_deployment_dependencies.create(

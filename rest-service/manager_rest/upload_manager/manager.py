@@ -19,11 +19,7 @@ from manager_rest.dsl_back_compat import create_bc_plugin_yaml
 from manager_rest.archiving import get_archive_type
 from manager_rest.storage.models import Blueprint
 from manager_rest import config, manager_exceptions
-from manager_rest.utils import (mkdirs,
-                                current_tenant,
-                                unzip,
-                                files_in_folder,
-                                remove)
+from manager_rest.utils import current_tenant, unzip, files_in_folder, remove
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.constants import (SUPPORTED_ARCHIVE_TYPES)
 from manager_rest.upload_manager.storage import storage_client
@@ -181,7 +177,10 @@ def _update_blueprint_archive(tenant_name, blueprint_id):
             with storage_client().get(src_file_path) as tmp_file_name:
                 dst_dir_path = os.path.dirname(file_rel_path)
                 if dst_dir_path:
-                    mkdirs(os.path.join(tmpdir, 'blueprint', dst_dir_path))
+                    os.makedirs(
+                        os.path.join(tmpdir, 'blueprint', dst_dir_path),
+                        exist_ok=True,
+                    )
                 shutil.copy2(tmp_file_name, dst_file_path)
 
         with tempfile.NamedTemporaryFile(dir=file_server_root) as fh:

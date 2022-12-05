@@ -1,14 +1,12 @@
 import os
 import re
 import glob
-import errno
 import shutil
 import zipfile
 import tempfile
 from dateutil import rrule
 from base64 import b64encode
 from datetime import datetime
-from os import path, makedirs
 from dateutil import parser as date_parser
 
 from flask import g
@@ -59,29 +57,6 @@ def _endpoint_strip_version(endpoint: str) -> str:
 
 def is_sanity_mode():
     return os.path.isfile(constants.SANITY_MODE_FILE_PATH)
-
-
-def copy_resources(file_server_root, resources_path=None):
-    if resources_path is None:
-        resources_path = path.abspath(__file__)
-        for i in range(3):
-            resources_path = path.dirname(resources_path)
-        resources_path = path.join(resources_path, 'resources')
-    cloudify_resources = path.join(resources_path,
-                                   'rest-service',
-                                   'cloudify')
-    shutil.copytree(cloudify_resources, path.join(file_server_root,
-                                                  'cloudify'))
-
-
-def mkdirs(folder_path):
-    try:
-        makedirs(folder_path)
-    except OSError as exc:
-        if exc.errno == errno.EEXIST and path.isdir(folder_path):
-            pass
-        else:
-            raise
 
 
 def create_filter_params_list_description(parameters, list_type):
@@ -291,16 +266,17 @@ def extract_host_agent_plugins_from_plan(plan):
     return host_agent_plugins_to_install
 
 
-def get_amqp_client():
+def get_amqp_client(tenant=None, connect_timeout=None):
+    vhost = '/' if tenant is None else tenant.rabbitmq_vhost
     return get_client(
         amqp_host=config.instance.amqp_host,
         amqp_user=config.instance.amqp_username,
         amqp_pass=config.instance.amqp_password,
         amqp_port=BROKER_PORT_SSL,
-        amqp_vhost='/',
+        amqp_vhost=vhost,
         ssl_enabled=True,
         ssl_cert_data=config.instance.amqp_ca,
-        connect_timeout=3,
+        connect_timeout=connect_timeout,
     )
 
 
