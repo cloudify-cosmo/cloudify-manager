@@ -12,8 +12,9 @@ from cloudify.constants import (
     EVENTS_EXCHANGE_NAME,
 )
 
-from manager_rest import config, utils
+from manager_rest import config
 from manager_rest.storage import get_storage_manager, models
+from manager_rest.utils import current_tenant, get_amqp_client
 
 
 def get_amqp_handler(kind):
@@ -58,22 +59,7 @@ def send_hook(event):
 
 
 def _get_tenant_dict():
-    return {'name': utils.current_tenant.name}
-
-
-def get_amqp_client(tenant=None):
-    vhost = '/' if tenant is None else tenant.rabbitmq_vhost
-    client = get_client(
-        amqp_host=config.instance.amqp_host,
-        amqp_user=config.instance.amqp_username,
-        amqp_pass=config.instance.amqp_password,
-        amqp_port=BROKER_PORT_SSL,
-        amqp_vhost=vhost,
-        ssl_enabled=True,
-        ssl_cert_data=config.instance.amqp_ca,
-        connect_timeout=None,
-    )
-    return client
+    return {'name': current_tenant.name}
 
 
 def workflow_sendhandler() -> SendHandler:
@@ -232,7 +218,7 @@ def delete_source_plugins(deployment_id):
                 'task_name': 'delete-source-plugins',
                 'kwargs': {
                     'deployment_id': deployment_id,
-                    'tenant_name': utils.current_tenant.name
+                    'tenant_name': current_tenant.name
                 }
             }
         })
