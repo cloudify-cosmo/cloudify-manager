@@ -243,12 +243,6 @@ class CloudifyFlaskApp(Flask):
 app: CloudifyFlaskApp
 
 
-def reset_app(configuration=None):
-    global app
-    config.reset(configuration)
-    app = CloudifyFlaskApp(False)
-
-
 def _detect_debug_environment():
     """
     Detect whether server is running in a debug environment

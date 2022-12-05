@@ -292,7 +292,8 @@ class BaseServerTestCase(unittest.TestCase):
         for patcher in cls._patchers:
             patcher.start()
 
-        cls._reset_app()
+        copy_resources(cls.server_configuration.file_server_root)
+        server.app = server.CloudifyFlaskApp(False)
         cls._handle_flask_app_and_db()
         cls.client = cls.create_client()
 
@@ -405,13 +406,6 @@ class BaseServerTestCase(unittest.TestCase):
         cls.maintenance_mode_dir = tempfile.mkdtemp(prefix='maintenance-')
         fd, cls.tmp_conf_file = tempfile.mkstemp(prefix='conf-file-')
         os.close(fd)
-
-    @classmethod
-    def _reset_app(cls):
-        utils.copy_resources(cls.server_configuration.file_server_root)
-        server.reset_app(cls.server_configuration)
-
-        cls._set_hash_mechanism_to_plaintext()
 
     @staticmethod
     def _set_hash_mechanism_to_plaintext():
