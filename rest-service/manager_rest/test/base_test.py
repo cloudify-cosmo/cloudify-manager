@@ -136,6 +136,24 @@ class TestClient(FlaskClient):
         return super(TestClient, self).open(*args, **kwargs)
 
 
+
+def copy_resources(file_server_root):
+    resources_path = os.path.normpath(os.path.join(
+        # rest-service/manager-rest/tests/
+        os.path.dirname(os.path.abspath(__file__)),
+        '..',  # rest-service/manager-rest/
+        '..',  # rest-service/
+        '..',  # repo root
+        'resources',
+        'rest-service',
+        'cloudify',
+    ))
+    shutil.copytree(
+        resources_path,
+        os.path.join(file_server_root, 'cloudify'),
+    )
+
+
 class BaseServerTestCase(unittest.TestCase):
     client: CloudifyClient
     app: server.CloudifyFlaskApp
