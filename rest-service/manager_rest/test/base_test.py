@@ -1036,36 +1036,3 @@ class BaseServerTestCase(unittest.TestCase):
         self.client.users.create(username, password, role='default')
         self.client.tenants.add_user(username, tenant, role=role)
         return self.create_client_with_tenant(username, password)
-
-    def _put_mock_blueprint(self):
-        blueprint_id = str(uuid.uuid4())
-        now = utils.get_formatted_timestamp()
-        return self.sm.put(
-            models.Blueprint(
-                id=blueprint_id,
-                created_at=now,
-                updated_at=now,
-                main_file_name='abcd',
-                plan={})
-        )
-
-    @staticmethod
-    def _get_mock_deployment(deployment_id, blueprint):
-        now = utils.get_formatted_timestamp()
-        deployment = models.Deployment(
-            id=deployment_id,
-            display_name=deployment_id,
-            created_at=now,
-            updated_at=now,
-        )
-        deployment.blueprint = blueprint
-        return deployment
-
-    def put_mock_deployments(self, source_deployment, target_deployment):
-        blueprint = self._put_mock_blueprint()
-        source_deployment = self._get_mock_deployment(source_deployment,
-                                                      blueprint)
-        self.sm.put(source_deployment)
-        target_deployment = self._get_mock_deployment(target_deployment,
-                                                      blueprint)
-        self.sm.put(target_deployment)
