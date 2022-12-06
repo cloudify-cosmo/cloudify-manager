@@ -1,4 +1,4 @@
-from manager_rest import config
+from manager_rest import config, constants, permissions
 from manager_rest.configure_manager import (
     configure,
     dict_merge,
@@ -122,3 +122,78 @@ class TestConfigureManager(base_test.BaseServerTestCase):
         assert config.instance.amqp_host
         assert config.instance.amqp_username == 'username1'
         assert config.instance.amqp_password == 'password1'
+
+    def test_create_roles(self):
+        db.session.execute(models.Role.__table__.delete())
+        assert len(models.Role.query.all()) == 0
+
+        configure({
+            'roles': [
+                {
+                    'name': 'role1'
+                },
+                {
+                    'name': 'role2',
+                    'type': 'tenant_role',
+                    'description': 'descr1',
+                },
+            ]
+        })
+
+        # in the created roles, we expect the ones from the config...
+        expected_roles = {
+            ('role1', 'system_role', None),
+            ('role2', 'tenant_role', 'descr1'),
+        }
+        # ...and also the default roles as well
+        for default_role in permissions.ROLES:
+            expected_roles.add((
+                default_role['name'],
+                default_role['type'],
+                default_role['description'],
+            ))
+        roles = {
+            (r.name, r.type, r.description)
+            for r in models.Role.query.all()
+        }
+
+        assert roles == expected_roles
+
+    def test_create_roles_override(self):
+        db.session.execute(models.Role.__table__.delete())
+        assert len(models.Role.query.all()) == 0
+
+        # creating roles that are also default roles, still overrides their
+        # description
+        configure({
+            'roles': [
+                {
+                    'name': 'sys_admin',
+                    'description': 'descr',
+                },
+                {
+                    'name': constants.DEFAULT_TENANT_ROLE,
+                    'description': 'descr',
+                },
+            ]
+        })
+        roles = models.Role.query.all()
+        assert len(roles) == 2
+        assert all(r.description == 'descr' for r in roles)
+
+        # ...doing it again, updates them
+        configure({
+            'roles': [
+                {
+                    'name': 'sys_admin',
+                    'description': 'descr2',
+                },
+                {
+                    'name': constants.DEFAULT_TENANT_ROLE,
+                    'description': 'descr2',
+                },
+            ]
+        })
+
+        assert len(roles) == 2
+        assert all(r.description == 'descr2' for r in roles)
