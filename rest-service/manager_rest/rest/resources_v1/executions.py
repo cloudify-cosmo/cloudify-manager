@@ -201,6 +201,45 @@ class Executions(SecuredResource):
                 execution.id = execution_id
             sm.put(execution)
             messages = []
+            if (
+                force_status in ExecutionState.STATES
+                and force_status not in ExecutionState.WAITING_STATES
+                and force_status != ExecutionState.PENDING
+            ):
+                if deployment_id:
+                    deployment = sm.get(models.Deployment, deployment_id)
+                    deployment_latest_time = None
+                    if deployment.latest_execution is not None:
+                        deployment_latest_time = parse_datetime_string(
+                            deployment.latest_execution.started_at)
+
+                    exec_relations_set = False
+                    if (
+                        deployment_latest_time is None
+                        or (
+                            deployment_latest_time
+                            and deployment_latest_time < started_at
+                        )
+                    ):
+                        deployment.latest_execution = execution
+                        exec_relations_set = True
+
+                    if execution.workflow_id == \
+                            'create_deployment_environment':
+                        dep_create_time = None
+                        if deployment.create_execution is not None:
+                            dep_create_time = parse_datetime_string(
+                                deployment.create_execution.started_at)
+                        if (
+                            dep_create_time is None
+                            or dep_create_time < started_at
+                        ):
+                            deployment.create_execution = execution
+                            exec_relations_set = True
+
+                    if exec_relations_set:
+                        sm.update(deployment)
+
             if not force_status:
                 messages = rm.prepare_executions(
                     [execution],
