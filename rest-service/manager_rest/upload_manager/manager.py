@@ -115,9 +115,12 @@ def cleanup_blueprint_archive_from_file_server(blueprint_id, tenant):
 
 
 def update_blueprint_icon_file(tenant_name, blueprint_id):
-    with tempfile.NamedTemporaryFile() as fh:
-        save_file_content(fh.name, 'blueprint_icon')
-        _set_blueprints_icon(tenant_name, blueprint_id, fh.name)
+    with tempfile.NamedTemporaryFile(delete=False) as fh:
+        tmp_file_name = fh.name
+        save_file_content(tmp_file_name, 'blueprint_icon')
+        _set_blueprints_icon(tenant_name, blueprint_id, tmp_file_name)
+    if os.path.exists(tmp_file_name):
+        os.remove(tmp_file_name)
     _update_blueprint_archive(tenant_name, blueprint_id)
 
 
@@ -183,11 +186,15 @@ def _update_blueprint_archive(tenant_name, blueprint_id):
                     )
                 shutil.copy2(tmp_file_name, dst_file_path)
 
-        with tempfile.NamedTemporaryFile(dir=file_server_root) as fh:
+        with tempfile.NamedTemporaryFile(dir=file_server_root,
+                                         delete=False) as fh:
+            tmp_file_name = fh.name
             with tarfile.open(fh.name, "w:gz") as tar_handle:
                 tar_handle.add('blueprint')
             storage_client().delete(archive_filename)
-            storage_client().put(fh.name, new_archive_path)
+            storage_client().put(tmp_file_name, new_archive_path)
+        if os.path.exists(tmp_file_name):
+            os.remove(tmp_file_name)
 
 
 def extract_blueprint_archive_to_file_server(blueprint_id, tenant):
