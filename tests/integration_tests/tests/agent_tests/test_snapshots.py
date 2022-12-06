@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import time
 import uuid
 import pytest
@@ -20,6 +21,7 @@ import pytest
 from integration_tests import AgentTestCase
 from cloudify.models_states import AgentState
 from integration_tests.tests.utils import get_resource as resource
+from integration_tests.framework.flask_utils import reset_storage
 
 pytestmark = pytest.mark.group_snapshots
 
@@ -33,14 +35,27 @@ class TestSnapshots(AgentTestCase):
 
     def _deploy_with_agents(self, states):
         deployments = []
+        execution_ids = []
         for state in states:
-            deployment, _ = self.deploy_application(
-                resource("dsl/agent_tests/with_agent.yaml"))
+            deployment, execution = self.deploy_application(
+                resource("dsl/agent_tests/with_agent.yaml"),
+                wait_for_execution=False,
+            )
             deployments.append(deployment)
+            execution_ids.append(execution)
+
+        for execution_id in execution_ids:
+            exc = self.client.executions.get(execution_id)
+            self.wait_for_execution_to_end(exc)
+
+        for deployment, state in zip(deployments, states):
             agent = self.client.agents.list(deployment_id=deployment.id)
             self.client.agents.update(agent.items[0].id, state)
-        self.assertEqual(len(self.client.agents.list(state=states).items),
-                         len(states))
+
+        self.assertEqual(
+            len(self.client.agents.list(state=states).items),
+            len(states),
+        )
         return deployments
 
     def _create_snapshot(self):
@@ -50,8 +65,16 @@ class TestSnapshots(AgentTestCase):
         return snapshot_id
 
     def _undeploy(self, states, deployments):
+        executions = [
+            self.client.executions.start(deployment.id, 'uninstall')
+            for deployment in deployments
+        ]
+        for execution in executions:
+            self.wait_for_execution_to_end(execution)
+
         for deployment in deployments:
-            self.undeploy_application(deployment.id, is_delete_deployment=True)
+            self.delete_deployment(deployment.id, validate=True)
+
         self.assertEqual(len(self.client.agents.list(state=states).items), 0)
 
     def _restore_snapshot(self, states, deployments, snapshot_id):
