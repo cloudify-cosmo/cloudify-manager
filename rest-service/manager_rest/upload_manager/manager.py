@@ -52,7 +52,7 @@ def _do_upload_snapshot(snapshot_id, upload_path):
         snapshot_id,
         f'{snapshot_id}.zip',
     )
-    storage_client().put(upload_path, target_path)
+    storage_client().move(upload_path, target_path)
 
 
 def upload_snapshot(snapshot_id):
@@ -89,7 +89,7 @@ def _do_upload_blueprint(blueprint_id, upload_path):
         blueprint_id,
         f'{blueprint_id}.{archive_type}',
     )
-    storage_client().put(upload_path, target_path)
+    storage_client().move(upload_path, target_path)
 
 
 def upload_blueprint_archive_to_file_server(blueprint_id):
@@ -115,9 +115,12 @@ def cleanup_blueprint_archive_from_file_server(blueprint_id, tenant):
 
 
 def update_blueprint_icon_file(tenant_name, blueprint_id):
-    with tempfile.NamedTemporaryFile() as fh:
-        save_file_content(fh.name, 'blueprint_icon')
-        _set_blueprints_icon(tenant_name, blueprint_id, fh.name)
+    with tempfile.NamedTemporaryFile(delete=False) as fh:
+        tmp_file_name = fh.name
+        save_file_content(tmp_file_name, 'blueprint_icon')
+        _set_blueprints_icon(tenant_name, blueprint_id, tmp_file_name)
+    if os.path.exists(tmp_file_name):
+        os.remove(tmp_file_name)
     _update_blueprint_archive(tenant_name, blueprint_id)
 
 
@@ -144,7 +147,7 @@ def _set_blueprints_icon(tenant_name, blueprint_id, icon_path=None):
         BLUEPRINT_ICON_FILENAME,
     )
     if icon_path:
-        storage_client().put(icon_path, blueprint_icon_path)
+        storage_client().move(icon_path, blueprint_icon_path)
     else:
         storage_client().delete(blueprint_icon_path)
 
@@ -183,11 +186,13 @@ def _update_blueprint_archive(tenant_name, blueprint_id):
                     )
                 shutil.copy2(tmp_file_name, dst_file_path)
 
-        with tempfile.NamedTemporaryFile(dir=file_server_root) as fh:
+        with tempfile.NamedTemporaryFile(dir=file_server_root,
+                                         delete=False) as fh:
+            tmp_file_name = fh.name
             with tarfile.open(fh.name, "w:gz") as tar_handle:
                 tar_handle.add('blueprint')
             storage_client().delete(archive_filename)
-            storage_client().put(fh.name, new_archive_path)
+            storage_client().move(tmp_file_name, new_archive_path)
 
 
 def extract_blueprint_archive_to_file_server(blueprint_id, tenant):
@@ -231,7 +236,7 @@ def extract_blueprint_archive_to_file_server(blueprint_id, tenant):
     try:
         # use os.rename - bp_from is already in file_server_root, i.e.
         # same filesystem as the target dir
-        storage_client().put(bp_from, bp_dir)
+        storage_client().move(bp_from, bp_dir)
     except OSError as e:  # e.g. directory not empty
         shutil.rmtree(bp_from)
         raise manager_exceptions.ConflictError(str(e))
@@ -277,12 +282,12 @@ def _store_plugin(plugin_id, wagon_path, yaml_paths):
         FILE_SERVER_PLUGINS_FOLDER,
         plugin_id,
     )
-    storage_client().put(
+    storage_client().move(
         wagon_path,
         os.path.join(target_path, wagon_info['archive_name'])
     )
     for yaml_path in yaml_paths:
-        storage_client().put(
+        storage_client().move(
             yaml_path,
             os.path.join(target_path, os.path.basename(yaml_path)),
         )
