@@ -27,8 +27,8 @@ class StorageClient:
         """List files in the path location"""
         raise NotImplementedError('Should be implemented in subclasses')
 
-    def put(self, src_path: str, dst_path: str):
-        """Save files to the target location"""
+    def move(self, src_path: str, dst_path: str):
+        """Save files to the target location, removes the local src_path"""
         raise NotImplementedError('Should be implemented in subclasses')
 
     def delete(self, path: str):
@@ -68,7 +68,7 @@ class LocalStorageClient(StorageClient):
                     os.path.relpath(os.path.join(dir_path, name), list_root)
                 )
 
-    def put(self, src_path: str, dst_path: str):
+    def move(self, src_path: str, dst_path: str):
         full_dst_path = os.path.join(self.base_uri, dst_path)
         os.makedirs(os.path.dirname(full_dst_path), exist_ok=True)
         shutil.move(src_path, full_dst_path)
@@ -139,9 +139,10 @@ class S3StorageClient(StorageClient):
             key = contents.find('s3:Key', S3StorageClient.XML_NS)
             yield key.text
 
-    def put(self, src_path: str, dst_path: str):
+    def move(self, src_path: str, dst_path: str):
         if os.path.isfile(src_path):
-            return self._put_file(src_path, dst_path)
+            self._put_file(src_path, dst_path)
+            return os.remove(src_path)
 
         src_files = set()
         for dir_path, _, file_names in os.walk(src_path):
@@ -154,6 +155,7 @@ class S3StorageClient(StorageClient):
                 os.path.join(src_path, file_name),
                 os.path.join(dst_path, file_name)
             )
+        shutil.rmtree(src_path)
 
     def _put_file(self, src_path: str, dst_path: str):
         with open(src_path, 'rb') as data:
