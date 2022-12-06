@@ -163,15 +163,7 @@ def _get_user_tenant_association(user, tenant):
     return user_tenant_association
 
 
-def _create_admin_user(user_config):
-    """Create the admin user based on the passed-in config
-
-    The admin user will have the username&password from the config,
-    or use defaults if not provided.
-    """
-    admin_username = _get_admin_username(user_config)
-    admin_password = _get_admin_password(user_config) or 'admin'
-
+def _create_admin_role():
     admin_role = models.Role.query.filter_by(name='sys_admin').first()
     if not admin_role:
         admin_role = models.Role(
@@ -180,6 +172,17 @@ def _create_admin_user(user_config):
             description='User that can manage Cloudify',
         )
         db.session.add(admin_role)
+    return admin_role
+
+
+def _create_admin_user(user_config, admin_role):
+    """Create the admin user based on the passed-in config
+
+    The admin user will have the username&password from the config,
+    or use defaults if not provided.
+    """
+    admin_username = _get_admin_username(user_config)
+    admin_password = _get_admin_password(user_config) or 'admin'
 
     admin_user = user_datastore.create_user(
         id=constants.BOOTSTRAP_ADMIN_ID,
@@ -239,20 +242,17 @@ def configure(user_config):
     _register_rabbitmq_brokers(user_config)
 
     default_tenant = _get_default_tenant()
-    need_assoc = False
     if not default_tenant:
-        need_assoc = True
         default_tenant = _create_default_tenant()
 
+    admin_role = _create_admin_role()
     admin_user = user_datastore.get_user(constants.BOOTSTRAP_ADMIN_ID)
     if admin_user:
         _update_admin_user(admin_user, user_config)
     else:
-        admin_user = _create_admin_user(user_config)
-        need_assoc = True
+        admin_user = _create_admin_user(user_config, admin_role)
 
-    if need_assoc:
-        _setup_user_tenant_assoc(admin_user, default_tenant)
+    _setup_user_tenant_assoc(admin_user, default_tenant)
 
     _create_provider_context(user_config)
 
