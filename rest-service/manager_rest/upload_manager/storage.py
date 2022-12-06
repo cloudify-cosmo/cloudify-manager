@@ -1,4 +1,3 @@
-import itertools
 import os
 import shutil
 import tempfile
@@ -62,12 +61,12 @@ class LocalStorageClient(StorageClient):
     def list(self, path: str):
         # list all files in path and its subdirectories, but not path
         list_root = os.path.join(self.base_uri, path)
-        elements = []
-        for dirpath, dirnames, filenames in os.walk(list_root):
-            prefix = os.path.relpath(dirpath, list_root)
-            for child in itertools.chain(dirnames, filenames):
-                elements.append(os.path.join(prefix, child))
-        return elements
+        for dir_path, _, file_names in os.walk(list_root):
+            for name in file_names:
+                yield os.path.join(
+                    path,
+                    os.path.relpath(os.path.join(dir_path, name), list_root)
+                )
 
     def put(self, src_path: str, dst_path: str):
         full_dst_path = os.path.join(self.base_uri, dst_path)
