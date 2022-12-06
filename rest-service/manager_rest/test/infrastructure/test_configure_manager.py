@@ -229,7 +229,6 @@ class TestConfigureManager(base_test.BaseServerTestCase):
         assert {p.role_name for p in user_get_permissions} == \
             {'user', 'sys_admin'}
 
-
     def test_create_permissions_nonexistent_role(self):
         with self.assertRaisesRegex(ValueError, 'something.*nonexistent'):
             configure({
