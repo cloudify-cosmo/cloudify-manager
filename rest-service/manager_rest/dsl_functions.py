@@ -49,6 +49,7 @@ SECRETS_PROVIDER_SCHEMA = {
     },
 }
 
+
 def evaluate_node(node):
     # dsl-parser uses name in plans, while the db storage uses id :(
     node['name'] = node['id']
@@ -183,6 +184,7 @@ def _get_vault_response(url, token, path):
     )
 
     return response
+
 
 def _get_vault_path_details(url, token, path):
     response = _get_vault_response(url, token, path)
