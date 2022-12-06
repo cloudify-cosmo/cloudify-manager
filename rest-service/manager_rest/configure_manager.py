@@ -309,7 +309,7 @@ def _register_rabbitmq_brokers(user_config):
 
 def _create_roles(user_config):
     default_roles = permissions.ROLES
-    roles_to_make = list(user_config.get('roles', []))  # copy
+    roles_to_make = list(user_config.get('roles') or [])  # copy
     seen_roles = {r['name'] for r in roles_to_make}
 
     for default_role in default_roles:
@@ -325,6 +325,39 @@ def _create_roles(user_config):
         db.session.add(role)
 
 
+def _create_permissions(user_config):
+    default_permissions = permissions.PERMISSIONS
+    permissions_to_make = dict(user_config.get('permissions') or {})  # copy
+
+    for default_permission in default_permissions:
+        if default_permission not in permissions_to_make:
+            permissions_to_make[default_permission] = set()
+
+    existing_permissions = {}
+    for p in models.Permission.query.all():
+        existing_permissions.setdefault(p.name, set()).add(p.role_name)
+
+    roles = {r.name: r for r in models.Role.query.all()}
+
+    for permission_name, role_names in permissions_to_make.items():
+        already_assigned = existing_permissions.get(permission_name, set())
+        missing_roles = set(role_names) | {'sys_admin'} - already_assigned
+
+        for role_name in missing_roles:
+            try:
+                role = roles[role_name]
+            except KeyError:
+                raise ValueError(
+                    f'Permission {permission_name} is assigned '
+                    f'to non-existent role {role_name}'
+                )
+            perm = models.Permission(
+                name=permission_name,
+                role=role,
+            )
+            db.session.add(perm)
+
+
 def configure(user_config):
     """Configure the manager based on the provided config"""
     _register_rabbitmq_brokers(user_config)
@@ -334,6 +367,8 @@ def configure(user_config):
         default_tenant = _create_default_tenant()
 
     _create_roles(user_config)
+    _create_permissions(user_config)
+
     admin_user = user_datastore.get_user(constants.BOOTSTRAP_ADMIN_ID)
     if admin_user:
         _update_admin_user(admin_user, user_config)

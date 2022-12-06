@@ -197,3 +197,43 @@ class TestConfigureManager(base_test.BaseServerTestCase):
 
         assert len(roles) == 2
         assert all(r.description == 'descr2' for r in roles)
+
+    def test_create_permissions(self):
+        db.session.execute(models.Permission.__table__.delete())
+        assert len(models.Permission.query.all()) == 0
+        configure({})
+
+        created_permissions = models.Permission.query.all()
+        assert len(created_permissions) == len(permissions.PERMISSIONS)
+
+    def test_create_permissions_set_user(self):
+        db.session.execute(models.Permission.__table__.delete())
+        assert len(models.Permission.query.all()) == 0
+        configure({
+            'permissions': {
+                # you tried to deny sys_admin some of their permissions?
+                # fat chance, they'll get it anyway!
+                'user_get': ['user']
+            },
+        })
+
+        created_permissions = models.Permission.query.all()
+        # +1 because we created 1 additional permission: user_get for role=user
+        assert len(created_permissions) == len(permissions.PERMISSIONS) + 1
+        user_get_permissions = (
+            models.Permission.query
+            .filter_by(name='user_get')
+            .all()
+        )
+        assert len(user_get_permissions) == 2
+        assert {p.role_name for p in user_get_permissions} == \
+            {'user', 'sys_admin'}
+
+
+    def test_create_permissions_nonexistent_role(self):
+        with self.assertRaisesRegex(ValueError, 'something.*nonexistent'):
+            configure({
+                'permissions': {
+                    'something': ['nonexistent role']
+                },
+            })
