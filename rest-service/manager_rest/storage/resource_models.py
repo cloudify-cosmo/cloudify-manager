@@ -2323,16 +2323,15 @@ class Agent(CreatedAtMixin, SQLResourceBase):
         self._set_parent(node_instance)
         self.node_instance = node_instance
 
-    def to_response(self, include=None, **kwargs):
-        include = include or self.response_fields
+    def to_response(self, include=None, get_data=False, **kwargs):
         agent_dict = super(Agent, self).to_response(include, **kwargs)
-        if 'rabbitmq_username' not in include:
-            agent_dict.pop('rabbitmq_username', None)
-        if 'rabbitmq_password' in include:
+
+        if get_data:
             agent_dict['rabbitmq_password'] = decrypt(
                 agent_dict['rabbitmq_password']
             )
         else:
+            agent_dict.pop('rabbitmq_username', None)
             agent_dict.pop('rabbitmq_password', None)
         return agent_dict
 

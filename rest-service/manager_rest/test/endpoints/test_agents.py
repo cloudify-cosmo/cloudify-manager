@@ -239,8 +239,6 @@ class AgentsTest(base_test.BaseServerTestCase):
     def test_list_agents(self):
         self._agent('agent_1')
         self._agent(agent_name='agent_2', state=AgentState.CREATING)
-        self.assertEqual(len(self.client.agents.list().items), 1)
-        self.client.agents.update('agent_2', AgentState.STARTED)
         self.assertEqual(len(self.client.agents.list().items), 2)
 
     def test_list_agents_sort_byname(self):
