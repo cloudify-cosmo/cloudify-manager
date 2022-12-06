@@ -170,9 +170,11 @@ def upload(ctx, **kwargs):
     # Warn users re: using multiple rel's between the same source and target
     check_multiple_relationship_to_one_target(ctx, plan)
 
+    requirements = plan.pop('requirements', None) or {}
     # Update DB with parsed plan
     update_dict = {
         'plan': plan,
+        'requirements': requirements,
         'main_file_name': app_file_name,
         'state': BlueprintUploadState.UPLOADED,
     }

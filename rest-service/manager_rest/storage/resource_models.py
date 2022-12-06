@@ -88,6 +88,7 @@ class Blueprint(CreatedAtMixin, SQLResourceBase):
     main_file_name = db.Column(db.Text)
     plan_p = db.Column(db.PickleType(protocol=2))
     plan = db.Column(JSONString)
+    requirements = db.Column(JSONString)
     updated_at = db.Column(UTCDateTime)
     description = db.Column(db.Text)
     is_hidden = db.Column(db.Boolean, nullable=False, default=False)

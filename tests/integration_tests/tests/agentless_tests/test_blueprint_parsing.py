@@ -30,12 +30,15 @@ outputs:
             blueprint_id='bp1',
         )
         bp = self.client.blueprints.get('bp1')
-        assert 'requirements' in bp.plan
-        requirements = bp.plan['requirements']
-        assert 'parent_capabilities' in requirements
-        parent_capabilities = requirements['parent_capabilities']
+        assert bp.requirements
+        assert 'parent_capabilities' in bp.requirements
+        parent_capabilities = bp.requirements['parent_capabilities']
         assert ['cap1'] in parent_capabilities
         assert ['cap2', 'key1'] in parent_capabilities
+
+        bps = self.client.blueprints.list()
+        assert len(bps) == 1
+        assert bps[0].requirements == bp.requirements
 
     def test_requirements_secrets(self):
         bp = """
@@ -62,10 +65,9 @@ outputs:
             blueprint_id='bp1',
         )
         bp = self.client.blueprints.get('bp1')
-        assert 'requirements' in bp.plan
-        requirements = bp.plan['requirements']
-        assert 'secrets' in requirements
-        required_secrets = requirements['secrets']
+        assert bp.requirements
+        assert 'secrets' in bp.requirements
+        required_secrets = bp.requirements['secrets']
         assert 'sec1' in required_secrets
         assert ['sec2', 'attr'] in required_secrets
         assert 'sec3' in required_secrets
