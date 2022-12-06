@@ -329,18 +329,16 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
         return plugins[max_item[0]]
 
     def _make_plugin_yaml_url(self, plugin, dsl_version):
-        plugin_path = os.path.join(
-            self.file_server_root,
-            FILE_SERVER_PLUGINS_FOLDER,
-            plugin.id)
-        yaml_files = self._plugin_yamls_for_dsl_version(plugin_path,
-                                                        dsl_version)
-        if len(yaml_files) != 1:
+        yaml_file_names = self.client.plugins.list_yaml_files(plugin.id,
+                                                              dsl_version)
+
+        if not yaml_file_names:
+            version_msg = f' for DSL {dsl_version}' if dsl_version else ''
             raise InvalidBlueprintImport(
-                'Plugin {0}: expected one yaml file, but found {1}'
-                .format(plugin.package_name, len(yaml_files)))
-        filename = os.path.join(plugin_path, yaml_files[0])
-        return 'file://{0}'.format(filename)
+                f'Plugin {plugin.package_name}: expected one yaml file'
+                f'{version_msg}, but found none')
+
+        return f'resource://{yaml_file_names[0]}'
 
     def _resolve_blueprint_url(self, import_url):
         blueprint_id = import_url.replace(BLUEPRINT_PREFIX, '', 1).strip()

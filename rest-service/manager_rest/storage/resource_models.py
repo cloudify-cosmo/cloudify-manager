@@ -177,7 +177,8 @@ class Plugin(SQLResourceBase):
             unique=True
         ),
     )
-    _extra_fields = {'installation_state': flask_fields.Raw}
+    _extra_fields = {'installation_state': flask_fields.Raw,
+                     'yaml_files_paths': flask_fields.List(flask_fields.Raw)}
 
     archive_name = db.Column(db.Text, nullable=False, index=True)
     distribution = db.Column(db.Text)
@@ -199,6 +200,18 @@ class Plugin(SQLResourceBase):
     blueprint_labels = db.Column(JSONString)
     labels = db.Column(JSONString)
     resource_tags = db.Column(JSONString)
+
+    @property
+    def yaml_files_paths(self):
+        """List all *.yaml files"""
+        # Imported here because of circular import
+        from manager_rest.upload_manager import storage_client
+        plugin_dir = path.join(FILE_SERVER_PLUGINS_FOLDER, self.id)
+        yaml_files = []
+        for file_name in storage_client().list(plugin_dir):
+            if file_name.endswith('.yaml'):
+                yaml_files += [file_name]
+        return yaml_files
 
     def yaml_file_path(self):
         plugin_dir = path.join(config.instance.file_server_root,
