@@ -103,23 +103,57 @@ class TestSnapshots(AgentTestCase):
     def test_snapshot_with_agents(self):
         states = [AgentState.STARTED, AgentState.CREATING]
         deployments = self._deploy_with_agents(states)
-        self.assertEqual(len(self.client.agents.list().items), 1)
+        self.assertEqual(len(self.client.agents.list().items), 2)
         snapshot_id = self._create_snapshot()
-        self._undeploy(states, deployments)
+
+        downloaded_snapshot = os.path.join(self.workdir, 'snapshot.zip')
+        self.client.snapshots.download(
+            snapshot_id,
+            output_file=downloaded_snapshot,
+        )
+
+        reset_storage(self.env.container_id)
+        self.client.snapshots.upload(downloaded_snapshot, snapshot_id)
         self._restore_snapshot(states, deployments, snapshot_id)
-        self.assertEqual(len(self.client.agents.list().items), 1)
+
+        # unlike the other tenant tests, in this one we FIRST reset + restore,
+        # and only then undeploy. This checks that agent connectivity is
+        # still available after that reset + restore
+        self.assertEqual(len(self.client.agents.list().items), 2)
+        self._undeploy(states, deployments)
+        self.assertEqual(len(self.client.agents.list().items), 0)
 
     def test_snapshot_with_failed_agents(self):
         states = [AgentState.STOPPED, AgentState.DELETED, AgentState.FAILED]
         deployments = self._deploy_with_agents(states)
+
         snapshot_id = self._create_snapshot()
+        downloaded_snapshot = os.path.join(self.workdir, 'snapshot.zip')
+        self.client.snapshots.download(
+            snapshot_id,
+            output_file=downloaded_snapshot,
+        )
+
         self._undeploy(states, deployments)
+
+        reset_storage(self.env.container_id)
+        self.client.snapshots.upload(downloaded_snapshot, snapshot_id)
         self._restore_snapshot(states, deployments, snapshot_id)
 
     def test_snapshot_with_agents_multitenant(self):
         self.client.tenants.create('mike')
         mike_client = self.create_rest_client(tenant='mike')
         self._deploy_with_agents_multitenant(mike_client)
+
         snapshot_id = self._create_snapshot()
+        downloaded_snapshot = os.path.join(self.workdir, 'snapshot.zip')
+        self.client.snapshots.download(
+            snapshot_id,
+            output_file=downloaded_snapshot,
+        )
+
         self._undeploy_multitenant(mike_client)
+
+        reset_storage(self.env.container_id)
+        self.client.snapshots.upload(downloaded_snapshot, snapshot_id)
         self._restore_snapshot_multitenant(snapshot_id)
