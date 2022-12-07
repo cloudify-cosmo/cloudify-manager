@@ -239,6 +239,19 @@ class Executions(SecuredResource):
 
                     if exec_relations_set:
                         sm.update(deployment)
+                elif execution.workflow_id == 'upload_blueprint':
+                    bp_id = execution.parameters['blueprint_id']
+                    blueprint = sm.get(models.Blueprint, bp_id)
+                    upload_time = None
+                    if blueprint.upload_execution is not None:
+                        upload_time = parse_datetime_string(
+                            blueprint.upload_execution.started_at)
+                    if (
+                        upload_time is None
+                        or (upload_time and upload_time < started_at)
+                    ):
+                        blueprint.upload_execution = execution
+                        sm.update(blueprint)
 
             if not force_status:
                 messages = rm.prepare_executions(

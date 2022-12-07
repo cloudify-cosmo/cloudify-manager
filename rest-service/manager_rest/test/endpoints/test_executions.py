@@ -719,6 +719,197 @@ class ExecutionsTestCase(BaseServerTestCase):
                     dep_id).create_execution.id == old_execution_id,\
                     f'Create execution should not be changed for {state}'
 
+    def test_restore_not_set_upload_from_none(self):
+        for state in self.EXEC_NOT_SET_STATES:
+            with self.subTest():
+                bp_id = f'bp_{state}'
+                execution_id = f'upload_for_{state}'
+                models.Blueprint(
+                    id=bp_id,
+                    creator=self.user,
+                    tenant=self.tenant,
+                )
+                models.Blueprint(
+                    id=state,
+                    creator=self.user,
+                    tenant=self.tenant,
+                )
+
+                self.client.executions.create(
+                    execution_id=execution_id,
+                    workflow_id='upload_blueprint',
+                    deployment_id='',
+                    parameters={'blueprint_id': bp_id},
+                    force_status=state,
+                )
+
+                assert self.sm.get(
+                    models.Blueprint, bp_id).upload_execution is None,\
+                    f'Upload execution should not be set for {state}'
+                assert self.sm.get(
+                    models.Blueprint, state).upload_execution is None,\
+                    f'Upload exec should not be set for other bp for {state}'
+
+    def test_restore_set_upload_from_none(self):
+        for state in self.EXEC_SET_STATES:
+            with self.subTest():
+                bp_id = f'bp_{state}'
+                exec_id = f'upload_for_{state}'
+                models.Blueprint(
+                    id=bp_id,
+                    creator=self.user,
+                    tenant=self.tenant,
+                )
+                models.Blueprint(
+                    id=state,
+                    creator=self.user,
+                    tenant=self.tenant,
+                )
+
+                self.client.executions.create(
+                    execution_id=exec_id,
+                    workflow_id='upload_blueprint',
+                    deployment_id='',
+                    parameters={'blueprint_id': bp_id},
+                    force_status=state,
+                )
+
+                assert self.sm.get(
+                    models.Blueprint, bp_id).upload_execution.id == exec_id,\
+                    f'Upload execution should be set for {state}'
+                assert self.sm.get(
+                    models.Blueprint, state).upload_execution is None,\
+                    f'Upload exec should not be set for other bp for {state}'
+
+    def test_restore_not_set_upload_with_newer(self):
+        """We should never update the upload execution if it is newer than the
+        execution we are restoring.
+        """
+        for state in self.EXEC_SET_STATES:
+            with self.subTest():
+                bp_id = f'bp_{state}'
+                old_exec_id = f'old_upload_for_{state}'
+                exec_id = f'upload_for_{state}'
+                prev_timestamp = "2222-11-25T15:13:17.930Z"
+                timestamp = "2122-11-25T15:13:17.930Z"
+                bp = models.Blueprint(
+                    id=bp_id,
+                    creator=self.user,
+                    tenant=self.tenant,
+                )
+                models.Blueprint(
+                    id=state,
+                    creator=self.user,
+                    tenant=self.tenant,
+                )
+                execution = self._execution(id=old_exec_id,
+                                            status=ExecutionState.TERMINATED,
+                                            started_at=prev_timestamp)
+                bp.upload_execution = execution
+
+                self.client.executions.create(
+                    execution_id=exec_id,
+                    workflow_id='upload_blueprint',
+                    deployment_id='',
+                    parameters={'blueprint_id': bp_id},
+                    force_status=state,
+                    started_at=timestamp,
+                )
+
+                assert self.sm.get(
+                    models.Blueprint,
+                    bp_id).upload_execution.id == old_exec_id,\
+                    f'Upload execution should not be updated for {state}'
+                assert self.sm.get(
+                    models.Blueprint, state).upload_execution is None,\
+                    f'Upload exec should not be set for other bp for {state}'
+
+    def test_restore_set_upload_with_older(self):
+        """We should update the upload execution if we see a upload_blueprint
+        execution that is newer than the current one, if it ran.
+        """
+        for state in self.EXEC_SET_STATES:
+            with self.subTest():
+                bp_id = f'bp_{state}'
+                old_exec_id = f'old_upload_for_{state}'
+                exec_id = f'upload_for_{state}'
+                prev_timestamp = "2022-11-25T15:13:17.930Z"
+                timestamp = "2122-11-25T15:13:17.930Z"
+                bp = models.Blueprint(
+                    id=bp_id,
+                    creator=self.user,
+                    tenant=self.tenant,
+                )
+                models.Blueprint(
+                    id=state,
+                    creator=self.user,
+                    tenant=self.tenant,
+                )
+                execution = self._execution(id=old_exec_id,
+                                            status=ExecutionState.TERMINATED,
+                                            started_at=prev_timestamp)
+                bp.upload_execution = execution
+
+                self.client.executions.create(
+                    execution_id=exec_id,
+                    workflow_id='upload_blueprint',
+                    deployment_id='',
+                    parameters={'blueprint_id': bp_id},
+                    force_status=state,
+                    started_at=timestamp,
+                )
+
+                assert self.sm.get(
+                    models.Blueprint,
+                    bp_id).upload_execution.id == exec_id,\
+                    f'Upload execution should not be updated for {state}'
+                assert self.sm.get(
+                    models.Blueprint, state).upload_execution is None,\
+                    f'Upload exec should not be set for other bp for {state}'
+
+    def test_restore_not_set_upload_with_older(self):
+        """We should not set upload execution when provided an execution
+        that did not run.
+        """
+        for state in self.EXEC_NOT_SET_STATES:
+            with self.subTest():
+                bp_id = f'bp_{state}'
+                old_exec_id = f'old_upload_for_{state}'
+                exec_id = f'upload_for_{state}'
+                prev_timestamp = "2022-11-25T15:13:17.930Z"
+                timestamp = "2122-11-25T15:13:17.930Z"
+                bp = models.Blueprint(
+                    id=bp_id,
+                    creator=self.user,
+                    tenant=self.tenant,
+                )
+                models.Blueprint(
+                    id=state,
+                    creator=self.user,
+                    tenant=self.tenant,
+                )
+                execution = self._execution(id=old_exec_id,
+                                            status=ExecutionState.TERMINATED,
+                                            started_at=prev_timestamp)
+                bp.upload_execution = execution
+
+                self.client.executions.create(
+                    execution_id=exec_id,
+                    workflow_id='upload_blueprint',
+                    deployment_id='',
+                    parameters={'blueprint_id': bp_id},
+                    force_status=state,
+                    started_at=timestamp,
+                )
+
+                assert self.sm.get(
+                    models.Blueprint,
+                    bp_id).upload_execution.id == old_exec_id,\
+                    f'Upload execution should not be updated for {state}'
+                assert self.sm.get(
+                    models.Blueprint, state).upload_execution is None,\
+                    f'Upload exec should not be set for other bp for {state}'
+
     def test_get_non_existent_execution(self):
         resource_path = '/executions/idonotexist'
         response = self.get(resource_path)
