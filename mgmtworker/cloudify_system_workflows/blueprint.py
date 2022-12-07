@@ -170,7 +170,7 @@ def upload(ctx, **kwargs):
     # Warn users re: using multiple rel's between the same source and target
     check_multiple_relationship_to_one_target(ctx, plan)
 
-    requirements = plan.pop('requirements', None) or {}
+    requirements = plan.get('requirements') or {}
     # Update DB with parsed plan
     update_dict = {
         'plan': plan,
