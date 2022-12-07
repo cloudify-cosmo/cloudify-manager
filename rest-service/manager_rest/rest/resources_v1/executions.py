@@ -221,49 +221,35 @@ class Executions(SecuredResource):
         return execution, 201
 
     def _process_linked_executions(self, execution, deployment, sm):
-        if deployment:
-            deployment_latest_time = None
-            if deployment.latest_execution is not None:
-                deployment_latest_time = parse_datetime_string(
-                    deployment.latest_execution.started_at)
+        def _should_update(execution, target_entity, target_attr):
+            attr = getattr(target_entity, target_attr)
+            if attr is None:
+                # Always update if the linked exec wasn't set
+                return True
+            else:
+                target_time = parse_datetime_string(attr.started_at)
+                if target_time < execution.started_at:
+                    return True
+            return False
 
+        if deployment:
             exec_relations_set = False
-            if (
-                deployment_latest_time is None
-                or (
-                    deployment_latest_time
-                    and deployment_latest_time < execution.started_at
-                )
-            ):
+            if _should_update(execution, deployment, 'latest_execution'):
                 deployment.latest_execution = execution
                 exec_relations_set = True
 
             if execution.workflow_id == \
                     'create_deployment_environment':
-                dep_create_time = None
-                if deployment.create_execution is not None:
-                    dep_create_time = parse_datetime_string(
-                        deployment.create_execution.started_at)
-                if (
-                    dep_create_time is None
-                    or dep_create_time < execution.started_at
-                ):
+                if _should_update(execution, deployment, 'create_execution'):
                     deployment.create_execution = execution
                     exec_relations_set = True
 
             if exec_relations_set:
                 sm.update(deployment)
         elif execution.workflow_id == 'upload_blueprint':
-            bp_id = execution.parameters['blueprint_id']
-            blueprint = sm.get(models.Blueprint, bp_id)
-            upload_time = None
-            if blueprint.upload_execution is not None:
-                upload_time = parse_datetime_string(
-                    blueprint.upload_execution.started_at)
-            if (
-                upload_time is None
-                or (upload_time and upload_time < execution.started_at)
-            ):
+            blueprint = sm.get(models.Blueprint,
+                               execution.parameters['blueprint_id'])
+            if _should_update(execution, blueprint, 'upload_execution'):
                 blueprint.upload_execution = execution
                 sm.update(blueprint)
 
