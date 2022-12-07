@@ -106,8 +106,9 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
         return import_url
 
     def _fetch_plugin_import(self, import_url, dsl_version):
-        import_url = self._resolve_plugin_yaml_url(import_url, dsl_version)
-        return super(ResolverWithCatalogSupport, self).fetch_import(import_url)
+        plugin = self.retrieve_plugin(import_url, dsl_version)
+        plugin_yaml = self.client.plugins.get_yaml(plugin.id, dsl_version)
+        return plugin_yaml
 
     @staticmethod
     def _make_plugin_filters(plugin_spec, version_constraints, mappings):
