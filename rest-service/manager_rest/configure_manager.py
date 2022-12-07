@@ -11,7 +11,7 @@ from collections.abc import MutableMapping
 
 from flask_security.utils import hash_password
 
-from manager_rest import config, constants
+from manager_rest import config, constants, permissions
 from manager_rest.storage import (
     db,
     models,
@@ -172,15 +172,7 @@ def _create_admin_user(user_config):
     admin_username = _get_admin_username(user_config)
     admin_password = _get_admin_password(user_config) or 'admin'
 
-    admin_role = models.Role.query.filter_by(name='sys_admin').first()
-    if not admin_role:
-        admin_role = models.Role(
-            name='sys_admin',
-            type='system_role',
-            description='User that can manage Cloudify',
-        )
-        db.session.add(admin_role)
-
+    admin_role = models.Role.query.filter_by(name='sys_admin').one()
     admin_user = user_datastore.create_user(
         id=constants.BOOTSTRAP_ADMIN_ID,
         username=admin_username,
@@ -202,15 +194,11 @@ def _setup_user_tenant_assoc(admin_user, default_tenant):
     )
 
     if not user_tenant_association:
-        user_role = user_datastore.find_role(constants.DEFAULT_TENANT_ROLE)
-        if not user_role:
-            user_role = models.Role(
-                name=constants.DEFAULT_TENANT_ROLE,
-                type='tenant_role',
-                description='Regular user, can perform actions '
-                            'on tenants resources'
-            )
-            db.session.add(user_role)
+        user_role = (
+            models.Role.query
+            .filter_by(name=constants.DEFAULT_TENANT_ROLE)
+            .one()
+        )
         user_tenant_association = models.UserTenantAssoc(
             user=admin_user,
             tenant=default_tenant,
@@ -232,46 +220,6 @@ def _create_provider_context(user_config):
         )
     pc.context = user_config.get('provider_context') or {}
     db.session.add(pc)
-
-
-def configure(user_config):
-    """Configure the manager based on the provided config"""
-    _register_rabbitmq_brokers(user_config)
-
-    default_tenant = _get_default_tenant()
-    need_assoc = False
-    if not default_tenant:
-        need_assoc = True
-        default_tenant = _create_default_tenant()
-
-    admin_user = user_datastore.get_user(constants.BOOTSTRAP_ADMIN_ID)
-    if admin_user:
-        _update_admin_user(admin_user, user_config)
-    else:
-        admin_user = _create_admin_user(user_config)
-        need_assoc = True
-
-    if need_assoc:
-        _setup_user_tenant_assoc(admin_user, default_tenant)
-
-    _create_provider_context(user_config)
-
-    db.session.commit()
-
-
-def _load_user_config(paths):
-    """Load and merge the config files provided by paths"""
-    user_config = {}
-    for config_path in paths:
-        if not config_path:
-            continue
-        try:
-            with open(config_path) as f:
-                config_source = yaml.safe_load(f)
-        except FileNotFoundError:
-            continue
-        dict_merge(user_config, config_source)
-    return user_config
 
 
 def _insert_rabbitmq_broker(brokers, ca_cert):
@@ -357,6 +305,96 @@ def _register_rabbitmq_brokers(user_config):
         # reload config after inserting rabbitmqs, so that .amqp_host
         # and others are set
         config.instance.load_from_db(session=db.session)
+
+
+def _create_roles(user_config):
+    default_roles = permissions.ROLES
+    roles_to_make = list(user_config.get('roles') or [])  # copy
+    seen_roles = {r['name'] for r in roles_to_make}
+
+    for default_role in default_roles:
+        if default_role['name'] not in seen_roles:
+            roles_to_make.append(default_role)
+
+    for role_spec in roles_to_make:
+        role = models.Role.query.filter_by(name=role_spec['name']).first()
+        if role is None:
+            role = models.Role(name=role_spec['name'])
+        role.description = role_spec.get('description')
+        role.type = role_spec.get('type', 'system_role')
+        db.session.add(role)
+
+
+def _create_permissions(user_config):
+    default_permissions = permissions.PERMISSIONS
+    permissions_to_make = dict(user_config.get('permissions') or {})  # copy
+
+    for default_permission in default_permissions:
+        if default_permission not in permissions_to_make:
+            permissions_to_make[default_permission] = set()
+
+    existing_permissions = {}
+    for p in models.Permission.query.all():
+        existing_permissions.setdefault(p.name, set()).add(p.role_name)
+
+    roles = {r.name: r for r in models.Role.query.all()}
+
+    for permission_name, role_names in permissions_to_make.items():
+        already_assigned = existing_permissions.get(permission_name, set())
+        missing_roles = set(role_names) | {'sys_admin'} - already_assigned
+
+        for role_name in missing_roles:
+            try:
+                role = roles[role_name]
+            except KeyError:
+                raise ValueError(
+                    f'Permission {permission_name} is assigned '
+                    f'to non-existent role {role_name}'
+                )
+            perm = models.Permission(
+                name=permission_name,
+                role=role,
+            )
+            db.session.add(perm)
+
+
+def configure(user_config):
+    """Configure the manager based on the provided config"""
+    _register_rabbitmq_brokers(user_config)
+
+    default_tenant = _get_default_tenant()
+    if not default_tenant:
+        default_tenant = _create_default_tenant()
+
+    _create_roles(user_config)
+    _create_permissions(user_config)
+
+    admin_user = user_datastore.get_user(constants.BOOTSTRAP_ADMIN_ID)
+    if admin_user:
+        _update_admin_user(admin_user, user_config)
+    else:
+        admin_user = _create_admin_user(user_config)
+
+    _setup_user_tenant_assoc(admin_user, default_tenant)
+
+    _create_provider_context(user_config)
+
+    db.session.commit()
+
+
+def _load_user_config(paths):
+    """Load and merge the config files provided by paths"""
+    user_config = {}
+    for config_path in paths:
+        if not config_path:
+            continue
+        try:
+            with open(config_path) as f:
+                config_source = yaml.safe_load(f)
+        except FileNotFoundError:
+            continue
+        dict_merge(user_config, config_source)
+    return user_config
 
 
 def _create_admin_token(target):
