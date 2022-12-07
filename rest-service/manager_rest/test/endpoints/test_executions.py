@@ -473,7 +473,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         for state in self.EXEC_NOT_SET_STATES:
             with self.subTest():
                 dep_id = f'dep_{state}'
-                self._deployment(dep_id)
+                deployment = self._deployment(dep_id)
                 assert self.sm.get(
                     models.Deployment, dep_id).latest_execution is None
                 self.client.executions.create(
@@ -482,15 +482,14 @@ class ExecutionsTestCase(BaseServerTestCase):
                     force_status=state,
                     started_at="2122-11-25T15:13:17.930Z",
                 )
-                assert self.sm.get(models.Deployment,
-                                   dep_id).latest_execution is None,\
+                assert deployment.latest_execution is None,\
                     f'Latest execution should not be set for {state}'
 
     def test_restore_set_latest_from_none(self):
         for state in self.EXEC_SET_STATES:
             with self.subTest():
                 dep_id = f'dep_{state}'
-                self._deployment(dep_id)
+                deployment = self._deployment(dep_id)
                 assert self.sm.get(
                     models.Deployment, dep_id).latest_execution is None
                 timestamp = "2122-11-25T15:13:17.930Z"
@@ -500,9 +499,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                     force_status=state,
                     started_at=timestamp,
                 )
-                assert self.sm.get(
-                    models.Deployment,
-                    dep_id).latest_execution.started_at == timestamp,\
+                assert deployment.latest_execution.started_at == timestamp,\
                     f'Latest execution should be set for {state}'
 
     def test_restore_not_set_latest_with_older_not_running(self):
@@ -529,9 +526,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                     started_at=timestamp,
                 )
 
-                assert self.sm.get(
-                    models.Deployment,
-                    dep_id).latest_execution.id == old_execution_id,\
+                assert deployment.latest_execution.id == old_execution_id,\
                     f'Latest execution should not be changed for {state}'
 
     def test_restore_set_latest_with_older(self):
@@ -558,9 +553,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                     started_at=timestamp,
                 )
 
-                assert self.sm.get(
-                    models.Deployment,
-                    dep_id).latest_execution.id == new_execution_id,\
+                assert deployment.latest_execution.id == new_execution_id,\
                     f'Latest execution should be changed for {state}'
 
     def test_restore_not_set_latest_with_newer(self):
@@ -585,9 +578,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                     started_at=timestamp,
                 )
 
-                assert self.sm.get(
-                    models.Deployment,
-                    dep_id).latest_execution.id == old_execution_id,\
+                assert deployment.latest_execution.id == old_execution_id,\
                     f'Latest execution should not be changed for {state}'
 
     def test_restore_not_set_create_exec_from_none(self):
@@ -596,7 +587,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                 dep_id = f'dep_{state}'
                 timestamp = "2122-11-25T15:13:17.930Z"
                 execution_id = f'create_for_{state}'
-                self._deployment(dep_id)
+                deployment = self._deployment(dep_id)
 
                 self.client.executions.create(
                     execution_id=execution_id,
@@ -606,8 +597,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                     started_at=timestamp,
                 )
 
-                assert self.sm.get(
-                    models.Deployment, dep_id).create_execution is None,\
+                assert deployment.create_execution is None,\
                     f'Create execution should not be set for {state}'
 
     def test_restore_set_create_exec_from_none(self):
@@ -616,7 +606,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                 dep_id = f'dep_{state}'
                 timestamp = "2122-11-25T15:13:17.930Z"
                 execution_id = f'create_for_{state}'
-                self._deployment(dep_id)
+                deployment = self._deployment(dep_id)
 
                 self.client.executions.create(
                     execution_id=execution_id,
@@ -626,9 +616,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                     started_at=timestamp,
                 )
 
-                assert self.sm.get(
-                    models.Deployment,
-                    dep_id).create_execution.id == execution_id,\
+                assert deployment.create_execution.id == execution_id,\
                     f'Create execution should be set for {state}'
 
     def test_restore_not_set_create_with_older_not_running(self):
@@ -656,9 +644,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                     started_at=timestamp,
                 )
 
-                assert self.sm.get(
-                    models.Deployment,
-                    dep_id).create_execution.id == old_execution_id,\
+                assert deployment.create_execution.id == old_execution_id,\
                     f'Create execution should not be changed for {state}'
 
     def test_restore_set_create_with_older(self):
@@ -686,9 +672,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                     started_at=timestamp,
                 )
 
-                assert self.sm.get(
-                    models.Deployment,
-                    dep_id).create_execution.id == new_execution_id,\
+                assert deployment.create_execution.id == new_execution_id,\
                     f'Create execution should be changed for {state}'
 
     def test_restore_not_set_create_with_newer(self):
@@ -714,9 +698,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                     started_at=timestamp,
                 )
 
-                assert self.sm.get(
-                    models.Deployment,
-                    dep_id).create_execution.id == old_execution_id,\
+                assert deployment.create_execution.id == old_execution_id,\
                     f'Create execution should not be changed for {state}'
 
     def test_restore_not_set_upload_from_none(self):
@@ -724,12 +706,12 @@ class ExecutionsTestCase(BaseServerTestCase):
             with self.subTest():
                 bp_id = f'bp_{state}'
                 execution_id = f'upload_for_{state}'
-                models.Blueprint(
+                bp1 = models.Blueprint(
                     id=bp_id,
                     creator=self.user,
                     tenant=self.tenant,
                 )
-                models.Blueprint(
+                bp2 = models.Blueprint(
                     id=state,
                     creator=self.user,
                     tenant=self.tenant,
@@ -743,11 +725,9 @@ class ExecutionsTestCase(BaseServerTestCase):
                     force_status=state,
                 )
 
-                assert self.sm.get(
-                    models.Blueprint, bp_id).upload_execution is None,\
+                assert bp1.upload_execution is None,\
                     f'Upload execution should not be set for {state}'
-                assert self.sm.get(
-                    models.Blueprint, state).upload_execution is None,\
+                assert bp2.upload_execution is None,\
                     f'Upload exec should not be set for other bp for {state}'
 
     def test_restore_set_upload_from_none(self):
@@ -755,12 +735,12 @@ class ExecutionsTestCase(BaseServerTestCase):
             with self.subTest():
                 bp_id = f'bp_{state}'
                 exec_id = f'upload_for_{state}'
-                models.Blueprint(
+                bp1 = models.Blueprint(
                     id=bp_id,
                     creator=self.user,
                     tenant=self.tenant,
                 )
-                models.Blueprint(
+                bp2 = models.Blueprint(
                     id=state,
                     creator=self.user,
                     tenant=self.tenant,
@@ -774,11 +754,9 @@ class ExecutionsTestCase(BaseServerTestCase):
                     force_status=state,
                 )
 
-                assert self.sm.get(
-                    models.Blueprint, bp_id).upload_execution.id == exec_id,\
+                assert bp1.upload_execution.id == exec_id,\
                     f'Upload execution should be set for {state}'
-                assert self.sm.get(
-                    models.Blueprint, state).upload_execution is None,\
+                assert bp2.upload_execution is None,\
                     f'Upload exec should not be set for other bp for {state}'
 
     def test_restore_not_set_upload_with_newer(self):
@@ -792,12 +770,12 @@ class ExecutionsTestCase(BaseServerTestCase):
                 exec_id = f'upload_for_{state}'
                 prev_timestamp = "2222-11-25T15:13:17.930Z"
                 timestamp = "2122-11-25T15:13:17.930Z"
-                bp = models.Blueprint(
+                bp1 = models.Blueprint(
                     id=bp_id,
                     creator=self.user,
                     tenant=self.tenant,
                 )
-                models.Blueprint(
+                bp2 = models.Blueprint(
                     id=state,
                     creator=self.user,
                     tenant=self.tenant,
@@ -805,7 +783,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                 execution = self._execution(id=old_exec_id,
                                             status=ExecutionState.TERMINATED,
                                             started_at=prev_timestamp)
-                bp.upload_execution = execution
+                bp1.upload_execution = execution
 
                 self.client.executions.create(
                     execution_id=exec_id,
@@ -816,12 +794,9 @@ class ExecutionsTestCase(BaseServerTestCase):
                     started_at=timestamp,
                 )
 
-                assert self.sm.get(
-                    models.Blueprint,
-                    bp_id).upload_execution.id == old_exec_id,\
+                assert bp1.upload_execution.id == old_exec_id,\
                     f'Upload execution should not be updated for {state}'
-                assert self.sm.get(
-                    models.Blueprint, state).upload_execution is None,\
+                assert bp2.upload_execution is None,\
                     f'Upload exec should not be set for other bp for {state}'
 
     def test_restore_set_upload_with_older(self):
@@ -835,12 +810,12 @@ class ExecutionsTestCase(BaseServerTestCase):
                 exec_id = f'upload_for_{state}'
                 prev_timestamp = "2022-11-25T15:13:17.930Z"
                 timestamp = "2122-11-25T15:13:17.930Z"
-                bp = models.Blueprint(
+                bp1 = models.Blueprint(
                     id=bp_id,
                     creator=self.user,
                     tenant=self.tenant,
                 )
-                models.Blueprint(
+                bp2 = models.Blueprint(
                     id=state,
                     creator=self.user,
                     tenant=self.tenant,
@@ -848,7 +823,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                 execution = self._execution(id=old_exec_id,
                                             status=ExecutionState.TERMINATED,
                                             started_at=prev_timestamp)
-                bp.upload_execution = execution
+                bp1.upload_execution = execution
 
                 self.client.executions.create(
                     execution_id=exec_id,
@@ -859,12 +834,9 @@ class ExecutionsTestCase(BaseServerTestCase):
                     started_at=timestamp,
                 )
 
-                assert self.sm.get(
-                    models.Blueprint,
-                    bp_id).upload_execution.id == exec_id,\
+                assert bp1.upload_execution.id == exec_id,\
                     f'Upload execution should not be updated for {state}'
-                assert self.sm.get(
-                    models.Blueprint, state).upload_execution is None,\
+                assert bp2.upload_execution is None,\
                     f'Upload exec should not be set for other bp for {state}'
 
     def test_restore_not_set_upload_with_older(self):
@@ -878,12 +850,12 @@ class ExecutionsTestCase(BaseServerTestCase):
                 exec_id = f'upload_for_{state}'
                 prev_timestamp = "2022-11-25T15:13:17.930Z"
                 timestamp = "2122-11-25T15:13:17.930Z"
-                bp = models.Blueprint(
+                bp1 = models.Blueprint(
                     id=bp_id,
                     creator=self.user,
                     tenant=self.tenant,
                 )
-                models.Blueprint(
+                bp2 = models.Blueprint(
                     id=state,
                     creator=self.user,
                     tenant=self.tenant,
@@ -891,7 +863,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                 execution = self._execution(id=old_exec_id,
                                             status=ExecutionState.TERMINATED,
                                             started_at=prev_timestamp)
-                bp.upload_execution = execution
+                bp1.upload_execution = execution
 
                 self.client.executions.create(
                     execution_id=exec_id,
@@ -902,12 +874,9 @@ class ExecutionsTestCase(BaseServerTestCase):
                     started_at=timestamp,
                 )
 
-                assert self.sm.get(
-                    models.Blueprint,
-                    bp_id).upload_execution.id == old_exec_id,\
+                assert bp1.upload_execution.id == old_exec_id,\
                     f'Upload execution should not be updated for {state}'
-                assert self.sm.get(
-                    models.Blueprint, state).upload_execution is None,\
+                assert bp2.upload_execution is None,\
                     f'Upload exec should not be set for other bp for {state}'
 
     def test_get_non_existent_execution(self):
