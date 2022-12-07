@@ -183,6 +183,7 @@ class Executions(SecuredResource):
                 'force': force,
                 'error': error,
             }
+            deployment = None
             if deployment_id:
                 deployment = sm.get(models.Deployment, deployment_id)
                 rm.verify_deployment_environment_created_successfully(
@@ -206,51 +207,7 @@ class Executions(SecuredResource):
                 and force_status not in ExecutionState.WAITING_STATES
                 and force_status != ExecutionState.PENDING
             ):
-                if deployment_id:
-                    deployment_latest_time = None
-                    if deployment.latest_execution is not None:
-                        deployment_latest_time = parse_datetime_string(
-                            deployment.latest_execution.started_at)
-
-                    exec_relations_set = False
-                    if (
-                        deployment_latest_time is None
-                        or (
-                            deployment_latest_time
-                            and deployment_latest_time < started_at
-                        )
-                    ):
-                        deployment.latest_execution = execution
-                        exec_relations_set = True
-
-                    if execution.workflow_id == \
-                            'create_deployment_environment':
-                        dep_create_time = None
-                        if deployment.create_execution is not None:
-                            dep_create_time = parse_datetime_string(
-                                deployment.create_execution.started_at)
-                        if (
-                            dep_create_time is None
-                            or dep_create_time < started_at
-                        ):
-                            deployment.create_execution = execution
-                            exec_relations_set = True
-
-                    if exec_relations_set:
-                        sm.update(deployment)
-                elif execution.workflow_id == 'upload_blueprint':
-                    bp_id = execution.parameters['blueprint_id']
-                    blueprint = sm.get(models.Blueprint, bp_id)
-                    upload_time = None
-                    if blueprint.upload_execution is not None:
-                        upload_time = parse_datetime_string(
-                            blueprint.upload_execution.started_at)
-                    if (
-                        upload_time is None
-                        or (upload_time and upload_time < started_at)
-                    ):
-                        blueprint.upload_execution = execution
-                        sm.update(blueprint)
+                self._process_linked_executions(execution, deployment, sm)
 
             if not force_status:
                 messages = rm.prepare_executions(
@@ -262,6 +219,53 @@ class Executions(SecuredResource):
                 )
         workflow_executor.execute_workflow(messages)
         return execution, 201
+
+    def _process_linked_executions(self, execution, deployment, sm):
+        if deployment:
+            deployment_latest_time = None
+            if deployment.latest_execution is not None:
+                deployment_latest_time = parse_datetime_string(
+                    deployment.latest_execution.started_at)
+
+            exec_relations_set = False
+            if (
+                deployment_latest_time is None
+                or (
+                    deployment_latest_time
+                    and deployment_latest_time < execution.started_at
+                )
+            ):
+                deployment.latest_execution = execution
+                exec_relations_set = True
+
+            if execution.workflow_id == \
+                    'create_deployment_environment':
+                dep_create_time = None
+                if deployment.create_execution is not None:
+                    dep_create_time = parse_datetime_string(
+                        deployment.create_execution.started_at)
+                if (
+                    dep_create_time is None
+                    or dep_create_time < execution.started_at
+                ):
+                    deployment.create_execution = execution
+                    exec_relations_set = True
+
+            if exec_relations_set:
+                sm.update(deployment)
+        elif execution.workflow_id == 'upload_blueprint':
+            bp_id = execution.parameters['blueprint_id']
+            blueprint = sm.get(models.Blueprint, bp_id)
+            upload_time = None
+            if blueprint.upload_execution is not None:
+                upload_time = parse_datetime_string(
+                    blueprint.upload_execution.started_at)
+            if (
+                upload_time is None
+                or (upload_time and upload_time < execution.started_at)
+            ):
+                blueprint.upload_execution = execution
+                sm.update(blueprint)
 
     def _parse_scheduled_time(self, scheduled_time):
         scheduled_utc = parse_datetime_string(scheduled_time)
