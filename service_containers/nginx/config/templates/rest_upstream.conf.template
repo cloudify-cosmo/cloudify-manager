@@ -1,10 +1,18 @@
-# Upstream for Cloudify's Rest Service.
 upstream cloudify-rest {
   server rest_service:${REST_SERVICE_PORT};
 }
 
 upstream fileserver {
   server fileserver:${FILESERVER_PORT};
+}
+
+upstream cloudify-stage {
+  server stage_frontend:3000;
+}
+
+
+upstream cloudify-stage-backend {
+  server stage_backend:8088;
 }
 
 # REST and UI external server
@@ -24,6 +32,7 @@ server {
 
   # Serves the Fileserver.
   include "/etc/nginx/conf.d/fileserver.cloudify";
+  include "/etc/nginx/conf.d/ui-locations.cloudify";
 }
 
 # like the above, but on 80, without ssl. While still in development, we'd like
@@ -34,6 +43,7 @@ server {
   include "/etc/nginx/conf.d/logs-conf.cloudify";
   include "/etc/nginx/conf.d/rest-location.cloudify";
   include "/etc/nginx/conf.d/fileserver.cloudify";
+  include "/etc/nginx/conf.d/ui-locations.cloudify";
 }
 
 # REST and UI internal server - always SSL enabled
