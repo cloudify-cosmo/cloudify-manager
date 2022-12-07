@@ -207,7 +207,6 @@ class Executions(SecuredResource):
                 and force_status != ExecutionState.PENDING
             ):
                 if deployment_id:
-                    deployment = sm.get(models.Deployment, deployment_id)
                     deployment_latest_time = None
                     if deployment.latest_execution is not None:
                         deployment_latest_time = parse_datetime_string(
