@@ -265,6 +265,7 @@ class BlueprintsId(resources_v2.BlueprintsId):
 
         request_schema = {
             'plan': {'type': dict, 'optional': True},
+            'requirements': {'type': dict, 'optional': True},
             'description': {'type': str, 'optional': True},
             'main_file_name': {'type': str, 'optional': True},
             'visibility': {'type': str, 'optional': True},
@@ -326,6 +327,8 @@ class BlueprintsId(resources_v2.BlueprintsId):
         # set other blueprint attributes.
         if 'plan' in request_dict:
             blueprint.plan = request_dict['plan']
+        if 'requirements' in request_dict:
+            blueprint.requirements = request_dict['requirements']
         if 'description' in request_dict:
             blueprint.description = request_dict['description']
         if 'main_file_name' in request_dict:

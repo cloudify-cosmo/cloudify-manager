@@ -36,6 +36,19 @@ from manager_rest.manager_exceptions import (
 
 SecretType = namedtuple('SecretType', 'key value')
 
+SECRETS_PROVIDER_SCHEMA = {
+    'vault': {
+        'connection_parameters': [
+            'url',
+            'token',
+            'path',
+        ],
+    },
+    'local': {
+        'connection_parameters': [],
+    },
+}
+
 
 def evaluate_node(node):
     # dsl-parser uses name in plans, while the db storage uses id :(
@@ -162,7 +175,7 @@ def _get_secret_from_vault(url, token, path, key):
     return secret_value
 
 
-def _get_vault_path_details(url, token, path):
+def _get_vault_response(url, token, path):
     response = requests.get(
         f'{url}/v1/secret/data/{path}',
         headers={
@@ -170,7 +183,29 @@ def _get_vault_path_details(url, token, path):
         }
     )
 
+    return response
+
+
+def _get_vault_path_details(url, token, path):
+    response = _get_vault_response(url, token, path)
+
     return response.json()
+
+
+def check_vault_connection(url, token, path):
+    vault_status = {
+        'status': True,
+        'message': '',
+    }
+
+    try:
+        response = _get_vault_response(url, token, path)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as error:
+        vault_status['status'] = False
+        vault_status['message'] = error
+
+    return vault_status
 
 
 class FunctionEvaluationStorage(object):

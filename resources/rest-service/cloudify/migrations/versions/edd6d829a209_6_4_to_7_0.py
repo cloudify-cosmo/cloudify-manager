@@ -47,9 +47,11 @@ def upgrade():
     add_secrets_schema()
     add_secrets_provider_relationship()
     add_s3_client_config()
+    add_blueprint_requirements_column()
 
 
 def downgrade():
+    drop_blueprint_requirements_column()
     drop_s3_client_config()
     downgrade_users_roles_constraints()
     remove_json_columns()
@@ -737,3 +739,14 @@ def drop_s3_client_config():
                 & (config_table.c.scope == op.inline_literal('rest'))
             )
         )
+
+
+def add_blueprint_requirements_column():
+    op.add_column(
+        'blueprints',
+        sa.Column('requirements', JSONString(), nullable=True),
+    )
+
+
+def drop_blueprint_requirements_column():
+    op.drop_column('blueprints', 'requirements')
