@@ -12,6 +12,9 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+import os
+import shutil
+import tempfile
 
 import pytest
 import retrying
@@ -218,6 +221,32 @@ class TestPlugins(AgentlessTestCase):
             'ns2--integer_property': 67890,
             'ns2--list_property': [9, 8, 7],
         }
+
+    @pytest.mark.usefixtures('dsl_backcompat_plugin')
+    def test_list_yaml_files(self):
+        plugins = self.client.plugins.list(package_name='dsl_backcompat')
+        plugin_id = plugins[0].id
+        try:
+            with tempfile.TemporaryDirectory() as tmpdir:
+
+                yamls = self.client.plugins.list_yaml_files(plugin_id)
+                assert len(yamls) == 2
+
+                yamls = self.client.plugins.list_yaml_files(plugin_id, '1_3')
+                assert len(yamls) == 1
+                assert yamls[0].endswith('/plugin_1_3.yaml')
+
+                yamls = self.client.plugins.list_yaml_files(plugin_id, '1_4')
+                assert len(yamls) == 1
+                assert yamls[0].endswith('/plugin.yaml')
+
+                yamls = self.client.plugins.list_yaml_files(plugin_id, '1_5')
+                assert len(yamls) == 1
+                assert yamls[0].endswith('/plugin.yaml')
+
+        finally:
+            if os.path.isdir(tmpdir):
+                shutil.rmtree(tmpdir)
 
 
 class TestPluginsSystemState(AgentlessTestCase):

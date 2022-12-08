@@ -1,1 +1,280 @@
-[{"created_at": "2022-11-25T15:14:39.191Z", "id": "6d4e2e5e-87aa-471b-a1e0-4bc8a48a4ec3", "name": "update_check_drift", "execution_id": "bb5cb4c7-f2f0-415c-a8c9-a927dd0c0018", "operations": [{"created_at": "2022-11-25T15:14:39.191Z", "id": "184e9c1a-b951-4954-a566-60dc5822453a", "name": "NOP", "state": "pending", "dependencies": [], "type": "NOPLocalWorkflowTask", "parameters": {"on_success": {"path": "cloudify.plugins.workflows.check_drift_on_success"}, "on_failure": {"path": "cloudify.plugins.workflows.check_drift_on_failure_ignore_failure"}, "retried_task": null, "current_retries": 0, "send_task_events": true, "retry_interval": 30, "total_retries": -1, "info": null, "error": null, "containing_subgraph": null, "task_kwargs": {}}, "manager_name": null, "agent_name": null}, {"created_at": "2022-11-25T15:14:39.191Z", "id": "6fec3a87-eff4-47be-a519-6787cf10b0d2", "name": "NOP", "state": "pending", "dependencies": [], "type": "NOPLocalWorkflowTask", "parameters": {"on_success": {"path": "cloudify.plugins.workflows.check_drift_on_success"}, "on_failure": {"path": "cloudify.plugins.workflows.check_drift_on_failure_ignore_failure"}, "retried_task": null, "current_retries": 0, "send_task_events": true, "retry_interval": 30, "total_retries": -1, "info": null, "error": null, "containing_subgraph": null, "task_kwargs": {}}, "manager_name": null, "agent_name": null}, {"created_at": "2022-11-25T15:14:39.191Z", "id": "b5eaf709-958e-4ad2-bc6d-9759231f21c6", "name": "NOP", "state": "pending", "dependencies": [], "type": "NOPLocalWorkflowTask", "parameters": {"on_success": {"path": "cloudify.plugins.workflows.check_drift_on_success"}, "on_failure": {"path": "cloudify.plugins.workflows.check_drift_on_failure_ignore_failure"}, "retried_task": null, "current_retries": 0, "send_task_events": true, "retry_interval": 30, "total_retries": -1, "info": null, "error": null, "containing_subgraph": null, "task_kwargs": {}}, "manager_name": null, "agent_name": null}, {"created_at": "2022-11-25T15:14:39.191Z", "id": "e68b92ce-40d4-4f12-94f9-cc57e57c7e84", "name": "NOP", "state": "pending", "dependencies": [], "type": "NOPLocalWorkflowTask", "parameters": {"on_success": {"path": "cloudify.plugins.workflows.check_drift_on_success"}, "on_failure": {"path": "cloudify.plugins.workflows.check_drift_on_failure_ignore_failure"}, "retried_task": null, "current_retries": 0, "send_task_events": true, "retry_interval": 30, "total_retries": -1, "info": null, "error": null, "containing_subgraph": null, "task_kwargs": {}}, "manager_name": null, "agent_name": null}, {"created_at": "2022-11-25T15:14:39.191Z", "id": "b1e864e9-173a-478a-9301-06abbbb01a5b", "name": "NOP", "state": "pending", "dependencies": [], "type": "NOPLocalWorkflowTask", "parameters": {"on_success": {"path": "cloudify.plugins.workflows.check_drift_on_success"}, "on_failure": {"path": "cloudify.plugins.workflows.check_drift_on_failure_ignore_failure"}, "retried_task": null, "current_retries": 0, "send_task_events": true, "retry_interval": 30, "total_retries": -1, "info": null, "error": null, "containing_subgraph": null, "task_kwargs": {}}, "manager_name": null, "agent_name": null}, {"created_at": "2022-11-25T15:14:39.191Z", "id": "c4036e0b-f430-4fa9-a3a2-9f8a120ac0b6", "name": "NOP", "state": "pending", "dependencies": [], "type": "NOPLocalWorkflowTask", "parameters": {"on_success": {"path": "cloudify.plugins.workflows.check_drift_on_success"}, "on_failure": {"path": "cloudify.plugins.workflows.check_drift_on_failure_ignore_failure"}, "retried_task": null, "current_retries": 0, "send_task_events": true, "retry_interval": 30, "total_retries": -1, "info": null, "error": null, "containing_subgraph": null, "task_kwargs": {}}, "manager_name": null, "agent_name": null}, {"created_at": "2022-11-25T15:14:39.191Z", "id": "c532bcbf-32b2-4b0f-98fe-702de539119d", "name": "NOP", "state": "pending", "dependencies": [], "type": "NOPLocalWorkflowTask", "parameters": {"on_success": {"path": "cloudify.plugins.workflows.check_drift_on_success"}, "on_failure": {"path": "cloudify.plugins.workflows.check_drift_on_failure_ignore_failure"}, "retried_task": null, "current_retries": 0, "send_task_events": true, "retry_interval": 30, "total_retries": -1, "info": null, "error": null, "containing_subgraph": null, "task_kwargs": {}}, "manager_name": null, "agent_name": null}, {"created_at": "2022-11-25T15:14:39.191Z", "id": "6d1c0195-c6ef-4be9-8fd2-c2102c10e97b", "name": "NOP", "state": "pending", "dependencies": [], "type": "NOPLocalWorkflowTask", "parameters": {"on_success": {"path": "cloudify.plugins.workflows.check_drift_on_success"}, "on_failure": {"path": "cloudify.plugins.workflows.check_drift_on_failure_ignore_failure"}, "retried_task": null, "current_retries": 0, "send_task_events": true, "retry_interval": 30, "total_retries": -1, "info": null, "error": null, "containing_subgraph": null, "task_kwargs": {}}, "manager_name": null, "agent_name": null}, {"created_at": "2022-11-25T15:14:39.191Z", "id": "b55facb7-cf85-4be1-8db9-b53ff675e1a9", "name": "NOP", "state": "pending", "dependencies": [], "type": "NOPLocalWorkflowTask", "parameters": {"on_success": {"path": "cloudify.plugins.workflows.check_drift_on_success"}, "on_failure": {"path": "cloudify.plugins.workflows.check_drift_on_failure_ignore_failure"}, "retried_task": null, "current_retries": 0, "send_task_events": true, "retry_interval": 30, "total_retries": -1, "info": null, "error": null, "containing_subgraph": null, "task_kwargs": {}}, "manager_name": null, "agent_name": null}, {"created_at": "2022-11-25T15:14:39.191Z", "id": "c0769191-f9f8-47c8-9770-900440140241", "name": "NOP", "state": "pending", "dependencies": [], "type": "NOPLocalWorkflowTask", "parameters": {"on_success": {"path": "cloudify.plugins.workflows.check_drift_on_success"}, "on_failure": {"path": "cloudify.plugins.workflows.check_drift_on_failure_ignore_failure"}, "retried_task": null, "current_retries": 0, "send_task_events": true, "retry_interval": 30, "total_retries": -1, "info": null, "error": null, "containing_subgraph": null, "task_kwargs": {}}, "manager_name": null, "agent_name": null}]}]
+[
+    {
+        "created_at": "2022-11-25T15:14:39.191Z",
+        "id": "6d4e2e5e-87aa-471b-a1e0-4bc8a48a4ec3",
+        "name": "update_check_drift",
+        "execution_id": "bb5cb4c7-f2f0-415c-a8c9-a927dd0c0018",
+        "operations": [
+            {
+                "created_at": "2022-11-25T15:14:39.191Z",
+                "id": "184e9c1a-b951-4954-a566-60dc5822453a",
+                "name": "NOP",
+                "state": "pending",
+                "dependencies": [],
+                "type": "NOPLocalWorkflowTask",
+                "parameters": {
+                    "on_success": {
+                        "path": "cloudify.plugins.workflows.check_drift_on_success"
+                    },
+                    "on_failure": {
+                        "path": "cloudify.plugins.workflows.check_drift_on_failure_ignore_failure"
+                    },
+                    "retried_task": null,
+                    "current_retries": 0,
+                    "send_task_events": true,
+                    "retry_interval": 30,
+                    "total_retries": -1,
+                    "info": null,
+                    "error": null,
+                    "containing_subgraph": null,
+                    "task_kwargs": {}
+                },
+                "manager_name": null,
+                "agent_name": null
+            },
+            {
+                "created_at": "2022-11-25T15:14:39.191Z",
+                "id": "6fec3a87-eff4-47be-a519-6787cf10b0d2",
+                "name": "NOP",
+                "state": "pending",
+                "dependencies": [],
+                "type": "NOPLocalWorkflowTask",
+                "parameters": {
+                    "on_success": {
+                        "path": "cloudify.plugins.workflows.check_drift_on_success"
+                    },
+                    "on_failure": {
+                        "path": "cloudify.plugins.workflows.check_drift_on_failure_ignore_failure"
+                    },
+                    "retried_task": null,
+                    "current_retries": 0,
+                    "send_task_events": true,
+                    "retry_interval": 30,
+                    "total_retries": -1,
+                    "info": null,
+                    "error": null,
+                    "containing_subgraph": null,
+                    "task_kwargs": {}
+                },
+                "manager_name": null,
+                "agent_name": null
+            },
+            {
+                "created_at": "2022-11-25T15:14:39.191Z",
+                "id": "b5eaf709-958e-4ad2-bc6d-9759231f21c6",
+                "name": "NOP",
+                "state": "pending",
+                "dependencies": [],
+                "type": "NOPLocalWorkflowTask",
+                "parameters": {
+                    "on_success": {
+                        "path": "cloudify.plugins.workflows.check_drift_on_success"
+                    },
+                    "on_failure": {
+                        "path": "cloudify.plugins.workflows.check_drift_on_failure_ignore_failure"
+                    },
+                    "retried_task": null,
+                    "current_retries": 0,
+                    "send_task_events": true,
+                    "retry_interval": 30,
+                    "total_retries": -1,
+                    "info": null,
+                    "error": null,
+                    "containing_subgraph": null,
+                    "task_kwargs": {}
+                },
+                "manager_name": null,
+                "agent_name": null
+            },
+            {
+                "created_at": "2022-11-25T15:14:39.191Z",
+                "id": "e68b92ce-40d4-4f12-94f9-cc57e57c7e84",
+                "name": "NOP",
+                "state": "pending",
+                "dependencies": [],
+                "type": "NOPLocalWorkflowTask",
+                "parameters": {
+                    "on_success": {
+                        "path": "cloudify.plugins.workflows.check_drift_on_success"
+                    },
+                    "on_failure": {
+                        "path": "cloudify.plugins.workflows.check_drift_on_failure_ignore_failure"
+                    },
+                    "retried_task": null,
+                    "current_retries": 0,
+                    "send_task_events": true,
+                    "retry_interval": 30,
+                    "total_retries": -1,
+                    "info": null,
+                    "error": null,
+                    "containing_subgraph": null,
+                    "task_kwargs": {}
+                },
+                "manager_name": null,
+                "agent_name": null
+            },
+            {
+                "created_at": "2022-11-25T15:14:39.191Z",
+                "id": "b1e864e9-173a-478a-9301-06abbbb01a5b",
+                "name": "NOP",
+                "state": "pending",
+                "dependencies": [],
+                "type": "NOPLocalWorkflowTask",
+                "parameters": {
+                    "on_success": {
+                        "path": "cloudify.plugins.workflows.check_drift_on_success"
+                    },
+                    "on_failure": {
+                        "path": "cloudify.plugins.workflows.check_drift_on_failure_ignore_failure"
+                    },
+                    "retried_task": null,
+                    "current_retries": 0,
+                    "send_task_events": true,
+                    "retry_interval": 30,
+                    "total_retries": -1,
+                    "info": null,
+                    "error": null,
+                    "containing_subgraph": null,
+                    "task_kwargs": {}
+                },
+                "manager_name": null,
+                "agent_name": null
+            },
+            {
+                "created_at": "2022-11-25T15:14:39.191Z",
+                "id": "c4036e0b-f430-4fa9-a3a2-9f8a120ac0b6",
+                "name": "NOP",
+                "state": "pending",
+                "dependencies": [],
+                "type": "NOPLocalWorkflowTask",
+                "parameters": {
+                    "on_success": {
+                        "path": "cloudify.plugins.workflows.check_drift_on_success"
+                    },
+                    "on_failure": {
+                        "path": "cloudify.plugins.workflows.check_drift_on_failure_ignore_failure"
+                    },
+                    "retried_task": null,
+                    "current_retries": 0,
+                    "send_task_events": true,
+                    "retry_interval": 30,
+                    "total_retries": -1,
+                    "info": null,
+                    "error": null,
+                    "containing_subgraph": null,
+                    "task_kwargs": {}
+                },
+                "manager_name": null,
+                "agent_name": null
+            },
+            {
+                "created_at": "2022-11-25T15:14:39.191Z",
+                "id": "c532bcbf-32b2-4b0f-98fe-702de539119d",
+                "name": "NOP",
+                "state": "pending",
+                "dependencies": [],
+                "type": "NOPLocalWorkflowTask",
+                "parameters": {
+                    "on_success": {
+                        "path": "cloudify.plugins.workflows.check_drift_on_success"
+                    },
+                    "on_failure": {
+                        "path": "cloudify.plugins.workflows.check_drift_on_failure_ignore_failure"
+                    },
+                    "retried_task": null,
+                    "current_retries": 0,
+                    "send_task_events": true,
+                    "retry_interval": 30,
+                    "total_retries": -1,
+                    "info": null,
+                    "error": null,
+                    "containing_subgraph": null,
+                    "task_kwargs": {}
+                },
+                "manager_name": null,
+                "agent_name": null
+            },
+            {
+                "created_at": "2022-11-25T15:14:39.191Z",
+                "id": "6d1c0195-c6ef-4be9-8fd2-c2102c10e97b",
+                "name": "NOP",
+                "state": "pending",
+                "dependencies": [],
+                "type": "NOPLocalWorkflowTask",
+                "parameters": {
+                    "on_success": {
+                        "path": "cloudify.plugins.workflows.check_drift_on_success"
+                    },
+                    "on_failure": {
+                        "path": "cloudify.plugins.workflows.check_drift_on_failure_ignore_failure"
+                    },
+                    "retried_task": null,
+                    "current_retries": 0,
+                    "send_task_events": true,
+                    "retry_interval": 30,
+                    "total_retries": -1,
+                    "info": null,
+                    "error": null,
+                    "containing_subgraph": null,
+                    "task_kwargs": {}
+                },
+                "manager_name": null,
+                "agent_name": null
+            },
+            {
+                "created_at": "2022-11-25T15:14:39.191Z",
+                "id": "b55facb7-cf85-4be1-8db9-b53ff675e1a9",
+                "name": "NOP",
+                "state": "pending",
+                "dependencies": [],
+                "type": "NOPLocalWorkflowTask",
+                "parameters": {
+                    "on_success": {
+                        "path": "cloudify.plugins.workflows.check_drift_on_success"
+                    },
+                    "on_failure": {
+                        "path": "cloudify.plugins.workflows.check_drift_on_failure_ignore_failure"
+                    },
+                    "retried_task": null,
+                    "current_retries": 0,
+                    "send_task_events": true,
+                    "retry_interval": 30,
+                    "total_retries": -1,
+                    "info": null,
+                    "error": null,
+                    "containing_subgraph": null,
+                    "task_kwargs": {}
+                },
+                "manager_name": null,
+                "agent_name": null
+            },
+            {
+                "created_at": "2022-11-25T15:14:39.191Z",
+                "id": "c0769191-f9f8-47c8-9770-900440140241",
+                "name": "NOP",
+                "state": "pending",
+                "dependencies": [],
+                "type": "NOPLocalWorkflowTask",
+                "parameters": {
+                    "on_success": {
+                        "path": "cloudify.plugins.workflows.check_drift_on_success"
+                    },
+                    "on_failure": {
+                        "path": "cloudify.plugins.workflows.check_drift_on_failure_ignore_failure"
+                    },
+                    "retried_task": null,
+                    "current_retries": 0,
+                    "send_task_events": true,
+                    "retry_interval": 30,
+                    "total_retries": -1,
+                    "info": null,
+                    "error": null,
+                    "containing_subgraph": null,
+                    "task_kwargs": {}
+                },
+                "manager_name": null,
+                "agent_name": null
+            }
+        ]
+    }
+]
