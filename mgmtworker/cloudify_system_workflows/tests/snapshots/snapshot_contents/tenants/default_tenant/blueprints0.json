@@ -7,6 +7,9 @@
         "plan": {
             "someplan": "here"
         },
+        "requirements": {
+            "parent_capabilities": []
+        },
         "description": null,
         "is_hidden": false,
         "state": "uploaded",
