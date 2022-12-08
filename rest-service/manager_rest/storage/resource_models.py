@@ -308,8 +308,15 @@ class SecretsProvider(CreatedAtMixin, SQLResourceBase):
 
     name = db.Column(db.Text, nullable=False)
     type = db.Column(db.Text, nullable=False)
-    connection_parameters = db.Column(JSONString, nullable=True)
+    connection_parameters = db.Column(db.Text, nullable=True)
     updated_at = db.Column(UTCDateTime)
+
+    @classproperty
+    def resource_fields(cls):
+        fields = super().resource_fields
+        fields['connection_parameters'] = flask_fields.Raw
+
+        return fields
 
 
 class Secret(CreatedAtMixin, SQLResourceBase):
