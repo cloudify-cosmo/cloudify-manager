@@ -10,6 +10,7 @@ from manager_rest.upload_manager.manager import (
 from manager_rest.upload_manager.storage import (
     init_storage_client,
     list_dir,
+    storage_client,
 )
 
 __all__ = (
@@ -23,4 +24,5 @@ __all__ = (
 
     'init_storage_client',
     'list_dir',
+    'storage_client',
 )

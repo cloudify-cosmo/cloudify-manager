@@ -291,6 +291,7 @@ EXPECTED_CALLS = {
                         'fakecloud',
                         {
                             'plan': {'someplan': 'here'},
+                            'requirements': {'parent_capabilities': []},
                             'state': 'uploaded',
                             'labels': [
                                 {'key': 'general_usefulness',
@@ -337,12 +338,6 @@ EXPECTED_CALLS = {
                             'description': 'Some dep that does a thing.\n',
                         },
                     ),
-                    mock.call(blueprint_id='fakecloud',
-                              update_dict={'upload_execution': 'defupexc1'}),
-                    mock.call(blueprint_id='fakecloudmore',
-                              update_dict={'upload_execution': 'defupexc2'}),
-                    mock.call(blueprint_id='consumer',
-                              update_dict={'upload_execution': 'defupexc3'}),
                 ],
                 'shared': [
                     mock.call(
@@ -353,8 +348,6 @@ EXPECTED_CALLS = {
                             'description': 'I believe I can fly.\n'
                         }
                     ),
-                    mock.call(blueprint_id='shared_provider',
-                              update_dict={'upload_execution': 'xyz000'})
                 ],
             },
             'sort_key': '',
@@ -423,19 +416,6 @@ EXPECTED_CALLS = {
                         async_create=False,
                         workflows={'someother': {}}
                     ),
-                ],
-            },
-            'sort_key': 'deployment_id',
-        },
-        'set_attributes': {
-            'expected': {
-                'default_tenant': [
-                    mock.call(deployment_id='shared_provider',
-                              create_execution='sharecredef',
-                              latest_execution='sharelatdef'),
-                    mock.call(deployment_id='fakeclouddeps-123',
-                              create_execution='fakecredef',
-                              latest_execution='fakelatdef'),
                 ],
             },
             'sort_key': 'deployment_id',

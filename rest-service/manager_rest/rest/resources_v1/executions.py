@@ -183,6 +183,7 @@ class Executions(SecuredResource):
                 'force': force,
                 'error': error,
             }
+            deployment = None
             if deployment_id:
                 deployment = sm.get(models.Deployment, deployment_id)
                 rm.verify_deployment_environment_created_successfully(
@@ -201,6 +202,13 @@ class Executions(SecuredResource):
                 execution.id = execution_id
             sm.put(execution)
             messages = []
+            if (
+                force_status in ExecutionState.STATES
+                and force_status not in ExecutionState.WAITING_STATES
+                and force_status != ExecutionState.PENDING
+            ):
+                self._process_linked_executions(execution, deployment, sm)
+
             if not force_status:
                 messages = rm.prepare_executions(
                     [execution],
@@ -211,6 +219,39 @@ class Executions(SecuredResource):
                 )
         workflow_executor.execute_workflow(messages)
         return execution, 201
+
+    def _process_linked_executions(self, execution, deployment, sm):
+        def _should_update(execution, target_entity, target_attr):
+            attr = getattr(target_entity, target_attr)
+            if attr is None:
+                # Always update if the linked exec wasn't set
+                return True
+            else:
+                target_time = parse_datetime_string(attr.started_at)
+                if target_time < execution.started_at:
+                    return True
+            return False
+
+        if deployment:
+            exec_relations_set = False
+            if _should_update(execution, deployment, 'latest_execution'):
+                deployment.latest_execution = execution
+                exec_relations_set = True
+
+            if execution.workflow_id == \
+                    'create_deployment_environment':
+                if _should_update(execution, deployment, 'create_execution'):
+                    deployment.create_execution = execution
+                    exec_relations_set = True
+
+            if exec_relations_set:
+                sm.update(deployment)
+        elif execution.workflow_id == 'upload_blueprint':
+            blueprint = sm.get(models.Blueprint,
+                               execution.parameters['blueprint_id'])
+            if _should_update(execution, blueprint, 'upload_execution'):
+                blueprint.upload_execution = execution
+                sm.update(blueprint)
 
     def _parse_scheduled_time(self, scheduled_time):
         scheduled_utc = parse_datetime_string(scheduled_time)
