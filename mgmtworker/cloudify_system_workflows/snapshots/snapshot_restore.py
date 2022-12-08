@@ -187,7 +187,6 @@ class SnapshotRestore(object):
             'deployments_filter', 'blueprints',
             # Everything after this point requires blueprints and plugins
             'deployments', 'deployment_groups', 'executions',
-            'blueprints_executions', 'deployments_executions',
             'execution_groups', 'events', 'execution_schedules',
         ]:
             for tenant in self._new_tenants:
@@ -388,12 +387,7 @@ class SnapshotRestore(object):
         else:
             client = self._client
         ctx.logger.debug('Restoring %s from index %s', entity_type, idx)
-        if entity_type == 'blueprints_executions':
-            entity_client = client.blueprints
-        elif entity_type == 'deployments_executions':
-            entity_client = client.deployments
-        else:
-            entity_client = getattr(client, entity_type)
+        entity_client = getattr(client, entity_type)
         restore_func = None
 
         if entity_type == 'permissions':
@@ -492,15 +486,6 @@ class SnapshotRestore(object):
                 entity['deployment_id'] = entity['deployment_id'] or ''
             elif entity_type == 'execution_groups':
                 entity['executions'] = entity.pop('execution_ids')
-            elif entity_type == 'blueprints_executions':
-                restore_func = entity_client.update
-                blueprint, execution = next(iter(entity.items()))
-                kwargs = {
-                    'blueprint_id': blueprint,
-                    'update_dict': {'upload_execution': execution},
-                }
-            elif entity_type == 'deployments_executions':
-                restore_func = entity_client.set_attributes
             elif entity_type == 'execution_schedules':
                 entity['schedule_id'] = entity.pop('id')
                 entity['rrule'] = entity.pop('rule', {}).pop('rrule')

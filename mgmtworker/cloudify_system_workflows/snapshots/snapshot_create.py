@@ -27,14 +27,12 @@ INCLUDES = {
                 'tenant_name', 'creator', 'created_at'],
     'blueprints': ['id', 'visibility', 'labels', 'created_at', 'created_by',
                    'state', 'main_file_name', 'plan', 'description', 'error',
-                   'error_traceback', 'is_hidden', 'upload_execution',
-                   'requirements'],
+                   'error_traceback', 'is_hidden', 'requirements'],
     'deployments': ['id', 'blueprint_id', 'inputs', 'visibility', 'labels',
                     'display_name', 'runtime_only_evaluation', 'created_by',
                     'created_at', 'workflows', 'groups', 'policy_triggers',
                     'policy_types', 'outputs', 'capabilities', 'description',
-                    'scaling_groups', 'resource_tags', 'create_execution',
-                    'latest_execution', 'deployment_status',
+                    'scaling_groups', 'resource_tags', 'deployment_status',
                     'installation_status'],
     'nodes': ['id', 'host_id', 'plugins', 'plugins_to_install', 'properties',
               'max_number_of_instances', 'min_number_of_instances',
@@ -222,33 +220,6 @@ class SnapshotCreate(object):
         for i in range(file_count):
             start = i * ENTITIES_PER_GROUPING
             finish = (i+1) * ENTITIES_PER_GROUPING
-            if dump_type == 'blueprints':
-                bp_exec_file = (
-                    destination_base + '_executions' + str(i) + suffix
-                )
-                bp_exec_data = [
-                    {item['id']: item.pop('upload_execution')['id']}
-                    for item in data[start:finish]
-                    if item.get('upload_execution')
-                ]
-                with open(bp_exec_file, 'w') as dump_handle:
-                    json.dump(bp_exec_data, dump_handle)
-            if dump_type == 'deployments':
-                dep_exec_file = (
-                    destination_base + '_executions' + str(i) + suffix
-                )
-                deployment_executions = [
-                    {
-                        'deployment_id': deployment['id'],
-                        'create_execution': deployment.pop(
-                            'create_execution', None),
-                        'latest_execution': deployment.pop(
-                            'latest_execution', None),
-                    }
-                    for deployment in data[start:finish]
-                ]
-                with open(dep_exec_file, 'w') as dump_handle:
-                    json.dump(deployment_executions, dump_handle)
             this_file = destination_base + str(i) + suffix
             with open(this_file, 'w') as dump_handle:
                 json.dump(data[start:finish], dump_handle)
