@@ -7,7 +7,7 @@ upstream fileserver {
 }
 
 upstream cloudify-stage {
-  server stage_frontend:3000;
+  server stage_frontend:8188;
 }
 
 
