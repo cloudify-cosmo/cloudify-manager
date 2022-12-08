@@ -458,7 +458,7 @@ class SnapshotRestore(object):
                 extra_details = {}
                 for detail_name in [
                     'plan', 'state', 'error', 'error_traceback',
-                    'is_hidden', 'description', 'labels',
+                    'is_hidden', 'description', 'labels', 'requirements',
                 ]:
                     detail = entity.pop(detail_name)
                     if detail:
