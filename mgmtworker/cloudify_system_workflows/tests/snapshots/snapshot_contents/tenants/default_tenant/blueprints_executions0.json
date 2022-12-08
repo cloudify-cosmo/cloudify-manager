@@ -1,1 +1,11 @@
-[{"fakecloud": "defupexc1"}, {"fakecloudmore": "defupexc2"}, {"consumer": "defupexc3"}]
+[
+    {
+        "fakecloud": "defupexc1"
+    },
+    {
+        "fakecloudmore": "defupexc2"
+    },
+    {
+        "consumer": "defupexc3"
+    }
+]

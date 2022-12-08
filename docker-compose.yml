@@ -56,6 +56,8 @@ services:
     depends_on:
       - rest_service
       - certs_creator
+      - stage_frontend
+      - stage_backend
     ports:
       - "80:80"
       - "443:443"
@@ -116,6 +118,23 @@ services:
       - ssl:/etc/cloudify/ssl:ro
       - mgmtworker_workdir:/mgmtworker
     entrypoint: /opt/rest-service/docker/entrypoint_config.sh
+    restart: on-failure
+
+  stage_frontend:
+    container_name: stage_frontend
+    image: stage_frontend
+    networks:
+      - cloudify
+
+  stage_backend:
+    container_name: stage_backend
+    image: stage_backend
+    environment:
+      RESTSERVICE_ADDRESS: nginx
+    networks:
+      - cloudify
+    volumes:
+      - ssl:/etc/cloudify/ssl:ro
     restart: on-failure
 
 networks:

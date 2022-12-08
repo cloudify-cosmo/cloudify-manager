@@ -5,11 +5,11 @@ plugins:
     package_version: 0.0.1
 
 data_types:
-    cloudify.datatypes.cool.Config:
-      properties:
-        some_deployment:
-          description: Some deployment ID.
-          type: deployment_id
+  cloudify.datatypes.cool.Config:
+    properties:
+      some_deployment:
+        description: Some deployment ID.
+        type: deployment_id
 
 workflows:
   test_parameters_1:

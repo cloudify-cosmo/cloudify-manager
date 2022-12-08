@@ -1,1 +1,895 @@
-[{"created_at": "2022-11-25T15:14:07.946Z", "id": "aabff329-b8a2-49b9-8787-35612277c2ba", "name": "install", "execution_id": "38189853-175a-449c-9f30-9a06d3bbdf70", "operations": [{"created_at": "2022-11-25T15:14:07.946Z", "id": "c2f4a54a-193d-41db-971c-ee05d449fe13", "name": "SetNodeInstanceStateTask", "state": "succeeded", "dependencies": ["acdfeeee-9e6d-4a31-a637-1a11969fd0fc"], "type": "SetNodeInstanceStateTask", "parameters": {"on_success": null, "on_failure": null, "retried_task": null, "current_retries": 0, "send_task_events": false, "retry_interval": 30, "total_retries": 0, "info": "initializing", "error": null, "containing_subgraph": "acdfeeee-9e6d-4a31-a637-1a11969fd0fc", "task_kwargs": {"node_instance_id": "proxied_vm_z7igl5", "state": "initializing"}}, "manager_name": "i-033a355130693f2d0", "agent_name": null}, {"created_at": "2022-11-25T15:14:07.946Z", "id": "acdfeeee-9e6d-4a31-a637-1a11969fd0fc", "name": "install_proxied_vm_z7igl5", "state": "succeeded", "dependencies": [], "type": "SubgraphTask", "parameters": {"on_success": null, "on_failure": {"path": "cloudify.plugins.lifecycle._SubgraphOnFailure", "instance_id": "proxied_vm_z7igl5", "on_retry": "reinstall"}, "retried_task": null, "current_retries": 0, "send_task_events": true, "retry_interval": 30, "total_retries": 0, "info": {"name": "install_proxied_vm_z7igl5"}, "error": null, "containing_subgraph": null, "task_kwargs": {}}, "manager_name": "i-033a355130693f2d0", "agent_name": null}, {"created_at": "2022-11-25T15:14:07.946Z", "id": "dceed122-040f-4f13-95ca-a943f3d685b0", "name": "SendNodeEventTask", "state": "succeeded", "dependencies": ["acdfeeee-9e6d-4a31-a637-1a11969fd0fc", "c2f4a54a-193d-41db-971c-ee05d449fe13"], "type": "SendNodeEventTask", "parameters": {"on_success": null, "on_failure": null, "retried_task": null, "current_retries": 0, "send_task_events": false, "retry_interval": 30, "total_retries": 0, "info": "Validating node instance before creation: nothing to do", "error": null, "containing_subgraph": "acdfeeee-9e6d-4a31-a637-1a11969fd0fc", "task_kwargs": {"node_instance_id": "proxied_vm_z7igl5", "event": "Validating node instance before creation: nothing to do", "additional_context": null}}, "manager_name": "i-033a355130693f2d0", "agent_name": null}, {"created_at": "2022-11-25T15:14:07.946Z", "id": "30c34cd9-aad0-4d87-a4bc-1c1d95a97f26", "name": "SendNodeEventTask", "state": "succeeded", "dependencies": ["acdfeeee-9e6d-4a31-a637-1a11969fd0fc", "dceed122-040f-4f13-95ca-a943f3d685b0"], "type": "SendNodeEventTask", "parameters": {"on_success": null, "on_failure": null, "retried_task": null, "current_retries": 0, "send_task_events": false, "retry_interval": 30, "total_retries": 0, "info": "Precreating node instance: nothing to do", "error": null, "containing_subgraph": "acdfeeee-9e6d-4a31-a637-1a11969fd0fc", "task_kwargs": {"node_instance_id": "proxied_vm_z7igl5", "event": "Precreating node instance: nothing to do", "additional_context": null}}, "manager_name": "i-033a355130693f2d0", "agent_name": null}, {"created_at": "2022-11-25T15:14:07.946Z", "id": "c3b95de1-bad3-4598-b086-e7657c87d995", "name": "SendNodeEventTask", "state": "succeeded", "dependencies": ["acdfeeee-9e6d-4a31-a637-1a11969fd0fc", "30c34cd9-aad0-4d87-a4bc-1c1d95a97f26"], "type": "SendNodeEventTask", "parameters": {"on_success": null, "on_failure": null, "retried_task": null, "current_retries": 0, "send_task_events": false, "retry_interval": 30, "total_retries": 0, "info": "Creating node instance: nothing to do", "error": null, "containing_subgraph": "acdfeeee-9e6d-4a31-a637-1a11969fd0fc", "task_kwargs": {"node_instance_id": "proxied_vm_z7igl5", "event": "Creating node instance: nothing to do", "additional_context": null}}, "manager_name": "i-033a355130693f2d0", "agent_name": null}, {"created_at": "2022-11-25T15:14:07.946Z", "id": "fc215b91-f4c5-42a9-b3bd-38de6f42adc3", "name": "SendNodeEventTask", "state": "succeeded", "dependencies": ["acdfeeee-9e6d-4a31-a637-1a11969fd0fc", "c3b95de1-bad3-4598-b086-e7657c87d995"], "type": "SendNodeEventTask", "parameters": {"on_success": null, "on_failure": null, "retried_task": null, "current_retries": 0, "send_task_events": false, "retry_interval": 30, "total_retries": 0, "info": "Configuring node instance: nothing to do", "error": null, "containing_subgraph": "acdfeeee-9e6d-4a31-a637-1a11969fd0fc", "task_kwargs": {"node_instance_id": "proxied_vm_z7igl5", "event": "Configuring node instance: nothing to do", "additional_context": null}}, "manager_name": "i-033a355130693f2d0", "agent_name": null}, {"created_at": "2022-11-25T15:14:07.946Z", "id": "3c64f318-d109-4931-bc32-25caba48b5d2", "name": "SendNodeEventTask", "state": "succeeded", "dependencies": ["bbbacb75-5eed-4e8d-952c-01d2b7a1cd96", "e08d5bed-45a0-4a71-8633-8104944f393e"], "type": "SendNodeEventTask", "parameters": {"on_success": null, "on_failure": null, "retried_task": null, "current_retries": 0, "send_task_events": false, "retry_interval": 30, "total_retries": 0, "info": "Creating node instance", "error": null, "containing_subgraph": "e08d5bed-45a0-4a71-8633-8104944f393e", "task_kwargs": {"node_instance_id": "file_w331xm", "event": "Creating node instance", "additional_context": null}}, "manager_name": "i-033a355130693f2d0", "agent_name": null}, {"created_at": "2022-11-25T15:14:07.946Z", "id": "bd4939c7-7d49-496e-a081-0d36c9c27317", "name": "test_plugin.file.create", "state": "succeeded", "dependencies": ["3c64f318-d109-4931-bc32-25caba48b5d2", "59618807-9335-467b-a6c6-008f41699909", "e08d5bed-45a0-4a71-8633-8104944f393e"], "type": "RemoteWorkflowTask", "parameters": {"on_success": null, "on_failure": null, "retried_task": null, "current_retries": 0, "send_task_events": true, "retry_interval": 15, "total_retries": 60, "info": null, "error": null, "containing_subgraph": "e08d5bed-45a0-4a71-8633-8104944f393e", "task_kwargs": {"kwargs": {"__cloudify_context": {"__cloudify_context": "0.3", "type": "operation", "task_id": "bd4939c7-7d49-496e-a081-0d36c9c27317", "task_name": "test_plugin.file.create", "execution_id": "38189853-175a-449c-9f30-9a06d3bbdf70", "workflow_id": "install", "tenant": {"name": "default_tenant"}, "timeout": null, "timeout_recoverable": null, "node_id": "file_w331xm", "node_name": "file", "plugin": {"name": "test_plugin", "package_name": "test-plugin", "package_version": "1.0.0", "visibility": "global", "tenant_name": "shared", "source": null, "properties": {}}, "operation": {"name": "cloudify.interfaces.lifecycle.create", "retry_number": 0, "max_retries": 60}, "has_intrinsic_functions": false, "host_id": "proxied_vm_z7igl5", "executor": "host_agent", "local": false, "bypass_maintenance": null, "workflow_parameters": {}, "execution_creator_username": "admin", "blueprint_id": "consumer", "deployment_id": "consumerdeps-b3ddc4c4-06f2-4fc1-8279-79ed273ea73c", "deployment_display_name": "consumerdeps-b3ddc4c4-06f2-4fc1-8279-79ed273ea73c", "deployment_creator": "admin", "deployment_resource_tags": {}}}}}, "manager_name": "i-033a355130693f2d0", "agent_name": null}, {"created_at": "2022-11-25T15:14:07.946Z", "id": "4f859750-17e0-4cda-a680-f7fdb001b534", "name": "SendNodeEventTask", "state": "succeeded", "dependencies": ["acdfeeee-9e6d-4a31-a637-1a11969fd0fc", "ababb198-7b7e-4aa8-a675-52a1a542ac30"], "type": "SendNodeEventTask", "parameters": {"on_success": null, "on_failure": null, "retried_task": null, "current_retries": 0, "send_task_events": false, "retry_interval": 30, "total_retries": 0, "info": "Creating agent", "error": null, "containing_subgraph": "acdfeeee-9e6d-4a31-a637-1a11969fd0fc", "task_kwargs": {"node_instance_id": "proxied_vm_z7igl5", "event": "Creating agent", "additional_context": null}}, "manager_name": "i-033a355130693f2d0", "agent_name": null}, {"created_at": "2022-11-25T15:14:07.946Z", "id": "959f1dec-1aed-4719-8893-8410e912a6c8", "name": "SendNodeEventTask", "state": "succeeded", "dependencies": ["acdfeeee-9e6d-4a31-a637-1a11969fd0fc", "c3cb61f5-68e5-4bb7-8671-f69b236e922f"], "type": "SendNodeEventTask", "parameters": {"on_success": null, "on_failure": null, "retried_task": null, "current_retries": 0, "send_task_events": false, "retry_interval": 30, "total_retries": 0, "info": "Agent created", "error": null, "containing_subgraph": "acdfeeee-9e6d-4a31-a637-1a11969fd0fc", "task_kwargs": {"node_instance_id": "proxied_vm_z7igl5", "event": "Agent created", "additional_context": null}}, "manager_name": "i-033a355130693f2d0", "agent_name": null}, {"created_at": "2022-11-25T15:14:07.946Z", "id": "1d291563-6df1-4c81-8759-462d98353d14", "name": "SendNodeEventTask", "state": "succeeded", "dependencies": ["acdfeeee-9e6d-4a31-a637-1a11969fd0fc", "959f1dec-1aed-4719-8893-8410e912a6c8"], "type": "SendNodeEventTask", "parameters": {"on_success": null, "on_failure": null, "retried_task": null, "current_retries": 0, "send_task_events": false, "retry_interval": 30, "total_retries": 0, "info": "Poststarting node instance: nothing to do", "error": null, "containing_subgraph": "acdfeeee-9e6d-4a31-a637-1a11969fd0fc", "task_kwargs": {"node_instance_id": "proxied_vm_z7igl5", "event": "Poststarting node instance: nothing to do", "additional_context": null}}, "manager_name": "i-033a355130693f2d0", "agent_name": null}, {"created_at": "2022-11-25T15:14:07.946Z", "id": "b08e8877-b5f9-4c8a-baf8-53716bfedd06", "name": "SetNodeInstanceStateTask", "state": "succeeded", "dependencies": ["acdfeeee-9e6d-4a31-a637-1a11969fd0fc", "1d291563-6df1-4c81-8759-462d98353d14"], "type": "SetNodeInstanceStateTask", "parameters": {"on_success": null, "on_failure": null, "retried_task": null, "current_retries": 0, "send_task_events": false, "retry_interval": 30, "total_retries": 0, "info": "started", "error": null, "containing_subgraph": "acdfeeee-9e6d-4a31-a637-1a11969fd0fc", "task_kwargs": {"node_instance_id": "proxied_vm_z7igl5", "state": "started"}}, "manager_name": "i-033a355130693f2d0", "agent_name": null}, {"created_at": "2022-11-25T15:14:07.946Z", "id": "d4b4b6fa-b2ad-4dee-9ee8-04d7bfeed6c4", "name": "SendNodeEventTask", "state": "succeeded", "dependencies": ["acdfeeee-9e6d-4a31-a637-1a11969fd0fc", "1d291563-6df1-4c81-8759-462d98353d14"], "type": "SendNodeEventTask", "parameters": {"on_success": null, "on_failure": null, "retried_task": null, "current_retries": 0, "send_task_events": false, "retry_interval": 30, "total_retries": 0, "info": "Node instance started", "error": null, "containing_subgraph": "acdfeeee-9e6d-4a31-a637-1a11969fd0fc", "task_kwargs": {"node_instance_id": "proxied_vm_z7igl5", "event": "Node instance started", "additional_context": null}}, "manager_name": "i-033a355130693f2d0", "agent_name": null}, {"created_at": "2022-11-25T15:14:07.946Z", "id": "e08d5bed-45a0-4a71-8633-8104944f393e", "name": "install_file_w331xm", "state": "succeeded", "dependencies": ["acdfeeee-9e6d-4a31-a637-1a11969fd0fc"], "type": "SubgraphTask", "parameters": {"on_success": null, "on_failure": {"path": "cloudify.plugins.lifecycle._SubgraphOnFailure", "instance_id": "file_w331xm", "on_retry": "reinstall"}, "retried_task": null, "current_retries": 0, "send_task_events": true, "retry_interval": 30, "total_retries": 0, "info": {"name": "install_file_w331xm"}, "error": null, "containing_subgraph": null, "task_kwargs": {}}, "manager_name": "i-033a355130693f2d0", "agent_name": null}, {"created_at": "2022-11-25T15:14:07.946Z", "id": "21744967-fc02-4a8e-9366-be9304808f56", "name": "SetNodeInstanceStateTask", "state": "succeeded", "dependencies": ["e08d5bed-45a0-4a71-8633-8104944f393e"], "type": "SetNodeInstanceStateTask", "parameters": {"on_success": null, "on_failure": null, "retried_task": null, "current_retries": 0, "send_task_events": false, "retry_interval": 30, "total_retries": 0, "info": "initializing", "error": null, "containing_subgraph": "e08d5bed-45a0-4a71-8633-8104944f393e", "task_kwargs": {"node_instance_id": "file_w331xm", "state": "initializing"}}, "manager_name": "i-033a355130693f2d0", "agent_name": null}, {"created_at": "2022-11-25T15:14:07.946Z", "id": "6beb3038-4432-4557-a259-bbe56e6ec382", "name": "SendNodeEventTask", "state": "succeeded", "dependencies": ["21744967-fc02-4a8e-9366-be9304808f56", "e08d5bed-45a0-4a71-8633-8104944f393e"], "type": "SendNodeEventTask", "parameters": {"on_success": null, "on_failure": null, "retried_task": null, "current_retries": 0, "send_task_events": false, "retry_interval": 30, "total_retries": 0, "info": "Validating node instance before creation: nothing to do", "error": null, "containing_subgraph": "e08d5bed-45a0-4a71-8633-8104944f393e", "task_kwargs": {"node_instance_id": "file_w331xm", "event": "Validating node instance before creation: nothing to do", "additional_context": null}}, "manager_name": "i-033a355130693f2d0", "agent_name": null}, {"created_at": "2022-11-25T15:14:07.946Z", "id": "bbbacb75-5eed-4e8d-952c-01d2b7a1cd96", "name": "SendNodeEventTask", "state": "succeeded", "dependencies": ["6beb3038-4432-4557-a259-bbe56e6ec382", "e08d5bed-45a0-4a71-8633-8104944f393e"], "type": "SendNodeEventTask", "parameters": {"on_success": null, "on_failure": null, "retried_task": null, "current_retries": 0, "send_task_events": false, "retry_interval": 30, "total_retries": 0, "info": "Precreating node instance: nothing to do", "error": null, "containing_subgraph": "e08d5bed-45a0-4a71-8633-8104944f393e", "task_kwargs": {"node_instance_id": "file_w331xm", "event": "Precreating node instance: nothing to do", "additional_context": null}}, "manager_name": "i-033a355130693f2d0", "agent_name": null}, {"created_at": "2022-11-25T15:14:07.946Z", "id": "59618807-9335-467b-a6c6-008f41699909", "name": "SetNodeInstanceStateTask", "state": "succeeded", "dependencies": ["bbbacb75-5eed-4e8d-952c-01d2b7a1cd96", "e08d5bed-45a0-4a71-8633-8104944f393e"], "type": "SetNodeInstanceStateTask", "parameters": {"on_success": null, "on_failure": null, "retried_task": null, "current_retries": 0, "send_task_events": false, "retry_interval": 30, "total_retries": 0, "info": "creating", "error": null, "containing_subgraph": "e08d5bed-45a0-4a71-8633-8104944f393e", "task_kwargs": {"node_instance_id": "file_w331xm", "state": "creating"}}, "manager_name": "i-033a355130693f2d0", "agent_name": null}, {"created_at": "2022-11-25T15:14:07.946Z", "id": "beaa7fe4-6ff2-47f4-8b42-2db28a0f755b", "name": "SendNodeEventTask", "state": "succeeded", "dependencies": ["bd4939c7-7d49-496e-a081-0d36c9c27317", "e08d5bed-45a0-4a71-8633-8104944f393e"], "type": "SendNodeEventTask", "parameters": {"on_success": null, "on_failure": null, "retried_task": null, "current_retries": 0, "send_task_events": false, "retry_interval": 30, "total_retries": 0, "info": "Node instance created", "error": null, "containing_subgraph": "e08d5bed-45a0-4a71-8633-8104944f393e", "task_kwargs": {"node_instance_id": "file_w331xm", "event": "Node instance created", "additional_context": null}}, "manager_name": "i-033a355130693f2d0", "agent_name": null}, {"created_at": "2022-11-25T15:14:07.946Z", "id": "57c45596-1a4c-4e89-914d-d42d2948a6a2", "name": "SetNodeInstanceStateTask", "state": "succeeded", "dependencies": ["bd4939c7-7d49-496e-a081-0d36c9c27317", "e08d5bed-45a0-4a71-8633-8104944f393e"], "type": "SetNodeInstanceStateTask", "parameters": {"on_success": null, "on_failure": null, "retried_task": null, "current_retries": 0, "send_task_events": false, "retry_interval": 30, "total_retries": 0, "info": "created", "error": null, "containing_subgraph": "e08d5bed-45a0-4a71-8633-8104944f393e", "task_kwargs": {"node_instance_id": "file_w331xm", "state": "created"}}, "manager_name": "i-033a355130693f2d0", "agent_name": null}, {"created_at": "2022-11-25T15:14:07.946Z", "id": "471bca08-b91d-4470-a074-b64641fc53c8", "name": "SendNodeEventTask", "state": "succeeded", "dependencies": ["57c45596-1a4c-4e89-914d-d42d2948a6a2", "e08d5bed-45a0-4a71-8633-8104944f393e", "beaa7fe4-6ff2-47f4-8b42-2db28a0f755b"], "type": "SendNodeEventTask", "parameters": {"on_success": null, "on_failure": null, "retried_task": null, "current_retries": 0, "send_task_events": false, "retry_interval": 30, "total_retries": 0, "info": "Configuring node instance: nothing to do", "error": null, "containing_subgraph": "e08d5bed-45a0-4a71-8633-8104944f393e", "task_kwargs": {"node_instance_id": "file_w331xm", "event": "Configuring node instance: nothing to do", "additional_context": null}}, "manager_name": "i-033a355130693f2d0", "agent_name": null}, {"created_at": "2022-11-25T15:14:07.946Z", "id": "41710397-c8d1-46f9-8811-de9e1f8cb6a4", "name": "SendNodeEventTask", "state": "succeeded", "dependencies": ["471bca08-b91d-4470-a074-b64641fc53c8", "e08d5bed-45a0-4a71-8633-8104944f393e"], "type": "SendNodeEventTask", "parameters": {"on_success": null, "on_failure": null, "retried_task": null, "current_retries": 0, "send_task_events": false, "retry_interval": 30, "total_retries": 0, "info": "Starting node instance: nothing to do", "error": null, "containing_subgraph": "e08d5bed-45a0-4a71-8633-8104944f393e", "task_kwargs": {"node_instance_id": "file_w331xm", "event": "Starting node instance: nothing to do", "additional_context": null}}, "manager_name": "i-033a355130693f2d0", "agent_name": null}, {"created_at": "2022-11-25T15:14:07.946Z", "id": "c302cdc1-d232-4354-b874-260c05d14c61", "name": "SendNodeEventTask", "state": "succeeded", "dependencies": ["41710397-c8d1-46f9-8811-de9e1f8cb6a4", "e08d5bed-45a0-4a71-8633-8104944f393e"], "type": "SendNodeEventTask", "parameters": {"on_success": null, "on_failure": null, "retried_task": null, "current_retries": 0, "send_task_events": false, "retry_interval": 30, "total_retries": 0, "info": "Poststarting node instance: nothing to do", "error": null, "containing_subgraph": "e08d5bed-45a0-4a71-8633-8104944f393e", "task_kwargs": {"node_instance_id": "file_w331xm", "event": "Poststarting node instance: nothing to do", "additional_context": null}}, "manager_name": "i-033a355130693f2d0", "agent_name": null}, {"created_at": "2022-11-25T15:14:07.946Z", "id": "847160b9-1232-4c5a-80e9-a6b81830b785", "name": "SetNodeInstanceStateTask", "state": "succeeded", "dependencies": ["c302cdc1-d232-4354-b874-260c05d14c61", "e08d5bed-45a0-4a71-8633-8104944f393e"], "type": "SetNodeInstanceStateTask", "parameters": {"on_success": null, "on_failure": null, "retried_task": null, "current_retries": 0, "send_task_events": false, "retry_interval": 30, "total_retries": 0, "info": "started", "error": null, "containing_subgraph": "e08d5bed-45a0-4a71-8633-8104944f393e", "task_kwargs": {"node_instance_id": "file_w331xm", "state": "started"}}, "manager_name": "i-033a355130693f2d0", "agent_name": null}, {"created_at": "2022-11-25T15:14:07.946Z", "id": "4c964b92-06b0-4f76-b3ae-8afdbfcc6207", "name": "SendNodeEventTask", "state": "succeeded", "dependencies": ["c302cdc1-d232-4354-b874-260c05d14c61", "e08d5bed-45a0-4a71-8633-8104944f393e"], "type": "SendNodeEventTask", "parameters": {"on_success": null, "on_failure": null, "retried_task": null, "current_retries": 0, "send_task_events": false, "retry_interval": 30, "total_retries": 0, "info": "Node instance started", "error": null, "containing_subgraph": "e08d5bed-45a0-4a71-8633-8104944f393e", "task_kwargs": {"node_instance_id": "file_w331xm", "event": "Node instance started", "additional_context": null}}, "manager_name": "i-033a355130693f2d0", "agent_name": null}, {"created_at": "2022-11-25T15:14:07.946Z", "id": "ababb198-7b7e-4aa8-a675-52a1a542ac30", "name": "SendNodeEventTask", "state": "succeeded", "dependencies": ["acdfeeee-9e6d-4a31-a637-1a11969fd0fc", "fc215b91-f4c5-42a9-b3bd-38de6f42adc3"], "type": "SendNodeEventTask", "parameters": {"on_success": null, "on_failure": null, "retried_task": null, "current_retries": 0, "send_task_events": false, "retry_interval": 30, "total_retries": 0, "info": "Starting node instance: nothing to do", "error": null, "containing_subgraph": "acdfeeee-9e6d-4a31-a637-1a11969fd0fc", "task_kwargs": {"node_instance_id": "proxied_vm_z7igl5", "event": "Starting node instance: nothing to do", "additional_context": null}}, "manager_name": "i-033a355130693f2d0", "agent_name": null}, {"created_at": "2022-11-25T15:14:07.946Z", "id": "c3cb61f5-68e5-4bb7-8671-f69b236e922f", "name": "cloudify_agent.installer.operations.create", "state": "succeeded", "dependencies": ["acdfeeee-9e6d-4a31-a637-1a11969fd0fc", "4f859750-17e0-4cda-a680-f7fdb001b534"], "type": "RemoteWorkflowTask", "parameters": {"on_success": null, "on_failure": null, "retried_task": null, "current_retries": 0, "send_task_events": true, "retry_interval": 15, "total_retries": 60, "info": null, "error": null, "containing_subgraph": "acdfeeee-9e6d-4a31-a637-1a11969fd0fc", "task_kwargs": {"kwargs": {"__cloudify_context": {"__cloudify_context": "0.3", "type": "operation", "task_id": "c3cb61f5-68e5-4bb7-8671-f69b236e922f", "task_name": "cloudify_agent.installer.operations.create", "execution_id": "38189853-175a-449c-9f30-9a06d3bbdf70", "workflow_id": "install", "tenant": {"name": "default_tenant"}, "timeout": null, "timeout_recoverable": null, "node_id": "proxied_vm_z7igl5", "node_name": "proxied_vm", "plugin": {"name": "agent", "package_name": null, "package_version": null, "visibility": null, "tenant_name": null, "source": null, "properties": {}}, "operation": {"name": "cloudify.interfaces.cloudify_agent.create", "retry_number": 0, "max_retries": 60}, "has_intrinsic_functions": false, "host_id": "proxied_vm_z7igl5", "executor": "central_deployment_agent", "execution_env": {}, "local": false, "bypass_maintenance": null, "workflow_parameters": {}, "execution_creator_username": "admin", "blueprint_id": "consumer", "deployment_id": "consumerdeps-b3ddc4c4-06f2-4fc1-8279-79ed273ea73c", "deployment_display_name": "consumerdeps-b3ddc4c4-06f2-4fc1-8279-79ed273ea73c", "deployment_creator": "admin", "deployment_resource_tags": {}}}}}, "manager_name": "i-033a355130693f2d0", "agent_name": null}]}]
+[
+    {
+        "created_at": "2022-11-25T15:14:07.946Z",
+        "id": "aabff329-b8a2-49b9-8787-35612277c2ba",
+        "name": "install",
+        "execution_id": "38189853-175a-449c-9f30-9a06d3bbdf70",
+        "operations": [
+            {
+                "created_at": "2022-11-25T15:14:07.946Z",
+                "id": "c2f4a54a-193d-41db-971c-ee05d449fe13",
+                "name": "SetNodeInstanceStateTask",
+                "state": "succeeded",
+                "dependencies": [
+                    "acdfeeee-9e6d-4a31-a637-1a11969fd0fc"
+                ],
+                "type": "SetNodeInstanceStateTask",
+                "parameters": {
+                    "on_success": null,
+                    "on_failure": null,
+                    "retried_task": null,
+                    "current_retries": 0,
+                    "send_task_events": false,
+                    "retry_interval": 30,
+                    "total_retries": 0,
+                    "info": "initializing",
+                    "error": null,
+                    "containing_subgraph": "acdfeeee-9e6d-4a31-a637-1a11969fd0fc",
+                    "task_kwargs": {
+                        "node_instance_id": "proxied_vm_z7igl5",
+                        "state": "initializing"
+                    }
+                },
+                "manager_name": "i-033a355130693f2d0",
+                "agent_name": null
+            },
+            {
+                "created_at": "2022-11-25T15:14:07.946Z",
+                "id": "acdfeeee-9e6d-4a31-a637-1a11969fd0fc",
+                "name": "install_proxied_vm_z7igl5",
+                "state": "succeeded",
+                "dependencies": [],
+                "type": "SubgraphTask",
+                "parameters": {
+                    "on_success": null,
+                    "on_failure": {
+                        "path": "cloudify.plugins.lifecycle._SubgraphOnFailure",
+                        "instance_id": "proxied_vm_z7igl5",
+                        "on_retry": "reinstall"
+                    },
+                    "retried_task": null,
+                    "current_retries": 0,
+                    "send_task_events": true,
+                    "retry_interval": 30,
+                    "total_retries": 0,
+                    "info": {
+                        "name": "install_proxied_vm_z7igl5"
+                    },
+                    "error": null,
+                    "containing_subgraph": null,
+                    "task_kwargs": {}
+                },
+                "manager_name": "i-033a355130693f2d0",
+                "agent_name": null
+            },
+            {
+                "created_at": "2022-11-25T15:14:07.946Z",
+                "id": "dceed122-040f-4f13-95ca-a943f3d685b0",
+                "name": "SendNodeEventTask",
+                "state": "succeeded",
+                "dependencies": [
+                    "acdfeeee-9e6d-4a31-a637-1a11969fd0fc",
+                    "c2f4a54a-193d-41db-971c-ee05d449fe13"
+                ],
+                "type": "SendNodeEventTask",
+                "parameters": {
+                    "on_success": null,
+                    "on_failure": null,
+                    "retried_task": null,
+                    "current_retries": 0,
+                    "send_task_events": false,
+                    "retry_interval": 30,
+                    "total_retries": 0,
+                    "info": "Validating node instance before creation: nothing to do",
+                    "error": null,
+                    "containing_subgraph": "acdfeeee-9e6d-4a31-a637-1a11969fd0fc",
+                    "task_kwargs": {
+                        "node_instance_id": "proxied_vm_z7igl5",
+                        "event": "Validating node instance before creation: nothing to do",
+                        "additional_context": null
+                    }
+                },
+                "manager_name": "i-033a355130693f2d0",
+                "agent_name": null
+            },
+            {
+                "created_at": "2022-11-25T15:14:07.946Z",
+                "id": "30c34cd9-aad0-4d87-a4bc-1c1d95a97f26",
+                "name": "SendNodeEventTask",
+                "state": "succeeded",
+                "dependencies": [
+                    "acdfeeee-9e6d-4a31-a637-1a11969fd0fc",
+                    "dceed122-040f-4f13-95ca-a943f3d685b0"
+                ],
+                "type": "SendNodeEventTask",
+                "parameters": {
+                    "on_success": null,
+                    "on_failure": null,
+                    "retried_task": null,
+                    "current_retries": 0,
+                    "send_task_events": false,
+                    "retry_interval": 30,
+                    "total_retries": 0,
+                    "info": "Precreating node instance: nothing to do",
+                    "error": null,
+                    "containing_subgraph": "acdfeeee-9e6d-4a31-a637-1a11969fd0fc",
+                    "task_kwargs": {
+                        "node_instance_id": "proxied_vm_z7igl5",
+                        "event": "Precreating node instance: nothing to do",
+                        "additional_context": null
+                    }
+                },
+                "manager_name": "i-033a355130693f2d0",
+                "agent_name": null
+            },
+            {
+                "created_at": "2022-11-25T15:14:07.946Z",
+                "id": "c3b95de1-bad3-4598-b086-e7657c87d995",
+                "name": "SendNodeEventTask",
+                "state": "succeeded",
+                "dependencies": [
+                    "acdfeeee-9e6d-4a31-a637-1a11969fd0fc",
+                    "30c34cd9-aad0-4d87-a4bc-1c1d95a97f26"
+                ],
+                "type": "SendNodeEventTask",
+                "parameters": {
+                    "on_success": null,
+                    "on_failure": null,
+                    "retried_task": null,
+                    "current_retries": 0,
+                    "send_task_events": false,
+                    "retry_interval": 30,
+                    "total_retries": 0,
+                    "info": "Creating node instance: nothing to do",
+                    "error": null,
+                    "containing_subgraph": "acdfeeee-9e6d-4a31-a637-1a11969fd0fc",
+                    "task_kwargs": {
+                        "node_instance_id": "proxied_vm_z7igl5",
+                        "event": "Creating node instance: nothing to do",
+                        "additional_context": null
+                    }
+                },
+                "manager_name": "i-033a355130693f2d0",
+                "agent_name": null
+            },
+            {
+                "created_at": "2022-11-25T15:14:07.946Z",
+                "id": "fc215b91-f4c5-42a9-b3bd-38de6f42adc3",
+                "name": "SendNodeEventTask",
+                "state": "succeeded",
+                "dependencies": [
+                    "acdfeeee-9e6d-4a31-a637-1a11969fd0fc",
+                    "c3b95de1-bad3-4598-b086-e7657c87d995"
+                ],
+                "type": "SendNodeEventTask",
+                "parameters": {
+                    "on_success": null,
+                    "on_failure": null,
+                    "retried_task": null,
+                    "current_retries": 0,
+                    "send_task_events": false,
+                    "retry_interval": 30,
+                    "total_retries": 0,
+                    "info": "Configuring node instance: nothing to do",
+                    "error": null,
+                    "containing_subgraph": "acdfeeee-9e6d-4a31-a637-1a11969fd0fc",
+                    "task_kwargs": {
+                        "node_instance_id": "proxied_vm_z7igl5",
+                        "event": "Configuring node instance: nothing to do",
+                        "additional_context": null
+                    }
+                },
+                "manager_name": "i-033a355130693f2d0",
+                "agent_name": null
+            },
+            {
+                "created_at": "2022-11-25T15:14:07.946Z",
+                "id": "3c64f318-d109-4931-bc32-25caba48b5d2",
+                "name": "SendNodeEventTask",
+                "state": "succeeded",
+                "dependencies": [
+                    "bbbacb75-5eed-4e8d-952c-01d2b7a1cd96",
+                    "e08d5bed-45a0-4a71-8633-8104944f393e"
+                ],
+                "type": "SendNodeEventTask",
+                "parameters": {
+                    "on_success": null,
+                    "on_failure": null,
+                    "retried_task": null,
+                    "current_retries": 0,
+                    "send_task_events": false,
+                    "retry_interval": 30,
+                    "total_retries": 0,
+                    "info": "Creating node instance",
+                    "error": null,
+                    "containing_subgraph": "e08d5bed-45a0-4a71-8633-8104944f393e",
+                    "task_kwargs": {
+                        "node_instance_id": "file_w331xm",
+                        "event": "Creating node instance",
+                        "additional_context": null
+                    }
+                },
+                "manager_name": "i-033a355130693f2d0",
+                "agent_name": null
+            },
+            {
+                "created_at": "2022-11-25T15:14:07.946Z",
+                "id": "bd4939c7-7d49-496e-a081-0d36c9c27317",
+                "name": "test_plugin.file.create",
+                "state": "succeeded",
+                "dependencies": [
+                    "3c64f318-d109-4931-bc32-25caba48b5d2",
+                    "59618807-9335-467b-a6c6-008f41699909",
+                    "e08d5bed-45a0-4a71-8633-8104944f393e"
+                ],
+                "type": "RemoteWorkflowTask",
+                "parameters": {
+                    "on_success": null,
+                    "on_failure": null,
+                    "retried_task": null,
+                    "current_retries": 0,
+                    "send_task_events": true,
+                    "retry_interval": 15,
+                    "total_retries": 60,
+                    "info": null,
+                    "error": null,
+                    "containing_subgraph": "e08d5bed-45a0-4a71-8633-8104944f393e",
+                    "task_kwargs": {
+                        "kwargs": {
+                            "__cloudify_context": {
+                                "__cloudify_context": "0.3",
+                                "type": "operation",
+                                "task_id": "bd4939c7-7d49-496e-a081-0d36c9c27317",
+                                "task_name": "test_plugin.file.create",
+                                "execution_id": "38189853-175a-449c-9f30-9a06d3bbdf70",
+                                "workflow_id": "install",
+                                "tenant": {
+                                    "name": "default_tenant"
+                                },
+                                "timeout": null,
+                                "timeout_recoverable": null,
+                                "node_id": "file_w331xm",
+                                "node_name": "file",
+                                "plugin": {
+                                    "name": "test_plugin",
+                                    "package_name": "test-plugin",
+                                    "package_version": "1.0.0",
+                                    "visibility": "global",
+                                    "tenant_name": "shared",
+                                    "source": null,
+                                    "properties": {}
+                                },
+                                "operation": {
+                                    "name": "cloudify.interfaces.lifecycle.create",
+                                    "retry_number": 0,
+                                    "max_retries": 60
+                                },
+                                "has_intrinsic_functions": false,
+                                "host_id": "proxied_vm_z7igl5",
+                                "executor": "host_agent",
+                                "local": false,
+                                "bypass_maintenance": null,
+                                "workflow_parameters": {},
+                                "execution_creator_username": "admin",
+                                "blueprint_id": "consumer",
+                                "deployment_id": "consumerdeps-b3ddc4c4-06f2-4fc1-8279-79ed273ea73c",
+                                "deployment_display_name": "consumerdeps-b3ddc4c4-06f2-4fc1-8279-79ed273ea73c",
+                                "deployment_creator": "admin",
+                                "deployment_resource_tags": {}
+                            }
+                        }
+                    }
+                },
+                "manager_name": "i-033a355130693f2d0",
+                "agent_name": null
+            },
+            {
+                "created_at": "2022-11-25T15:14:07.946Z",
+                "id": "4f859750-17e0-4cda-a680-f7fdb001b534",
+                "name": "SendNodeEventTask",
+                "state": "succeeded",
+                "dependencies": [
+                    "acdfeeee-9e6d-4a31-a637-1a11969fd0fc",
+                    "ababb198-7b7e-4aa8-a675-52a1a542ac30"
+                ],
+                "type": "SendNodeEventTask",
+                "parameters": {
+                    "on_success": null,
+                    "on_failure": null,
+                    "retried_task": null,
+                    "current_retries": 0,
+                    "send_task_events": false,
+                    "retry_interval": 30,
+                    "total_retries": 0,
+                    "info": "Creating agent",
+                    "error": null,
+                    "containing_subgraph": "acdfeeee-9e6d-4a31-a637-1a11969fd0fc",
+                    "task_kwargs": {
+                        "node_instance_id": "proxied_vm_z7igl5",
+                        "event": "Creating agent",
+                        "additional_context": null
+                    }
+                },
+                "manager_name": "i-033a355130693f2d0",
+                "agent_name": null
+            },
+            {
+                "created_at": "2022-11-25T15:14:07.946Z",
+                "id": "959f1dec-1aed-4719-8893-8410e912a6c8",
+                "name": "SendNodeEventTask",
+                "state": "succeeded",
+                "dependencies": [
+                    "acdfeeee-9e6d-4a31-a637-1a11969fd0fc",
+                    "c3cb61f5-68e5-4bb7-8671-f69b236e922f"
+                ],
+                "type": "SendNodeEventTask",
+                "parameters": {
+                    "on_success": null,
+                    "on_failure": null,
+                    "retried_task": null,
+                    "current_retries": 0,
+                    "send_task_events": false,
+                    "retry_interval": 30,
+                    "total_retries": 0,
+                    "info": "Agent created",
+                    "error": null,
+                    "containing_subgraph": "acdfeeee-9e6d-4a31-a637-1a11969fd0fc",
+                    "task_kwargs": {
+                        "node_instance_id": "proxied_vm_z7igl5",
+                        "event": "Agent created",
+                        "additional_context": null
+                    }
+                },
+                "manager_name": "i-033a355130693f2d0",
+                "agent_name": null
+            },
+            {
+                "created_at": "2022-11-25T15:14:07.946Z",
+                "id": "1d291563-6df1-4c81-8759-462d98353d14",
+                "name": "SendNodeEventTask",
+                "state": "succeeded",
+                "dependencies": [
+                    "acdfeeee-9e6d-4a31-a637-1a11969fd0fc",
+                    "959f1dec-1aed-4719-8893-8410e912a6c8"
+                ],
+                "type": "SendNodeEventTask",
+                "parameters": {
+                    "on_success": null,
+                    "on_failure": null,
+                    "retried_task": null,
+                    "current_retries": 0,
+                    "send_task_events": false,
+                    "retry_interval": 30,
+                    "total_retries": 0,
+                    "info": "Poststarting node instance: nothing to do",
+                    "error": null,
+                    "containing_subgraph": "acdfeeee-9e6d-4a31-a637-1a11969fd0fc",
+                    "task_kwargs": {
+                        "node_instance_id": "proxied_vm_z7igl5",
+                        "event": "Poststarting node instance: nothing to do",
+                        "additional_context": null
+                    }
+                },
+                "manager_name": "i-033a355130693f2d0",
+                "agent_name": null
+            },
+            {
+                "created_at": "2022-11-25T15:14:07.946Z",
+                "id": "b08e8877-b5f9-4c8a-baf8-53716bfedd06",
+                "name": "SetNodeInstanceStateTask",
+                "state": "succeeded",
+                "dependencies": [
+                    "acdfeeee-9e6d-4a31-a637-1a11969fd0fc",
+                    "1d291563-6df1-4c81-8759-462d98353d14"
+                ],
+                "type": "SetNodeInstanceStateTask",
+                "parameters": {
+                    "on_success": null,
+                    "on_failure": null,
+                    "retried_task": null,
+                    "current_retries": 0,
+                    "send_task_events": false,
+                    "retry_interval": 30,
+                    "total_retries": 0,
+                    "info": "started",
+                    "error": null,
+                    "containing_subgraph": "acdfeeee-9e6d-4a31-a637-1a11969fd0fc",
+                    "task_kwargs": {
+                        "node_instance_id": "proxied_vm_z7igl5",
+                        "state": "started"
+                    }
+                },
+                "manager_name": "i-033a355130693f2d0",
+                "agent_name": null
+            },
+            {
+                "created_at": "2022-11-25T15:14:07.946Z",
+                "id": "d4b4b6fa-b2ad-4dee-9ee8-04d7bfeed6c4",
+                "name": "SendNodeEventTask",
+                "state": "succeeded",
+                "dependencies": [
+                    "acdfeeee-9e6d-4a31-a637-1a11969fd0fc",
+                    "1d291563-6df1-4c81-8759-462d98353d14"
+                ],
+                "type": "SendNodeEventTask",
+                "parameters": {
+                    "on_success": null,
+                    "on_failure": null,
+                    "retried_task": null,
+                    "current_retries": 0,
+                    "send_task_events": false,
+                    "retry_interval": 30,
+                    "total_retries": 0,
+                    "info": "Node instance started",
+                    "error": null,
+                    "containing_subgraph": "acdfeeee-9e6d-4a31-a637-1a11969fd0fc",
+                    "task_kwargs": {
+                        "node_instance_id": "proxied_vm_z7igl5",
+                        "event": "Node instance started",
+                        "additional_context": null
+                    }
+                },
+                "manager_name": "i-033a355130693f2d0",
+                "agent_name": null
+            },
+            {
+                "created_at": "2022-11-25T15:14:07.946Z",
+                "id": "e08d5bed-45a0-4a71-8633-8104944f393e",
+                "name": "install_file_w331xm",
+                "state": "succeeded",
+                "dependencies": [
+                    "acdfeeee-9e6d-4a31-a637-1a11969fd0fc"
+                ],
+                "type": "SubgraphTask",
+                "parameters": {
+                    "on_success": null,
+                    "on_failure": {
+                        "path": "cloudify.plugins.lifecycle._SubgraphOnFailure",
+                        "instance_id": "file_w331xm",
+                        "on_retry": "reinstall"
+                    },
+                    "retried_task": null,
+                    "current_retries": 0,
+                    "send_task_events": true,
+                    "retry_interval": 30,
+                    "total_retries": 0,
+                    "info": {
+                        "name": "install_file_w331xm"
+                    },
+                    "error": null,
+                    "containing_subgraph": null,
+                    "task_kwargs": {}
+                },
+                "manager_name": "i-033a355130693f2d0",
+                "agent_name": null
+            },
+            {
+                "created_at": "2022-11-25T15:14:07.946Z",
+                "id": "21744967-fc02-4a8e-9366-be9304808f56",
+                "name": "SetNodeInstanceStateTask",
+                "state": "succeeded",
+                "dependencies": [
+                    "e08d5bed-45a0-4a71-8633-8104944f393e"
+                ],
+                "type": "SetNodeInstanceStateTask",
+                "parameters": {
+                    "on_success": null,
+                    "on_failure": null,
+                    "retried_task": null,
+                    "current_retries": 0,
+                    "send_task_events": false,
+                    "retry_interval": 30,
+                    "total_retries": 0,
+                    "info": "initializing",
+                    "error": null,
+                    "containing_subgraph": "e08d5bed-45a0-4a71-8633-8104944f393e",
+                    "task_kwargs": {
+                        "node_instance_id": "file_w331xm",
+                        "state": "initializing"
+                    }
+                },
+                "manager_name": "i-033a355130693f2d0",
+                "agent_name": null
+            },
+            {
+                "created_at": "2022-11-25T15:14:07.946Z",
+                "id": "6beb3038-4432-4557-a259-bbe56e6ec382",
+                "name": "SendNodeEventTask",
+                "state": "succeeded",
+                "dependencies": [
+                    "21744967-fc02-4a8e-9366-be9304808f56",
+                    "e08d5bed-45a0-4a71-8633-8104944f393e"
+                ],
+                "type": "SendNodeEventTask",
+                "parameters": {
+                    "on_success": null,
+                    "on_failure": null,
+                    "retried_task": null,
+                    "current_retries": 0,
+                    "send_task_events": false,
+                    "retry_interval": 30,
+                    "total_retries": 0,
+                    "info": "Validating node instance before creation: nothing to do",
+                    "error": null,
+                    "containing_subgraph": "e08d5bed-45a0-4a71-8633-8104944f393e",
+                    "task_kwargs": {
+                        "node_instance_id": "file_w331xm",
+                        "event": "Validating node instance before creation: nothing to do",
+                        "additional_context": null
+                    }
+                },
+                "manager_name": "i-033a355130693f2d0",
+                "agent_name": null
+            },
+            {
+                "created_at": "2022-11-25T15:14:07.946Z",
+                "id": "bbbacb75-5eed-4e8d-952c-01d2b7a1cd96",
+                "name": "SendNodeEventTask",
+                "state": "succeeded",
+                "dependencies": [
+                    "6beb3038-4432-4557-a259-bbe56e6ec382",
+                    "e08d5bed-45a0-4a71-8633-8104944f393e"
+                ],
+                "type": "SendNodeEventTask",
+                "parameters": {
+                    "on_success": null,
+                    "on_failure": null,
+                    "retried_task": null,
+                    "current_retries": 0,
+                    "send_task_events": false,
+                    "retry_interval": 30,
+                    "total_retries": 0,
+                    "info": "Precreating node instance: nothing to do",
+                    "error": null,
+                    "containing_subgraph": "e08d5bed-45a0-4a71-8633-8104944f393e",
+                    "task_kwargs": {
+                        "node_instance_id": "file_w331xm",
+                        "event": "Precreating node instance: nothing to do",
+                        "additional_context": null
+                    }
+                },
+                "manager_name": "i-033a355130693f2d0",
+                "agent_name": null
+            },
+            {
+                "created_at": "2022-11-25T15:14:07.946Z",
+                "id": "59618807-9335-467b-a6c6-008f41699909",
+                "name": "SetNodeInstanceStateTask",
+                "state": "succeeded",
+                "dependencies": [
+                    "bbbacb75-5eed-4e8d-952c-01d2b7a1cd96",
+                    "e08d5bed-45a0-4a71-8633-8104944f393e"
+                ],
+                "type": "SetNodeInstanceStateTask",
+                "parameters": {
+                    "on_success": null,
+                    "on_failure": null,
+                    "retried_task": null,
+                    "current_retries": 0,
+                    "send_task_events": false,
+                    "retry_interval": 30,
+                    "total_retries": 0,
+                    "info": "creating",
+                    "error": null,
+                    "containing_subgraph": "e08d5bed-45a0-4a71-8633-8104944f393e",
+                    "task_kwargs": {
+                        "node_instance_id": "file_w331xm",
+                        "state": "creating"
+                    }
+                },
+                "manager_name": "i-033a355130693f2d0",
+                "agent_name": null
+            },
+            {
+                "created_at": "2022-11-25T15:14:07.946Z",
+                "id": "beaa7fe4-6ff2-47f4-8b42-2db28a0f755b",
+                "name": "SendNodeEventTask",
+                "state": "succeeded",
+                "dependencies": [
+                    "bd4939c7-7d49-496e-a081-0d36c9c27317",
+                    "e08d5bed-45a0-4a71-8633-8104944f393e"
+                ],
+                "type": "SendNodeEventTask",
+                "parameters": {
+                    "on_success": null,
+                    "on_failure": null,
+                    "retried_task": null,
+                    "current_retries": 0,
+                    "send_task_events": false,
+                    "retry_interval": 30,
+                    "total_retries": 0,
+                    "info": "Node instance created",
+                    "error": null,
+                    "containing_subgraph": "e08d5bed-45a0-4a71-8633-8104944f393e",
+                    "task_kwargs": {
+                        "node_instance_id": "file_w331xm",
+                        "event": "Node instance created",
+                        "additional_context": null
+                    }
+                },
+                "manager_name": "i-033a355130693f2d0",
+                "agent_name": null
+            },
+            {
+                "created_at": "2022-11-25T15:14:07.946Z",
+                "id": "57c45596-1a4c-4e89-914d-d42d2948a6a2",
+                "name": "SetNodeInstanceStateTask",
+                "state": "succeeded",
+                "dependencies": [
+                    "bd4939c7-7d49-496e-a081-0d36c9c27317",
+                    "e08d5bed-45a0-4a71-8633-8104944f393e"
+                ],
+                "type": "SetNodeInstanceStateTask",
+                "parameters": {
+                    "on_success": null,
+                    "on_failure": null,
+                    "retried_task": null,
+                    "current_retries": 0,
+                    "send_task_events": false,
+                    "retry_interval": 30,
+                    "total_retries": 0,
+                    "info": "created",
+                    "error": null,
+                    "containing_subgraph": "e08d5bed-45a0-4a71-8633-8104944f393e",
+                    "task_kwargs": {
+                        "node_instance_id": "file_w331xm",
+                        "state": "created"
+                    }
+                },
+                "manager_name": "i-033a355130693f2d0",
+                "agent_name": null
+            },
+            {
+                "created_at": "2022-11-25T15:14:07.946Z",
+                "id": "471bca08-b91d-4470-a074-b64641fc53c8",
+                "name": "SendNodeEventTask",
+                "state": "succeeded",
+                "dependencies": [
+                    "57c45596-1a4c-4e89-914d-d42d2948a6a2",
+                    "e08d5bed-45a0-4a71-8633-8104944f393e",
+                    "beaa7fe4-6ff2-47f4-8b42-2db28a0f755b"
+                ],
+                "type": "SendNodeEventTask",
+                "parameters": {
+                    "on_success": null,
+                    "on_failure": null,
+                    "retried_task": null,
+                    "current_retries": 0,
+                    "send_task_events": false,
+                    "retry_interval": 30,
+                    "total_retries": 0,
+                    "info": "Configuring node instance: nothing to do",
+                    "error": null,
+                    "containing_subgraph": "e08d5bed-45a0-4a71-8633-8104944f393e",
+                    "task_kwargs": {
+                        "node_instance_id": "file_w331xm",
+                        "event": "Configuring node instance: nothing to do",
+                        "additional_context": null
+                    }
+                },
+                "manager_name": "i-033a355130693f2d0",
+                "agent_name": null
+            },
+            {
+                "created_at": "2022-11-25T15:14:07.946Z",
+                "id": "41710397-c8d1-46f9-8811-de9e1f8cb6a4",
+                "name": "SendNodeEventTask",
+                "state": "succeeded",
+                "dependencies": [
+                    "471bca08-b91d-4470-a074-b64641fc53c8",
+                    "e08d5bed-45a0-4a71-8633-8104944f393e"
+                ],
+                "type": "SendNodeEventTask",
+                "parameters": {
+                    "on_success": null,
+                    "on_failure": null,
+                    "retried_task": null,
+                    "current_retries": 0,
+                    "send_task_events": false,
+                    "retry_interval": 30,
+                    "total_retries": 0,
+                    "info": "Starting node instance: nothing to do",
+                    "error": null,
+                    "containing_subgraph": "e08d5bed-45a0-4a71-8633-8104944f393e",
+                    "task_kwargs": {
+                        "node_instance_id": "file_w331xm",
+                        "event": "Starting node instance: nothing to do",
+                        "additional_context": null
+                    }
+                },
+                "manager_name": "i-033a355130693f2d0",
+                "agent_name": null
+            },
+            {
+                "created_at": "2022-11-25T15:14:07.946Z",
+                "id": "c302cdc1-d232-4354-b874-260c05d14c61",
+                "name": "SendNodeEventTask",
+                "state": "succeeded",
+                "dependencies": [
+                    "41710397-c8d1-46f9-8811-de9e1f8cb6a4",
+                    "e08d5bed-45a0-4a71-8633-8104944f393e"
+                ],
+                "type": "SendNodeEventTask",
+                "parameters": {
+                    "on_success": null,
+                    "on_failure": null,
+                    "retried_task": null,
+                    "current_retries": 0,
+                    "send_task_events": false,
+                    "retry_interval": 30,
+                    "total_retries": 0,
+                    "info": "Poststarting node instance: nothing to do",
+                    "error": null,
+                    "containing_subgraph": "e08d5bed-45a0-4a71-8633-8104944f393e",
+                    "task_kwargs": {
+                        "node_instance_id": "file_w331xm",
+                        "event": "Poststarting node instance: nothing to do",
+                        "additional_context": null
+                    }
+                },
+                "manager_name": "i-033a355130693f2d0",
+                "agent_name": null
+            },
+            {
+                "created_at": "2022-11-25T15:14:07.946Z",
+                "id": "847160b9-1232-4c5a-80e9-a6b81830b785",
+                "name": "SetNodeInstanceStateTask",
+                "state": "succeeded",
+                "dependencies": [
+                    "c302cdc1-d232-4354-b874-260c05d14c61",
+                    "e08d5bed-45a0-4a71-8633-8104944f393e"
+                ],
+                "type": "SetNodeInstanceStateTask",
+                "parameters": {
+                    "on_success": null,
+                    "on_failure": null,
+                    "retried_task": null,
+                    "current_retries": 0,
+                    "send_task_events": false,
+                    "retry_interval": 30,
+                    "total_retries": 0,
+                    "info": "started",
+                    "error": null,
+                    "containing_subgraph": "e08d5bed-45a0-4a71-8633-8104944f393e",
+                    "task_kwargs": {
+                        "node_instance_id": "file_w331xm",
+                        "state": "started"
+                    }
+                },
+                "manager_name": "i-033a355130693f2d0",
+                "agent_name": null
+            },
+            {
+                "created_at": "2022-11-25T15:14:07.946Z",
+                "id": "4c964b92-06b0-4f76-b3ae-8afdbfcc6207",
+                "name": "SendNodeEventTask",
+                "state": "succeeded",
+                "dependencies": [
+                    "c302cdc1-d232-4354-b874-260c05d14c61",
+                    "e08d5bed-45a0-4a71-8633-8104944f393e"
+                ],
+                "type": "SendNodeEventTask",
+                "parameters": {
+                    "on_success": null,
+                    "on_failure": null,
+                    "retried_task": null,
+                    "current_retries": 0,
+                    "send_task_events": false,
+                    "retry_interval": 30,
+                    "total_retries": 0,
+                    "info": "Node instance started",
+                    "error": null,
+                    "containing_subgraph": "e08d5bed-45a0-4a71-8633-8104944f393e",
+                    "task_kwargs": {
+                        "node_instance_id": "file_w331xm",
+                        "event": "Node instance started",
+                        "additional_context": null
+                    }
+                },
+                "manager_name": "i-033a355130693f2d0",
+                "agent_name": null
+            },
+            {
+                "created_at": "2022-11-25T15:14:07.946Z",
+                "id": "ababb198-7b7e-4aa8-a675-52a1a542ac30",
+                "name": "SendNodeEventTask",
+                "state": "succeeded",
+                "dependencies": [
+                    "acdfeeee-9e6d-4a31-a637-1a11969fd0fc",
+                    "fc215b91-f4c5-42a9-b3bd-38de6f42adc3"
+                ],
+                "type": "SendNodeEventTask",
+                "parameters": {
+                    "on_success": null,
+                    "on_failure": null,
+                    "retried_task": null,
+                    "current_retries": 0,
+                    "send_task_events": false,
+                    "retry_interval": 30,
+                    "total_retries": 0,
+                    "info": "Starting node instance: nothing to do",
+                    "error": null,
+                    "containing_subgraph": "acdfeeee-9e6d-4a31-a637-1a11969fd0fc",
+                    "task_kwargs": {
+                        "node_instance_id": "proxied_vm_z7igl5",
+                        "event": "Starting node instance: nothing to do",
+                        "additional_context": null
+                    }
+                },
+                "manager_name": "i-033a355130693f2d0",
+                "agent_name": null
+            },
+            {
+                "created_at": "2022-11-25T15:14:07.946Z",
+                "id": "c3cb61f5-68e5-4bb7-8671-f69b236e922f",
+                "name": "cloudify_agent.installer.operations.create",
+                "state": "succeeded",
+                "dependencies": [
+                    "acdfeeee-9e6d-4a31-a637-1a11969fd0fc",
+                    "4f859750-17e0-4cda-a680-f7fdb001b534"
+                ],
+                "type": "RemoteWorkflowTask",
+                "parameters": {
+                    "on_success": null,
+                    "on_failure": null,
+                    "retried_task": null,
+                    "current_retries": 0,
+                    "send_task_events": true,
+                    "retry_interval": 15,
+                    "total_retries": 60,
+                    "info": null,
+                    "error": null,
+                    "containing_subgraph": "acdfeeee-9e6d-4a31-a637-1a11969fd0fc",
+                    "task_kwargs": {
+                        "kwargs": {
+                            "__cloudify_context": {
+                                "__cloudify_context": "0.3",
+                                "type": "operation",
+                                "task_id": "c3cb61f5-68e5-4bb7-8671-f69b236e922f",
+                                "task_name": "cloudify_agent.installer.operations.create",
+                                "execution_id": "38189853-175a-449c-9f30-9a06d3bbdf70",
+                                "workflow_id": "install",
+                                "tenant": {
+                                    "name": "default_tenant"
+                                },
+                                "timeout": null,
+                                "timeout_recoverable": null,
+                                "node_id": "proxied_vm_z7igl5",
+                                "node_name": "proxied_vm",
+                                "plugin": {
+                                    "name": "agent",
+                                    "package_name": null,
+                                    "package_version": null,
+                                    "visibility": null,
+                                    "tenant_name": null,
+                                    "source": null,
+                                    "properties": {}
+                                },
+                                "operation": {
+                                    "name": "cloudify.interfaces.cloudify_agent.create",
+                                    "retry_number": 0,
+                                    "max_retries": 60
+                                },
+                                "has_intrinsic_functions": false,
+                                "host_id": "proxied_vm_z7igl5",
+                                "executor": "central_deployment_agent",
+                                "execution_env": {},
+                                "local": false,
+                                "bypass_maintenance": null,
+                                "workflow_parameters": {},
+                                "execution_creator_username": "admin",
+                                "blueprint_id": "consumer",
+                                "deployment_id": "consumerdeps-b3ddc4c4-06f2-4fc1-8279-79ed273ea73c",
+                                "deployment_display_name": "consumerdeps-b3ddc4c4-06f2-4fc1-8279-79ed273ea73c",
+                                "deployment_creator": "admin",
+                                "deployment_resource_tags": {}
+                            }
+                        }
+                    }
+                },
+                "manager_name": "i-033a355130693f2d0",
+                "agent_name": null
+            }
+        ]
+    }
+]

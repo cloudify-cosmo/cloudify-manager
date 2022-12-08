@@ -1,5 +1,6 @@
 import hashlib
 import itertools
+import re
 import uuid
 
 from os import path
@@ -30,14 +31,12 @@ from dsl_parser.constants import (WORKFLOW_PLUGINS_TO_INSTALL,
 from dsl_parser.constraints import extract_constraints, validate_input_value
 from dsl_parser import exceptions as dsl_exceptions
 
-from manager_rest import config, manager_exceptions
+from manager_rest import manager_exceptions
 from manager_rest.rest.responses import Workflow, Label
 from manager_rest.utils import (get_rrule,
-                                classproperty,
-                                files_in_folder)
+                                classproperty)
 from manager_rest.constants import (
     FILE_SERVER_PLUGINS_FOLDER,
-    FILE_SERVER_RESOURCES_FOLDER,
     AUDIT_OPERATIONS,
     DEPLOYMENT_UPDATE_ENTITY_TYPES,
     DEPLOYMENT_UPDATE_ACTION_TYPES,
@@ -177,7 +176,8 @@ class Plugin(SQLResourceBase):
             unique=True
         ),
     )
-    _extra_fields = {'installation_state': flask_fields.Raw}
+    _extra_fields = {'installation_state': flask_fields.Raw,
+                     'yaml_files_paths': flask_fields.List(flask_fields.Raw)}
 
     archive_name = db.Column(db.Text, nullable=False, index=True)
     distribution = db.Column(db.Text)
@@ -200,28 +200,37 @@ class Plugin(SQLResourceBase):
     labels = db.Column(JSONString)
     resource_tags = db.Column(JSONString)
 
-    def yaml_file_path(self):
-        plugin_dir = path.join(config.instance.file_server_root,
-                               FILE_SERVER_PLUGINS_FOLDER,
-                               self.id)
-        if not path.isdir(plugin_dir):
-            return None
-        yaml_files = files_in_folder(plugin_dir, '*.yaml')
-        return yaml_files[0] if yaml_files else None
+    @property
+    def yaml_files_paths(self):
+        """List all *.yaml files"""
+        # Imported here because of circular import
+        from manager_rest.upload_manager import storage_client
+        plugin_dir = path.join(FILE_SERVER_PLUGINS_FOLDER, self.id)
+        yaml_files = []
+        for file_name in storage_client().list(plugin_dir):
+            if file_name.endswith('.yaml'):
+                yaml_files += [file_name]
+        return yaml_files
+
+    def yaml_file_path(self, dsl_version=None):
+        unknown_dsl_version_yaml_files_paths = []
+        for yaml_file_path in self.yaml_files_paths:
+            if not dsl_version:
+                return yaml_file_path
+
+            if yaml_file_path.endswith(f'{dsl_version}.yaml'):
+                return yaml_file_path
+            if not re.search(r"_\d_\d+.yaml$", yaml_file_path):
+                unknown_dsl_version_yaml_files_paths += [yaml_file_path]
+
+        if unknown_dsl_version_yaml_files_paths:
+            return unknown_dsl_version_yaml_files_paths[0]
+
+        return ''
 
     def _yaml_file_name(self):
         yaml_path = self.yaml_file_path()
         return path.basename(yaml_path) if yaml_path else ''
-
-    @property
-    def file_server_path(self):
-        file_name = self._yaml_file_name()
-        if not file_name:
-            return ''
-        return path.join(FILE_SERVER_RESOURCES_FOLDER,
-                         FILE_SERVER_PLUGINS_FOLDER,
-                         self.id,
-                         file_name)
 
     @property
     def yaml_url_path(self):
@@ -236,15 +245,12 @@ class Plugin(SQLResourceBase):
     @classproperty
     def response_fields(cls):
         fields = super(Plugin, cls).response_fields
-        fields['file_server_path'] = flask_fields.String
         fields['yaml_url_path'] = flask_fields.String
         return fields
 
     def to_response(self, include=None, get_data=False, **kwargs):
         include = include or self.response_fields
         plugin_dict = super(Plugin, self).to_response(include, **kwargs)
-        if not get_data:
-            plugin_dict['file_server_path'] = ''
         if 'installation_state' in plugin_dict \
                 and 'installation_state' in include:
             plugin_dict['installation_state'] = [
