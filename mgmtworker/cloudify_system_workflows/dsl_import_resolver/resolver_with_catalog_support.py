@@ -143,10 +143,6 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
                 version_constraints.get(name)
         return name, filters
 
-    def _resolve_plugin_yaml_url(self, import_url, dsl_version):
-        plugin = self.retrieve_plugin(import_url, dsl_version)
-        return self._make_plugin_yaml_url(plugin, dsl_version)
-
     @staticmethod
     def _create_zip(source, destination, include_folder=True):
         with closing(zipfile.ZipFile(destination, 'w')) as zip_file:
@@ -328,18 +324,6 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
 
         max_item = max(matching_versions, key=lambda i_v: i_v[1])
         return plugins[max_item[0]]
-
-    def _make_plugin_yaml_url(self, plugin, dsl_version):
-        yaml_file_names = self.client.plugins.list_yaml_files(plugin.id,
-                                                              dsl_version)
-
-        if not yaml_file_names:
-            version_msg = f' for DSL {dsl_version}' if dsl_version else ''
-            raise InvalidBlueprintImport(
-                f'Plugin {plugin.package_name}: expected one yaml file'
-                f'{version_msg}, but found none')
-
-        return f'resource://{yaml_file_names[0]}'
 
     def _resolve_blueprint_url(self, import_url):
         blueprint_id = import_url.replace(BLUEPRINT_PREFIX, '', 1).strip()
