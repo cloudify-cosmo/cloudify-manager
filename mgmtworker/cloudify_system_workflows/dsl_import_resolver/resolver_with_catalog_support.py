@@ -106,8 +106,9 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
         return import_url
 
     def _fetch_plugin_import(self, import_url, dsl_version):
-        import_url = self._resolve_plugin_yaml_url(import_url, dsl_version)
-        return super(ResolverWithCatalogSupport, self).fetch_import(import_url)
+        plugin = self.retrieve_plugin(import_url, dsl_version)
+        plugin_yaml = self.client.plugins.get_yaml(plugin.id, dsl_version)
+        return plugin_yaml
 
     @staticmethod
     def _make_plugin_filters(plugin_spec, version_constraints, mappings):
@@ -141,10 +142,6 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
             filters[EXTRA_VERSION_CONSTRAINT] = \
                 version_constraints.get(name)
         return name, filters
-
-    def _resolve_plugin_yaml_url(self, import_url, dsl_version):
-        plugin = self.retrieve_plugin(import_url, dsl_version)
-        return self._make_plugin_yaml_url(plugin, dsl_version)
 
     @staticmethod
     def _create_zip(source, destination, include_folder=True):
@@ -327,20 +324,6 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
 
         max_item = max(matching_versions, key=lambda i_v: i_v[1])
         return plugins[max_item[0]]
-
-    def _make_plugin_yaml_url(self, plugin, dsl_version):
-        plugin_path = os.path.join(
-            self.file_server_root,
-            FILE_SERVER_PLUGINS_FOLDER,
-            plugin.id)
-        yaml_files = self._plugin_yamls_for_dsl_version(plugin_path,
-                                                        dsl_version)
-        if len(yaml_files) != 1:
-            raise InvalidBlueprintImport(
-                'Plugin {0}: expected one yaml file, but found {1}'
-                .format(plugin.package_name, len(yaml_files)))
-        filename = os.path.join(plugin_path, yaml_files[0])
-        return 'file://{0}'.format(filename)
 
     def _resolve_blueprint_url(self, import_url):
         blueprint_id = import_url.replace(BLUEPRINT_PREFIX, '', 1).strip()
