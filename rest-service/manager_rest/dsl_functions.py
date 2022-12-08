@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import json
 import requests
 
 from collections import namedtuple
@@ -20,6 +21,10 @@ from dsl_parser import exceptions as parser_exceptions
 from dsl_parser.constants import CAPABILITIES, EVAL_FUNCS_PATH_PREFIX_KEY
 
 from cloudify import cryptography_utils
+
+from cloudify.cryptography_utils import (
+    decrypt,
+)
 
 from manager_rest.storage import (get_storage_manager,
                                   get_node as get_storage_node)
@@ -144,10 +149,15 @@ def get_secret_from_provider(secret):
 
         return decrypted_value
     elif provider.type == 'vault':
+        connection_parameters = json.loads(
+            decrypt(
+                provider.connection_parameters,
+            ),
+        )
         decrypted_value = _get_secret_from_vault(
-            provider.connection_parameters['url'],
-            provider.connection_parameters['token'],
-            provider.connection_parameters['path'],
+            connection_parameters['url'],
+            connection_parameters['token'],
+            connection_parameters['path'],
             secret.key,
         )
 
