@@ -324,7 +324,7 @@ class BaseTestCase(unittest.TestCase):
             time.sleep(0.5)
             execution = get(execution.id)
             if time.time() > deadline:
-                raise utils.TimeoutException(
+                raise TimeoutError(
                     'Execution timed out: \n{0}'
                     .format(json.dumps(execution, indent=2)))
         if require_success and execution.status == Execution.FAILED:
@@ -426,7 +426,7 @@ class BaseTestCase(unittest.TestCase):
         while not any(message in e['message'] for e in all_events):
             time.sleep(0.5)
             if time.time() > deadline:
-                raise utils.TimeoutException(
+                raise TimeoutError(
                     'Execution timed out when waiting for message {0}: \n{1}'
                     .format(message, json.dumps(execution, indent=2))
                 )
