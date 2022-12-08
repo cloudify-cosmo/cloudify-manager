@@ -52,21 +52,13 @@ MOCK_CLIENT_RESPONSES = {
             'export': [{'id': 'secrets_list_t1'}],
         },
         'blueprints': {
-            'list': [
-                {'id': 'blueprint_t1',
-                 'upload_execution': {'id': 'some_execution_uploading_t1'}}],
+            'list': [{'id': 'blueprint_t1'}],
             'download': 'ghi789',
         },
         'deployments': {
-            'list': [{'id': 'deployment_t1.1',
-                      'create_execution': 'somecreate',
-                      'latest_execution': 'somelatest'},
-                     {'id': 'deployment_t1.2',
-                      'create_execution': 'somecreate2',
-                      'latest_execution': 'somelatest2'},
-                     {'id': 'deployment_t1.3',
-                      'create_execution': 'somecreate3',
-                      'latest_execution': 'somelatest3'}],
+            'list': [{'id': 'deployment_t1.1'},
+                     {'id': 'deployment_t1.2'},
+                     {'id': 'deployment_t1.3'}],
             'get': [{'workdir_zip': 'DEF1'},
                     {'workdir_zip': EMPTY_B64_ZIP},
                     {'workdir_zip': 'DEF3'}],
@@ -138,9 +130,7 @@ MOCK_CLIENT_RESPONSES = {
             'download': 'ghi789',
         },
         'deployments': {
-            'list': [{'id': 'deployment_t2',
-                      'create_execution': 'somecreate_t2',
-                      'latest_execution': 'somelatest_t2'}],
+            'list': [{'id': 'deployment_t2'}],
             'get': [{'workdir_zip': 'XYZF'}],
         },
         'deployment_groups': {
@@ -467,29 +457,6 @@ def _assert_tenants(tempdir, clients):
                         item = deepcopy(item)
                         item.pop('is_system_filter')
                         expected.append(item)
-                elif r_type == 'blueprints':
-                    expected_executions = []
-                    for item in data[data_start:data_end]:
-                        item = deepcopy(item)
-                        upload_exec = item.pop('upload_execution', None)
-                        if upload_exec:
-                            expected_executions.append(
-                                {item['id']: upload_exec['id']})
-                        expected.append(item)
-                elif r_type == 'deployments':
-                    expected_executions = []
-                    for item in data[data_start:data_end]:
-                        item = deepcopy(item)
-                        create_exc = item.pop('create_execution', None)
-                        latest_exc = item.pop('latest_execution', None)
-                        if create_exc or latest_exc:
-                            execs = {'deployment_id': item['id']}
-                            if create_exc:
-                                execs['create_execution'] = create_exc
-                            if latest_exc:
-                                execs['latest_execution'] = latest_exc
-                            expected_executions.append(execs)
-                        expected.append(item)
                 else:
                     expected = data[data_start:data_end]
 
@@ -502,17 +469,11 @@ def _assert_tenants(tempdir, clients):
                                         for plugin in expected}
                     assert stored_plugins == expected_plugins
                 elif r_type == 'blueprints':
-                    _check_resource_type('blueprints_executions', group,
-                                         expected_executions, tenant_dir)
-
                     stored_blueprints = set(os.listdir(sub_dir))
                     expected_blueprints = {blueprint['id'] + '.zip'
                                            for blueprint in expected}
                     assert stored_blueprints == expected_blueprints
                 elif r_type == 'deployments':
-                    _check_resource_type('deployments_executions', group,
-                                         expected_executions, tenant_dir)
-
                     dep_workdirs = methods_data['get']
                     stored_dep_workdirs = set(os.listdir(sub_dir))
                     expected_dep_workdirs = set()
