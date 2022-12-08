@@ -1,1 +1,20 @@
-[{"timestamp": "2022-11-25T15:14:05.970Z", "reported_timestamp": "2022-11-25T15:14:05.946Z", "blueprint_id": null, "deployment_id": null, "deployment_display_name": null, "workflow_id": null, "message": "execution 1 started", "error_causes": null, "event_type": "execution_state_change", "operation": null, "source_id": null, "target_id": null, "manager_name": null, "agent_name": null, "node_instance_id": null, "type": "cloudify_event"}]
+[
+    {
+        "timestamp": "2022-11-25T15:14:05.970Z",
+        "reported_timestamp": "2022-11-25T15:14:05.946Z",
+        "blueprint_id": null,
+        "deployment_id": null,
+        "deployment_display_name": null,
+        "workflow_id": null,
+        "message": "execution 1 started",
+        "error_causes": null,
+        "event_type": "execution_state_change",
+        "operation": null,
+        "source_id": null,
+        "target_id": null,
+        "manager_name": null,
+        "agent_name": null,
+        "node_instance_id": null,
+        "type": "cloudify_event"
+    }
+]

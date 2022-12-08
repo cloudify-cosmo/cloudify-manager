@@ -291,6 +291,7 @@ EXPECTED_CALLS = {
                         'fakecloud',
                         {
                             'plan': {'someplan': 'here'},
+                            'requirements': {'parent_capabilities': []},
                             'state': 'uploaded',
                             'labels': [
                                 {'key': 'general_usefulness',

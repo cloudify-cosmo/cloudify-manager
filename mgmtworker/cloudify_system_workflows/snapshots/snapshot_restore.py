@@ -452,9 +452,9 @@ class SnapshotRestore(object):
                 extra_details = {}
                 for detail_name in [
                     'plan', 'state', 'error', 'error_traceback',
-                    'is_hidden', 'description', 'labels',
+                    'is_hidden', 'description', 'labels', 'requirements',
                 ]:
-                    detail = entity.pop(detail_name)
+                    detail = entity.pop(detail_name, None)
                     if detail:
                         extra_details[detail_name] = detail
                 restore_func = entity_client.publish_archive
