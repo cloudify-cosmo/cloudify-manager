@@ -1,1 +1,24 @@
-[{"created_at": "2022-11-25T15:13:06.758Z", "id": "bdc6780d-836b-4d4c-9586-dafef3d0ef67", "ended_at": "2022-11-25T15:13:12.799Z", "error": "", "parameters": {"blueprint_id": "shared_provider", "app_file_name": "provider.yaml", "url": null, "file_server_root": "/opt/manager/resources", "marketplace_api_url": "https://example", "validate_only": false, "labels": []}, "status": "terminated", "workflow_id": "upload_blueprint", "started_at": "2022-11-25T15:13:11.492Z", "is_dry_run": false, "allow_custom_parameters": true, "deployment_id": null, "created_by": "admin"}]
+[
+    {
+        "created_at": "2022-11-25T15:13:06.758Z",
+        "id": "bdc6780d-836b-4d4c-9586-dafef3d0ef67",
+        "ended_at": "2022-11-25T15:13:12.799Z",
+        "error": "",
+        "parameters": {
+            "blueprint_id": "shared_provider",
+            "app_file_name": "provider.yaml",
+            "url": null,
+            "file_server_root": "/opt/manager/resources",
+            "marketplace_api_url": "https://example",
+            "validate_only": false,
+            "labels": []
+        },
+        "status": "terminated",
+        "workflow_id": "upload_blueprint",
+        "started_at": "2022-11-25T15:13:11.492Z",
+        "is_dry_run": false,
+        "allow_custom_parameters": true,
+        "deployment_id": null,
+        "created_by": "admin"
+    }
+]

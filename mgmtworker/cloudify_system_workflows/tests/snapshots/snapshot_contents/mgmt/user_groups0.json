@@ -1,1 +1,10 @@
-[{"name": "other", "tenants": {"other": "manager"}, "role": "default", "ldap_dn": null}]
+[
+    {
+        "name": "other",
+        "tenants": {
+            "other": "manager"
+        },
+        "role": "default",
+        "ldap_dn": null
+    }
+]

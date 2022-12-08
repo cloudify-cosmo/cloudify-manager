@@ -1,1 +1,16 @@
-[{"id": "3ea7f689-5eb3-46b6-a0ea-1c981e0ecb1c", "visibility": "tenant", "uploaded_at": "2022-11-25T15:13:17.032Z", "title": "fakecloud-plugin", "created_by": "admin"}, {"id": "da6daad8-76dd-4e32-afc1-aac75c622bb3", "visibility": "tenant", "uploaded_at": "2022-11-25T15:14:28.026Z", "title": "fakecloud-plugin", "created_by": "admin"}]
+[
+    {
+        "id": "3ea7f689-5eb3-46b6-a0ea-1c981e0ecb1c",
+        "visibility": "tenant",
+        "uploaded_at": "2022-11-25T15:13:17.032Z",
+        "title": "fakecloud-plugin",
+        "created_by": "admin"
+    },
+    {
+        "id": "da6daad8-76dd-4e32-afc1-aac75c622bb3",
+        "visibility": "tenant",
+        "uploaded_at": "2022-11-25T15:14:28.026Z",
+        "title": "fakecloud-plugin",
+        "created_by": "admin"
+    }
+]

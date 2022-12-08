@@ -1,1 +1,14 @@
-[{"name": "default_tenant", "rabbitmq_password": "doesnotmatter"}, {"name": "other", "rabbitmq_password": "ilikecake"}, {"name": "shared", "rabbitmq_password": "andbiscuits"}]
+[
+    {
+        "name": "default_tenant",
+        "rabbitmq_password": "doesnotmatter"
+    },
+    {
+        "name": "other",
+        "rabbitmq_password": "ilikecake"
+    },
+    {
+        "name": "shared",
+        "rabbitmq_password": "andbiscuits"
+    }
+]
