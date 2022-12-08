@@ -157,6 +157,7 @@ PERMISSIONS = [
     'secret_import',
     'secret_list',
     'secret_update',
+    'secrets_provider_credentials',
     'set_execution_details',
     'set_execution_group_details',
     'set_owner',
