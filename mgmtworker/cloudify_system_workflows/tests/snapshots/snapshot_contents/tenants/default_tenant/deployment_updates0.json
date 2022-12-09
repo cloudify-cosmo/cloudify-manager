@@ -1,20 +1,23 @@
 [
     {
-        "created_at": "2022-11-25T15:14:24.660Z",
-        "id": "fakeclouddepsforupdate-acd42600-3a79-43a3-b3af-81e816295cd0-2dfce316-1ca9-4635-acfc-7f71b6ba0daa",
+        "created_at": "2022-12-08T08:48:41.581Z",
+        "id": "somedepupdate",
+        "visibility": "tenant",
+        "deployment_plan": {"whatever": "goes here"},
+        "deployment_update_node_instances": {"stuff": "here"},
+        "central_plugins_to_uninstall": null,
+        "central_plugins_to_install": null,
+        "deployment_update_nodes": {"something": "else"},
+        "modified_entity_ids": null,
+        "old_inputs": {},
         "new_inputs": {},
         "state": "successful",
-        "deployment_id": "fakeclouddepsforupdate-acd42600-3a79-43a3-b3af-81e816295cd0",
+        "runtime_only_evaluation": false,
+        "deployment_id": "somedeployment",
+        "execution_id": "thisistheendmyonlyfriend",
+        "old_blueprint_id": "fakecloud",
         "new_blueprint_id": "fakecloudmore",
-        "created_by": "admin"
-    },
-    {
-        "created_at": "2022-11-25T15:14:36.879Z",
-        "id": "fakeclouddepsforupdate-acd42600-3a79-43a3-b3af-81e816295cd0-72faf5f1-e023-4c91-92d3-2cc52cef2fb6",
-        "new_inputs": {},
-        "state": "successful",
-        "deployment_id": "fakeclouddepsforupdate-acd42600-3a79-43a3-b3af-81e816295cd0",
-        "new_blueprint_id": null,
-        "created_by": "admin"
+        "created_by": "admin",
+        "steps": [{"september": "sun"}, {"over": "joyed"}, {"neon": "blue"}]
     }
 ]
