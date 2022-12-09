@@ -1,4 +1,3 @@
-mock
 python-dateutil
 faker
 virtualenv==15.1.0

@@ -1,7 +1,7 @@
 from copy import deepcopy
 
 import unittest
-from mock import patch
+from unittest.mock import patch
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 

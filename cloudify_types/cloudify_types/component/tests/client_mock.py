@@ -14,7 +14,7 @@
 
 import datetime
 
-from mock import MagicMock, Mock
+from unittest.mock import MagicMock, Mock
 
 from cloudify_rest_client.responses import ListResponse
 

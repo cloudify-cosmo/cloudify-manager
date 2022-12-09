@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import unittest
-from mock import patch
+from unittest.mock import patch
 
 from cloudify.state import current_ctx
 from cloudify.mocks import MockCloudifyContext

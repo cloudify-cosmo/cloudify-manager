@@ -1,7 +1,7 @@
-import mock
 import pytest
 import unittest
 from typing import Dict, Any
+from unittest import mock
 
 from datetime import datetime
 
