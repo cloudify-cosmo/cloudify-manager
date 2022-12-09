@@ -14,7 +14,7 @@
 #  * limitations under the License.
 
 from datetime import datetime
-import mock
+from unittest import mock
 
 from sqlalchemy.orm.exc import DetachedInstanceError
 

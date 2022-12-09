@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import mock
+from unittest import mock
 
 from cloudify.deployment_dependencies import dependency_creator_generator
 from cloudify.constants import SHARED_RESOURCE

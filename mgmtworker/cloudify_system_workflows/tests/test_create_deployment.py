@@ -1,4 +1,5 @@
-import mock
+from unittest import mock
+
 import pytest
 
 from cloudify_rest_client.responses import ListResponse

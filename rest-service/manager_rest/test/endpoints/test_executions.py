@@ -1,9 +1,9 @@
 import hashlib
-import mock
 import unittest
 import uuid
-from itertools import dropwhile
 from datetime import datetime, timedelta
+from itertools import dropwhile
+from unittest import mock
 
 from flask import Flask
 

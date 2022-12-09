@@ -14,11 +14,11 @@
 #  * limitations under the License.
 
 import errno
-import mock
 import os
 import uuid
 from datetime import datetime
 from typing import Optional, Dict, Any
+from unittest import mock
 
 from cloudify.models_states import (VisibilityState,
                                     ExecutionState,

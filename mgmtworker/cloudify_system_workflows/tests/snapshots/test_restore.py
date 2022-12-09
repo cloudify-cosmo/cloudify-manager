@@ -1,8 +1,8 @@
 import json
-import mock
 import os
 import shutil
 from tempfile import mkdtemp
+from unittest import mock
 
 import pytest
 

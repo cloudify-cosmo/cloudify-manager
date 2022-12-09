@@ -13,26 +13,26 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import os
 import json
-import time
-import uuid
-import shutil
 import logging
-import unittest
+import os
+import shutil
 import tempfile
-import sqlalchemy.exc
-from sqlalchemy.orm.session import close_all_sessions
+import time
+import traceback
+import unittest
+import uuid
 from typing import List
+from unittest.mock import Mock, patch
 
 import psycopg2
 import requests
-import traceback
+import sqlalchemy.exc
 
-from flask_migrate import Migrate, upgrade
-from mock import Mock, patch
 from flask.testing import FlaskClient
+from flask_migrate import Migrate, upgrade
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+from sqlalchemy.orm.session import close_all_sessions
 from urllib.parse import quote as urlquote
 
 from cloudify_rest_client import CloudifyClient
