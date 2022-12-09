@@ -794,6 +794,36 @@ EXPECTED_CALLS = {
             'sort_key': '',
         },
     },
+    'deployment_updates': {
+        'create': {
+            'expected': {
+                'default_tenant': [
+                    mock.call(created_at="2022-12-08T08:48:41.581Z",
+                              update_id="somedepupdate",
+                              visibility="tenant",
+                              deployment_plan={"whatever": "goes here"},
+                              deployment_update_node_instances={
+                                  "stuff": "here"},
+                              central_plugins_to_uninstall=None,
+                              central_plugins_to_install=None,
+                              deployment_update_nodes={"something": "else"},
+                              modified_entity_ids=None,
+                              old_inputs={},
+                              inputs={},
+                              state="successful",
+                              runtime_only_evaluation=False,
+                              deployment_id="somedeployment",
+                              execution_id="thisistheendmyonlyfriend",
+                              old_blueprint_id="fakecloud",
+                              blueprint_id="fakecloudmore",
+                              created_by="admin",
+                              steps=[{"september": "sun"}, {"over": "joyed"},
+                                     {"neon": "blue"}]),
+                ],
+            },
+            'sort_key': 'id',
+        },
+    },
 }
 
 

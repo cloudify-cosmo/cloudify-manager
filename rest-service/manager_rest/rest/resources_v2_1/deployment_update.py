@@ -33,11 +33,13 @@ from manager_rest.utils import (create_filter_params_list_description,
 from manager_rest.resource_manager import get_resource_manager
 from .. import rest_decorators
 from ..rest_utils import (
-    verify_and_convert_bool,
     get_json_and_verify_params,
-    wait_for_execution,
     lookup_and_validate_user,
+    parse_datetime_string,
     remove_invalid_keys,
+    valid_user,
+    verify_and_convert_bool,
+    wait_for_execution,
 )
 
 
@@ -203,13 +205,32 @@ class DeploymentUpdateId(SecuredResource):
             'deployment_id': {'type': str, 'required': True},
             'state': {'optional': True},
             'inputs': {'optional': True},
-            'blueprint_id': {'optional': True}
+            'blueprint_id': {'optional': True},
+            'created_at': {'optional': True},
+            'created_by': {'optional': True},
+            'execution_id': {'optional': True},
         })
         sm = get_storage_manager()
-        if not current_execution:
+        if params.get('execution_id') is None and not current_execution:
+            # Only allow non-execution creation of dep updates for restores
             raise manager_exceptions.ForbiddenError(
                 'Deployment update objects can only be created by executions')
 
+        if params.get('execution_id'):
+            execution = sm.get(models.Execution,
+                               params['execution_id'])
+        else:
+            execution = current_execution
+        created_at = None
+        if params.get('created_at'):
+            check_user_action_allowed('set_timestamp', None, True)
+            created_at = parse_datetime_string(params['created_at'])
+        created_by = None
+        if params.get('created_by'):
+            check_user_action_allowed('set_owner', None, True)
+            created_by = valid_user(params['created_by'])
+
+        add_steps = False
         with sm.transaction():
             dep = sm.get(models.Deployment, params['deployment_id'])
             dep_upd = sm.get(models.DeploymentUpdate, update_id,
@@ -217,15 +238,67 @@ class DeploymentUpdateId(SecuredResource):
             if dep_upd is None:
                 dep_upd = models.DeploymentUpdate(
                     id=update_id,
-                    _execution_fk=current_execution._storage_id
+                    _execution_fk=execution._storage_id,
                 )
             dep_upd.state = params.get('state') or STATES.UPDATING
             dep_upd.new_inputs = params.get('inputs')
             if params.get('blueprint_id'):
                 dep_upd.new_blueprint = sm.get(
                     models.Blueprint, params['blueprint_id'])
+            if created_at:
+                dep_upd.created_at = created_at
+            if created_by:
+                dep_upd.creator = created_by
+            if params.get('old_blueprint_id'):
+                dep_upd.old_blueprint = sm.get(
+                    models.Blueprint, params['old_blueprint_id'])
+            for attr in [
+                'runtime_only_evaluation', 'deployment_plan', 'steps',
+                'deployment_update_node_instances', 'modified_entity_ids',
+                'central_plugins_to_install', 'central_plugins_to_uninstall',
+                'old_inputs', 'deployment_update_nodes', 'visibility',
+            ]:
+                if params.get(attr) is not None:
+                    if attr == 'steps':
+                        add_steps = True
+                    else:
+                        setattr(dep_upd, attr, params[attr])
             dep_upd.set_deployment(dep)
-            return dep_upd
+
+        if add_steps:
+            steps_to_add = self._prepare_raw_steps(
+                dep_upd, params['steps'])
+            with sm.transaction():
+                db.session.execute(
+                    models.DeploymentUpdateStep.__table__.insert(),
+                    steps_to_add,
+                )
+
+        return dep_upd
+
+    def _prepare_raw_steps(self, dep_update, raw_steps):
+        if any(item.get('created_by') for item in raw_steps):
+            check_user_action_allowed('set_owner')
+
+        valid_params = {'action', '_creator_id', '_deployment_update_fk',
+                        'entity_id', 'entity_type', 'id', 'private_resource',
+                        'resource_availability', '_tenant_id',
+                        'topology_order', 'visibility'}
+
+        user_lookup_cache: Dict[str, models.User] = {}
+
+        for raw_step in raw_steps:
+            raw_step['_tenant_id'] = dep_update._tenant_id
+
+            created_by = lookup_and_validate_user(raw_step.get('created_by'),
+                                                  user_lookup_cache)
+            raw_step['_creator_id'] = created_by.id
+            raw_step['_deployment_update_fk'] = dep_update._storage_id
+            raw_step['visibility'] = dep_update.visibility
+
+            remove_invalid_keys(raw_step, valid_params)
+
+        return raw_steps
 
     @authorize('deployment_update_update')
     @rest_decorators.marshal_with(models.DeploymentUpdate)
