@@ -15,9 +15,9 @@
 
 import os
 import uuid
-import mock
 import tempfile
 import shutil
+from unittest import mock
 
 import pytest
 

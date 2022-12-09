@@ -1,11 +1,11 @@
-from copy import deepcopy
-from dataclasses import dataclass
 import json
-from math import ceil
 import os
 import shutil
+from copy import deepcopy
+from dataclasses import dataclass
+from math import ceil
+from unittest import mock
 
-import mock
 import pytest
 
 from cloudify_rest_client.responses import ListResponse

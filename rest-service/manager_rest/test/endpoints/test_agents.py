@@ -14,7 +14,7 @@
 # limitations under the License.
 ############
 
-from mock import patch
+from unittest.mock import patch
 
 from cloudify.models_states import AgentState
 from cloudify.cryptography_utils import encrypt

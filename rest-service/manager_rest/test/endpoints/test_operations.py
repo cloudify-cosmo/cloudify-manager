@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
+from unittest import mock
 
-import mock
 import pytest
 
 from cloudify import constants

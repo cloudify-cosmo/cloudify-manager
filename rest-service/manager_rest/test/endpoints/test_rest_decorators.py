@@ -16,10 +16,10 @@
 
 import urllib.parse
 from unittest import TestCase
+from unittest.mock import Mock
 
 from dateutil.parser import parse as parse_datetime
 from flask import Flask
-from mock import Mock
 from pydantic import ValidationError
 
 from manager_rest.rest.rest_decorators import (

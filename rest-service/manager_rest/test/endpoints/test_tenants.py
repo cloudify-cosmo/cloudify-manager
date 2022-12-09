@@ -15,7 +15,7 @@
 
 import pytest
 
-from mock import patch
+from unittest.mock import patch
 
 from manager_rest import premium_enabled
 from manager_rest.constants import DEFAULT_TENANT_NAME

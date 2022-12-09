@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import mock
-import unittest
+from unittest import mock, TestCase
 
 from cloudify.state import current_ctx
 from cloudify.mocks import MockCloudifyContext
@@ -42,7 +41,7 @@ COMPONENT_PROPS = {
 MOCK_TIMEOUT = .0001
 
 
-class ComponentTestBase(unittest.TestCase):
+class ComponentTestBase(TestCase):
 
     def setUp(self, context_data=COMPONENT_PROPS):
         super(ComponentTestBase, self).setUp()

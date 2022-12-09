@@ -1,6 +1,6 @@
 import os
 
-from mock import patch
+from unittest.mock import patch
 
 from cloudify.snapshots import STATES
 from cloudify_rest_client.exceptions import CloudifyClientError

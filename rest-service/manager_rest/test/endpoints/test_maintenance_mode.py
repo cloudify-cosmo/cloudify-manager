@@ -13,7 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from mock import patch
+from unittest.mock import patch
 
 from cloudify_rest_client import exceptions
 from cloudify.models_states import ExecutionState

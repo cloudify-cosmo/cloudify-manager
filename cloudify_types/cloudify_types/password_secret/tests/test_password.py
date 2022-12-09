@@ -1,5 +1,5 @@
 import unittest
-from mock import patch, Mock
+from unittest.mock import patch, Mock
 
 from cloudify.state import current_ctx
 from cloudify.mocks import MockCloudifyContext

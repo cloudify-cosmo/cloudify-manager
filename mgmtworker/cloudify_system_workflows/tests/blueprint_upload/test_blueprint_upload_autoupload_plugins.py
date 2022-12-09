@@ -1,5 +1,6 @@
 import os
-import mock
+from unittest import mock
+
 import pytest
 
 from cloudify_system_workflows.blueprint import extract_parser_context

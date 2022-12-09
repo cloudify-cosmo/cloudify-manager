@@ -14,11 +14,11 @@
 #  * limitations under the License.
 
 import json
-import mock
 import os
 import tarfile
 import zipfile
 from datetime import datetime, timedelta
+from unittest import mock
 
 import wagon
 

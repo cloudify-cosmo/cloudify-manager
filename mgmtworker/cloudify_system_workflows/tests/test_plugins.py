@@ -14,8 +14,7 @@
 #    * limitations under the License.
 
 import unittest
-
-from mock import patch, MagicMock, PropertyMock, call
+from unittest.mock import patch, MagicMock, PropertyMock, call
 
 from cloudify.models_states import ExecutionState
 
