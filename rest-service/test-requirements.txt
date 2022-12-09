@@ -1,5 +1,4 @@
 python-dateutil
-faker
 virtualenv==15.1.0
 wagon>=0.12
 pytest
