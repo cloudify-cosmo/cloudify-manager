@@ -11,7 +11,7 @@ from collections.abc import MutableMapping
 
 from flask_security.utils import hash_password
 
-from manager_rest import config, constants, permissions
+from manager_rest import config, constants, permissions, version
 from manager_rest.storage import (
     db,
     models,
@@ -69,6 +69,11 @@ def _get_rabbitmq_ca_path(user_config):
         value = ''
 
     return value or '/etc/cloudify/ssl/cloudify_internal_ca_cert.pem'
+
+
+def _get_manager_ca_path():
+    # not configurable currently
+    return '/etc/cloudify/ssl/cloudify_internal_ca_cert.pem'
 
 
 def _get_rabbitmq_use_hostnames_in_db(user_config):
@@ -358,6 +363,59 @@ def _create_permissions(user_config):
             db.session.add(perm)
 
 
+def _update_manager_ca_cert(manager, ca_cert):
+    stored_cert = manager.ca_cert
+    if ca_cert and stored_cert:
+        if stored_cert.value.strip() != ca_cert.strip():
+            raise RuntimeError('ca_cert differs from existing manager CA')
+
+    if not stored_cert:
+        if not ca_cert:
+            with open(_get_manager_ca_path()) as f:
+                ca_cert = f.read()
+        if not ca_cert:
+            raise RuntimeError('No manager certs found, and ca_cert not given')
+        ca = models.Certificate(
+            name=f'{manager.hostname}-ca',
+            value=ca_cert,
+            updated_at=datetime.datetime.utcnow(),
+        )
+        manager.ca_cert = ca
+        db.session.add(ca)
+
+
+def _insert_manager(user_config):
+    manager_config = user_config.get('manager') or {}
+    hostname = manager_config.get('hostname')
+    if not hostname:
+        return
+
+    manager = models.Manager.query.filter_by(hostname=hostname).first()
+    if not manager:
+        manager = models.Manager(hostname=hostname)
+        db.session.add(manager)
+
+    private_ip = manager_config.get('private_ip')
+    public_ip = manager_config.get('public_ip')
+    networks = manager_config.get('networks') or {}
+    networks.setdefault('default', private_ip or public_ip)
+
+    manager.networks = networks or manager.networks
+    manager.private_ip = private_ip or manager.private_ip or public_ip
+    manager.public_ip = public_ip or manager.public_ip or private_ip
+
+    version_data = version.get_version_data()
+    manager.version = version_data.get('version')
+    manager.edition = version_data.get('edition')
+    manager.distribution = version_data.get('distribution')
+    manager.distro_release = version_data.get('distro_release')
+    manager.last_seen = datetime.datetime.utcnow()
+
+    ca_cert = manager_config.get('ca_cert')
+    if ca_cert or not manager.ca_cert:
+        _update_manager_ca_cert(manager, ca_cert)
+
+
 def configure(user_config):
     """Configure the manager based on the provided config"""
     _register_rabbitmq_brokers(user_config)
@@ -379,6 +437,7 @@ def configure(user_config):
 
     _create_provider_context(user_config)
 
+    _insert_manager(user_config)
     db.session.commit()
 
 

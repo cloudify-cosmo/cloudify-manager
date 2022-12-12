@@ -107,6 +107,8 @@ services:
       context: rest-service
       ssh:
         - default
+    environment:
+      ENTRYPOINT: localhost
     depends_on:
       - postgresql
       - certs_creator
