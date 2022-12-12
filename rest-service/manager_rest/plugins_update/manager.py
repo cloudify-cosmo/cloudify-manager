@@ -139,21 +139,18 @@ class PluginsUpdateManager(object):
         plugins_update = self.stage_plugin_update(blueprint,
                                                   filters.get('force', False),
                                                   all_tenants=all_tenants)
-        self.sm.put(plugins_update)
-        # from celery.contrib import rdb; rdb.set_trace()
         if changes_required:
             tenants_deployments = defaultdict(list)
             for dep in self._get_deployments_to_update(blueprint_id,
                                                        all_tenants):
                 tenants_deployments[dep.tenant.name].append(dep.id)
             plugins_update.deployments_per_tenant = dict(tenants_deployments)
-            self.sm.update(plugins_update)
 
             temp_blueprint = self._create_temp_blueprint_from(blueprint,
                                                               temp_plan)
             plugins_update.temp_blueprint = temp_blueprint
             plugins_update.state = STATES.UPDATING
-            self.sm.update(plugins_update)
+        self.sm.put(plugins_update)
 
         plugins_update.execution, messages = \
             get_resource_manager(self.sm).update_plugins(
