@@ -12,7 +12,6 @@ ENV POSTGRES_USER=cloudify
 ENV POSTGRES_PASSWORD=cloudify
 # FILE_SERVER_TYPE=minio or local
 ENV FILE_SERVER_TYPE=s3
-ENV CONFIG_FILE_PATH=/opt/rest-service/docker/config.yaml
 
 RUN --mount=type=cache,target=/root/.cache \
     apt-get update \
