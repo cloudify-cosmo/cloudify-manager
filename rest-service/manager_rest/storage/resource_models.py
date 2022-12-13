@@ -343,6 +343,10 @@ class Secret(CreatedAtMixin, SQLResourceBase):
         SecretsProvider._storage_id,
         nullable=True,
     )
+    provider_options = db.Column(
+        db.Text,
+        nullable=True,
+    )
 
     @hybrid_property
     def key(self):
@@ -354,6 +358,7 @@ class Secret(CreatedAtMixin, SQLResourceBase):
         fields['key'] = fields.pop('id')
         fields['value'] = flask_fields.Raw
         fields['provider_name'] = flask_fields.String()
+        fields['provider_options'] = flask_fields.Raw
 
         return fields
 

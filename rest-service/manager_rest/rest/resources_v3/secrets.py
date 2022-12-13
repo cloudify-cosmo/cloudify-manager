@@ -54,6 +54,20 @@ class SecretsKey(SecuredResource):
                     "please recreate the secret".format(key))
         if secret.schema:
             secret_dict['value'] = json.loads(secret_dict['value'])
+
+        if secret_dict['provider_options'] and \
+                rest_utils.is_hidden_value_permitted(secret):
+            try:
+                secret_dict['provider_options'] = decrypt(
+                    secret_dict['provider_options'],
+                )
+            except InvalidToken:
+                raise manager_exceptions.InvalidFernetTokenFormatError(
+                    "The Secret provider options for key `{}` is malformed, "
+                    "please recreate the provider options".format(key))
+        else:
+            secret_dict['provider_options'] = None
+
         return secret_dict
 
     @authorize('secret_create')
@@ -94,6 +108,7 @@ class SecretsKey(SecuredResource):
         self._update_value(secret)
         self._update_owner(secret)
         self._update_provider(secret)
+        self._update_provider_options(secret)
         secret.updated_at = utils.get_formatted_timestamp()
         return get_storage_manager().update(secret, validate_global=True)
 
@@ -121,6 +136,10 @@ class SecretsKey(SecuredResource):
                 },
                 'provider': {
                     'type': str,
+                    'optional': True,
+                },
+                'provider_options': {
+                    'type': dict,
                     'optional': True,
                 },
             },
@@ -165,6 +184,8 @@ class SecretsKey(SecuredResource):
                 provider_name,
             )
 
+        provider_options = request_dict.get('provider_options')
+
         secret_params = {
             'value': value,
             'schema': schema,
@@ -172,6 +193,7 @@ class SecretsKey(SecuredResource):
             'visibility': visibility,
             'is_hidden_value': is_hidden_value,
             'provider': provider,
+            'provider_options': provider_options,
         }
         return secret_params
 
@@ -257,6 +279,29 @@ class SecretsKey(SecuredResource):
 
         secret.provider = provider
 
+    @staticmethod
+    def _update_provider_options(secret):
+        request_dict = rest_utils.get_json_and_verify_params(
+            {
+                'provider_options': {
+                    'type': dict,
+                    'optional': True,
+                },
+            },
+        )
+        provider_options = request_dict.get(
+            'provider_options',
+        )
+
+        if not provider_options:
+            return
+
+        secret.provider_options = encrypt(
+            json.dumps(
+                provider_options,
+            ),
+        ),
+
 
 class Secrets(SecuredResource):
     @authorize('secret_list')
@@ -283,7 +328,7 @@ class Secrets(SecuredResource):
             pagination=pagination,
             sort=sort,
             all_tenants=all_tenants,
-            get_all_results=get_all_results
+            get_all_results=get_all_results,
         )
 
 

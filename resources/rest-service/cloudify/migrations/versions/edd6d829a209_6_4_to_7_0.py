@@ -45,6 +45,7 @@ def upgrade():
     add_users_created_at_index()
     create_secrets_providers_table()
     add_secrets_schema()
+    add_secrets_provider_options()
     add_secrets_provider_relationship()
     add_s3_client_config()
     add_blueprint_requirements_column()
@@ -61,6 +62,7 @@ def downgrade():
     drop_secrets_provider_relationship()
     drop_secrets_providers_table()
     drop_secrets_schema()
+    drop_secrets_provider_options()
 
 
 def add_p_to_pickle_columns():
@@ -643,8 +645,26 @@ def add_secrets_schema():
                   sa.Column('schema', JSONString(), nullable=True))
 
 
+def add_secrets_provider_options():
+    op.add_column(
+        'secrets',
+        sa.Column(
+            'provider_options',
+            sa.Text,
+            nullable=True,
+        ),
+    )
+
+
 def drop_secrets_schema():
     op.drop_column('secrets', 'schema')
+
+
+def drop_secrets_provider_options():
+    op.drop_column(
+        'secrets',
+        'provider_options',
+    )
 
 
 def add_secrets_provider_relationship():

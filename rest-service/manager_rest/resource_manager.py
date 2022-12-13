@@ -2910,6 +2910,14 @@ def create_secret(key, secret, tenant, created_at=None,
                   updated_at=None, creator=None):
     sm = get_storage_manager()
     timestamp = utils.get_formatted_timestamp()
+
+    if provider_options := secret.get('provider_options'):
+        provider_options = encrypt(
+            json.dumps(
+                secret.get('provider_options'),
+            ),
+        )
+
     new_secret = models.Secret(
         id=key,
         value=encrypt(secret['value']),
@@ -2920,6 +2928,7 @@ def create_secret(key, secret, tenant, created_at=None,
         is_hidden_value=secret['is_hidden_value'],
         tenant=tenant,
         provider=secret.get('provider'),
+        provider_options=provider_options,
     )
     if creator:
         new_secret.creator = creator
@@ -2930,6 +2939,13 @@ def create_secret(key, secret, tenant, created_at=None,
 def update_secret(existing_secret, secret):
     existing_secret.value = encrypt(secret['value'])
     existing_secret.updated_at = utils.get_formatted_timestamp()
+    if provider_options := secret.get('provider_options'):
+        existing_secret.provider_options = encrypt(
+            json.dumps(
+                provider_options,
+            ),
+        )
+
     return get_storage_manager().update(existing_secret, validate_global=True)
 
 
