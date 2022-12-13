@@ -1,19 +1,20 @@
 [
     {
         "created_at": "2022-11-25T15:14:35.397Z",
-        "id": "c72a1649-3060-4f91-ab09-48f62d4df4f2",
+        "id": "someupdateid",
         "state": "successful",
         "deployments_to_update": null,
         "deployments_per_tenant": {
             "default_tenant": [
-                "fakeclouddepsforupdate-acd42600-3a79-43a3-b3af-81e816295cd0"
+                "dep1",
+                "dep2"
             ]
         },
         "forced": false,
         "all_tenants": false,
         "blueprint_id": "fakecloudmore",
         "temp_blueprint_id": null,
-        "execution_id": "fba8f459-3917-4b13-b3ed-adf29de92b70",
+        "execution_id": "someexecid",
         "created_by": "admin"
     }
 ]
