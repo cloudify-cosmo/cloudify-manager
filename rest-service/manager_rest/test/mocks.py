@@ -1,3 +1,4 @@
+import json
 import numbers
 import types
 from datetime import datetime
@@ -9,6 +10,7 @@ from werkzeug.datastructures import FileStorage
 
 from cloudify_rest_client.client import HTTPClient
 from cloudify_rest_client.executions import Execution
+from cloudify_rest_client.exceptions import CloudifyClientError
 
 from manager_rest import utils
 from manager_rest.storage import get_storage_manager, models
@@ -59,7 +61,7 @@ class MockHTTPClient(HTTPClient):
         self._root_path = root_path
 
     def do_request(self,
-                   requests_method,
+                   method,
                    uri,
                    data=None,
                    params=None,
@@ -69,6 +71,8 @@ class MockHTTPClient(HTTPClient):
                    expected_status_code=200,
                    stream=False,
                    versioned_url=True,
+                   verify=False,
+                   wrapper=None,
                    timeout=None):
         # hack: we have app-ctx everywhere in tests, but we'd like to still
         # load the user again on every request, in case this client uses
@@ -77,30 +81,18 @@ class MockHTTPClient(HTTPClient):
         if '_login_user' in g:
             delattr(g, '_login_user')
 
-        if CLIENT_API_VERSION == 'v1':
-            # in v1, HTTPClient won't append the version part of the URL
-            # on its own, so it's done here instead
-            uri = '/api/{0}{1}'.format(CLIENT_API_VERSION, uri)
-
-        return super(MockHTTPClient, self).do_request(
-            requests_method=requests_method,
-            uri=uri,
-            data=data,
-            params=params,
-            headers=headers,
-            expected_status_code=expected_status_code,
-            stream=stream
-        )
-
-    def _do_request(self, requests_method, request_url, body, params, headers,
-                    expected_status_code, stream, verify, timeout=None):
-        if 'get' in requests_method.__name__:
+        request_url = f'/api/{CLIENT_API_VERSION}{uri}'
+        if isinstance(data, dict):
+            body = json.dumps(data)
+        else:
+            body = data
+        if method == 'GET':
             response = self.app.get(request_url,
                                     headers=headers,
                                     data=body,
                                     query_string=build_query_string(params))
 
-        elif 'put' in requests_method.__name__:
+        elif method == 'PUT':
             if isinstance(body, types.GeneratorType):
                 body = b''.join(body)
             if hasattr(body, 'fields'):
@@ -128,19 +120,19 @@ class MockHTTPClient(HTTPClient):
                                     headers=headers,
                                     data=body,
                                     query_string=build_query_string(params))
-        elif 'post' in requests_method.__name__:
+        elif method == 'POST':
             if isinstance(body, types.GeneratorType):
                 body = b''.join(body)
             response = self.app.post(request_url,
                                      headers=headers,
                                      data=body,
                                      query_string=build_query_string(params))
-        elif 'patch' in requests_method.__name__:
+        elif method == 'PATCH':
             response = self.app.patch(request_url,
                                       headers=headers,
                                       data=body,
                                       query_string=build_query_string(params))
-        elif 'delete' in requests_method.__name__:
+        elif method == 'DELETE':
             response = self.app.delete(request_url,
                                        headers=headers,
                                        data=body,
@@ -152,14 +144,18 @@ class MockHTTPClient(HTTPClient):
             expected_status_code = [expected_status_code]
         if response.status_code not in expected_status_code:
             response.content = response.data
-            self._raise_client_error(MockClientResponse(response), request_url)
+            raise CloudifyClientError.from_response(
+                response, response.status_code, response.content)
 
         if stream:
             return MockStreamedResponse(response, self._root_path)
 
         if response.status_code == 204:
             return None
-        return response.get_json()
+        response_json = response.get_json()
+        if wrapper:
+            return wrapper(response_json)
+        return response_json
 
 
 class MockStreamedResponse(object):
