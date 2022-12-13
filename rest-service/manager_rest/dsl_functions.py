@@ -156,7 +156,13 @@ def get_secret_from_provider(secret):
         )
         url = connection_parameters.get('url')
         token = connection_parameters.get('token')
-        default_path = connection_parameters.get('path')
+        path = []
+
+        if default_path := connection_parameters.get('path'):
+            path.append(
+                default_path,
+            )
+
         secret_path = None
 
         if secret.provider_options:
@@ -167,10 +173,14 @@ def get_secret_from_provider(secret):
             )
             secret_path = provider_options.get('path')
 
-        path = f'{default_path}'
-
         if secret_path:
-            path += f'/{secret_path}'
+            path.append(
+                secret_path,
+            )
+
+        path = '/'.join(
+            path,
+        )
 
         decrypted_value = _get_secret_from_vault(
             url,

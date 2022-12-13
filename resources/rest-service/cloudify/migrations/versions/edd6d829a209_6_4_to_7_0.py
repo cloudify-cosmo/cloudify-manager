@@ -663,7 +663,7 @@ def drop_secrets_schema():
 def drop_secrets_provider_options():
     op.drop_column(
         'secrets',
-        'schema',
+        'provider_options',
     )
 
 
