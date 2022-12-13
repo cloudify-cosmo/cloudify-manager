@@ -824,6 +824,28 @@ EXPECTED_CALLS = {
             'sort_key': 'id',
         },
     },
+    'plugins_update': {
+        'inject': {
+            'expected': {
+                'default_tenant': [
+                    mock.call(created_at='2022-11-25T15:14:35.397Z',
+                              state='successful',
+                              deployments_per_tenant={
+                                  'default_tenant': ['dep1', 'dep2'],
+                              },
+                              all_tenants=False,
+                              blueprint_id='fakecloudmore',
+                              temp_blueprint_id=None,
+                              execution_id='someexecid',
+                              created_by='admin',
+                              update_id='someupdateid',
+                              affected_deployments=None,
+                              force=False),
+                ],
+            },
+            'sort_key': 'update_id',
+        },
+    },
 }
 
 

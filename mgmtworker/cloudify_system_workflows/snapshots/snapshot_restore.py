@@ -188,7 +188,7 @@ class SnapshotRestore(object):
             # Everything after this point requires blueprints and plugins
             'deployments', 'deployment_groups', 'executions',
             'execution_groups', 'events', 'execution_schedules',
-            'deployment_updates',
+            'deployment_updates', 'plugins_update',
         ]:
             for tenant in self._new_tenants:
                 self._new_restore_parse_and_restore(resource, tenant=tenant)
@@ -494,6 +494,12 @@ class SnapshotRestore(object):
                 entity['update_id'] = entity.pop('id')
                 entity['blueprint_id'] = entity.pop('new_blueprint_id')
                 entity['inputs'] = entity.pop('new_inputs', None)
+            elif entity_type == 'plugins_update':
+                entity['update_id'] = entity.pop('id')
+                entity['affected_deployments'] = entity.pop(
+                    'deployments_to_update', None)
+                entity['force'] = entity.pop('forced', None)
+                restore_func = entity_client.inject
 
             if not restore_func:
                 restore_func = entity_client.create
