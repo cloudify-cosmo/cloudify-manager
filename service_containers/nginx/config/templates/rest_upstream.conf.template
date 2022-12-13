@@ -18,7 +18,7 @@ upstream cloudify-stage-backend {
 # REST and UI external server
 server {
   # server listening for external requests
-  listen              443 ssl;
+  listen              443 ssl http2;
 
   server_name         _;
 
@@ -49,7 +49,7 @@ server {
 # REST and UI internal server - always SSL enabled
 server {
   # server listening for internal requests
-  listen              53333 ssl default_server;
+  listen              53333 ssl default_server http2;
 
 
   server_name         _;
