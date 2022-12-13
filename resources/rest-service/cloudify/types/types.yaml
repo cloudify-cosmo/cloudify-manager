@@ -926,7 +926,8 @@ workflows:
     mapping: default_workflows.cloudify.plugins.workflows.execute_operation
     is_cascading: false
     parameters:
-      operation: {}
+      operation:
+        type: operation_name
       operation_kwargs:
         default: {}
       allow_kwargs_override:
