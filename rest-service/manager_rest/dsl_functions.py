@@ -154,10 +154,28 @@ def get_secret_from_provider(secret):
                 provider.connection_parameters,
             ),
         )
+        url = connection_parameters.get('url')
+        token = connection_parameters.get('token')
+        default_path = connection_parameters.get('path')
+        secret_path = None
+
+        if secret.provider_options:
+            provider_options = json.loads(
+                decrypt(
+                    secret.provider_options,
+                ),
+            )
+            secret_path = provider_options.get('path')
+
+        path = f'{default_path}'
+
+        if secret_path:
+            path += f'/{secret_path}'
+
         decrypted_value = _get_secret_from_vault(
-            connection_parameters['url'],
-            connection_parameters['token'],
-            connection_parameters['path'],
+            url,
+            token,
+            path,
             secret.key,
         )
 

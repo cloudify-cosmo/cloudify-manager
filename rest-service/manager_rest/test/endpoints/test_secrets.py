@@ -1,4 +1,11 @@
+import json
+
 from manager_rest.test import base_test
+
+from cloudify.cryptography_utils import (
+    decrypt,
+)
+
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 
@@ -70,3 +77,60 @@ class TestSecrets(base_test.BaseServerTestCase):
         with self.assertRaises(CloudifyClientError) as cm:
             self.client.secrets.get('test_key')
         assert cm.exception.status_code == 404
+
+    def test_create_secret_with_provider_options(self):
+        secret_name = 'test_key'
+        secret_value = 'test_value'
+        provider_options = {
+            'key1': 'value1',
+            'key2': 'value2',
+        }
+
+        new_secret = self.client.secrets.create(
+            key=secret_name,
+            value=secret_value,
+            provider_options=provider_options,
+        )
+
+        assert new_secret.provider_options != provider_options
+        assert json.loads(
+            decrypt(
+                new_secret.provider_options,
+            ),
+        ) == provider_options
+
+    def test_update_secret_with_provider_options(self):
+        secret_name = 'test_key'
+        secret_value = 'test_value'
+        provider_options = {
+            'key1': 'value1',
+            'key2': 'value2',
+        }
+        updated_provider_options = {
+            'key3': 'value3',
+            'key4': 'value4',
+        }
+
+        self.client.secrets.create(
+            key=secret_name,
+            value=secret_value,
+            provider_options=provider_options,
+        )
+
+        updated_secret = self.client.secrets.update(
+            key=secret_name,
+            provider_options=updated_provider_options,
+        )
+
+        assert updated_secret.provider_options != provider_options
+        assert updated_secret.provider_options != updated_provider_options
+        assert json.loads(
+            decrypt(
+                updated_secret.provider_options,
+            ),
+        ) != provider_options
+        assert json.loads(
+            decrypt(
+                updated_secret.provider_options,
+            ),
+        ) == updated_provider_options
