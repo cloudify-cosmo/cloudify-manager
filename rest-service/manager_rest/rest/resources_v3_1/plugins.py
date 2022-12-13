@@ -108,7 +108,7 @@ class PluginsUpdate(SecuredResource):
                 'execution_id': {'type': str, 'optional': True},
                 'state': {'type': str, 'optional': True},
                 'affected_deployments': {'type': list, 'optional': True},
-                'deployments_per_tenants': {'type': dict, 'optional': True},
+                'deployments_per_tenant': {'type': dict, 'optional': True},
                 'temp_blueprint_id': {'type': str, 'optional': True},
             })
         except BadRequest:
@@ -132,7 +132,7 @@ class PluginsUpdate(SecuredResource):
                                        'update_id',
                                        'execution_id', 'state',
                                        'affected_deployments',
-                                       'deployments_per_tenants',
+                                       'deployments_per_tenant',
                                        'temp_blueprint_id']):
             check_user_action_allowed('set_plugin_update_details')
             if not args.get('state'):
@@ -167,8 +167,8 @@ class PluginsUpdate(SecuredResource):
                 )._storage_id
             plugins_update.deployments_to_update = args.get(
                 'affected_deployments', [])
-            plugins_update.deployments_to_update = args.get(
-                'deployments_per_tenants', {})
+            plugins_update.deployments_per_tenant = args.get(
+                'deployments_per_tenant', {})
             if args.get('temp_blueprint_id'):
                 plugins_update.temp_blueprint = update_manager.sm.get(
                     models.Blueprint, args['temp_blueprint_id'])
