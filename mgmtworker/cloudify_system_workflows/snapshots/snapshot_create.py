@@ -7,7 +7,6 @@ import zipfile
 from cloudify.workflows import ctx
 from cloudify.manager import get_rest_client
 from cloudify.constants import FILE_SERVER_SNAPSHOTS_FOLDER
-from cloudify.zip_utils import make_zip64_archive
 
 from . import constants, utils
 
@@ -118,26 +117,38 @@ class SnapshotCreate(object):
         self._tempdir = None
         self._client = None
         self._tenant_clients = {}
+        self._zip_handle = None
+        self._archive_dest = self._get_snapshot_archive_name()
 
     def create(self):
         self._client = get_rest_client()
         self._tenants = self._get_tenants()
         self._prepare_tempdir()
         try:
-            manager_version = utils.get_manager_version(self._client)
+            with zipfile.ZipFile(
+                self._archive_dest,
+                'w',
+                compression=zipfile.ZIP_DEFLATED,
+                allowZip64=True,
+            ) as zip_handle:
+                self._zip_handle = zip_handle
 
-            self._dump_metadata(manager_version)
+                manager_version = utils.get_manager_version(self._client)
 
-            self._dump_management()
-            for tenant in self._tenants:
-                self._dump_tenant(tenant)
+                self._dump_metadata(manager_version)
 
-            self._create_archive()
-            self._update_snapshot_status(self._config.created_status)
-            ctx.logger.info('Snapshot created successfully')
+                self._dump_management()
+                for tenant in self._tenants:
+                    self._dump_tenant(tenant)
+
+                self._update_snapshot_status(self._config.created_status)
+                ctx.logger.info('Snapshot created successfully')
         except BaseException as e:
             self._update_snapshot_status(self._config.failed_status, str(e))
             ctx.logger.error('Snapshot creation failed: {0}'.format(str(e)))
+            if os.path.exists(self._archive_dest):
+                # Clean up snapshot archive
+                os.unlink(self._archive_dest)
             raise
         finally:
             ctx.logger.debug('Removing temp dir: {0}'.format(self._tempdir))
@@ -199,6 +210,8 @@ class SnapshotCreate(object):
         if dump_type in GET_DATA:
             get_kwargs['_get_data'] = True
 
+        os.makedirs(destination_base, exist_ok=True)
+
         include = INCLUDES.get(dump_type)
         if include:
             get_kwargs['_include'] = include
@@ -227,9 +240,12 @@ class SnapshotCreate(object):
         for i in range(file_count):
             start = i * ENTITIES_PER_GROUPING
             finish = (i+1) * ENTITIES_PER_GROUPING
-            this_file = destination_base + str(i) + suffix
+            this_file = os.path.join(destination_base, str(i) + suffix)
             with open(this_file, 'w') as dump_handle:
                 json.dump(data[start:finish], dump_handle)
+            self._zip_handle.write(this_file,
+                                   os.path.relpath(this_file, self._tempdir))
+            os.unlink(this_file)
 
         if dump_type in ('plugins', 'blueprints', 'deployments'):
             self._dump_blobs(data, dump_type, client, tenant_name)
@@ -246,17 +262,15 @@ class SnapshotCreate(object):
             self._dump_nodes_and_instances(data, client, tenant_name)
 
     def _dump_blobs(self, entities, dump_type, client, tenant_name):
-        dest_dir_base = os.path.join(self._tempdir, 'tenants', tenant_name,
-                                     dump_type)
+        dest_dir = os.path.join(self._tempdir, 'tenants', tenant_name,
+                                dump_type + '_archives')
+        os.makedirs(dest_dir, exist_ok=True)
         suffix = {
             'plugins': '.wgn',
             'blueprints': '.zip',
             'deployments': '.b64zip',
         }[dump_type]
-        for idx, entity in enumerate(entities):
-            dest_dir_idx = idx // ENTITIES_PER_GROUPING
-            dest_dir = dest_dir_base + str(dest_dir_idx)
-            os.makedirs(dest_dir, exist_ok=True)
+        for entity in entities:
             entity_id = entity['id']
             entity_dest = os.path.join(dest_dir, entity_id + suffix)
             if dump_type == 'deployments':
@@ -286,48 +300,43 @@ class SnapshotCreate(object):
                                        os.path.basename(entity_dest))
                     os.remove(yaml_dest)
                     os.remove(entity_dest)
+                    entity_dest = zip_dest
+            self._zip_handle.write(
+                entity_dest, os.path.relpath(entity_dest, self._tempdir))
+            os.unlink(entity_dest)
 
     def _dump_events(self, event_sources, event_source_type, client,
                      tenant_name):
         if not self._include_events:
             return
-        dest_dir_base = os.path.join(self._tempdir, 'tenants', tenant_name,
-                                     'events', event_source_type)
+        dest_dir = os.path.join(self._tempdir, 'tenants', tenant_name,
+                                event_source_type + '_events')
         # executions -> execution_id, execution-groups -> execution-group_id
         event_source_id_prop = event_source_type[:-1] + '_id'
-        for idx, source in enumerate(event_sources):
+        for source in event_sources:
             source_id = source['id']
-            dest_dir_idx = idx // ENTITIES_PER_GROUPING
-
             self._dump_parts(event_source_id_prop, source_id, client,
-                             dest_dir_base, dest_dir_idx, 'events')
+                             dest_dir, 'events')
 
     def _dump_tasks_graphs(self, executions, client, tenant_name):
-        dest_dir_base = os.path.join(self._tempdir, 'tenants', tenant_name)
-        for idx, execution in enumerate(executions):
+        dest_dir = os.path.join(self._tempdir, 'tenants', tenant_name,
+                                'tasks_graphs')
+        for execution in executions:
             source_id = execution['id']
-            dest_dir_idx = idx // ENTITIES_PER_GROUPING
-
             self._dump_parts('execution_id', source_id, client,
-                             dest_dir_base, dest_dir_idx, 'tasks_graphs')
+                             dest_dir, 'tasks_graphs')
 
     def _dump_nodes_and_instances(self, deployments, client, tenant_name):
         dest_dir_base = os.path.join(self._tempdir, 'tenants', tenant_name)
-        for idx, deployment in enumerate(deployments):
+        for deployment in deployments:
             dep_id = deployment['id']
-            dest_dir_idx = idx // ENTITIES_PER_GROUPING
+            for part in ['nodes', 'node_instances', 'agents']:
+                dest_dir = os.path.join(dest_dir_base, part)
+                self._dump_parts('deployment_id', dep_id, client, dest_dir,
+                                 part)
 
-            self._dump_parts('deployment_id', dep_id, client, dest_dir_base,
-                             dest_dir_idx, 'nodes')
-            self._dump_parts('deployment_id', dep_id, client, dest_dir_base,
-                             dest_dir_idx, 'node_instances')
-            self._dump_parts('deployment_id', dep_id, client, dest_dir_base,
-                             dest_dir_idx, 'agents')
-
-    def _dump_parts(self, filter_name, filter_id, client, dest_dir_base,
-                    idx, part):
-        part_dest_dir = os.path.join(dest_dir_base, part + str(idx))
-        os.makedirs(part_dest_dir, exist_ok=True)
+    def _dump_parts(self, filter_name, filter_id, client, dest_dir, part):
+        os.makedirs(dest_dir, exist_ok=True)
         part_kwargs = {
             filter_name: filter_id,
             '_include': INCLUDES[part],
@@ -361,9 +370,12 @@ class SnapshotCreate(object):
                 part for part in parts
                 if not part['id'] == ctx.execution_id
             ]
-        parts_dest = os.path.join(part_dest_dir, filter_id + '.json')
+        parts_dest = os.path.join(dest_dir, filter_id + '.json')
         with open(parts_dest, 'w') as dump_handle:
             json.dump(parts, dump_handle)
+        self._zip_handle.write(parts_dest,
+                               os.path.relpath(parts_dest, self._tempdir))
+        os.unlink(parts_dest)
 
     def _update_snapshot_status(self, status, error=None):
         self._client.snapshots.update_status(
@@ -383,19 +395,19 @@ class SnapshotCreate(object):
         )
         with open(metadata_filename, 'w') as f:
             json.dump(metadata, f)
-
-    def _create_archive(self):
-        snapshot_archive_name = self._get_snapshot_archive_name()
-        ctx.logger.info(
-            'Creating snapshot archive: {0}'.format(snapshot_archive_name))
-        make_zip64_archive(snapshot_archive_name, self._tempdir)
+        self._zip_handle.write(
+            metadata_filename,
+            os.path.relpath(metadata_filename, self._tempdir))
+        os.unlink(metadata_filename)
 
     def _get_snapshot_archive_name(self):
         """Return the base name for the snapshot archive
         """
         snapshots_dir = self._get_and_create_snapshots_dir()
         snapshot_dir = os.path.join(snapshots_dir, self._snapshot_id)
-        os.makedirs(snapshot_dir)
+        # Cope with existing dir from a previous attempt to create a snap with
+        # the same name
+        os.makedirs(snapshot_dir, exist_ok=True)
         return os.path.join(snapshot_dir, '{}.zip'.format(self._snapshot_id))
 
     def _get_and_create_snapshots_dir(self):
