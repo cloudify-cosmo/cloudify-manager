@@ -745,11 +745,13 @@ class InstallParameters:
     skip_drift_check: bool
     force_reinstall: bool
     skip_heal: bool
+    force_reinstall_ids: list
 
     def __init__(self, ctx, update_params, dep_update):
         self._update_instances = dep_update['deployment_update_node_instances']
         self.update_id = dep_update.id
         self.steps = dep_update.steps
+        self.force_reinstall_ids = update_params.get('reinstall_list') or set()
 
         for kind in ['added', 'removed', 'extended', 'reduced']:
             changed, related = self._split_by_modification(

@@ -111,6 +111,40 @@ def test_update_operation(subtests, blueprint_filename, parameters, install):
             assert actual_calls == expected_calls
 
 
+def test_reinstall_list():
+    storage = deploy('force_reinstall.yaml', resource_id='d1', inputs={
+        'inp1': 'value1',
+    })
+    dep_env = local.load_env('d1', storage)
+    dep_env.execute('install')
+
+    instances = dep_env.storage.get_node_instances()
+    assert len(instances) == 1
+    ni_id = instances[0].id
+
+    storage.create_deployment_update('d1', 'update1', {
+        'new_inputs': {'inp1': 'value1'},  # unchanged
+    })
+
+    # updating with reinstall_list, reinstalls that instance, even though
+    # nothing has changed
+    dep_env.execute('update', parameters={
+        'update_id': 'update1',
+        'reinstall_list': [ni_id]
+    })
+    inst = dep_env.storage.get_node_instance(ni_id)
+    assert inst.runtime_properties['invocations'] == ['create']
+
+    # reinstall_list overrides even skip_reinstall!
+    dep_env.execute('update', parameters={
+        'update_id': 'update1',
+        'reinstall_list': [ni_id],
+        'skip_reinstall': True,
+    })
+    inst = dep_env.storage.get_node_instance(ni_id)
+    assert inst.runtime_properties['invocations'] == ['create', 'create']
+
+
 def op(ctx, return_value=None, fail=False):
     """Operation used in the update-operation test.
 

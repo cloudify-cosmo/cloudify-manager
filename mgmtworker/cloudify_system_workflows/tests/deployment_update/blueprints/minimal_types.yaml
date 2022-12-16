@@ -16,3 +16,9 @@ workflows:
       force_reinstall:
         type: boolean
         default: false
+      skip_reinstall:
+        type: boolean
+        default: false
+      reinstall_list:
+        type: list
+        default: []
