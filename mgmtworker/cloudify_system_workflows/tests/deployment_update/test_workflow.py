@@ -144,6 +144,7 @@ def test_reinstall_list():
     inst = dep_env.storage.get_node_instance(ni_id)
     assert inst.runtime_properties['invocations'] == ['create', 'create']
 
+
 def op(ctx, return_value=None, fail=False):
     """Operation used in the update-operation test.
 

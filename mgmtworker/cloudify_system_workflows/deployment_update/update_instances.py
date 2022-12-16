@@ -281,7 +281,7 @@ def update_or_reinstall_instances(ctx, graph, dep_up, install_params):
 
     must_reinstall -= to_skip
     if install_params.skip_reinstall:
-       must_reinstall = force_reinstall_instances
+        must_reinstall = force_reinstall_instances
     if must_reinstall:
         intact_nodes = (
             set(workflow_ctx.node_instances)
