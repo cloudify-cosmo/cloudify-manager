@@ -105,6 +105,7 @@ class DeploymentUpdate(SecuredResource):
                 'runtime_only_evaluation': runtime_eval,
                 'force': force,
                 'workflow_id': request.json.get('workflow_id', None),
+                'reinstall_list': reinstall_list,
             }
             # boolean params
             for name, default in [
