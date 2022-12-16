@@ -176,7 +176,7 @@ def _clean_drift(ctx, instance):
 
 def update_or_reinstall_instances(ctx, graph, dep_up, install_params):
     to_skip = set(install_params.added_instances) \
-              | set(install_params.removed_instances)
+        | set(install_params.removed_instances)
     # update must not touch instances that weren't installed previously
     to_skip |= {
         ni for ni in workflow_ctx.node_instances
@@ -185,7 +185,12 @@ def update_or_reinstall_instances(ctx, graph, dep_up, install_params):
     consider_for_update = set(workflow_ctx.node_instances) - to_skip
     changed_instances = _find_changed_instances(dep_up.steps) - to_skip
 
-    must_reinstall = set()
+    force_reinstall_instances = {
+        inst for inst in consider_for_update
+        if inst.id in install_params.force_reinstall_ids
+    }
+    must_reinstall = set(force_reinstall_instances)
+    consider_for_update -= force_reinstall_instances
     instances_with_drift = set()
 
     if not install_params.skip_drift_check:
@@ -274,7 +279,9 @@ def update_or_reinstall_instances(ctx, graph, dep_up, install_params):
         must_reinstall |= failed_update
 
     must_reinstall -= to_skip
-    if must_reinstall and not install_params.skip_reinstall:
+    if install_params.skip_reinstall:
+        must_reinstall = force_reinstall_instances
+    if must_reinstall:
         intact_nodes = (
             set(workflow_ctx.node_instances)
             - must_reinstall
