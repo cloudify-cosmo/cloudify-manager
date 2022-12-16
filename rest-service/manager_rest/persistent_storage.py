@@ -11,8 +11,8 @@ from manager_rest import manager_exceptions
 from manager_rest.rest.rest_utils import make_streaming_response
 
 
-class StorageClient:
-    """StorageClient is a base class for storage clients"""
+class FileStorageHandler:
+    """FileStorageHandler is a base class for persistent storage handlers"""
     def __init__(self, base_uri: str):
         self.base_uri = base_uri
 
@@ -41,8 +41,8 @@ class StorageClient:
         raise NotImplementedError('Should be implemented in subclasses')
 
 
-class LocalStorageClient(StorageClient):
-    """LocalStorageClient implements storage methods for local filesystem"""
+class LocalStorageHandler(FileStorageHandler):
+    """LocalStorageHandler implements storage methods for local filesystem"""
     def find(self, path: str, suffixes=None):
         """Get a file by its path"""
         full_path = os.path.join(self.base_uri, path)
@@ -95,8 +95,8 @@ class LocalStorageClient(StorageClient):
         return send_file(full_path, as_attachment=True)
 
 
-class S3StorageClient(StorageClient):
-    """S3StorageClient implements storage methods for S3-compatible storage"""
+class S3StorageHandler(FileStorageHandler):
+    """S3StorageHandler implements storage methods for S3-compatible storage"""
     XML_NS = {'s3': 'http://s3.amazonaws.com/doc/2006-03-01/'}
 
     def __init__(self,
@@ -212,13 +212,15 @@ class S3StorageClient(StorageClient):
         return f'{self.base_uri}/{self.bucket_name}'.rstrip('/')
 
 
-def init_storage_client(config):
-    """Initialize storage client object based on provided configuration"""
+def init_storage_handler(config):
+    """Initialize storage handler object based on provided configuration"""
     match config.file_server_type.lower():
         case 'local':
-            client = LocalStorageClient(config.file_server_root)
+            return LocalStorageHandler(
+                config.file_server_root,
+            )
         case 's3':
-            client = S3StorageClient(
+            return S3StorageHandler(
                 config.s3_server_url,
                 config.s3_resources_bucket,
                 config.s3_client_timeout,
@@ -227,15 +229,8 @@ def init_storage_client(config):
             raise manager_exceptions.UnsupportedFileServerType(
                 f'Unsupported file server type: {config.file_server_type}'
             )
-    return client
 
 
-def list_dir(path: str):
-    """List files in path using current storage client"""
-    client = storage_client()
-    return client.list(path)
-
-
-def storage_client() -> StorageClient:
-    """Get the storage_client object from Cloudify Flask app"""
-    return current_app.extensions.get('storage_client')
+def get_storage_handler() -> FileStorageHandler:
+    """Get the storage_handler object from Cloudify Flask app"""
+    return current_app.extensions['storage_handler']

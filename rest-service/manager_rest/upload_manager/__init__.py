@@ -7,11 +7,6 @@ from manager_rest.upload_manager.manager import (
     upload_plugin,
     upload_snapshot,
 )
-from manager_rest.upload_manager.storage import (
-    init_storage_client,
-    list_dir,
-    storage_client,
-)
 
 __all__ = (
     'cleanup_blueprint_archive_from_file_server',
@@ -21,8 +16,4 @@ __all__ = (
     'upload_blueprint_archive_to_file_server',
     'upload_plugin',
     'upload_snapshot',
-
-    'init_storage_client',
-    'list_dir',
-    'storage_client',
 )
