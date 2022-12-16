@@ -5,9 +5,10 @@ from contextlib import contextmanager
 from xml.etree import ElementTree
 
 import requests
-from flask import current_app
+from flask import current_app, send_file
 
 from manager_rest import manager_exceptions
+from manager_rest.rest.rest_utils import make_streaming_response
 
 
 class StorageClient:
@@ -33,6 +34,10 @@ class StorageClient:
 
     def delete(self, path: str):
         """Remove the location"""
+        raise NotImplementedError('Should be implemented in subclasses')
+
+    def proxy(self, path: str):
+        """Return a proxied request to the fileserver"""
         raise NotImplementedError('Should be implemented in subclasses')
 
 
@@ -80,6 +85,14 @@ class LocalStorageClient(StorageClient):
             shutil.rmtree(full_path)
         else:
             os.remove(full_path)
+
+    def proxy(self, path: str):
+        full_path = os.path.join(self.base_uri, path)
+
+        if not os.path.isfile(full_path):
+            return {}, 404
+
+        return send_file(full_path, as_attachment=True)
 
 
 class S3StorageClient(StorageClient):
@@ -135,8 +148,8 @@ class S3StorageClient(StorageClient):
 
         xml_et = ElementTree.fromstring(response.content)
 
-        for contents in xml_et.findall('s3:Contents', S3StorageClient.XML_NS):
-            key = contents.find('s3:Key', S3StorageClient.XML_NS)
+        for contents in xml_et.findall('s3:Contents', self.XML_NS):
+            key = contents.find('s3:Key', self.XML_NS)
             yield key.text
 
     def move(self, src_path: str, dst_path: str):
@@ -181,12 +194,26 @@ class S3StorageClient(StorageClient):
                 f'HTTP status code {res.status_code}'
             )
 
+    def proxy(self, path: str):
+        file_name, _, file_extension = path.split('/')[-1].partition('.')
+        if not file_name:
+            file_name, file_extension = file_extension, file_name
+
+        return make_streaming_response(
+            file_name,
+            # the /resources-s3/ prefix in here, must match the location
+            # of the s3 fileserver in nginx
+            '/resources-s3/' + path,
+            file_extension,
+        )
+
     @property
     def server_url(self):
         return f'{self.base_uri}/{self.bucket_name}'.rstrip('/')
 
 
 def init_storage_client(config):
+    """Initialize storage client object based on provided configuration"""
     match config.file_server_type.lower():
         case 'local':
             client = LocalStorageClient(config.file_server_root)
@@ -210,4 +237,5 @@ def list_dir(path: str):
 
 
 def storage_client() -> StorageClient:
+    """Get the storage_client object from Cloudify Flask app"""
     return current_app.extensions.get('storage_client')
