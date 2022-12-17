@@ -14,12 +14,14 @@
 #  * limitations under the License.
 
 import os
+import tempfile
 from typing import Any
 
 from flask import request
 from flask_restful.reqparse import Argument
 
 from cloudify.constants import MANAGER_RESOURCES_PATH
+from manager_rest.manager_exceptions import UploadFileMissing
 from manager_rest.security import SecuredResource, premium_only
 from manager_rest.rest import rest_utils
 from manager_rest.storage import get_storage_manager, models
@@ -203,6 +205,30 @@ class FileServerProxy(SecuredResource):
 
         # else path probably points to a file
         return self.storage_handler.proxy(rel_path)
+
+    def put(self, path=None):
+        if not request.data:
+            raise UploadFileMissing('File upload error: no file provided')
+
+        _, tmp_file_name = tempfile.mkstemp()
+        with open(tmp_file_name, 'wb') as tmp_file:
+            tmp_file.write(request.data)
+            tmp_file.close()
+        self.storage_handler.move(tmp_file_name, path)
+
+    def post(self, path=None):
+        if not request.files:
+            raise UploadFileMissing('File upload error: no files provided')
+
+        for _, file in request.files.items():
+            _, tmp_file_name = tempfile.mkstemp()
+            with open(tmp_file_name, 'wb') as tmp_file:
+                tmp_file.write(file.stream.read())
+                tmp_file.close()
+            self.storage_handler.move(
+                tmp_file_name,
+                os.path.join(path or '', file.filename)
+            )
 
 
 class MonitoringAuth(SecuredResource):

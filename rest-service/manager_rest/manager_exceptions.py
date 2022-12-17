@@ -354,6 +354,11 @@ class PluginInstallationTimeout(ManagerException):
     status_code = 400
 
 
+class UploadFileMissing(ManagerException):
+    error_code = 'upload_missing_file'
+    status_code = 400
+
+
 class PluginDistributionNotSupported(PluginInstallationError):
     pass
 
