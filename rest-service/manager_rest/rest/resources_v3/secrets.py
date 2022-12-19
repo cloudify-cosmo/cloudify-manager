@@ -12,7 +12,7 @@ from cloudify.cryptography_utils import (encrypt,
                                          decrypt,
                                          generate_key_using_password)
 
-from cloudify_rest_client.exceptions import(
+from cloudify_rest_client.exceptions import (
     CloudifyClientError,
 )
 
