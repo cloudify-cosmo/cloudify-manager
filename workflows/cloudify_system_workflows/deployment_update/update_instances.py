@@ -229,7 +229,11 @@ def update_or_reinstall_instances(ctx, graph, dep_up, install_params):
         instances_to_update = set()
 
     if instances_to_update:
-        intact_nodes = set(workflow_ctx.node_instances) - instances_to_update
+        intact_nodes = (
+            set(workflow_ctx.node_instances)
+            - instances_to_update
+            - to_skip
+        )
         clear_graph(graph)
         if not install_params.skip_heal:
             # TODO factor healing out, to make this function shorter
@@ -286,6 +290,7 @@ def update_or_reinstall_instances(ctx, graph, dep_up, install_params):
             set(workflow_ctx.node_instances)
             - must_reinstall
             - set(install_params.removed_instances)
+            - to_skip
         )
         uninstall_ids = {ni.id for ni in install_params.removed_instances}
         for n in must_reinstall:

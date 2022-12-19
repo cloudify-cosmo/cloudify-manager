@@ -1,0 +1,31 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - minimal_types.yaml
+
+node_types:
+  t1: {}
+
+node_templates:
+  n1:
+    type: t1
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          implementation: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+        check_drift:
+          implementation: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+          inputs:
+            return_value: {"drift": true}
+
+  n2:
+    type: t1
+    relationships:
+      - target: n1
+        type: cloudify.relationships.depends_on
+        source_interfaces:
+          cloudify.interfaces.relationship_lifecycle:
+            establish: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
+        target_interfaces:
+          cloudify.interfaces.relationship_lifecycle:
+            establish: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op

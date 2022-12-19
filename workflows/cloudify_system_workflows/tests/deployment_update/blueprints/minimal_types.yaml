@@ -5,6 +5,10 @@ plugins:
 workflows:
   install:
     mapping: builtin.cloudify.plugins.workflows.install
+    parameters:
+      node_ids:
+        type: list
+        default: null
   update:
     mapping: builtin.cloudify_system_workflows.deployment_update.workflow.update_deployment
     parameters:
@@ -22,3 +26,30 @@ workflows:
       reinstall_list:
         type: list
         default: []
+relationships:
+  cloudify.relationships.depends_on:
+    source_interfaces:
+      cloudify.interfaces.relationship_lifecycle:
+        # install
+        preconfigure: {}
+        postconfigure: {}
+        establish: {}
+        # uninstall
+        unlink: {}
+        # misc
+        update: {}
+        check_drift: {}
+    target_interfaces:
+      cloudify.interfaces.relationship_lifecycle:
+        # install
+        preconfigure: {}
+        postconfigure: {}
+        establish: {}
+        # uninstall
+        unlink: {}
+        # misc
+        update: {}
+        check_drift: {}
+    properties:
+      connection_type:
+        default: all_to_all
