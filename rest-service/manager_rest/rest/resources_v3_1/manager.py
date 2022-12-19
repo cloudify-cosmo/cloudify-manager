@@ -20,7 +20,7 @@ import tarfile
 import zipfile
 from typing import Any
 
-from flask import request
+from flask import request, send_file
 from flask_restful.reqparse import Argument
 
 from cloudify.constants import MANAGER_RESOURCES_PATH
@@ -45,6 +45,9 @@ try:
     from cloudify_premium import manager as manager_premium
 except ImportError:
     manager_premium = None
+
+
+RESOURCES_PATH = '/resources/'
 
 
 # community base classes for the managers and brokers endpoints:
@@ -204,13 +207,47 @@ class FileServerProxy(SecuredResource):
         if not path:
             return {}, 404
 
-        if _is_resource_path_directory(rel_path):
-            files_list = [f'/resources/{file_name}'
+        args = rest_utils.get_args_and_verify_arguments([
+            Argument('archive', type=bool, required=False)
+        ])
+        as_archive = args.get('archive', False)
+
+        if not _is_resource_path_directory(rel_path):
+            return self.storage_handler.proxy(rel_path)
+        elif not as_archive:
+            files_list = [os.path.join(RESOURCES_PATH, file_name)
                           for file_name in self.storage_handler.list(rel_path)]
             return {'files': files_list}, 200
+        else:
+            tmp_dir_name = tempfile.mkdtemp()
+            for download_file_name in self.storage_handler.list(rel_path):
+                src_path = os.path.join(
+                    rel_path,
+                    os.path.relpath(download_file_name, rel_path),
+                )
+                dst_path = os.path.join(tmp_dir_name, src_path)
+                dst_dir = os.path.dirname(dst_path)
+                if not os.path.isdir(dst_dir):
+                    os.makedirs(dst_dir)
+                with self.storage_handler.get(src_path) as tmp_file_name:
+                    shutil.copy2(tmp_file_name, dst_path)
 
-        # else path probably points to a file
-        return self.storage_handler.proxy(rel_path)
+            archive_file_name = _create_archive(tmp_dir_name)
+            shutil.rmtree(tmp_dir_name)
+
+            if stripped := rel_path.rstrip('/'):
+                download_file_name = f"{os.path.basename(stripped)}.tar.gz"
+            else:
+                download_file_name = 'resource.tar.gz'
+
+            result = send_file(
+                archive_file_name,
+                download_name=download_file_name,
+                as_attachment=True,
+            )
+            os.remove(archive_file_name)
+
+            return result
 
     def put(self, path=None):
         args = rest_utils.get_args_and_verify_arguments([
@@ -290,6 +327,13 @@ def _extract_archive(file_name, archive_type):
     raise ArchiveTypeError(f'Unknown archive type {archive_type}')
 
 
+def _create_archive(dir_name):
+    _, tmp_file_name = tempfile.mkstemp(suffix='.tar.gz')
+    with tarfile.open(tmp_file_name, 'w:gz') as archive:
+        archive.add(dir_name, arcname='./')
+    return tmp_file_name
+
+
 def _archive_type(file_name):
     if tarfile.is_tarfile(file_name):
         return 'tar'
@@ -304,7 +348,7 @@ def _is_resource_path_directory(path):
 def _resource_relative_path(uri=None):
     if not uri:
         uri = request.headers['X-Original-Uri']
-        if not uri.startswith('/resources/'):
+        if not uri.startswith(RESOURCES_PATH):
             return None
 
-    return uri.replace('/resources/', '', 1)
+    return uri.replace(RESOURCES_PATH, '', 1)
