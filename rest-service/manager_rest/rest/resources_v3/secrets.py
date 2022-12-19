@@ -54,7 +54,7 @@ class SecretsKey(SecuredResource):
         else:
             # Returns the decrypted value
             try:
-                secret_dict['value'] = get_secret_method(key)[1]
+                secret_dict['value'] = get_secret_method(key).value
             except InvalidToken:
                 raise manager_exceptions.InvalidFernetTokenFormatError(
                     "The Secret value for key `{}` is malformed, "

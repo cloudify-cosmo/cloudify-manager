@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import json
+import os
 import tempfile
 import requests
 
@@ -29,6 +30,10 @@ from cloudify.cryptography_utils import (
 
 from cloudify_rest_client.client import (
     CloudifyClient,
+)
+
+from cloudify_rest_client.exceptions import (
+    CloudifyClientError,
 )
 
 from manager_rest.storage import (get_storage_manager,
@@ -61,7 +66,6 @@ SECRETS_PROVIDER_SCHEMA = {
             'username',
             'password',
             'tenant',
-            'cert',
         ],
     },
     'local': {
@@ -272,8 +276,15 @@ def _get_secret_from_cloudify(
         secret = client.secrets.get(
             secret_name,
         )
-    except requests.exceptions.RequestException as e:
+    except (
+            requests.exceptions.RequestException,
+            CloudifyClientError,
+    ) as e:
         raise FailedDependency(e)
+    finally:
+        if tmp_cert := connection_parameters.get('cert'):
+            if os.path.exists(tmp_cert):
+                os.remove(tmp_cert)
 
     return secret['value']
 
@@ -329,18 +340,24 @@ def check_cloudify_connection(**connection_parameters):
     )
 
     try:
-        status_response = client.manager.get_status()
-        status_response.raise_for_status()
-    except requests.exceptions.RequestException as e:
+        client.manager.get_status()
+    except (
+            requests.exceptions.RequestException,
+            CloudifyClientError,
+    ) as e:
         status['status'] = False
-        status['message'] = e
+        status['message'] = str(e)
+    finally:
+        if tmp_cert := connection_parameters.get('cert'):
+            if os.path.exists(tmp_cert):
+                os.remove(tmp_cert)
 
     return status
 
 
 def _get_cloudify_cert_temp_file(cert):
-    tmp_cert = tempfile.NamedTemporaryFile()
-    tmp_cert.write(bytes(cert, 'utf-8'))
+    tmp_cert = tempfile.NamedTemporaryFile(mode='w+')
+    tmp_cert.write(cert)
     tmp_cert.seek(0)
 
     return tmp_cert
