@@ -171,17 +171,20 @@ class S3StorageHandler(FileStorageHandler):
         shutil.rmtree(src_path)
 
     def _put_file(self, src_path: str, dst_path: str):
-        with open(src_path, 'rb') as data:
+        with open(src_path, 'rb') as buffer:
             res = requests.put(
                 f'{self.server_url}/{dst_path}',
-                data=data,
                 timeout=self.req_timeout,
+                files={
+                    os.path.basename(src_path): buffer
+                },
             )
-            if res.status_code >= 400:
-                raise manager_exceptions.FileServerException(
-                    f'Error uploading {src_path} to {dst_path}: '
-                    f'HTTP status code {res.status_code}'
-                )
+
+        if res.status_code >= 400:
+            raise manager_exceptions.FileServerException(
+                f'Error uploading {src_path} to {dst_path}: '
+                f'HTTP status code {res.status_code}'
+            )
 
     def delete(self, path: str):
         res = requests.delete(
