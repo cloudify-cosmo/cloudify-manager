@@ -93,7 +93,7 @@ def setup_resources(api):
         'MonitoringAuth': 'monitoring-auth',
         'FileServerProxy': [
             'file-server-proxy/',
-            'file-server-proxy/<path:uri>',
+            'file-server-proxy/<path:path>',
         ],
         'FileServerIndex': 'file-server-index',
         'LdapAuthentication': 'ldap',
