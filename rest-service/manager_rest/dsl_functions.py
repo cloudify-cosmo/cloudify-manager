@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import json
+import os
+import tempfile
 import requests
 
 from collections import namedtuple
@@ -26,6 +28,14 @@ from cloudify.cryptography_utils import (
     decrypt,
 )
 
+from cloudify_rest_client.client import (
+    CloudifyClient,
+)
+
+from cloudify_rest_client.exceptions import (
+    CloudifyClientError,
+)
+
 from manager_rest.storage import (get_storage_manager,
                                   get_node as get_storage_node)
 from manager_rest.storage.models import (NodeInstance,
@@ -37,6 +47,7 @@ from manager_rest.manager_exceptions import (
     FunctionsEvaluationError,
     DeploymentOutputsEvaluationError,
     DeploymentCapabilitiesEvaluationError,
+    FailedDependency,
 )
 
 SecretType = namedtuple('SecretType', 'key value')
@@ -47,6 +58,14 @@ SECRETS_PROVIDER_SCHEMA = {
             'url',
             'token',
             'path',
+        ],
+    },
+    'cloudify': {
+        'connection_parameters': [
+            'host',
+            'username',
+            'password',
+            'tenant',
         ],
     },
     'local': {
@@ -190,6 +209,31 @@ def get_secret_from_provider(secret):
         )
 
         return decrypted_value
+    elif provider.type == 'cloudify':
+        connection_parameters = json.loads(
+            decrypt(
+                provider.connection_parameters,
+            ),
+        )
+        secret_name = None
+
+        if secret.provider_options:
+            provider_options = json.loads(
+                decrypt(
+                    secret.provider_options,
+                ),
+            )
+            secret_name = provider_options.get('name')
+
+        if not secret_name:
+            secret_name = secret.key
+
+        decrypted_value = _get_secret_from_cloudify(
+            secret_name,
+            **connection_parameters,
+        )
+
+        return decrypted_value
     else:
         raise ValueError(
             f'Secrets Provider is not supported: {provider.type}',
@@ -211,6 +255,38 @@ def _get_secret_from_vault(url, token, path, key):
     secret_value = path_details['data']['data'][key]
 
     return secret_value
+
+
+def _get_secret_from_cloudify(
+        secret_name,
+        **connection_parameters,
+):
+    if not connection_parameters.get('protocol'):
+        connection_parameters['protocol'] = 'https'
+
+    if cert := connection_parameters.get('cert'):
+        temp_cert_file = _get_cloudify_cert_temp_file(cert)
+        connection_parameters['cert'] = temp_cert_file.name
+
+    client = CloudifyClient(
+        **connection_parameters,
+    )
+
+    try:
+        secret = client.secrets.get(
+            secret_name,
+        )
+    except (
+            requests.exceptions.RequestException,
+            CloudifyClientError,
+    ) as e:
+        raise FailedDependency(e)
+    finally:
+        if tmp_cert := connection_parameters.get('cert'):
+            if os.path.exists(tmp_cert):
+                os.remove(tmp_cert)
+
+    return secret['value']
 
 
 def _get_vault_response(url, token, path):
@@ -244,6 +320,47 @@ def check_vault_connection(url, token, path):
         vault_status['message'] = error
 
     return vault_status
+
+
+def check_cloudify_connection(**connection_parameters):
+    status = {
+        'status': True,
+        'message': '',
+    }
+
+    if not connection_parameters.get('protocol'):
+        connection_parameters['protocol'] = 'https'
+
+    if cert := connection_parameters.get('cert'):
+        temp_cert_file = _get_cloudify_cert_temp_file(cert)
+        connection_parameters['cert'] = temp_cert_file.name
+
+    client = CloudifyClient(
+        **connection_parameters,
+    )
+
+    try:
+        client.manager.get_status()
+    except (
+            requests.exceptions.RequestException,
+            CloudifyClientError,
+    ) as e:
+        status['status'] = False
+        status['message'] = str(e)
+    finally:
+        if tmp_cert := connection_parameters.get('cert'):
+            if os.path.exists(tmp_cert):
+                os.remove(tmp_cert)
+
+    return status
+
+
+def _get_cloudify_cert_temp_file(cert):
+    tmp_cert = tempfile.NamedTemporaryFile(mode='w+')
+    tmp_cert.write(cert)
+    tmp_cert.seek(0)
+
+    return tmp_cert
 
 
 class FunctionEvaluationStorage(object):
@@ -281,9 +398,10 @@ class FunctionEvaluationStorage(object):
         return node.to_dict()
 
     def get_secret(self, secret_key):
-        secret = self.sm.get(Secret, secret_key)
-        decrypted_value = cryptography_utils.decrypt(secret.value)
-        return SecretType(secret_key, decrypted_value)
+        return get_secret_method(
+            secret_key,
+            sm=self.sm,
+        )
 
     def get_capability(self, capability_path):
         shared_dep_id, element_id = capability_path[0], capability_path[1]
