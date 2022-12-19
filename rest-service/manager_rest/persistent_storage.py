@@ -5,13 +5,14 @@ from contextlib import contextmanager
 from xml.etree import ElementTree
 
 import requests
-from flask import current_app
+from flask import current_app, send_file
 
 from manager_rest import manager_exceptions
+from manager_rest.rest.rest_utils import make_streaming_response
 
 
-class StorageClient:
-    """StorageClient is a base class for storage clients"""
+class FileStorageHandler:
+    """FileStorageHandler is a base class for persistent storage handlers"""
     def __init__(self, base_uri: str):
         self.base_uri = base_uri
 
@@ -35,9 +36,13 @@ class StorageClient:
         """Remove the location"""
         raise NotImplementedError('Should be implemented in subclasses')
 
+    def proxy(self, path: str):
+        """Return a proxied request to the fileserver"""
+        raise NotImplementedError('Should be implemented in subclasses')
 
-class LocalStorageClient(StorageClient):
-    """LocalStorageClient implements storage methods for local filesystem"""
+
+class LocalStorageHandler(FileStorageHandler):
+    """LocalStorageHandler implements storage methods for local filesystem"""
     def find(self, path: str, suffixes=None):
         """Get a file by its path"""
         full_path = os.path.join(self.base_uri, path)
@@ -81,9 +86,17 @@ class LocalStorageClient(StorageClient):
         else:
             os.remove(full_path)
 
+    def proxy(self, path: str):
+        full_path = os.path.join(self.base_uri, path)
 
-class S3StorageClient(StorageClient):
-    """S3StorageClient implements storage methods for S3-compatible storage"""
+        if not os.path.isfile(full_path):
+            return {}, 404
+
+        return send_file(full_path, as_attachment=True)
+
+
+class S3StorageHandler(FileStorageHandler):
+    """S3StorageHandler implements storage methods for S3-compatible storage"""
     XML_NS = {'s3': 'http://s3.amazonaws.com/doc/2006-03-01/'}
 
     def __init__(self,
@@ -135,8 +148,8 @@ class S3StorageClient(StorageClient):
 
         xml_et = ElementTree.fromstring(response.content)
 
-        for contents in xml_et.findall('s3:Contents', S3StorageClient.XML_NS):
-            key = contents.find('s3:Key', S3StorageClient.XML_NS)
+        for contents in xml_et.findall('s3:Contents', self.XML_NS):
+            key = contents.find('s3:Key', self.XML_NS)
             yield key.text
 
     def move(self, src_path: str, dst_path: str):
@@ -181,17 +194,33 @@ class S3StorageClient(StorageClient):
                 f'HTTP status code {res.status_code}'
             )
 
+    def proxy(self, path: str):
+        file_name, _, file_extension = path.split('/')[-1].partition('.')
+        if not file_name:
+            file_name, file_extension = file_extension, file_name
+
+        return make_streaming_response(
+            file_name,
+            # the /resources-s3/ prefix in here, must match the location
+            # of the s3 fileserver in nginx
+            '/resources-s3/' + path,
+            file_extension,
+        )
+
     @property
     def server_url(self):
         return f'{self.base_uri}/{self.bucket_name}'.rstrip('/')
 
 
-def init_storage_client(config):
+def init_storage_handler(config):
+    """Initialize storage handler object based on provided configuration"""
     match config.file_server_type.lower():
         case 'local':
-            client = LocalStorageClient(config.file_server_root)
+            return LocalStorageHandler(
+                config.file_server_root,
+            )
         case 's3':
-            client = S3StorageClient(
+            return S3StorageHandler(
                 config.s3_server_url,
                 config.s3_resources_bucket,
                 config.s3_client_timeout,
@@ -200,14 +229,8 @@ def init_storage_client(config):
             raise manager_exceptions.UnsupportedFileServerType(
                 f'Unsupported file server type: {config.file_server_type}'
             )
-    return client
 
 
-def list_dir(path: str):
-    """List files in path using current storage client"""
-    client = storage_client()
-    return client.list(path)
-
-
-def storage_client() -> StorageClient:
-    return current_app.extensions.get('storage_client')
+def get_storage_handler() -> FileStorageHandler:
+    """Get the storage_handler object from Cloudify Flask app"""
+    return current_app.extensions['storage_handler']
