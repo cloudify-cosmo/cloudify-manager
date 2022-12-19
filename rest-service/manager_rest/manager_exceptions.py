@@ -449,7 +449,7 @@ class BadFilterRule(ManagerException):
 
 class FailedDependency(ManagerException):
     error_code = 'failed_dependency'
-    status_code = 424
+    status_code = 400
 
 
 class NotListeningLDAPServer(ManagerException):
