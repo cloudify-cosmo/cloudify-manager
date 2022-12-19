@@ -14,14 +14,20 @@
 #  * limitations under the License.
 
 import os
+import shutil
 import tempfile
+import tarfile
+import zipfile
 from typing import Any
 
 from flask import request
 from flask_restful.reqparse import Argument
 
 from cloudify.constants import MANAGER_RESOURCES_PATH
-from manager_rest.manager_exceptions import UploadFileMissing
+from manager_rest.manager_exceptions import (
+    ArchiveTypeError,
+    UploadFileMissing,
+)
 from manager_rest.security import SecuredResource, premium_only
 from manager_rest.rest import rest_utils
 from manager_rest.storage import get_storage_manager, models
@@ -207,14 +213,40 @@ class FileServerProxy(SecuredResource):
         return self.storage_handler.proxy(rel_path)
 
     def put(self, path=None):
-        if not request.data:
-            raise UploadFileMissing('File upload error: no file provided')
+        args = rest_utils.get_args_and_verify_arguments([
+            Argument('extract', type=bool, required=False)
+        ])
+        extract = args.get('extract', False)
 
         _, tmp_file_name = tempfile.mkstemp()
         with open(tmp_file_name, 'wb') as tmp_file:
             tmp_file.write(request.data)
             tmp_file.close()
-        self.storage_handler.move(tmp_file_name, path)
+
+        if not extract:
+            return self.storage_handler.move(tmp_file_name, path)
+
+        try:
+            tmp_dir_name = _extract_archive(
+                tmp_file_name,
+                _archive_type(tmp_file_name),
+            )
+        finally:
+            os.remove(tmp_file_name)
+
+        for dir_path, _, file_names in os.walk(tmp_dir_name):
+            for file_name in file_names:
+                src = os.path.join(tmp_dir_name, dir_path, file_name)
+                dst = os.path.join(
+                    os.path.dirname(path),
+                    os.path.relpath(
+                        os.path.join(dir_path, file_name),
+                        tmp_dir_name,
+                    ),
+                )
+
+                self.storage_handler.move(src, dst)
+        shutil.rmtree(tmp_dir_name)
 
     def post(self, path=None):
         if not request.files:
@@ -241,6 +273,28 @@ class MonitoringAuth(SecuredResource):
     def get(self, **_):
         check_user_action_allowed("monitoring")
         return "", 200
+
+
+def _extract_archive(file_name, archive_type):
+    match archive_type.lower():
+        case 'tar':
+            tmp_dir_name = tempfile.mkdtemp()
+            with tarfile.open(file_name, 'r:*') as archive:
+                archive.extractall(path=tmp_dir_name)
+            return tmp_dir_name
+        case 'zip':
+            tmp_dir_name = tempfile.mkdtemp()
+            with zipfile.ZipFile(file_name) as archive:
+                archive.extractall(path=tmp_dir_name)
+            return tmp_dir_name
+    raise ArchiveTypeError(f'Unknown archive type {archive_type}')
+
+
+def _archive_type(file_name):
+    if tarfile.is_tarfile(file_name):
+        return 'tar'
+    if zipfile.is_zipfile(file_name):
+        return 'zip'
 
 
 def _is_resource_path_directory(path):
