@@ -368,7 +368,7 @@ def update_deployment_node_instances(*, update_id):
         ]
         workflow_ctx.create_node_instances(
             dep_up.deployment_id,
-            added_instances
+            added_instances,
         )
     if update_instances.get('extended_and_related'):
         for ni in update_instances['extended_and_related']:
@@ -869,6 +869,14 @@ def _execute_deployment_update(ctx, update_id, install_params):
             node_instances=install_params.removed_instances,
             related_nodes=install_params.removed_target_instances,
         )
+
+    update_or_reinstall_instances(
+        ctx,
+        graph,
+        dep_up,
+        install_params,
+    )
+
     if install_params.added and not install_params.skip_install:
         clear_graph(graph)
         lifecycle.install_node_instances(
@@ -879,13 +887,6 @@ def _execute_deployment_update(ctx, update_id, install_params):
     if install_params.extended and not install_params.skip_install:
         clear_graph(graph)
         _establish_relationships(ctx, graph, install_params)
-
-    update_or_reinstall_instances(
-        ctx,
-        graph,
-        dep_up,
-        install_params,
-    )
 
 
 def _execute_custom_workflow(dep_up, workflow_id, install_params,

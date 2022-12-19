@@ -20,6 +20,10 @@ node_templates:
 
   n2:
     type: t1
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          implementation: builtin.cloudify_system_workflows.tests.deployment_update.test_workflow.op
     relationships:
       - target: n1
         type: cloudify.relationships.depends_on
