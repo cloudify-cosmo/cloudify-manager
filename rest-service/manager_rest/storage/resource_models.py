@@ -204,10 +204,10 @@ class Plugin(SQLResourceBase):
     def yaml_files_paths(self):
         """List all *.yaml files"""
         # Imported here because of circular import
-        from manager_rest.upload_manager import storage_client
+        from manager_rest.persistent_storage import get_storage_handler
         plugin_dir = path.join(FILE_SERVER_PLUGINS_FOLDER, self.id)
         yaml_files = []
-        for file_name in storage_client().list(plugin_dir):
+        for file_name in get_storage_handler().list(plugin_dir):
             if file_name.endswith('.yaml'):
                 yaml_files += [file_name]
         return yaml_files

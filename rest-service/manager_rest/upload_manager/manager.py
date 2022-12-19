@@ -1,29 +1,26 @@
 import os
-import tarfile
-import uuid
-
 import shutil
-import zipfile
+import tarfile
 import tempfile
+import uuid
+import zipfile
 
 from flask import request, current_app
 
 from cloudify.models_states import BlueprintUploadState
-from manager_rest.manager_exceptions import ArchiveTypeError
+from manager_rest import config, manager_exceptions
+from manager_rest.archiving import get_archive_type
 from manager_rest.constants import (FILE_SERVER_PLUGINS_FOLDER,
                                     FILE_SERVER_SNAPSHOTS_FOLDER,
                                     FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
                                     FILE_SERVER_BLUEPRINTS_FOLDER,
                                     BLUEPRINT_ICON_FILENAME)
-from manager_rest.dsl_back_compat import create_bc_plugin_yaml
-from manager_rest.archiving import get_archive_type
-from manager_rest.storage.models import Blueprint
-from manager_rest import config, manager_exceptions
-from manager_rest.utils import current_tenant, unzip, files_in_folder, remove
-from manager_rest.resource_manager import get_resource_manager
 from manager_rest.constants import (SUPPORTED_ARCHIVE_TYPES)
-from manager_rest.upload_manager.storage import storage_client
-
+from manager_rest.dsl_back_compat import create_bc_plugin_yaml
+from manager_rest.manager_exceptions import ArchiveTypeError
+from manager_rest.persistent_storage import get_storage_handler
+from manager_rest.resource_manager import get_resource_manager
+from manager_rest.storage.models import Blueprint
 from manager_rest.upload_manager.utils import (
     base_archive_filename,
     extract_file_to_file_server,
@@ -36,7 +33,7 @@ from manager_rest.upload_manager.utils import (
     unpack_caravan,
     zip_dir,
 )
-
+from manager_rest.utils import current_tenant, unzip, files_in_folder, remove
 
 UPLOADING_FOLDER_NAME = '.uploading'
 
@@ -52,7 +49,7 @@ def _do_upload_snapshot(snapshot_id, upload_path):
         snapshot_id,
         f'{snapshot_id}.zip',
     )
-    storage_client().move(upload_path, target_path)
+    get_storage_handler().move(upload_path, target_path)
 
 
 def upload_snapshot(snapshot_id):
@@ -89,7 +86,7 @@ def _do_upload_blueprint(blueprint_id, upload_path):
         blueprint_id,
         f'{blueprint_id}.{archive_type}',
     )
-    storage_client().move(upload_path, target_path)
+    get_storage_handler().move(upload_path, target_path)
 
 
 def upload_blueprint_archive_to_file_server(blueprint_id):
@@ -147,9 +144,9 @@ def _set_blueprints_icon(tenant_name, blueprint_id, icon_path=None):
         BLUEPRINT_ICON_FILENAME,
     )
     if icon_path:
-        storage_client().move(icon_path, blueprint_icon_path)
+        get_storage_handler().move(icon_path, blueprint_icon_path)
     else:
-        storage_client().delete(blueprint_icon_path)
+        get_storage_handler().delete(blueprint_icon_path)
 
 
 def _update_blueprint_archive(tenant_name, blueprint_id):
@@ -162,7 +159,7 @@ def _update_blueprint_archive(tenant_name, blueprint_id):
         FILE_SERVER_BLUEPRINTS_FOLDER,
         tenant_name,
         blueprint_id)
-    archive_filename = storage_client().find(
+    archive_filename = get_storage_handler().find(
         os.path.join(archive_dir, blueprint_id),
         SUPPORTED_ARCHIVE_TYPES
     )
@@ -172,12 +169,12 @@ def _update_blueprint_archive(tenant_name, blueprint_id):
     with tempfile.TemporaryDirectory(dir=file_server_root) as tmpdir:
         os.chdir(tmpdir)
         os.mkdir('blueprint')
-        for src_file_path in storage_client().list(blueprint_dir):
+        for src_file_path in get_storage_handler().list(blueprint_dir):
             file_rel_path = \
                 src_file_path.replace(blueprint_dir, '').lstrip('/')
             dst_file_path = os.path.join(tmpdir, 'blueprint', file_rel_path)
 
-            with storage_client().get(src_file_path) as tmp_file_name:
+            with get_storage_handler().get(src_file_path) as tmp_file_name:
                 dst_dir_path = os.path.dirname(file_rel_path)
                 if dst_dir_path:
                     os.makedirs(
@@ -191,8 +188,8 @@ def _update_blueprint_archive(tenant_name, blueprint_id):
             tmp_file_name = fh.name
             with tarfile.open(fh.name, "w:gz") as tar_handle:
                 tar_handle.add('blueprint')
-            storage_client().delete(archive_filename)
-            storage_client().move(tmp_file_name, new_archive_path)
+            get_storage_handler().delete(archive_filename)
+            get_storage_handler().move(tmp_file_name, new_archive_path)
 
 
 def extract_blueprint_archive_to_file_server(blueprint_id, tenant):
@@ -202,7 +199,7 @@ def extract_blueprint_archive_to_file_server(blueprint_id, tenant):
         FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
         tenant,
         blueprint_id)
-    blueprint_file_path = storage_client().find(
+    blueprint_file_path = get_storage_handler().find(
         os.path.join(local_path, blueprint_id),
         SUPPORTED_ARCHIVE_TYPES,
     )
@@ -216,7 +213,7 @@ def extract_blueprint_archive_to_file_server(blueprint_id, tenant):
         sm.update(blueprint)
         raise manager_exceptions.NotFoundError(error_msg)
     try:
-        with storage_client().get(blueprint_file_path) as local_file_name:
+        with get_storage_handler().get(blueprint_file_path) as local_file_name:
             app_dir = extract_file_to_file_server(local_file_name,
                                                   file_server_root)
     except Exception as e:
@@ -236,7 +233,7 @@ def extract_blueprint_archive_to_file_server(blueprint_id, tenant):
     try:
         # use os.rename - bp_from is already in file_server_root, i.e.
         # same filesystem as the target dir
-        storage_client().move(bp_from, bp_dir)
+        get_storage_handler().move(bp_from, bp_dir)
     except OSError as e:  # e.g. directory not empty
         shutil.rmtree(bp_from)
         raise manager_exceptions.ConflictError(str(e))
@@ -282,12 +279,12 @@ def _store_plugin(plugin_id, wagon_path, yaml_paths):
         FILE_SERVER_PLUGINS_FOLDER,
         plugin_id,
     )
-    storage_client().move(
+    get_storage_handler().move(
         wagon_path,
         os.path.join(target_path, wagon_info['archive_name'])
     )
     for yaml_path in yaml_paths:
-        storage_client().move(
+        get_storage_handler().move(
             yaml_path,
             os.path.join(target_path, os.path.basename(yaml_path)),
         )

@@ -22,15 +22,19 @@ from cloudify.models_states import BlueprintUploadState
 from manager_rest import (
     config,
     manager_exceptions,
-    upload_manager,
     workflow_executor,
 )
+from manager_rest.persistent_storage import get_storage_handler
 from manager_rest.rest import swagger
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.storage import (get_storage_manager,
                                   models)
+from manager_rest.upload_manager import (
+    cleanup_blueprint_archive_from_file_server,
+    upload_blueprint_archive_to_file_server,
+)
 from manager_rest.utils import current_tenant
 from manager_rest.rest.rest_decorators import marshal_with
 from manager_rest.rest.rest_utils import (make_streaming_response,
@@ -58,7 +62,7 @@ class BlueprintsIdArchive(SecuredResource):
             blueprint.id,
         )
         archive_type = None
-        for archive_file_name in upload_manager.list_dir(path):
+        for archive_file_name in get_storage_handler().list(path):
             for arc_type in SUPPORTED_ARCHIVE_TYPES:
                 if archive_file_name.endswith(f'{blueprint.id}.{arc_type}'):
                     archive_type = arc_type
@@ -182,7 +186,7 @@ class BlueprintsId(SecuredResource):
             sm.update(blueprint)
 
         try:
-            upload_manager.upload_blueprint_archive_to_file_server(
+            upload_blueprint_archive_to_file_server(
                 blueprint_id)
             workflow_executor.execute_workflow(messages)
         except manager_exceptions.ExistingRunningExecutionError as e:
@@ -190,7 +194,7 @@ class BlueprintsId(SecuredResource):
             blueprint.error = str(e)
             blueprint.error_traceback = traceback.format_exc()
             sm.update(blueprint)
-            upload_manager.cleanup_blueprint_archive_from_file_server(
+            cleanup_blueprint_archive_from_file_server(
                 blueprint_id, current_tenant.name)
             raise
         return blueprint, 201
