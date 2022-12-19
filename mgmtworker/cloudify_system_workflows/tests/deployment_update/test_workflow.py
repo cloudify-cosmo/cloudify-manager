@@ -199,7 +199,52 @@ def test_establish_operation():
         'check_drift', 'create', 'target_establish',  # from this update
     ]
     assert n2_instance.runtime_properties['invocations'] == [
-        'source_establish'
+        'source_establish',
+    ]
+
+
+def test_establish_once():
+    """When adding a node, the establish is ran after reinstalls.
+
+    It wouldn't make sense to establish relationships with the newly-added
+    instance, and then reinstall a dependency only to establish them
+    again. Instead, make sure we reinstall existing instances before
+    installing new instances, and so establish only needs to run once.
+    """
+    storage = deploy('single_node.yaml', resource_id='d1')
+    storage.create_blueprint(
+        'bp2',
+        os.path.join(dsl_path_base(), 'single_relationship.yaml'),
+    )
+    dep_env = local.load_env('d1', storage)
+
+    dep_env.execute('install')
+
+    n1_instances = dep_env.storage.get_node_instances(node_id='n1')
+    n2_instances = dep_env.storage.get_node_instances(node_id='n2')
+    assert len(n1_instances) == 1
+    assert len(n2_instances) == 0
+    n1_instance = n1_instances[0]
+    assert n1_instance.state == 'started'
+
+    storage.create_deployment_update('d1', 'update1', {
+        'new_blueprint_id': 'bp2',
+    })
+    dep_env.execute('update', parameters={'update_id': 'update1'})
+
+    n1_instance = dep_env.storage.get_node_instance(n1_instance.id)
+    n2_instances = dep_env.storage.get_node_instances(node_id='n2')
+    assert len(n2_instances) == 1
+    n2_instance = n2_instances[0]
+    assert n2_instance.state == 'started'
+
+    assert n1_instance.runtime_properties['invocations'] == [
+        # establish is AFTER the (re)create
+        'check_drift', 'create', 'target_establish'
+    ]
+    assert n2_instance.runtime_properties['invocations'] == [
+        # establish is AFTER the create
+        'create', 'source_establish'
     ]
 
 
