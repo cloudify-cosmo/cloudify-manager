@@ -447,6 +447,11 @@ class BadFilterRule(ManagerException):
         )
 
 
+class FailedDependency(ManagerException):
+    error_code = 'failed_dependency'
+    status_code = 424
+
+
 class NotListeningLDAPServer(ManagerException):
     error_code = 'not_running_ldap_server'
     status_code = 500

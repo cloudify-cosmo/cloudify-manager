@@ -12,10 +12,17 @@ from cloudify.cryptography_utils import (encrypt,
                                          decrypt,
                                          generate_key_using_password)
 
+from cloudify_rest_client.exceptions import(
+    CloudifyClientError,
+)
+
 from ... import utils
 from ..responses_v3 import SecretsListResponse
 
 from manager_rest import manager_exceptions
+from manager_rest.dsl_functions import (
+    get_secret_method,
+)
 from manager_rest.utils import current_tenant
 from manager_rest.security import SecuredResource
 from manager_rest.flask_utils import get_tenant_by_name
@@ -47,11 +54,13 @@ class SecretsKey(SecuredResource):
         else:
             # Returns the decrypted value
             try:
-                secret_dict['value'] = decrypt(secret.value)
+                secret_dict['value'] = get_secret_method(key)[1]
             except InvalidToken:
                 raise manager_exceptions.InvalidFernetTokenFormatError(
                     "The Secret value for key `{}` is malformed, "
                     "please recreate the secret".format(key))
+            except CloudifyClientError as e:
+                raise manager_exceptions.NotFoundError(e)
         if secret.schema:
             secret_dict['value'] = json.loads(secret_dict['value'])
 
@@ -78,9 +87,14 @@ class SecretsKey(SecuredResource):
         update_if_exists is set to true
         """
         secret = self._get_secret_params(key)
-        if not secret.get('value'):
+
+        value = secret.get('value')
+        provider = secret.get('provider')
+
+        if not value and not provider:
             raise manager_exceptions.BadParametersError(
-                'Cannot create a secret with empty value: {0}'.format(key)
+                'Cannot create a secret with empty value or provider: \
+                {0}'.format(key)
             )
         try:
             return create_secret(key=key, secret=secret, tenant=current_tenant)
