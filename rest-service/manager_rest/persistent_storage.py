@@ -185,7 +185,7 @@ class S3StorageHandler(FileStorageHandler):
                 timeout=self.req_timeout,
             )
 
-        if res.status_code >= 400:
+        if not res.ok:
             raise manager_exceptions.FileServerException(
                 f'Error uploading {src_path} to {dst_path}: '
                 f'HTTP status code {res.status_code}'
@@ -196,7 +196,7 @@ class S3StorageHandler(FileStorageHandler):
             f'{self.server_url}/{path}',
             timeout=self.req_timeout,
         )
-        if res.status_code >= 400:
+        if not res.ok:
             raise manager_exceptions.FileServerException(
                 f'Error deleting: {path}: '
                 f'HTTP status code {res.status_code}'
