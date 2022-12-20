@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from xml.etree import ElementTree
 
 import requests
-from flask import current_app, send_file
+from flask import current_app
 
 from manager_rest import manager_exceptions
 from manager_rest.rest.rest_utils import make_streaming_response
@@ -92,7 +92,7 @@ class LocalStorageHandler(FileStorageHandler):
         if not os.path.isfile(full_path):
             return {}, 404
 
-        return send_file(full_path, as_attachment=True)
+        return make_streaming_response(full_path)
 
 
 class S3StorageHandler(FileStorageHandler):
@@ -171,24 +171,32 @@ class S3StorageHandler(FileStorageHandler):
         shutil.rmtree(src_path)
 
     def _put_file(self, src_path: str, dst_path: str):
-        with open(src_path, 'rb') as data:
+        with open(src_path, 'rb') as buffer:
+            # Below is a not very aesthetically pleasing workaround for a known
+            # bug in requests, which should be solved in requests 3.x
+            # https://github.com/psf/requests/issues/4215
+            data = buffer
+            if _file_is_empty(src_path):
+                data = b''
+
             res = requests.put(
                 f'{self.server_url}/{dst_path}',
                 data=data,
                 timeout=self.req_timeout,
             )
-            if res.status_code >= 400:
-                raise manager_exceptions.FileServerException(
-                    f'Error uploading {src_path} to {dst_path}: '
-                    f'HTTP status code {res.status_code}'
-                )
+
+        if not res.ok:
+            raise manager_exceptions.FileServerException(
+                f'Error uploading {src_path} to {dst_path}: '
+                f'HTTP status code {res.status_code}'
+            )
 
     def delete(self, path: str):
         res = requests.delete(
             f'{self.server_url}/{path}',
             timeout=self.req_timeout,
         )
-        if res.status_code >= 400:
+        if not res.ok:
             raise manager_exceptions.FileServerException(
                 f'Error deleting: {path}: '
                 f'HTTP status code {res.status_code}'
@@ -199,17 +207,17 @@ class S3StorageHandler(FileStorageHandler):
         if not file_name:
             file_name, file_extension = file_extension, file_name
 
-        return make_streaming_response(
-            file_name,
-            # the /resources-s3/ prefix in here, must match the location
-            # of the s3 fileserver in nginx
-            '/resources-s3/' + path,
-            file_extension,
-        )
+        # the /resources-s3/ prefix in here, must match the location
+        # of the s3 fileserver in nginx
+        return make_streaming_response(f'/resources-s3/{path}')
 
     @property
     def server_url(self):
         return f'{self.base_uri}/{self.bucket_name}'.rstrip('/')
+
+
+def _file_is_empty(file_name):
+    return os.stat(file_name).st_size == 0
 
 
 def init_storage_handler(config):

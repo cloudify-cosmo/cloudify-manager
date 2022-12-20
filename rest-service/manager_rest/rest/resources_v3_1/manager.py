@@ -14,14 +14,20 @@
 #  * limitations under the License.
 
 import os
+import shutil
 import tempfile
+import tarfile
+import zipfile
 from typing import Any
 
-from flask import request
+from flask import request, send_file
 from flask_restful.reqparse import Argument
 
 from cloudify.constants import MANAGER_RESOURCES_PATH
-from manager_rest.manager_exceptions import UploadFileMissing
+from manager_rest.manager_exceptions import (
+    ArchiveTypeError,
+    UploadFileMissing,
+)
 from manager_rest.security import SecuredResource, premium_only
 from manager_rest.rest import rest_utils
 from manager_rest.storage import get_storage_manager, models
@@ -39,6 +45,9 @@ try:
     from cloudify_premium import manager as manager_premium
 except ImportError:
     manager_premium = None
+
+
+RESOURCES_PATH = '/resources/'
 
 
 # community base classes for the managers and brokers endpoints:
@@ -198,23 +207,83 @@ class FileServerProxy(SecuredResource):
         if not path:
             return {}, 404
 
-        if _is_resource_path_directory(rel_path):
-            files_list = [f'/resources/{file_name}'
+        args = rest_utils.get_args_and_verify_arguments([
+            Argument('archive', type=bool, required=False)
+        ])
+        as_archive = args.get('archive', False)
+
+        if not _is_resource_path_directory(rel_path):
+            return self.storage_handler.proxy(rel_path)
+        elif not as_archive:
+            files_list = [os.path.join(RESOURCES_PATH, file_name)
                           for file_name in self.storage_handler.list(rel_path)]
             return {'files': files_list}, 200
+        else:
+            tmp_dir_name = tempfile.mkdtemp()
+            for download_file_name in self.storage_handler.list(rel_path):
+                src_path = os.path.join(
+                    rel_path,
+                    os.path.relpath(download_file_name, rel_path),
+                )
+                dst_path = os.path.join(tmp_dir_name, src_path)
+                dst_dir = os.path.dirname(dst_path)
+                if not os.path.isdir(dst_dir):
+                    os.makedirs(dst_dir)
+                with self.storage_handler.get(src_path) as tmp_file_name:
+                    shutil.copy2(tmp_file_name, dst_path)
 
-        # else path probably points to a file
-        return self.storage_handler.proxy(rel_path)
+            archive_file_name = _create_archive(tmp_dir_name)
+            shutil.rmtree(tmp_dir_name)
+
+            if stripped := rel_path.rstrip('/'):
+                download_file_name = f"{os.path.basename(stripped)}.tar.gz"
+            else:
+                download_file_name = 'resource.tar.gz'
+
+            result = send_file(
+                archive_file_name,
+                download_name=download_file_name,
+                as_attachment=True,
+            )
+            os.remove(archive_file_name)
+
+            return result
 
     def put(self, path=None):
-        if not request.data:
-            raise UploadFileMissing('File upload error: no file provided')
+        args = rest_utils.get_args_and_verify_arguments([
+            Argument('extract', type=bool, required=False)
+        ])
+        extract = args.get('extract', False)
 
         _, tmp_file_name = tempfile.mkstemp()
         with open(tmp_file_name, 'wb') as tmp_file:
             tmp_file.write(request.data)
             tmp_file.close()
-        self.storage_handler.move(tmp_file_name, path)
+
+        if not extract:
+            return self.storage_handler.move(tmp_file_name, path)
+
+        try:
+            tmp_dir_name = _extract_archive(
+                tmp_file_name,
+                _archive_type(tmp_file_name),
+            )
+        finally:
+            os.remove(tmp_file_name)
+
+        for dir_path, _, file_names in os.walk(tmp_dir_name):
+            for file_name in file_names:
+                src = os.path.join(tmp_dir_name, dir_path, file_name)
+                dst = os.path.join(
+                    os.path.dirname(path),
+                    os.path.relpath(
+                        os.path.join(dir_path, file_name),
+                        tmp_dir_name,
+                    ),
+                )
+
+                self.storage_handler.move(src, dst)
+        shutil.rmtree(tmp_dir_name)
 
     def post(self, path=None):
         if not request.files:
@@ -243,6 +312,35 @@ class MonitoringAuth(SecuredResource):
         return "", 200
 
 
+def _extract_archive(file_name, archive_type):
+    match archive_type.lower():
+        case 'tar':
+            tmp_dir_name = tempfile.mkdtemp()
+            with tarfile.open(file_name, 'r:*') as archive:
+                archive.extractall(path=tmp_dir_name)
+            return tmp_dir_name
+        case 'zip':
+            tmp_dir_name = tempfile.mkdtemp()
+            with zipfile.ZipFile(file_name) as archive:
+                archive.extractall(path=tmp_dir_name)
+            return tmp_dir_name
+    raise ArchiveTypeError(f'Unknown archive type {archive_type}')
+
+
+def _create_archive(dir_name):
+    _, tmp_file_name = tempfile.mkstemp(suffix='.tar.gz')
+    with tarfile.open(tmp_file_name, 'w:gz') as archive:
+        archive.add(dir_name, arcname='./')
+    return tmp_file_name
+
+
+def _archive_type(file_name):
+    if tarfile.is_tarfile(file_name):
+        return 'tar'
+    if zipfile.is_zipfile(file_name):
+        return 'zip'
+
+
 def _is_resource_path_directory(path):
     return path.endswith('/')
 
@@ -250,7 +348,7 @@ def _is_resource_path_directory(path):
 def _resource_relative_path(uri=None):
     if not uri:
         uri = request.headers['X-Original-Uri']
-        if not uri.startswith('/resources/'):
+        if not uri.startswith(RESOURCES_PATH):
             return None
 
-    return uri.replace('/resources/', '', 1)
+    return uri.replace(RESOURCES_PATH, '', 1)

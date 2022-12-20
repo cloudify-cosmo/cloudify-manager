@@ -160,13 +160,13 @@ def convert_to_int(value):
             'invalid parameter, should be int, got: {0}'.format(value))
 
 
-def make_streaming_response(res_id, res_path, archive_type):
+def make_streaming_response(res_path: str):
     response = make_response()
     response.headers['Content-Description'] = 'File Transfer'
     response.headers['Cache-Control'] = 'no-cache'
     response.headers['Content-Type'] = 'application/octet-stream'
     response.headers['Content-Disposition'] = \
-        'attachment; filename={0}.{1}'.format(res_id, archive_type)
+        f'attachment; filename="{os.path.basename(res_path)}"'
     response.headers['X-Accel-Redirect'] = res_path
     response.headers['X-Accel-Buffering'] = 'yes'
     return response

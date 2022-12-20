@@ -169,11 +169,7 @@ class PluginsArchive(SecuredResource):
             plugin_id,
             plugin.archive_name)
 
-        return rest_utils.make_streaming_response(
-            plugin_id,
-            plugin_path,
-            'wgn'
-        )
+        return rest_utils.make_streaming_response(plugin_path)
 
 
 class PluginsId(SecuredResource):
