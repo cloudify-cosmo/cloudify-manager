@@ -159,7 +159,9 @@ class SecretsKey(SecuredResource):
             },
         )
         value = request_dict['value']
-        if schema := request_dict.get('schema') or None:
+        schema = request_dict.get('schema') or None
+
+        if schema:
             try:
                 jsonschema.validate(value, schema)
             except jsonschema.ValidationError as e:
