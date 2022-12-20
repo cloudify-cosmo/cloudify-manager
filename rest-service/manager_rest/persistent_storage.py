@@ -172,12 +172,17 @@ class S3StorageHandler(FileStorageHandler):
 
     def _put_file(self, src_path: str, dst_path: str):
         with open(src_path, 'rb') as buffer:
+            # Below is a not very aesthetically pleasing workaround for a known
+            # bug in requests, which should be solved in requests 3.x
+            # https://github.com/psf/requests/issues/4215
+            data = buffer
+            if _file_is_empty(src_path):
+                data = b''
+
             res = requests.put(
                 f'{self.server_url}/{dst_path}',
+                data=data,
                 timeout=self.req_timeout,
-                files={
-                    os.path.basename(src_path): buffer
-                },
             )
 
         if res.status_code >= 400:
@@ -213,6 +218,10 @@ class S3StorageHandler(FileStorageHandler):
     @property
     def server_url(self):
         return f'{self.base_uri}/{self.bucket_name}'.rstrip('/')
+
+
+def _file_is_empty(file_name):
+    return os.stat(file_name).st_size == 0
 
 
 def init_storage_handler(config):
