@@ -91,3 +91,27 @@ class TestCheckDrift(ComponentTestBase):
         ])
         drift = check_drift(ctx=ctx)
         assert drift == {'deployment': ['id']}
+
+    def test_auto_inc_suffix(self):
+        ctx = self.get_mock_ctx('test-2', {
+            'resource_config': {
+                'deployment': {
+                    'id': 'test',
+                    'auto_inc_suffix': True,
+                },
+            },
+        })
+        ctx.instance.runtime_properties.update({
+            'deployment': {'id': 'test-2'}
+        })
+        self.cfy_mock_client.deployments.set_existing_objects([
+            Deployment({'id': 'test-2', 'blueprint_id': 'test'}),
+        ])
+        self.cfy_mock_client.blueprints.set_existing_objects([
+            Blueprint({'id': 'test'})
+        ])
+        drift = check_drift(ctx=ctx)
+        # even though the resource_config deployment id is "test",
+        # and the actual deployment id is "test-2" - that was generated
+        # by auto_inc_suffix, so there's no drift
+        assert not drift
