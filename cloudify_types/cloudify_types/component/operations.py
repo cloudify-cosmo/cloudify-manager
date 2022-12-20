@@ -399,9 +399,19 @@ def _diff_blueprint(blueprint_spec, blueprint):
         if spec_blueprint_id != blueprint.id:
             blueprint_drift.append('id')
 
-    spec_blueprint_labels = blueprint_spec.get('labels')
-    if blueprint.labels and spec_blueprint_labels:
-        blueprint_drift.append('labels')
+    if spec_labels := {
+        list(label.items())[0]
+        for label in blueprint_spec.get('labels', [])
+        if label
+    }:
+        blueprint_labels = blueprint.labels or []
+        current_labels = {
+            (label['key'], label['value'])
+            for label in blueprint_labels
+            if not label['key'].startswith('csys-')
+        }
+        if current_labels != spec_labels:
+            blueprint_drift.append('labels')
     return blueprint_drift
 
 

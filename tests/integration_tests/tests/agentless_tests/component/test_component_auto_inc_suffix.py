@@ -158,8 +158,11 @@ node_templates:
 
     def test_drift(self):
         basic_blueprint_path = resource('dsl/empty_blueprint.yaml')
-        self.client.blueprints.upload(basic_blueprint_path,
-                                      entity_id=self.basic_blueprint_id)
+        self.client.blueprints.upload(
+            basic_blueprint_path,
+            entity_id=self.basic_blueprint_id,
+            labels=[{'a': 'b'}],
+        )
         wait_for_blueprint_upload(self.basic_blueprint_id, self.client, True)
 
         deployment_id = 'd{0}'.format(uuid.uuid4())
@@ -178,6 +181,8 @@ node_templates:
         blueprint:
           external_resource: true
           id: basic
+          labels:
+            - a: b
         deployment:
           id: component
           auto_inc_suffix: true

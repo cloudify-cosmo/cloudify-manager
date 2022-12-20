@@ -42,6 +42,7 @@ class TestCheckDrift(ComponentTestBase):
             'resource_config': {
                 'blueprint': {
                     'id': 'test',
+                    'labels': [{'a': 'b'}, {'c': 'd'}],
                 }
             },
         })
@@ -49,7 +50,16 @@ class TestCheckDrift(ComponentTestBase):
             Deployment({'id': 'test', 'labels': [], 'blueprint_id': 'test2'})
         ])
         self.cfy_mock_client.blueprints.set_existing_objects([
-            Blueprint({'id': 'test2'})
+            Blueprint({
+                'id': 'test2',
+                'labels': [
+                    # same labels as in resource config, but different order,
+                    # and different structure ({a:b} vs {key:a,value:b})
+                    # still no drift on labels!
+                    {'key': 'c', 'value': 'd'},
+                    {'key': 'a', 'value': 'b'},
+                ],
+            })
         ])
         drift = check_drift(ctx=ctx)
         assert drift == {'blueprint': ['id']}
@@ -59,7 +69,7 @@ class TestCheckDrift(ComponentTestBase):
             'resource_config': {
                 'blueprint': {
                     'id': 'test',
-                    'labels': [{'key': 'a', 'value': 'c'}],
+                    'labels': [{'a': 'c'}],
                 }
             },
         })
