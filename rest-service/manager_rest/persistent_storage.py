@@ -207,13 +207,9 @@ class S3StorageHandler(FileStorageHandler):
         if not file_name:
             file_name, file_extension = file_extension, file_name
 
-        return make_streaming_response(
-            file_name,
-            # the /resources-s3/ prefix in here, must match the location
-            # of the s3 fileserver in nginx
-            '/resources-s3/' + path,
-            file_extension,
-        )
+        # the /resources-s3/ prefix in here, must match the location
+        # of the s3 fileserver in nginx
+        return make_streaming_response(f'/resources-s3/{path}')
 
     @property
     def server_url(self):
