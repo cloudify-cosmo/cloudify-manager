@@ -338,6 +338,83 @@ def refresh(**kwargs):
     populate_runtime_with_wf_results(client, deployment_id)
 
 
+def _diff_deployment(deployment_spec, deployment):
+    """Return the names of attributes that drifted in the deployment
+
+    :param deployment_spec: the specification of the deployment as given in
+        node properties.resource_config
+    :param deployment: actual deployment
+    :return: list of attribute names, e.g. ["id", "labels"]
+    """
+    deployment_drift = []
+    if not deployment_spec:
+        return deployment_drift
+
+    deployment_id = deployment.id
+    if deployment_spec.get('auto_inc_suffix'):
+        # if we created the deployment with auto_inc_suffix, the actual
+        # deployment id is going to be `<dep_id>-<number>`, while in
+        # node properties we only store the base "dep_id". Consider that
+        # not drifted.
+        deployment_id, _, _suffix = deployment_id.rpartition('-')
+
+    if spec_deployment_id := deployment_spec.get('id'):
+        if deployment_id != spec_deployment_id:
+            deployment_drift.append('id')
+
+    if spec_labels := {
+        list(label.items())[0]
+        for label in deployment_spec.get('labels', [])
+        if label
+    }:
+        deployment_labels = deployment.labels or []
+        current_labels = {
+            (label['key'], label['value'])
+            for label in deployment_labels
+            if not label['key'].startswith('csys-')
+        }
+        if current_labels != spec_labels:
+            deployment_drift.append('labels')
+
+    if spec_inputs := deployment_spec.get('inputs'):
+        if spec_inputs != deployment.inputs:
+            deployment_drift.append('inputs')
+
+    return deployment_drift
+
+
+def _diff_blueprint(blueprint_spec, blueprint):
+    """Return the names of attributes that drifted in the blueprint
+
+    :param blueprint_spec: the specification of the blueprint as given in
+        node properties.resource_config
+    :param deployment: actual blueprint
+    :return: list of attribute names, e.g. ["id", "labels"]
+    """
+    blueprint_drift = []
+    if not blueprint_spec:
+        return blueprint_spec
+
+    if spec_blueprint_id := blueprint_spec.get('id'):
+        if spec_blueprint_id != blueprint.id:
+            blueprint_drift.append('id')
+
+    if spec_labels := {
+        list(label.items())[0]
+        for label in blueprint_spec.get('labels', [])
+        if label
+    }:
+        blueprint_labels = blueprint.labels or []
+        current_labels = {
+            (label['key'], label['value'])
+            for label in blueprint_labels
+            if not label['key'].startswith('csys-')
+        }
+        if current_labels != spec_labels:
+            blueprint_drift.append('labels')
+    return blueprint_drift
+
+
 @operation(resumable=True)
 def check_drift(timeout=EXECUTIONS_TIMEOUT, **kwargs):
     deployment_id = current_deployment_id(**kwargs)
@@ -373,39 +450,16 @@ def check_drift(timeout=EXECUTIONS_TIMEOUT, **kwargs):
     if modified_keys:
         drift['capabilities'] = modified_keys
 
-    # Discover the properties drift - the deployment
-    new_deployment_properties = node_properties.get('deployment', {})
-    modified_keys = list(dict_sum_diff(
-        {
-            'id': deployment_id,
-            'inputs': deployment.inputs,
-            'labels': [{label['key']: label['value']}
-                       for label in deployment.labels
-                       if not label['key'].startswith('csys-')],
-        },
-        {
-            'id': new_deployment_properties.get('id', deployment_id),
-            'inputs': new_deployment_properties.get('inputs', {}),
-            'labels': new_deployment_properties.get('labels', []),
-        },
-    ))
-    if modified_keys:
-        drift['deployment'] = modified_keys
-
-    # Discover the properties drift, starting with blueprint
-    new_blueprint_properties = node_properties.get('blueprint', {})
-    modified_keys = list(dict_sum_diff(
-        {
-            'id': blueprint.id,
-            'labels': blueprint.labels,
-        },
-        {
-            'id': new_blueprint_properties.get('id', blueprint.id),
-            'labels': new_blueprint_properties.get('labels', []),
-        },
-    ))
-    if modified_keys:
-        drift['blueprint'] = modified_keys
+    if deployment_drift := _diff_deployment(
+        node_properties.get('deployment', {}),
+        deployment,
+    ):
+        drift['deployment'] = deployment_drift
+    if blueprint_drift := _diff_blueprint(
+        node_properties.get('blueprint', {}),
+        blueprint,
+    ):
+        drift['blueprint'] = blueprint_drift
 
     return drift or None
 
