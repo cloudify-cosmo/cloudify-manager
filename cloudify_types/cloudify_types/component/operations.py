@@ -351,6 +351,12 @@ def _diff_deployment(deployment_spec, deployment):
         return deployment_drift
 
     deployment_id = deployment.id
+    if deployment_spec.get('auto_inc_suffix'):
+        # if we created the deployment with auto_inc_suffix, the actual
+        # deployment id is going to be `<dep_id>-<number>`, while in
+        # node properties we only store the base "dep_id". Consider that
+        # not drifted.
+        deployment_id, _, _suffix = deployment_id.rpartition('-')
 
     if spec_deployment_id := deployment_spec.get('id'):
         if deployment_id != spec_deployment_id:
