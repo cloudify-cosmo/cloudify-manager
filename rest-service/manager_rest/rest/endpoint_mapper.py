@@ -101,7 +101,6 @@ def setup_resources(api):
         'SecretsExport': 'secrets/share/export',
         'SecretsImport': 'secrets/share/import',
         'SecretsKey': 'secrets/<string:key>',
-        'SecretsSetGlobal': 'secrets/<string:key>/set-global',
         'SecretsSetVisibility': 'secrets/<string:key>/set-visibility',
         'ManagerConfig': 'config',
         'ManagerConfigId': 'config/<string:name>',

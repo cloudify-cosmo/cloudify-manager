@@ -1,10 +1,12 @@
 import json
 
+from manager_rest.storage import models
 from manager_rest.test import base_test
 
 from cloudify.cryptography_utils import (
     decrypt,
 )
+from cloudify.models_states import VisibilityState
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 
@@ -134,3 +136,27 @@ class TestSecrets(base_test.BaseServerTestCase):
                 updated_secret.provider_options,
             ),
         ) == updated_provider_options
+
+    def test_update_secret_set_visibility(self):
+        key = 'sec1'
+        self.client.secrets.create(
+            key,
+            'value1',
+            visibility=VisibilityState.PRIVATE,
+        )
+        sec = models.Secret.query.filter_by(key=key).one()
+        with self.assertRaisesRegex(CloudifyClientError, 'visibility'):
+            # already private, can't set again
+            self.client.secrets.set_visibility(key, VisibilityState.PRIVATE)
+        assert sec.visibility == VisibilityState.PRIVATE
+
+        self.client.secrets.set_visibility(key, VisibilityState.TENANT)
+        assert sec.visibility == VisibilityState.TENANT
+
+        self.client.secrets.set_visibility(key, VisibilityState.GLOBAL)
+        assert sec.visibility == VisibilityState.GLOBAL
+
+        with self.assertRaisesRegex(CloudifyClientError, 'wider'):
+            # already has wider visibility, can't move back from global!
+            self.client.secrets.set_visibility(key, VisibilityState.TENANT)
+        assert sec.visibility == VisibilityState.GLOBAL
