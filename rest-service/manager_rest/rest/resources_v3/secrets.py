@@ -159,7 +159,7 @@ class SecretsKey(SecuredResource):
             },
         )
         value = request_dict['value']
-        if schema := request_dict.get('schema'):
+        if schema := request_dict.get('schema') or None:
             try:
                 jsonschema.validate(value, schema)
             except jsonschema.ValidationError as e:
@@ -198,7 +198,7 @@ class SecretsKey(SecuredResource):
                 provider_name,
             )
 
-        provider_options = request_dict.get('provider_options')
+        provider_options = request_dict.get('provider_options') or None
 
         secret_params = {
             'value': value,
