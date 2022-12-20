@@ -45,10 +45,7 @@ class ComponentTestBase(TestCase):
 
     def setUp(self, context_data=COMPONENT_PROPS):
         super(ComponentTestBase, self).setUp()
-        self._ctx = self.get_mock_ctx('test', COMPONENT_PROPS)
-        self._ctx.logger.log = mock.MagicMock(return_value=None)
-        self._ctx.logger.info = mock.MagicMock(return_value=None)
-        current_ctx.set(self._ctx)
+        self._ctx = self.get_mock_ctx('test', context_data)
         self.cfy_mock_client = MockCloudifyRestClient()
 
     def tearDown(self):
@@ -70,4 +67,7 @@ class ComponentTestBase(TestCase):
         )
         ctx.operation._operation_context = {'name': 'some.test'}
 
+        ctx.logger.log = mock.MagicMock(return_value=None)
+        ctx.logger.info = mock.MagicMock(return_value=None)
+        current_ctx.set(ctx)
         return ctx
