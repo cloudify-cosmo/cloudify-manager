@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from xml.etree import ElementTree
 
 import requests
-from flask import current_app, send_file
+from flask import current_app
 
 from manager_rest import manager_exceptions
 from manager_rest.rest.rest_utils import make_streaming_response
@@ -92,7 +92,7 @@ class LocalStorageHandler(FileStorageHandler):
         if not os.path.isfile(full_path):
             return {}, 404
 
-        return send_file(full_path, as_attachment=True)
+        return make_streaming_response(full_path)
 
 
 class S3StorageHandler(FileStorageHandler):
