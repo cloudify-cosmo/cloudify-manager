@@ -147,8 +147,4 @@ class LogBundlesIdArchive(SecuredResource):
             log_bundle_id
         )
 
-        return rest_utils.make_streaming_response(
-            log_bundle_id,
-            log_bundle_uri,
-            'zip'
-        )
+        return rest_utils.make_streaming_response(log_bundle_uri)

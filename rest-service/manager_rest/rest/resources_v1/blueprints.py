@@ -37,10 +37,8 @@ from manager_rest.upload_manager import (
 )
 from manager_rest.utils import current_tenant
 from manager_rest.rest.rest_decorators import marshal_with
-from manager_rest.rest.rest_utils import (make_streaming_response,
-                                          validate_inputs)
+from manager_rest.rest.rest_utils import validate_inputs
 from manager_rest.constants import (SUPPORTED_ARCHIVE_TYPES,
-                                    FILE_SERVER_RESOURCES_FOLDER,
                                     FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER)
 
 
@@ -74,14 +72,8 @@ class BlueprintsIdArchive(SecuredResource):
                 'Could not find blueprint\'s archive; '
                 f'Blueprint ID: {blueprint.id}')
 
-        blueprint_path = f'{FILE_SERVER_RESOURCES_FOLDER}/' +\
-                         f'{path}/{blueprint.id}.{archive_type}'
-
-        return make_streaming_response(
-            blueprint.id,
-            blueprint_path,
-            archive_type
-        )
+        blueprint_path = f'{path}/{blueprint.id}.{archive_type}'
+        return get_storage_handler().proxy(blueprint_path)
 
 
 class Blueprints(SecuredResource):

@@ -223,11 +223,7 @@ class SnapshotsIdArchive(SecuredResource):
             snapshot_id
         )
 
-        return rest_utils.make_streaming_response(
-            snapshot_id,
-            snapshot_uri,
-            'zip'
-        )
+        return rest_utils.make_streaming_response(snapshot_uri)
 
 
 class SnapshotsIdRestore(SecuredResource):
