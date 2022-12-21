@@ -121,9 +121,11 @@ class marshal_with(object):
                         data, fields_to_include)
 
                     if data is None:
-                        fields_to_include = {}
+                        return None, code
 
                     return marshal(data, fields_to_include), code, headers
+            elif response is None:
+                return None, 204
             else:
                 response = self.wrap_with_response_object(
                     response, fields_to_include)
