@@ -121,7 +121,7 @@ class marshal_with(object):
                         data, fields_to_include)
 
                     if data is None:
-                        return None, code
+                        return None, code, headers
 
                     return marshal(data, fields_to_include), code, headers
             elif response is None:
