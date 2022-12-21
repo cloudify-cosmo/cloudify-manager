@@ -225,7 +225,10 @@ class FileServerProxy(SecuredResource):
                     rel_path,
                     os.path.relpath(download_file_name, rel_path),
                 )
-                dst_path = os.path.join(tmp_dir_name, src_path)
+                dst_path = os.path.join(
+                    tmp_dir_name,
+                    os.path.relpath(src_path, rel_path),
+                )
                 dst_dir = os.path.dirname(dst_path)
                 if not os.path.isdir(dst_dir):
                     os.makedirs(dst_dir)
@@ -264,10 +267,7 @@ class FileServerProxy(SecuredResource):
             return self.storage_handler.move(tmp_file_name, path)
 
         try:
-            tmp_dir_name = _extract_archive(
-                tmp_file_name,
-                _archive_type(tmp_file_name),
-            )
+            tmp_dir_name = _extract_archive(tmp_file_name)
         finally:
             os.remove(tmp_file_name)
 
@@ -284,6 +284,7 @@ class FileServerProxy(SecuredResource):
 
                 self.storage_handler.move(src, dst)
         shutil.rmtree(tmp_dir_name)
+        return "", 200
 
     def post(self, path=None):
         if not request.files:
@@ -298,6 +299,7 @@ class FileServerProxy(SecuredResource):
                 tmp_file_name,
                 os.path.join(path or '', file.filename)
             )
+        return "", 200
 
 
 class MonitoringAuth(SecuredResource):
@@ -312,18 +314,19 @@ class MonitoringAuth(SecuredResource):
         return "", 200
 
 
-def _extract_archive(file_name, archive_type):
-    match archive_type.lower():
+def _extract_archive(file_name, dst_dir=None):
+    archive_type = _archive_type(file_name).lower()
+    if dst_dir is None:
+        dst_dir = tempfile.mkdtemp()
+    match archive_type:
         case 'tar':
-            tmp_dir_name = tempfile.mkdtemp()
             with tarfile.open(file_name, 'r:*') as archive:
-                archive.extractall(path=tmp_dir_name)
-            return tmp_dir_name
+                archive.extractall(path=dst_dir)
+            return dst_dir
         case 'zip':
-            tmp_dir_name = tempfile.mkdtemp()
             with zipfile.ZipFile(file_name) as archive:
-                archive.extractall(path=tmp_dir_name)
-            return tmp_dir_name
+                archive.extractall(path=dst_dir)
+            return dst_dir
     raise ArchiveTypeError(f'Unknown archive type {archive_type}')
 
 
