@@ -42,7 +42,6 @@ from .plugins import (                           # NOQA
     PluginsUpdates,
     PluginsUpdateId,
     PluginsId,
-    PluginsSetGlobal,
     PluginsSetVisibility,
     PluginsYaml,
 )

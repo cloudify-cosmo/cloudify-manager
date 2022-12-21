@@ -67,7 +67,6 @@ def setup_resources(api):
         'PluginsUpdateId': 'plugins-updates/<string:update_id>',
         'PluginsUpdates': 'plugins-updates',
         'PluginsArchive': 'plugins/<string:plugin_id>/archive',
-        'PluginsSetGlobal': 'plugins/<string:plugin_id>/set-global',
         'PluginsSetVisibility': 'plugins/<string:plugin_id>/set-visibility',
         'PluginsYaml': 'plugins/<string:plugin_id>/yaml',
         'MaintenanceMode': 'maintenance',

@@ -28,19 +28,6 @@ from manager_rest.rest import (resources_v2,
                                rest_utils)
 
 
-class PluginsSetGlobal(SecuredResource):
-
-    @authorize('resource_set_global')
-    @rest_decorators.marshal_with(models.Plugin)
-    def patch(self, plugin_id):
-        """
-        Set the plugin's visibility to global
-        """
-        plugin = get_storage_manager().get(models.Plugin, plugin_id)
-        return get_resource_manager().set_visibility(plugin,
-                                                     VisibilityState.GLOBAL)
-
-
 class PluginsSetVisibility(SecuredResource):
 
     @authorize('resource_set_visibility')
