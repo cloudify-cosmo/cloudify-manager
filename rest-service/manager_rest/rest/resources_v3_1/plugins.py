@@ -344,7 +344,5 @@ class PluginsYaml(SecuredResource):
         plugin = get_storage_manager().get(models.Plugin, plugin_id)
         yaml_file_path = plugin.yaml_file_path(dsl_version)
         return rest_utils.make_streaming_response(
-            plugin_id,
-            f'/resources/{yaml_file_path}',
-            'yaml'
+            f'/resources/{yaml_file_path}'
         )
