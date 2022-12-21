@@ -119,7 +119,13 @@ class marshal_with(object):
                 else:
                     data = self.wrap_with_response_object(
                         data, fields_to_include)
+
+                    if data is None:
+                        return None, code, headers
+
                     return marshal(data, fields_to_include), code, headers
+            elif response is None:
+                return None, 204
             else:
                 response = self.wrap_with_response_object(
                     response, fields_to_include)
@@ -143,6 +149,8 @@ class marshal_with(object):
             if isinstance(data, User):
                 kwargs['include_hash'] = self._include_hash()
             return data.to_response(**kwargs)
+        elif data is None:
+            return None
         raise RuntimeError('Unexpected response data (type {0}) {1}'.format(
             type(data), data))
 
