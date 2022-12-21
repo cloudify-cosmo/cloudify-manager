@@ -14,7 +14,6 @@ def setup_resources(api):
         'BlueprintsId': 'blueprints/<string:blueprint_id>',
         'BlueprintsIdValidate': 'blueprints/<string:blueprint_id>/validate',
         'BlueprintsIdArchive': 'blueprints/<string:blueprint_id>/archive',
-        'BlueprintsSetGlobal': 'blueprints/<string:blueprint_id>/set-global',
         'BlueprintsSetVisibility': 'blueprints/<string:blueprint_id>/'
                                    'set-visibility',
         'BlueprintsIcon': 'blueprints/<string:blueprint_id>/icon',

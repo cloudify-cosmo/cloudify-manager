@@ -61,7 +61,6 @@ from .blueprints import (                        # NOQA
     BlueprintsId,
     BlueprintsIdArchive,
     BlueprintsIdValidate,
-    BlueprintsSetGlobal,
     BlueprintsSetVisibility,
     BlueprintsIcon,
 )
