@@ -22,11 +22,13 @@ from unittest import mock
 
 import wagon
 
+from cloudify.models_states import VisibilityState
+from cloudify_rest_client import exceptions
+from cloudify_rest_client.exceptions import CloudifyClientError
+
 from manager_rest.storage import db, models
 from manager_rest.test.base_test import BaseServerTestCase
-
-from cloudify_rest_client import exceptions
-from .test_utils import generate_progress_func
+from manager_rest.test.endpoints.test_utils import generate_progress_func
 
 TEST_PACKAGE_NAME = 'cloudify-script-plugin'
 TEST_PACKAGE_VERSION = '1.3'
@@ -458,3 +460,30 @@ plugins:
         )
         with open(downloaded_yaml_path) as downloaded_yaml:
             assert downloaded_yaml.read() == plugin_yaml_code
+
+    def test_update_plugin_set_visibility(self):
+        plug = models.Plugin(
+            id='plug1',
+            archive_name='plug1.wgn',
+            package_name='plug1',
+            uploaded_at=datetime.utcnow(),
+            visibility=VisibilityState.PRIVATE,
+            tenant=self.tenant,
+            creator=self.user,
+        )
+        with self.assertRaisesRegex(CloudifyClientError, 'visibility'):
+            # already private, can't set again
+            self.client.plugins.set_visibility(
+                plug.id, VisibilityState.PRIVATE)
+        assert plug.visibility == VisibilityState.PRIVATE
+
+        self.client.plugins.set_visibility(plug.id, VisibilityState.TENANT)
+        assert plug.visibility == VisibilityState.TENANT
+
+        self.client.plugins.set_visibility(plug.id, VisibilityState.GLOBAL)
+        assert plug.visibility == VisibilityState.GLOBAL
+
+        with self.assertRaisesRegex(CloudifyClientError, 'wider'):
+            # already has wider visibility, can't move back from global!
+            self.client.plugins.set_visibility(plug.id, VisibilityState.TENANT)
+        assert plug.visibility == VisibilityState.GLOBAL

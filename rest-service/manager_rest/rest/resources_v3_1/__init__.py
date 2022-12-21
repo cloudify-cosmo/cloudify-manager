@@ -42,7 +42,6 @@ from .plugins import (                           # NOQA
     PluginsUpdates,
     PluginsUpdateId,
     PluginsId,
-    PluginsSetGlobal,
     PluginsSetVisibility,
     PluginsYaml,
 )
@@ -62,7 +61,6 @@ from .blueprints import (                        # NOQA
     BlueprintsId,
     BlueprintsIdArchive,
     BlueprintsIdValidate,
-    BlueprintsSetGlobal,
     BlueprintsSetVisibility,
     BlueprintsIcon,
 )

@@ -348,21 +348,6 @@ class Secrets(SecuredResource):
         )
 
 
-class SecretsSetGlobal(SecuredResource):
-
-    @authorize('resource_set_global')
-    @rest_decorators.marshal_with(models.Secret)
-    def patch(self, key):
-        """
-        Set the secret's visibility to global
-        """
-        return get_resource_manager().set_global_visibility(
-            models.Secret,
-            key,
-            VisibilityState.GLOBAL
-        )
-
-
 class SecretsSetVisibility(SecuredResource):
 
     @authorize('secret_update')

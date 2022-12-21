@@ -41,19 +41,6 @@ from manager_rest import config
 from manager_rest.constants import FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER
 
 
-class BlueprintsSetGlobal(SecuredResource):
-
-    @authorize('resource_set_global')
-    @rest_decorators.marshal_with(models.Blueprint)
-    def patch(self, blueprint_id):
-        """
-        Set the blueprint's visibility to global
-        """
-        blueprint = get_storage_manager().get(models.Blueprint, blueprint_id)
-        return get_resource_manager().set_visibility(blueprint,
-                                                     VisibilityState.GLOBAL)
-
-
 class BlueprintsSetVisibility(SecuredResource):
 
     @authorize('resource_set_visibility')
