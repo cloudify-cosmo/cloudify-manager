@@ -4,6 +4,7 @@ from flask_restful.reqparse import Argument
 from flask_restful.inputs import boolean
 
 from manager_rest import upload_manager
+from manager_rest.persistent_storage import get_storage_handler
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.rest import (
     rest_decorators,
@@ -18,10 +19,7 @@ from manager_rest.storage import (
     models,
 )
 from manager_rest.utils import create_filter_params_list_description
-from manager_rest.constants import (
-    FILE_SERVER_PLUGINS_FOLDER,
-    FILE_SERVER_RESOURCES_FOLDER,
-)
+from manager_rest.constants import FILE_SERVER_PLUGINS_FOLDER
 
 
 class Plugins(SecuredResource):
@@ -163,13 +161,10 @@ class PluginsArchive(SecuredResource):
         """
         # Verify plugin exists.
         plugin = get_storage_manager().get(models.Plugin, plugin_id)
-        plugin_path = '{0}/{1}/{2}/{3}'.format(
-            FILE_SERVER_RESOURCES_FOLDER,
-            FILE_SERVER_PLUGINS_FOLDER,
-            plugin_id,
-            plugin.archive_name)
+        plugin_path = f'{FILE_SERVER_PLUGINS_FOLDER}/{plugin_id}'\
+                      f'/{plugin.archive_name}'
 
-        return rest_utils.make_streaming_response(plugin_path)
+        return get_storage_handler().proxy(plugin_path)
 
 
 class PluginsId(SecuredResource):

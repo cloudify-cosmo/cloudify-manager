@@ -23,11 +23,11 @@ from manager_rest import config, manager_exceptions, workflow_executor
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.rest import rest_decorators, rest_utils, swagger
+from manager_rest.persistent_storage import get_storage_handler
 from manager_rest.storage import get_storage_manager, models
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.upload_manager import upload_snapshot
-from manager_rest.constants import (FILE_SERVER_SNAPSHOTS_FOLDER,
-                                    FILE_SERVER_RESOURCES_FOLDER)
+from manager_rest.constants import FILE_SERVER_SNAPSHOTS_FOLDER
 
 
 def _get_snapshot_path(snapshot_id):
@@ -217,13 +217,10 @@ class SnapshotsIdArchive(SecuredResource):
                 'Failed snapshot cannot be downloaded'
             )
 
-        snapshot_uri = '{0}/{1}/{2}/{2}.zip'.format(
-            FILE_SERVER_RESOURCES_FOLDER,
-            FILE_SERVER_SNAPSHOTS_FOLDER,
-            snapshot_id
-        )
+        snapshot_uri = f'{FILE_SERVER_SNAPSHOTS_FOLDER}/{snapshot_id}/'\
+                       f'{snapshot_id}.zip'
 
-        return rest_utils.make_streaming_response(snapshot_uri)
+        return get_storage_handler().proxy(snapshot_uri)
 
 
 class SnapshotsIdRestore(SecuredResource):

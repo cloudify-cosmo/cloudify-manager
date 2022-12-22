@@ -4,6 +4,7 @@ from werkzeug.exceptions import BadRequest
 from cloudify.models_states import VisibilityState
 
 from manager_rest import manager_exceptions
+from manager_rest.persistent_storage import get_storage_handler
 from manager_rest.rest import swagger
 from manager_rest.security import SecuredResource
 from manager_rest.plugins_update.constants import PHASES
@@ -343,6 +344,4 @@ class PluginsYaml(SecuredResource):
         dsl_version = flask_request.args.get('dsl_version')
         plugin = get_storage_manager().get(models.Plugin, plugin_id)
         yaml_file_path = plugin.yaml_file_path(dsl_version)
-        return rest_utils.make_streaming_response(
-            f'/resources/{yaml_file_path}'
-        )
+        return get_storage_handler().proxy(yaml_file_path)
