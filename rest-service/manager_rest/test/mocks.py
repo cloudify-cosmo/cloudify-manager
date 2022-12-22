@@ -172,7 +172,7 @@ class MockStreamedResponse(object):
         self._response.headers.pop('Content-Length', None)
         self._root = root_path
         self.local_path = self._response.headers['X-Accel-Redirect'].replace(
-            '/resources',
+            '/resources-local',
             self._root
         )
 
