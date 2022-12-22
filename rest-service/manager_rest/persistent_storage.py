@@ -8,7 +8,6 @@ import requests
 from flask import current_app
 
 from manager_rest import manager_exceptions
-from manager_rest.constants import FILE_SERVER_RESOURCES_FOLDER
 from manager_rest.rest.rest_utils import make_streaming_response
 
 
@@ -18,7 +17,7 @@ class FileStorageHandler:
         self.base_uri = base_uri
 
     def find(self, path: str, suffixes=None):
-        """Return a path to a existing file specified by path and suffixes"""
+        """Return a path to existing file specified by path and suffixes"""
         raise NotImplementedError('Should be implemented in subclasses')
 
     def get(self, path: str):
@@ -88,14 +87,9 @@ class LocalStorageHandler(FileStorageHandler):
             os.remove(full_path)
 
     def proxy(self, path: str):
-        """Use nginx to return the given file to the user.
-
-        :param path: the path of a file to send, under FILE_SERVER_ROOT.
-            For example, for path=a/b.txt, the file
-            /opt/manager/resources/a/b.txt will be sent to the user
-        """
-        return make_streaming_response(
-            f'{FILE_SERVER_RESOURCES_FOLDER}/{path}')
+        # the /resources-local/ prefix in here, must match the location
+        # of the local fileserver in nginx
+        return make_streaming_response(f'/resources-local/{path}')
 
 
 class S3StorageHandler(FileStorageHandler):
@@ -134,10 +128,10 @@ class S3StorageHandler(FileStorageHandler):
             os.path.join(self.server_url, path),
             timeout=self.req_timeout
         )
-        with tempfile.NamedTemporaryFile() as fp:
-            fp.write(response.content)
-            fp.seek(0)
-            yield fp.name
+        with tempfile.NamedTemporaryFile() as temp_file:
+            temp_file.write(response.content)
+            temp_file.seek(0)
+            yield temp_file.name
 
     def list(self, path: str):
         params = {}
@@ -206,10 +200,6 @@ class S3StorageHandler(FileStorageHandler):
             )
 
     def proxy(self, path: str):
-        file_name, _, file_extension = path.split('/')[-1].partition('.')
-        if not file_name:
-            file_name, file_extension = file_extension, file_name
-
         # the /resources-s3/ prefix in here, must match the location
         # of the s3 fileserver in nginx
         return make_streaming_response(f'/resources-s3/{path}')

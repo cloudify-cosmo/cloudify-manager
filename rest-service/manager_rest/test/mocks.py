@@ -52,9 +52,10 @@ class MockClientResponse(object):
 
 class MockHTTPClient(HTTPClient):
 
-    def __init__(self, app, headers=None, root_path=None):
+    def __init__(self, app, headers=None, root_path=None, **kwargs):
         super(MockHTTPClient, self).__init__(host='localhost',
-                                             headers=headers)
+                                             headers=headers,
+                                             **kwargs)
         self.app = app
         self._root_path = root_path
 
@@ -68,6 +69,7 @@ class MockHTTPClient(HTTPClient):
                    sort=None,
                    expected_status_code=200,
                    stream=False,
+                   url_prefix=True,
                    versioned_url=True,
                    timeout=None):
         # hack: we have app-ctx everywhere in tests, but we'd like to still
@@ -77,7 +79,7 @@ class MockHTTPClient(HTTPClient):
         if '_login_user' in g:
             delattr(g, '_login_user')
 
-        if CLIENT_API_VERSION == 'v1':
+        if url_prefix and CLIENT_API_VERSION == 'v1':
             # in v1, HTTPClient won't append the version part of the URL
             # on its own, so it's done here instead
             uri = '/api/{0}{1}'.format(CLIENT_API_VERSION, uri)
@@ -89,7 +91,8 @@ class MockHTTPClient(HTTPClient):
             params=params,
             headers=headers,
             expected_status_code=expected_status_code,
-            stream=stream
+            stream=stream,
+            url_prefix=url_prefix,
         )
 
     def _do_request(self, requests_method, request_url, body, params, headers,
@@ -169,7 +172,7 @@ class MockStreamedResponse(object):
         self._response.headers.pop('Content-Length', None)
         self._root = root_path
         self.local_path = self._response.headers['X-Accel-Redirect'].replace(
-            '/resources',
+            '/resources-local',
             self._root
         )
 
