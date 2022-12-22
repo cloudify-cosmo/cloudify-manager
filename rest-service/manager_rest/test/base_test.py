@@ -291,6 +291,7 @@ class BaseServerTestCase(unittest.TestCase):
                         client.deployments.scaling_groups.api = \
                             mock_http_client
                         client.secrets_providers.api = mock_http_client
+                        client.resources.api = mock_http_client
 
         return client
 
