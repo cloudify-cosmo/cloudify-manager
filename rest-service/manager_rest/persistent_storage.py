@@ -8,7 +8,6 @@ import requests
 from flask import current_app
 
 from manager_rest import manager_exceptions
-from manager_rest.constants import FILE_SERVER_RESOURCES_FOLDER
 from manager_rest.rest.rest_utils import make_streaming_response
 
 
@@ -88,14 +87,9 @@ class LocalStorageHandler(FileStorageHandler):
             os.remove(full_path)
 
     def proxy(self, path: str):
-        """Use nginx to return the given file to the user.
-
-        :param path: the path of a file to send, under FILE_SERVER_ROOT.
-            For example, for path=a/b.txt, the file
-            /opt/manager/resources/a/b.txt will be sent to the user
-        """
-        return make_streaming_response(
-            f'{FILE_SERVER_RESOURCES_FOLDER}/{path}')
+        # the /resources-local/ prefix in here, must match the location
+        # of the local fileserver in nginx
+        return make_streaming_response(f'/resources-local/{path}')
 
 
 class S3StorageHandler(FileStorageHandler):
