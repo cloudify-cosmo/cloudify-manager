@@ -6,3 +6,4 @@ pytest-xdist
 # agent is only here for the mgmtworker, which is only (temporarily) used in tests
 https://github.com/cloudify-cosmo/cloudify-agent/archive/master.zip
 -e ../mgmtworker
+wheel>=0.38.0 # not directly required, pinned by Snyk to avoid a vulnerability
