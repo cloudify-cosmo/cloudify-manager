@@ -354,4 +354,4 @@ def _resource_relative_path(uri=None):
         if not uri.startswith(RESOURCES_PATH):
             return None
 
-    return uri.replace(RESOURCES_PATH, '', 1)
+    return uri
