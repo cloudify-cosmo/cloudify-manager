@@ -7,7 +7,10 @@ from integration_tests.tests.utils import get_resource as resource
 
 from cloudify.models_states import DeploymentState
 
-from cloudify_rest_client.exceptions import CloudifyClientError
+from cloudify_rest_client.exceptions import (
+    CloudifyClientError,
+    FunctionsEvaluationError,
+)
 
 pytestmark = pytest.mark.group_environments
 
@@ -1056,3 +1059,144 @@ class EnvironmentTest(AgentlessTestCase):
             sub_environments_status=DeploymentState.GOOD,
             sub_environments_count=4
         )
+
+    def test_required_environment_capability(self):
+        env_bp = """
+tosca_definitions_version: cloudify_dsl_1_5
+imports:
+  - cloudify/types/types.yaml
+capabilities:
+    cap1:
+        value:
+            a: 5
+"""
+        srv_bp = """
+tosca_definitions_version: cloudify_dsl_1_5
+imports:
+  - cloudify/types/types.yaml
+outputs:
+    out1:
+        value: {{get_environment_capability: {CAP_NAME}}}
+"""
+
+        self.upload_blueprint_resource(
+            self.make_yaml_file(env_bp),
+            blueprint_id='env',
+        )
+
+        # try to create a deployment from a blueprint that doesn't require
+        # any capabilities, but attach it to a non-existent parent
+        with self.assertRaisesRegex(CloudifyClientError, 'not found: env2'):
+            self.deploy(
+                blueprint_id='env',
+                deployment_id='env',
+                deployment_labels=[{'csys-obj-parent': 'env2'}],
+            )
+
+        # trying to create the deployment before the environment exists,
+        # but capabilities are required
+        self.upload_blueprint_resource(
+            self.make_yaml_file(srv_bp.format(CAP_NAME='cap1')),
+            blueprint_id='srv_1',
+        )
+        with self.assertRaisesRegex(
+            CloudifyClientError,
+            'environment capabilities',
+        ):
+            self.deploy(blueprint_id='srv_1', deployment_id='srv_1')
+
+        # now the environment does exist, but we require a non-existent
+        # capability
+        self.upload_blueprint_resource(
+            self.make_yaml_file(srv_bp.format(CAP_NAME='cap2')),
+            blueprint_id='srv_2',
+        )
+        with self.assertRaisesRegex(
+            CloudifyClientError,
+            'required capabilities: cap2',
+        ):
+            self.deploy(
+                blueprint_id='srv_2',
+                deployment_id='srv_2',
+                deployment_labels=[{'csys-obj-parent': 'env'}],
+            )
+
+        # now the environment does exist, and the capability also exists,
+        # but the capability structure is unexpected
+        self.upload_blueprint_resource(
+            self.make_yaml_file(srv_bp.format(CAP_NAME='[cap1, key1, 0]')),
+            blueprint_id='srv_3',
+        )
+        with self.assertRaisesRegex(
+            CloudifyClientError,
+            'required capabilities: cap1.key1.0',
+        ):
+            self.deploy(
+                blueprint_id='srv_3',
+                deployment_id='srv_3',
+                deployment_labels=[{'csys-obj-parent': 'env'}],
+            )
+
+        # the environment exists, the capability exists, and it is of the
+        # correct structure
+        self.upload_blueprint_resource(
+            self.make_yaml_file(srv_bp.format(CAP_NAME='[cap1, a]')),
+            blueprint_id='srv_4',
+        )
+        self.deploy(
+            blueprint_id='srv_4',
+            deployment_id='srv_4',
+            deployment_labels=[{'csys-obj-parent': 'env'}],
+        )
+
+    def test_evaluate_environment_capability(self):
+        bp = """
+tosca_definitions_version: cloudify_dsl_1_5
+imports:
+  - cloudify/types/types.yaml
+capabilities:
+    cap1:
+        value:
+            a: 5
+"""
+        self.upload_blueprint_resource(
+            self.make_yaml_file(bp),
+            blueprint_id='bp',
+        )
+
+        self.deploy(
+            blueprint_id='bp',
+            deployment_id='dep1',
+        )
+        self.deploy(
+            blueprint_id='bp',
+            deployment_id='dep2',
+            deployment_labels=[{'csys-obj-parent': 'dep1'}],
+        )
+
+        def _get_capability(dep_id, cap):
+            return self.client.evaluate.functions(
+                dep_id,
+                {},
+                {'val1': {'get_environment_capability': cap}}
+            )['payload']['val1']
+
+        with self.assertRaisesRegex(
+            FunctionsEvaluationError,
+            'csys-obj-parent',
+        ):
+            _get_capability('dep1', 'some-capability')
+
+        with self.assertRaisesRegex(
+            FunctionsEvaluationError,
+            'not declared',
+        ):
+            _get_capability('dep2', 'cap2')
+
+        with self.assertRaisesRegex(
+            FunctionsEvaluationError,
+            'nonexistent',
+        ):
+            _get_capability('dep2', ['cap1', 'nonexistent'])
+
+        assert _get_capability('dep2', ['cap1', 'a']) == 5

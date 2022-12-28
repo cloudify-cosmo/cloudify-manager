@@ -2,6 +2,8 @@ from unittest import mock
 
 import pytest
 
+from cloudify_rest_client.blueprints import Blueprint
+from cloudify_rest_client.deployments import Deployment
 from cloudify_rest_client.responses import ListResponse
 from cloudify_system_workflows.deployment_environment import create
 
@@ -44,9 +46,11 @@ def blueprint_plan(mock_ctx):
 @pytest.fixture
 def mock_client(blueprint_plan):
     client = mock.Mock()
-    client.blueprints.get = lambda bp: mock.Mock(
-        plan=blueprint_plan
-    )
+    bp = Blueprint({'plan': blueprint_plan})
+    dep = Deployment({})
+    client.blueprints.get.return_value = bp
+    client.deployments.set_attributes.return_value = dep
+
     client.node_instances.list = lambda node_id, _offset: ListResponse(
         [], {'pagination': {'total': 0, 'size': 1000}})
     client.evaluate.functions = lambda dep, ctx, obj: {'payload': obj}
