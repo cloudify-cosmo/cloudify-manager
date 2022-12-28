@@ -7,7 +7,10 @@ from integration_tests.tests.utils import get_resource as resource
 
 from cloudify.models_states import DeploymentState
 
-from cloudify_rest_client.exceptions import CloudifyClientError
+from cloudify_rest_client.exceptions import (
+    CloudifyClientError,
+    FunctionsEvaluationError,
+)
 
 pytestmark = pytest.mark.group_environments
 
@@ -1102,8 +1105,6 @@ outputs:
         ):
             self.deploy(blueprint_id='srv_1', deployment_id='srv_1')
 
-        self.deploy(blueprint_id='env', deployment_id='env')
-
         # now the environment does exist, but we require a non-existent
         # capability
         self.upload_blueprint_resource(
@@ -1147,3 +1148,55 @@ outputs:
             deployment_id='srv_4',
             deployment_labels=[{'csys-obj-parent': 'env'}],
         )
+
+    def test_evaluate_environment_capability(self):
+        bp = """
+tosca_definitions_version: cloudify_dsl_1_5
+imports:
+  - cloudify/types/types.yaml
+capabilities:
+    cap1:
+        value:
+            a: 5
+"""
+        self.upload_blueprint_resource(
+            self.make_yaml_file(bp),
+            blueprint_id='bp',
+        )
+
+        self.deploy(
+            blueprint_id='bp',
+            deployment_id='dep1',
+        )
+        self.deploy(
+            blueprint_id='bp',
+            deployment_id='dep2',
+            deployment_labels=[{'csys-obj-parent': 'dep1'}],
+        )
+
+        def _get_capability(dep_id, cap):
+            return self.client.evaluate.functions(
+                dep_id,
+                {},
+                {'val1': {'get_environment_capability': cap}}
+            )['payload']['val1']
+
+        with self.assertRaisesRegex(
+            FunctionsEvaluationError,
+            'csys-obj-parent',
+        ):
+            _get_capability('dep1', 'some-capability')
+
+        with self.assertRaisesRegex(
+            FunctionsEvaluationError,
+            'not declared',
+        ):
+            _get_capability('dep2', 'cap2')
+
+        with self.assertRaisesRegex(
+            FunctionsEvaluationError,
+            'nonexistent',
+        ):
+            _get_capability('dep2', ['cap1', 'nonexistent'])
+
+        assert _get_capability('dep2', ['cap1', 'a']) == 5
