@@ -1093,6 +1093,8 @@ outputs:
                 deployment_labels=[{'csys-obj-parent': 'env2'}],
             )
 
+        self.deploy(blueprint_id='env', deployment_id='env',)
+
         # trying to create the deployment before the environment exists,
         # but capabilities are required
         self.upload_blueprint_resource(
