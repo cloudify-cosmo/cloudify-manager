@@ -146,6 +146,7 @@ def _format_required_capabilities(capabilities):
         for cap in capabilities
     )
 
+
 def _get_deployment_parent(ctx, deployment):
     """Fetch the parent of the given deployment.
 
