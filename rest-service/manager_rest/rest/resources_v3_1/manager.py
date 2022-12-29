@@ -12,7 +12,7 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-
+import json
 import os
 import shutil
 import tempfile
@@ -50,6 +50,7 @@ except ImportError:
     manager_premium = None
 
 
+INDEX_JSON_FILENAME = '.index.json'
 RESOURCES_PATH = '/resources/'
 
 
@@ -236,6 +237,7 @@ class FileServerProxy(SecuredResource):
 
     def _prepare_directory_archive(self, path):
         tmp_dir_name = tempfile.mkdtemp()
+        metadata = []
         for file_info in self.storage_handler.list(path):
             src_path = os.path.join(
                 path,
@@ -250,6 +252,11 @@ class FileServerProxy(SecuredResource):
                 os.makedirs(dst_dir)
             with self.storage_handler.get(src_path) as tmp_file_name:
                 shutil.copy2(tmp_file_name, dst_path)
+            metadata.append(file_info.serialize(path))
+
+        with open(os.path.join(tmp_dir_name, INDEX_JSON_FILENAME), 'wt',
+                  encoding='utf-8') as fp:
+            json.dump(metadata, fp)
 
         archive_file_name = _create_archive(tmp_dir_name)
         shutil.rmtree(tmp_dir_name)
@@ -279,6 +286,11 @@ class FileServerProxy(SecuredResource):
             tmp_dir_name = _extract_archive(tmp_file_name)
         finally:
             os.remove(tmp_file_name)
+
+        try:
+            os.remove(os.path.join(tmp_dir_name, INDEX_JSON_FILENAME))
+        except FileNotFoundError:
+            pass
 
         for dir_path, _, file_names in os.walk(tmp_dir_name):
             for file_name in file_names:
