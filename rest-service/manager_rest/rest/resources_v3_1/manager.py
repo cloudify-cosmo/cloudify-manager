@@ -218,9 +218,9 @@ class FileServerProxy(SecuredResource):
         if not _is_resource_path_directory(rel_path):
             return self.storage_handler.proxy(rel_path)
         elif not as_archive:
-            files_list = [os.path.relpath(file_name, rel_path)
-                          for file_name in self.storage_handler.list(rel_path)]
-            return {'files': files_list}, 200
+            file_list = [fi.serialize(rel_path)
+                         for fi in self.storage_handler.list(rel_path)]
+            return file_list, 200
         else:
             tmp_dir_name = tempfile.mkdtemp()
             for download_file_name in self.storage_handler.list(rel_path):
