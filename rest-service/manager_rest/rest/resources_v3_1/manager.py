@@ -222,38 +222,44 @@ class FileServerProxy(SecuredResource):
                          for fi in self.storage_handler.list(rel_path)]
             return file_list, 200
         else:
-            tmp_dir_name = tempfile.mkdtemp()
-            for download_file_name in self.storage_handler.list(rel_path):
-                src_path = os.path.join(
-                    rel_path,
-                    os.path.relpath(download_file_name, rel_path),
-                )
-                dst_path = os.path.join(
-                    tmp_dir_name,
-                    os.path.relpath(src_path, rel_path),
-                )
-                dst_dir = os.path.dirname(dst_path)
-                if not os.path.isdir(dst_dir):
-                    os.makedirs(dst_dir)
-                with self.storage_handler.get(src_path) as tmp_file_name:
-                    shutil.copy2(tmp_file_name, dst_path)
-
-            archive_file_name = _create_archive(tmp_dir_name)
-            shutil.rmtree(tmp_dir_name)
-
-            if stripped := rel_path.rstrip('/'):
-                download_file_name = f"{os.path.basename(stripped)}.tar.gz"
-            else:
-                download_file_name = 'resource.tar.gz'
+            archive_file_name, download_file_name =\
+                self._prepare_directory_archive(rel_path)
 
             result = send_file(
                 archive_file_name,
                 download_name=download_file_name,
                 as_attachment=True,
             )
-            os.remove(archive_file_name)
 
+            os.remove(archive_file_name)
             return result
+
+    def _prepare_directory_archive(self, path):
+        tmp_dir_name = tempfile.mkdtemp()
+        for file_info in self.storage_handler.list(path):
+            src_path = os.path.join(
+                path,
+                os.path.relpath(file_info.filepath, path),
+            )
+            dst_path = os.path.join(
+                tmp_dir_name,
+                os.path.relpath(src_path, path),
+            )
+            dst_dir = os.path.dirname(dst_path)
+            if not os.path.isdir(dst_dir):
+                os.makedirs(dst_dir)
+            with self.storage_handler.get(src_path) as tmp_file_name:
+                shutil.copy2(tmp_file_name, dst_path)
+
+        archive_file_name = _create_archive(tmp_dir_name)
+        shutil.rmtree(tmp_dir_name)
+
+        if stripped := path.rstrip('/'):
+            download_file_name = f"{os.path.basename(stripped)}.tar.gz"
+        else:
+            download_file_name = 'resource.tar.gz'
+
+        return archive_file_name, download_file_name
 
     def put(self, path=None):
         args = rest_utils.get_args_and_verify_arguments([
