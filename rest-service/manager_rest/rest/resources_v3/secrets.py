@@ -316,7 +316,7 @@ class SecretsKey(SecuredResource):
             json.dumps(
                 provider_options,
             ),
-        ),
+        )
 
 
 class Secrets(SecuredResource):
