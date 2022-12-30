@@ -528,3 +528,44 @@ def configure_connection(ctx, **kwargs):
             ctx.target.instance.runtime_properties,
     })
     ctx.source.instance.runtime_properties['connection_state'] = state
+
+
+@operation
+def create_file_in_workdir(ctx, file_path: str, content: str):
+    ctx.logger.info('Will attempt to create a file in deployment workdir')
+    ctx.logger.info('ctx: %s', ctx)
+    ctx.logger.info('ctx.deployment: %s', ctx.deployment)
+    ctx.logger.info('local_resources_root: %s', ctx.get_local_resources_root())
+    ctx.logger.info('file_path: %s', file_path)
+    ctx.logger.info('content: %s', content)
+    local_resources_root = ctx.get_local_resources_root()
+    _write_file(os.path.join(local_resources_root, file_path), content)
+
+
+@operation
+def update_file_in_workdir(ctx, file_path: str, content: str):
+    ctx.logger.info('Will attempt to update a file in deployment workdir')
+    ctx.logger.info('ctx: %s', ctx)
+    ctx.logger.info('ctx.deployment: %s', ctx.deployment)
+    ctx.logger.info('local_resources_root: %s', ctx.get_local_resources_root())
+    ctx.logger.info('file_path: %s', file_path)
+    ctx.logger.info('content: %s', content)
+    local_resources_root = ctx.get_local_resources_root()
+    _write_file(os.path.join(local_resources_root, file_path), content)
+
+
+@operation
+def delete_file_in_workdir(ctx, file_path: str):
+    ctx.logger.info('Will attempt to delete a file in deployment workdir')
+    ctx.logger.info('ctx: %s', ctx)
+    ctx.logger.info('ctx.deployment: %s', ctx.deployment)
+    ctx.logger.info('local_resources_root: %s', ctx.get_local_resources_root())
+    ctx.logger.info('file_path: %s', file_path)
+    local_resources_root = ctx.get_local_resources_root()
+    os.remove(os.path.join(local_resources_root, file_path))
+
+
+def _write_file(absolute_file_path: str, content: str):
+    os.makedirs(os.path.dirname(absolute_file_path), exist_ok=True)
+    with open(absolute_file_path, 'wt', encoding='utf-8') as file:
+        file.write(content)

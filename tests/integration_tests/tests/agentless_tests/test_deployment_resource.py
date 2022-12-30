@@ -29,6 +29,7 @@ from integration_tests.tests.utils import (
 pytestmark = pytest.mark.group_deployments
 RESOURCE_PATH = 'resources/resource.txt'
 RESOURCE_CONTENT = 'this is a deployment resource'
+UPDATED_CONTENT = 'this is an updated deployment resource'
 
 
 @pytest.mark.usefixtures('testmockoperations_plugin')
@@ -82,6 +83,47 @@ class DeploymentResourceTest(AgentlessTestCase):
             force=True,
             delete_db_mode=True
         )
+        wait_for_deployment_deletion_to_complete(deployment_id, self.client)
+        with pytest.raises(CalledProcessError):
+            self.execute_on_manager('test -d {0}'.format(dep_resources_dir))
+
+    def test_deployment_resource_crud(self):
+        blueprint_id = 'b{0}'.format(uuid.uuid4())
+        deployment_id = 'resource-crud'
+        blueprint_path = resource('dsl/deployment_resource_crud.yaml')
+        base_dep_dir = '/opt/manager/resources/deployments'
+        dep_resources_dir = join(
+            base_dep_dir,
+            'default_tenant',
+            deployment_id,
+            'resources'
+        )
+        full_resource_path = join(base_dep_dir,
+                                  'default_tenant',
+                                  deployment_id,
+                                  RESOURCE_PATH)
+        self.execute_on_manager('mkdir -p {0}'.format(dep_resources_dir))
+        self.execute_on_manager(f'chown -R cfyuser. {base_dep_dir}')
+        with tempfile.NamedTemporaryFile(mode='w') as f:
+            f.write(RESOURCE_CONTENT)
+            f.flush()
+            self.copy_file_to_manager(source=f.name,
+                                      target=full_resource_path)
+            self.execute_on_manager('chmod +rx {0}'.format(
+                full_resource_path))
+
+        deployment, _ = self.deploy_application(
+            blueprint_path,
+            blueprint_id=blueprint_id,
+            deployment_id=deployment_id,
+            inputs={
+                'resource_path': 'resources/crud-test.txt',
+                'resource_content': RESOURCE_CONTENT,
+                'updated_content': UPDATED_CONTENT,
+            })
+
+        self.execute_workflow('uninstall', deployment_id,)
+        self.client.deployments.delete(deployment_id)
         wait_for_deployment_deletion_to_complete(deployment_id, self.client)
         with pytest.raises(CalledProcessError):
             self.execute_on_manager('test -d {0}'.format(dep_resources_dir))
