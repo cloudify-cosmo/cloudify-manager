@@ -14,6 +14,8 @@
 #  * limitations under the License.
 #
 
+from typing import Optional
+
 from flask import request
 
 from manager_rest.resource_manager import get_resource_manager
@@ -28,6 +30,10 @@ from manager_rest.storage import (
 )
 from manager_rest.security.authorization import authorize
 from manager_rest.utils import create_filter_params_list_description
+
+
+class _ExecutionsListQuery(rest_utils.ListQuery):
+    _include_system_workflows: Optional[bool] = False
 
 
 class Executions(resources_v1.Executions):
@@ -52,9 +58,8 @@ class Executions(resources_v1.Executions):
     @rest_decorators.create_filters(models.Execution)
     @rest_decorators.paginate
     @rest_decorators.sortable(models.Execution)
-    @rest_decorators.all_tenants
     def get(self, _include=None, filters=None, pagination=None,
-            sort=None, all_tenants=None, **kwargs):
+            sort=None, **kwargs):
         """
         List executions
         """
@@ -62,20 +67,14 @@ class Executions(resources_v1.Executions):
             filters['execution_groups'] = lambda col: col.any(
                 models.ExecutionGroup.id == request.args['_group_id']
             )
-        is_include_system_workflows = rest_utils.verify_and_convert_bool(
-            '_include_system_workflows',
-            request.args.get('_include_system_workflows', False))
-        get_all_results = rest_utils.verify_and_convert_bool(
-            '_get_all_results',
-            request.args.get('_get_all_results', False)
-        )
+        args = _ExecutionsListQuery.parse_obj(request.args)
         return get_resource_manager().list_executions(
             filters=filters,
             pagination=pagination,
             sort=sort,
-            is_include_system_workflows=is_include_system_workflows,
+            is_include_system_workflows=args._include_system_workflows,
             include=_include,
-            all_tenants=all_tenants,
-            get_all_results=get_all_results,
+            all_tenants=args.all_tenants,
+            get_all_results=args.get_all_results,
             load_relationships=True,
         )

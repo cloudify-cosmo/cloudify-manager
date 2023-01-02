@@ -14,21 +14,16 @@
 #  * limitations under the License.
 #
 
-import collections
+from typing import Any, Dict, Optional
 
+import pydantic
 from flask import request
-from flask_restful.reqparse import Argument
 
 from manager_rest import manager_exceptions
 from manager_rest.resource_manager import ResourceManager
 from manager_rest.rest import swagger
 from manager_rest.rest.rest_decorators import marshal_with
-from manager_rest.rest.rest_utils import (
-    get_args_and_verify_arguments,
-    get_json_and_verify_params,
-    verify_and_convert_bool,
-    is_deployment_update
-)
+from manager_rest.rest.rest_utils import is_deployment_update
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import (
@@ -38,8 +33,12 @@ from manager_rest.storage import (
 )
 
 
-class Nodes(SecuredResource):
+class _NodesListQuery(pydantic.BaseModel):
+    deployment_id: Optional[str] = None
+    node_id: Optional[str] = None
 
+
+class Nodes(SecuredResource):
     @swagger.operation(
         responseClass='List[{0}]'.format(models.Node.__name__),
         nickname="listNodes",
@@ -54,13 +53,8 @@ class Nodes(SecuredResource):
     @authorize('node_list')
     @marshal_with(models.Node)
     def get(self, _include=None, **kwargs):
-        """
-        List nodes
-        """
-        args = get_args_and_verify_arguments(
-            [Argument('deployment_id', required=False),
-             Argument('node_id', required=False)]
-        )
+        """List nodes"""
+        args = _NodesListQuery.parse_obj(request.args)
 
         deployment_id = args.get('deployment_id')
         node_id = args.get('node_id')
@@ -80,8 +74,12 @@ class Nodes(SecuredResource):
         return nodes
 
 
-class NodeInstances(SecuredResource):
+class _InstancesListQuery(pydantic.BaseModel):
+    deployment_id: Optional[str] = None
+    node_name: Optional[str] = None
 
+
+class NodeInstances(SecuredResource):
     @swagger.operation(
         responseClass='List[{0}]'.format(models.NodeInstance.__name__),
         nickname="listNodeInstances",
@@ -103,22 +101,27 @@ class NodeInstances(SecuredResource):
     @authorize('node_instance_list')
     @marshal_with(models.NodeInstance)
     def get(self, _include=None, **kwargs):
-        """
-        List node instances
-        """
-        args = get_args_and_verify_arguments(
-            [Argument('deployment_id', required=False),
-             Argument('node_name', required=False)]
-        )
-        deployment_id = args.get('deployment_id')
-        node_id = args.get('node_name')
+        """List node instances"""
+        args = _InstancesListQuery.parse_obj(request.args)
         params_filter = ResourceManager.create_filters_dict(
-            deployment_id=deployment_id, node_id=node_id)
+            deployment_id=args.deployment_id, node_id=args.node_id)
         return get_storage_manager().list(
             models.NodeInstance,
             filters=params_filter,
             include=_include
         ).items
+
+
+class _NodeInstanceUpdateArgs(pydantic.BaseModel):
+    version: int
+    runtime_properties: Optional[Dict[str, Any]] = None
+    system_properties: Optional[Dict[str, Any]] = None
+    relationships: Optional[Any] = None
+    state: Optional[str] = None
+
+
+class _NodeInstanceUpdateQuery(pydantic.BaseModel):
+    force: Optional[bool] = False
 
 
 class NodeInstancesId(SecuredResource):
@@ -197,18 +200,9 @@ class NodeInstancesId(SecuredResource):
     @marshal_with(models.NodeInstance)
     def patch(self, node_instance_id, **kwargs):
         """Update node instance by id."""
-        request_dict = get_json_and_verify_params(
-            {'version': {'type': int}}
-        )
-
-        if not isinstance(request.json, collections.abc.Mapping):
-            raise manager_exceptions.BadParametersError(
-                'Request body needs to be a mapping')
+        request_dict = _NodeInstanceUpdateArgs.parse_obj(request.json).dict()
         version = request_dict['version'] or 1
-        force = verify_and_convert_bool(
-            'force',
-            request.args.get('force', False)
-        )
+        force = _NodeInstanceUpdateQuery.parse_obj(request.args).force
 
         sm = get_storage_manager()
         with sm.transaction():
@@ -227,17 +221,17 @@ class NodeInstancesId(SecuredResource):
                         'Node instance update conflict [current version='
                         f'{instance.version}, update version={version}]'
                     )
-                if 'runtime_properties' in request_dict:
+                if request_dict['runtime_properties'] is not None:
                     instance.runtime_properties = \
                         request_dict['runtime_properties']
-                if 'system_properties' in request_dict:
+                if request_dict['system_properties'] is not None:
                     old_properties = instance.system_properties
                     instance.system_properties = \
                         request_dict['system_properties']
                     self._process_system_properties(instance, old_properties)
-                if 'state' in request_dict:
+                if request_dict['state'] is not None:
                     instance.state = request_dict['state']
-            if 'relationships' in request_dict:
+            if request_dict['relationships'] is not None:
                 if not is_deployment_update():
                     raise manager_exceptions.OnlyDeploymentUpdate()
                 instance.relationships = request_dict['relationships']

@@ -13,6 +13,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import pydantic
+from typing import Optional
 
 from flask import request
 
@@ -24,20 +26,13 @@ from manager_rest.rest.rest_decorators import marshal_with
 from manager_rest.security import SecuredResource
 from manager_rest.cluster_status_manager import (STATUS,
                                                  get_cluster_status)
-from manager_rest.rest.rest_utils import (verify_and_convert_bool,
-                                          get_json_and_verify_params)
+
+
+class _ClusterStatusQuery(pydantic.BaseModel):
+    summary: Optional[bool] = False
 
 
 class ClusterStatus(SecuredResource):
-    @staticmethod
-    def _get_request_dict():
-        request_dict = get_json_and_verify_params({
-            'reporting_freq': {'type': int},
-            'report': {'type': dict},
-            'timestamp': {'type': str}
-        })
-        return request_dict
-
     @swagger.operation(
         responseClass=responses.Status,
         nickname="cluster-status",
@@ -47,10 +42,8 @@ class ClusterStatus(SecuredResource):
     @marshal_with(responses.Status)
     def get(self):
         """Get the status of the entire cloudify cluster"""
-        summary_response = verify_and_convert_bool(
-            'summary',
-            request.args.get('summary', False)
-        )
+        args = _ClusterStatusQuery.parse_obj(request.args)
+        summary_response = args.summary
         cluster_status = get_cluster_status(detailed=not summary_response)
 
         # If the response should be only the summary

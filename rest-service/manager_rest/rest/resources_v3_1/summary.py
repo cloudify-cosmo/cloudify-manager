@@ -30,19 +30,20 @@ from cloudify_rest_client.responses import ListResponse
 from functools import wraps
 
 
+class _SummaryQuery(rest_utils.ListQuery):
+    _target_field: Optional[str] = None
+    _sub_field: Optional[str] = None
+
+
 class BaseSummary(SecuredResource):
     summary_fields: List[str] = []
     auth_req: Optional[str] = None
     model: Optional[Type[SQLModelBase]] = None
 
-    def get(self, pagination=None, all_tenants=None, filters=None):
-        target_field = request.args.get('_target_field')
-        subfield = request.args.get('_sub_field')
-
-        get_all_results = rest_utils.verify_and_convert_bool(
-            '_get_all_results',
-            request.args.get('_get_all_results', False)
-        )
+    def get(self, pagination=None, filters=None):
+        args = _SummaryQuery.parse_obj(request.args)
+        target_field = args._target_field
+        subfield = args._sub_field
 
         if target_field not in self.summary_fields:
             raise manager_exceptions.BadParametersError(
@@ -67,8 +68,8 @@ class BaseSummary(SecuredResource):
             sub_field=subfield,
             model_class=self.model,
             pagination=pagination,
-            all_tenants=all_tenants,
-            get_all_results=get_all_results,
+            all_tenants=args.all_tenants,
+            get_all_results=args.get_all_results,
             filters=filters,
         )
 
@@ -118,7 +119,6 @@ class SummarizeDeployments(BaseSummary):
 
     @authorize(auth_req, allow_all_tenants=True)
     @marshal_summary('deployments')
-    @rest_decorators.all_tenants
     @rest_decorators.create_filters(models.Deployment)
     @rest_decorators.paginate
     def get(self, *args, **kwargs):
@@ -138,7 +138,6 @@ class SummarizeNodes(BaseSummary):
     @marshal_summary('nodes')
     @rest_decorators.create_filters(models.Node)
     @rest_decorators.paginate
-    @rest_decorators.all_tenants
     def get(self, *args, **kwargs):
         return super(SummarizeNodes, self).get(*args, **kwargs)
 
@@ -160,7 +159,6 @@ class SummarizeNodeInstances(BaseSummary):
     @marshal_summary('node_instances')
     @rest_decorators.create_filters(models.NodeInstance)
     @rest_decorators.paginate
-    @rest_decorators.all_tenants
     def get(self, *args, **kwargs):
         return super(SummarizeNodeInstances, self).get(*args, **kwargs)
 
@@ -182,7 +180,6 @@ class SummarizeExecutions(BaseSummary):
     @marshal_summary('executions')
     @rest_decorators.create_filters(models.Execution)
     @rest_decorators.paginate
-    @rest_decorators.all_tenants
     def get(self, *args, **kwargs):
         return super(SummarizeExecutions, self).get(*args, **kwargs)
 
@@ -197,7 +194,6 @@ class SummarizeBlueprints(BaseSummary):
 
     @authorize(auth_req, allow_all_tenants=True)
     @marshal_summary('blueprints')
-    @rest_decorators.all_tenants
     @rest_decorators.create_filters(models.Blueprint)
     @rest_decorators.paginate
     def get(self, *args, **kwargs):
@@ -216,15 +212,12 @@ class SummarizeExecutionSchedules(BaseSummary):
 
     @authorize(auth_req, allow_all_tenants=True)
     @marshal_summary('execution_schedules')
-    @rest_decorators.all_tenants
     @rest_decorators.create_filters(models.ExecutionSchedule)
     @rest_decorators.paginate
     def get(self, *args, **kwargs):
-        target_field = request.args.get('_target_field')
-        get_all_results = rest_utils.verify_and_convert_bool(
-            '_get_all_results',
-            request.args.get('_get_all_results', False)
-        )
+        args = _SummaryQuery.parse_obj(request.args)
+        target_field = args._target_field
+
         if target_field not in self.summary_fields:
             raise manager_exceptions.BadParametersError(
                 'Field {target} is not available for summary. Valid fields '
@@ -236,8 +229,8 @@ class SummarizeExecutionSchedules(BaseSummary):
         schedules_list = get_storage_manager().list(
             models.ExecutionSchedule,
             pagination=kwargs.get('pagination'),
-            all_tenants=kwargs.get('all_tenants'),
-            get_all_results=get_all_results,
+            all_tenants=args.all_tenants,
+            get_all_results=args.get_all_results,
             filters=kwargs.get('filters'),
         )
         summary_dict: Dict[Tuple, int] = {}

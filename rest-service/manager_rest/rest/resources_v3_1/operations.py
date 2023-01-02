@@ -1,6 +1,8 @@
+import pydantic
 from datetime import datetime
+from typing import Any, Dict, List, Optional
+
 from flask import request
-from flask_restful.reqparse import Argument
 
 from cloudify import constants as common_constants
 from cloudify.workflows import events as common_events, tasks
@@ -8,11 +10,7 @@ from cloudify.models_states import ExecutionState
 from sqlalchemy.dialects.postgresql import JSON
 
 from manager_rest import manager_exceptions
-from manager_rest.rest.rest_utils import (
-    get_args_and_verify_arguments,
-    get_json_and_verify_params,
-    parse_datetime_string,
-)
+from manager_rest.rest.rest_utils import parse_datetime_string
 from manager_rest.rest.rest_decorators import (
     marshal_with,
     paginate,
@@ -30,22 +28,29 @@ from manager_rest.security.authorization import check_user_action_allowed
 from manager_rest.execution_token import current_execution
 
 
+class _OperationsActionArgs(pydantic.BaseModel):
+    action: str
+
+
+class _OperationListQuery(pydantic.BaseModel):
+    graph_id: Optional[str] = None
+    execution: Optional[str] = None
+    state: Optional[str] = None
+    skip_internal: Optional[bool] = None
+    execution_id: Optional[str] = None
+
+
 class Operations(SecuredResource):
     @authorize('operations')
     @marshal_with(models.Operation)
     @paginate
     def get(self, _include=None, pagination=None, **kwargs):
-        args = get_args_and_verify_arguments([
-            Argument('graph_id', type=str, required=False),
-            Argument('execution_id', type=str, required=False),
-            Argument('state', type=str, required=False),
-            Argument('skip_internal', type=bool, required=False),
-        ])
+        args = _OperationListQuery.parse_obj(request.args)
         sm = get_storage_manager()
-        graph_id = args.get('graph_id')
-        exc_id = args.get('execution_id')
-        state = args.get('state')
-        skip_internal = args.get('skip_internal')
+        graph_id = args.graph_id
+        exc_id = args.execution_id
+        state = args.state
+        skip_internal = args.skip_internal
 
         filters = {}
         if graph_id and exc_id:
@@ -74,11 +79,11 @@ class Operations(SecuredResource):
 
     @authorize('operations')
     def post(self, **kwargs):
-        request_dict = get_json_and_verify_params({'action'})
-        action = request_dict['action']
+        args = _OperationsActionArgs.parse_obj(request.json)
+        action = args.action
         if action == 'update-stored':
             self._update_stored_operations()
-        return None, 204
+        return "", 204
 
     def _update_stored_operations(self):
         """Recompute operation inputs, for resumable ops of the given node
@@ -92,7 +97,7 @@ class Operations(SecuredResource):
         """
         deployment_id = request.json['deployment_id']
         if not deployment_id:
-            return None, 204
+            return "", 204
         node_id = request.json['node_id']
         op_name = request.json['operation']
 
@@ -179,6 +184,23 @@ class Operations(SecuredResource):
         sm.update(operation, modified_attrs=['parameters'])
 
 
+class _CreateOperationArgs(pydantic.BaseModel):
+    name: str
+    graph_id: str
+    dependencies: List[str]
+    parameters: Optional[Dict[str, Any]] = None
+    type: str
+
+
+class _UpdateOperationArgs(pydantic.BaseModel):
+    state: Optional[str] = None
+    result: Optional[Any] = None
+    exception: Optional[str] = None
+    exception_causes: Optional[Any] = None
+    manager_name: Optional[str] = None
+    agent_name: Optional[str] = None
+
+
 class OperationsId(SecuredResource):
     @authorize('operations')
     @marshal_with(models.Operation)
@@ -188,48 +210,35 @@ class OperationsId(SecuredResource):
     @authorize('operations')
     @marshal_with(models.Operation)
     def put(self, operation_id, **kwargs):
-        params = get_json_and_verify_params({
-            'name': {'type': str, 'required': True},
-            'graph_id': {'type': str, 'required': True},
-            'dependencies': {'type': list, 'required': True},
-            'parameters': {'type': dict},
-            'type': {'type': str}
-        })
+        params = _CreateOperationArgs.parse_obj(request.json)
         operation = get_resource_manager().create_operation(
             operation_id,
-            name=params['name'],
-            graph_id=params['graph_id'],
-            dependencies=params['dependencies'],
-            type=params['type'],
-            parameters=params['parameters']
+            name=params.name,
+            graph_id=params.graph_id,
+            dependencies=params.dependencies,
+            type=params.type,
+            parameters=params.parameters
         )
         return operation, 201
 
     @authorize('operations', allow_if_execution=True)
     @detach_globals
     def patch(self, operation_id, **kwargs):
-        request_dict = get_json_and_verify_params({
-            'state': {'type': str},
-            'result': {'optional': True},
-            'exception': {'optional': True},
-            'exception_causes': {'optional': True},
-            'manager_name': {'optional': True},
-            'agent_name': {'optional': True},
-        })
+        args = _UpdateOperationArgs.parse_obj(request.json)
         sm = get_storage_manager()
         with sm.transaction():
             instance = sm.get(models.Operation, operation_id, locking=True)
             old_state = instance.state
-            instance.manager_name = request_dict.get('manager_name')
-            instance.agent_name = request_dict.get('agent_name')
-            instance.state = request_dict.get('state', instance.state)
+            instance.manager_name = args.manager_name
+            instance.agent_name = args.agent_name
+            instance.state = args.state or instance.state
             if instance.state == common_constants.TASK_SUCCEEDED:
                 self._on_task_success(sm, instance)
             self._insert_event(
                 instance,
-                request_dict.get('result'),
-                request_dict.get('exception'),
-                request_dict.get('exception_causes')
+                args.result,
+                args.exception,
+                args.exception_causes,
             )
             if not instance.is_nop and \
                     old_state not in common_constants.TERMINATED_STATES and \
@@ -397,18 +406,20 @@ class OperationsId(SecuredResource):
         return instance, 200
 
 
+class _GraphsListQuery(pydantic.BaseModel):
+    execution_id: str
+    name: Optional[str] = None
+
+
 class TasksGraphs(SecuredResource):
     @authorize('operations')
     @marshal_with(models.TasksGraph)
     @paginate
     def get(self, _include=None, pagination=None, **kwargs):
-        args = get_args_and_verify_arguments([
-            Argument('execution_id', type=str, required=True),
-            Argument('name', type=str, required=False)
-        ])
+        args = _GraphsListQuery.parse_obj(request.args)
         sm = get_storage_manager()
-        execution_id = args.get('execution_id')
-        name = args.get('name')
+        execution_id = args.execution_id
+        name = args.name
         execution = sm.get(models.Execution, execution_id)
         filters = {'execution': execution}
         if name:
@@ -421,45 +432,49 @@ class TasksGraphs(SecuredResource):
         )
 
 
+class _CreateGraphArgs(pydantic.BaseModel):
+    name: str
+    execution_id: str
+    operations: Optional[List[Any]] = None
+    created_at: Optional[str] = None
+    graph_id: Optional[str] = None
+
+
+class _UpdateGraphArgs(pydantic.BaseModel):
+    state: str
+
+
 class TasksGraphsId(SecuredResource):
     @authorize('operations')
     @marshal_with(models.TasksGraph)
     def post(self, **kwargs):
-        params = get_json_and_verify_params({
-            'name': {'type': str},
-            'execution_id': {'type': str},
-            'operations': {'optional': True},
-            'created_at': {'optional': True},
-            'graph_id': {'optional': True},
-        })
-        created_at = params.get('created_at')
-        operations = params.get('operations') or []
-        if params.get('graph_id'):
+        params = _CreateGraphArgs.parse_obj(request.json)
+        created_at = params.created_at
+        operations = params.operations
+        if params.graph_id is not None:
             check_user_action_allowed('set_execution_details')
         if created_at or any(op.get('created_at') for op in operations):
             check_user_action_allowed('set_timestamp')
-            created_at = parse_datetime_string(params.get('created_at'))
+            created_at = parse_datetime_string(params.created_at)
             for op in operations:
                 if op.get('created_at'):
                     op['created_at'] = parse_datetime_string(op['created_at'])
         sm = get_storage_manager()
         with sm.transaction():
             tasks_graph = get_resource_manager().create_tasks_graph(
-                name=params['name'],
-                execution_id=params['execution_id'],
-                operations=params.get('operations', []),
+                name=params.name,
+                execution_id=params.execution_id,
+                operations=params.operations,
                 created_at=created_at,
-                graph_id=params.get('graph_id')
+                graph_id=params.graph_id,
             )
         return tasks_graph, 201
 
     @authorize('operations')
     @marshal_with(models.TasksGraph)
     def patch(self, tasks_graph_id, **kwargs):
-        request_dict = get_json_and_verify_params(
-            {'state': {'type': str}}
-        )
+        params = _UpdateGraphArgs.parse_obj(request.json)
         sm = get_storage_manager()
         instance = sm.get(models.TasksGraph, tasks_graph_id, locking=True)
-        instance.state = request_dict.get('state', instance.state)
+        instance.state = params.state or instance.state
         return sm.update(instance)

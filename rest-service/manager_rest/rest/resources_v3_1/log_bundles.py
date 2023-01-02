@@ -1,4 +1,8 @@
+import pydantic
 import os
+from typing import Optional
+
+from flask import request
 
 from cloudify.models_states import LogBundleState, ExecutionState
 
@@ -45,8 +49,16 @@ class LogBundles(SecuredResource):
         )
 
 
-class LogBundlesId(SecuredResource):
+class _CreateLogBundleArgs(pydantic.BaseModel):
+    queue: Optional[bool] = False
 
+
+class _UpdateLogBundleArgs(pydantic.BaseModel):
+    status: str
+    error: Optional[str] = ''
+
+
+class LogBundlesId(SecuredResource):
     @swagger.operation(
         responseClass=models.LogBundle,
         nickname='getById',
@@ -73,14 +85,10 @@ class LogBundlesId(SecuredResource):
     @rest_decorators.marshal_with(models.Execution)
     def put(self, log_bundle_id):
         rest_utils.validate_inputs({'log_bundle_id': log_bundle_id})
-        request_dict = rest_utils.get_json_and_verify_params()
-        queue = rest_utils.verify_and_convert_bool(
-            'queue',
-            request_dict.get('queue', False)
-        )
+        args = _CreateLogBundleArgs.parse_obj(request.json)
         execution, messages = get_resource_manager().create_log_bundle(
             log_bundle_id,
-            queue,
+            args.queue,
         )
         workflow_executor.execute_workflow(messages)
         return execution, 201
@@ -118,12 +126,11 @@ class LogBundlesId(SecuredResource):
     def patch(self, log_bundle_id):
         """Update log bundle status by id
         """
-        request_dict = rest_utils.get_json_and_verify_params({'status'})
+        args = _UpdateLogBundleArgs.parse_obj(request.json)
         log_bundle = get_storage_manager().get(models.LogBundle,
                                                log_bundle_id)
-
-        log_bundle.status = request_dict['status']
-        log_bundle.error = request_dict.get('error', '')
+        log_bundle.status = args.status
+        log_bundle.error = args.error
         get_storage_manager().update(log_bundle)
 
 

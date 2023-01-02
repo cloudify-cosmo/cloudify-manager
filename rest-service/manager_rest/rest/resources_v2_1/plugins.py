@@ -13,13 +13,20 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import pydantic
+from flask import request
+from typing import Optional
+
 from manager_rest.rest import swagger
 from manager_rest.storage import models
 from manager_rest.security.authorization import authorize
 from manager_rest.resource_manager import get_resource_manager
 
 from .. import resources_v2
-from ..rest_utils import verify_and_convert_bool, get_json_and_verify_params
+
+
+class _PluginDeleteArgs(pydantic.BaseModel):
+    force: Optional[bool] = False
 
 
 class PluginsId(resources_v2.PluginsId):
@@ -31,12 +38,10 @@ class PluginsId(resources_v2.PluginsId):
     )
     @authorize('plugin_delete')
     def delete(self, plugin_id, **kwargs):
-        """
-        Delete plugin by ID
-        """
-        request_dict = get_json_and_verify_params()
-        force = verify_and_convert_bool(
-            'force', request_dict.get('force', False)
+        """Delete plugin by ID"""
+        params = _PluginDeleteArgs.parse_obj(request.json)
+        get_resource_manager().remove_plugin(
+            plugin_id=plugin_id,
+            force=params.force,
         )
-        get_resource_manager().remove_plugin(plugin_id=plugin_id, force=force)
-        return None, 204
+        return "", 204

@@ -1,6 +1,10 @@
-from datetime import datetime
 import itertools
 import json
+import pydantic
+
+from datetime import datetime
+from flask import request
+from typing import Any, List, Optional
 
 from ..resources_v2 import Events as v2_Events
 
@@ -8,7 +12,6 @@ from manager_rest import manager_exceptions
 from manager_rest.storage import get_storage_manager, models, db
 from manager_rest.security.authorization import (authorize,
                                                  check_user_action_allowed)
-from manager_rest.rest import rest_utils
 from manager_rest.rest.rest_decorators import detach_globals
 from manager_rest.execution_token import current_execution
 
@@ -19,6 +22,15 @@ def _strip_nul(text):
     There should likely be no NUL values in human-readable logs anyway.
     """
     return text.replace('\x00', '<NUL>')
+
+
+class _EventsCreateArgs(pydantic.BaseModel):
+    events: Optional[List[Any]] = []
+    logs: Optional[List[Any]] = []
+    execution_id: Optional[str] = None
+    execution_group_id: Optional[str] = None
+    manager_name: Optional[str] = None
+    agent_name: Optional[str] = None
 
 
 class Events(v2_Events):
@@ -33,15 +45,7 @@ class Events(v2_Events):
     @authorize('event_create', allow_if_execution=True)
     @detach_globals
     def post(self):
-        request_dict = rest_utils.get_json_and_verify_params({
-            'events': {'optional': True},
-            'logs': {'optional': True},
-            'execution_id': {'optional': True},
-            'execution_group_id': {'optional': True},
-            'manager_name': {'optional': True},
-            'agent_name': {'optional': True},
-        })
-
+        request_dict = _EventsCreateArgs.parse_obj(request.json).dict()
         raw_events = request_dict.get('events') or []
         raw_logs = request_dict.get('logs') or []
         if any(
@@ -83,7 +87,7 @@ class Events(v2_Events):
             'agent_name': request_dict.get('agent_name'),
         })
         if not raw_events and not raw_logs:
-            return None, 204
+            return "", 204
 
         with sm.transaction():
             for ev in raw_events:
@@ -92,7 +96,7 @@ class Events(v2_Events):
             for log in raw_logs:
                 db.session.execute(
                     self._log_from_raw_log(sm, log, exc_params))
-        return None, 201
+        return "[]", 201
 
     def _event_from_raw_event(self, sm, raw_event, exc_params):
         task_error_causes = raw_event['context'].get('task_error_causes')

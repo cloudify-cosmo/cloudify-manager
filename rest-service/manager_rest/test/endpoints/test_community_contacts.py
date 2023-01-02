@@ -45,7 +45,6 @@ class TestCommunityContacts(base_test.BaseServerTestCase):
         with self.assertRaises(CloudifyClientError) as cm:
             self._mock_post_contact(data, {})
         assert cm.exception.status_code == 400
-        assert "Missing first_name in json request body" in str(cm.exception)
 
     def test_create_contact_no_eula(self):
         data = self.data.copy()
@@ -63,14 +62,12 @@ class TestCommunityContacts(base_test.BaseServerTestCase):
         with self.assertRaises(CloudifyClientError) as cm:
             self._mock_post_contact(data, return_value)
         assert cm.exception.status_code == 400
-        assert "problem while submitting the form" in str(cm.exception)
 
     def test_create_contact_post_fails(self):
         data = self.data.copy()
         with self.assertRaises(CloudifyClientError) as cm:
             self._mock_post_contact(data, return_value=None, return_ok=False)
         assert cm.exception.status_code == 400
-        assert "problem while submitting the form" in str(cm.exception)
 
     def test_create_contact_malformed_return_value(self):
         data = self.data.copy()
@@ -83,4 +80,3 @@ class TestCommunityContacts(base_test.BaseServerTestCase):
                 mock_post.return_value = mock_return
                 self.client._client.post('/contacts', data=data)
         assert cm.exception.status_code == 400
-        assert "problem while submitting the form" in str(cm.exception)

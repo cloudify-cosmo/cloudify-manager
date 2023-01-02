@@ -24,13 +24,16 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 class SitesTestCase(base_test.BaseServerTestCase):
 
     def _put_site(self, name='test_site'):
-        site = models.Site()
-        site.id = name
-        site.name = name
-        site.latitude = 42
-        site.longitude = 43
-        site.visibility = VisibilityState.TENANT
-        site.created_at = utils.get_formatted_timestamp()
+        site = models.Site(
+            id=name,
+            name=name,
+            latitude=42,
+            longitude=43,
+            visibility=VisibilityState.TENANT,
+            created_at=utils.get_formatted_timestamp(),
+            creator=self.user,
+            tenant=self.tenant,
+        )
         self.sm.put(site)
 
     def _create_sites(self, sites_number):
@@ -183,9 +186,8 @@ class SitesTestCase(base_test.BaseServerTestCase):
         self._test_invalid_location(self.client.sites.create)
 
     def test_create_site_invalid_visibility(self):
-        error_msg = "400: Invalid visibility: `test`"
         self.assertRaisesRegex(CloudifyClientError,
-                               error_msg,
+                               'visibility',
                                self.client.sites.create,
                                'test_site',
                                visibility='test')
@@ -245,9 +247,8 @@ class SitesTestCase(base_test.BaseServerTestCase):
         self.assertEqual(site.name, 'test_site')
 
     def test_update_site_invalid_visibility(self):
-        error_msg = "400: Invalid visibility: `test`"
         self.assertRaisesRegex(CloudifyClientError,
-                               error_msg,
+                               'visibility',
                                self.client.sites.update,
                                'test_site',
                                visibility='test')

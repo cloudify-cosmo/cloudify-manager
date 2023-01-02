@@ -1,7 +1,8 @@
+import pydantic
 import socket
 import http.client
 import xmlrpc.client
-from typing import Dict
+from typing import Dict, Optional
 
 from flask import request
 from flask import current_app
@@ -15,7 +16,6 @@ from manager_rest.utils import get_amqp_client
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.rest.rest_decorators import marshal_with
-from manager_rest.rest.rest_utils import verify_and_convert_bool
 from manager_rest.syncthing_status_manager import get_syncthing_status
 
 try:
@@ -78,8 +78,11 @@ class OK(Resource):
             return "FAIL", 500
 
 
-class Status(SecuredResource):
+class _IsSummaryQuery(pydantic.BaseModel):
+    summary: Optional[bool] = False
 
+
+class Status(SecuredResource):
     @swagger.operation(
         responseClass=responses.Status,
         nickname="status",
@@ -89,13 +92,10 @@ class Status(SecuredResource):
     @marshal_with(responses.Status)
     def get(self):
         """Get the status of the manager services"""
-        summary_response = verify_and_convert_bool(
-            'summary',
-            request.args.get('summary', False)
-        )
+        args = _IsSummaryQuery.parse_obj(request.args)
         status, services = _get_status_and_services()
 
-        if summary_response:
+        if args.summary:
             return {'status': status, 'services': {}}
 
         return {'status': status, 'services': services}

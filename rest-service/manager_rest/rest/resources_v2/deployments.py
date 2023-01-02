@@ -48,19 +48,13 @@ class Deployments(resources_v1.Deployments):
     @rest_decorators.create_filters(models.Deployment)
     @rest_decorators.paginate
     @rest_decorators.sortable(models.Deployment)
-    @rest_decorators.all_tenants
     @rest_decorators.search_multiple_parameters(
         {'_search': 'id', '_search_name': 'display_name'})
     @rest_decorators.filter_id
     def get(self, _include=None, filters=None, pagination=None, sort=None,
-            all_tenants=None, search=None, filter_id=None, **kwargs):
-        """
-        List deployments
-        """
-        get_all_results = rest_utils.verify_and_convert_bool(
-            '_get_all_results',
-            request.args.get('_get_all_results', False)
-        )
+            search=None, filter_id=None, **kwargs):
+        """List deployments"""
+        args = rest_utils.ListQuery.parse_obj(request.args)
         sm = get_storage_manager()
         filters = filters or {}
         filters.update(rest_utils.deployment_group_id_filter())
@@ -81,8 +75,8 @@ class Deployments(resources_v1.Deployments):
             pagination=pagination,
             sort=sort,
             sort_labels=sort_labels,
-            all_tenants=all_tenants,
-            get_all_results=get_all_results,
+            all_tenants=args.all_tenants,
+            get_all_results=args.get_all_results,
             filter_rules=filter_rules,
             load_relationships=True,
         )

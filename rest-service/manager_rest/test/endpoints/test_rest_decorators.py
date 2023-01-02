@@ -27,6 +27,7 @@ from manager_rest.rest.rest_decorators import (
     rangeable,
     sortable,
 )
+# from manager_rest.rest.marshal import marshal_with
 
 
 class PaginateTest(TestCase):
@@ -250,3 +251,19 @@ class SortableTest(TestCase):
         with self.app.test_request_context('/?_sort=%20abcd'):
             with self.assertRaises(ValidationError):
                 sortable()(Mock)()
+
+
+# def test_marshal_with():
+#     class A:
+#         response_fields = {}
+#     app = Flask(__name__)
+#     with app.test_request_context():
+#         r = marshal_with(A)(lambda: [])()
+#     print(r)
+
+#     class A:
+#         resource_fields = {}
+#     app = Flask(__name__)
+#     with app.test_request_context():
+#         r = marshal_with(A)(lambda: [])()
+#     print(r)

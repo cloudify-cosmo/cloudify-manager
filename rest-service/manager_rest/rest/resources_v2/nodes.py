@@ -46,17 +46,11 @@ class Nodes(resources_v1.Nodes):
     @rest_decorators.create_filters(models.Node)
     @rest_decorators.paginate
     @rest_decorators.sortable(models.Node)
-    @rest_decorators.all_tenants
     @rest_decorators.search('id')
     def get(self, _include=None, filters=None, pagination=None,
-            sort=None, all_tenants=None, search=None, **kwargs):
-        """
-        List nodes
-        """
-        get_all_results = rest_utils.verify_and_convert_bool(
-            '_get_all_results',
-            request.args.get('_get_all_results', False)
-        )
+            sort=None, search=None, **kwargs):
+        """List nodes"""
+        args = rest_utils.ListQuery.parse_obj(request.args)
         nodes_list = get_storage_manager().list(
             models.Node,
             include=_include,
@@ -64,8 +58,8 @@ class Nodes(resources_v1.Nodes):
             filters=filters,
             substr_filters=search,
             sort=sort,
-            all_tenants=all_tenants,
-            get_all_results=get_all_results
+            all_tenants=args.all_tenants,
+            get_all_results=args.get_all_results
         )
         # Update the node instance count to account for group scaling policy
         for node in nodes_list:
@@ -100,17 +94,11 @@ class NodeInstances(resources_v1.NodeInstances):
     @rest_decorators.create_filters(models.NodeInstance)
     @rest_decorators.paginate
     @rest_decorators.sortable(models.NodeInstance)
-    @rest_decorators.all_tenants
     @rest_decorators.search('id')
     def get(self, _include=None, filters=None, pagination=None,
-            sort=None, all_tenants=None, search=None, **kwargs):
-        """
-        List node instances
-        """
-        get_all_results = rest_utils.verify_and_convert_bool(
-            '_get_all_results',
-            request.args.get('_get_all_results', False)
-        )
+            sort=None, search=None, **kwargs):
+        """List node instances"""
+        args = rest_utils.ListQuery.parse_obj(request.args)
         return get_storage_manager().list(
             models.NodeInstance,
             include=_include,
@@ -118,6 +106,6 @@ class NodeInstances(resources_v1.NodeInstances):
             substr_filters=search,
             pagination=pagination,
             sort=sort,
-            all_tenants=all_tenants,
-            get_all_results=get_all_results
+            all_tenants=args.all_tenants,
+            get_all_results=args.get_all_results
         )

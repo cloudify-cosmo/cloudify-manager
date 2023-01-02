@@ -14,8 +14,10 @@
 #  * limitations under the License.
 #
 
-from flask_restful.reqparse import Argument
-from flask_restful.inputs import boolean
+import pydantic
+from typing import Any, Optional
+
+from flask import request
 
 from dsl_parser import utils as dsl_parser_utils
 from manager_rest import manager_exceptions
@@ -23,16 +25,21 @@ from manager_rest.constants import PROVIDER_CONTEXT_ID
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.rest import requests_schema, responses, swagger
 from manager_rest.rest.rest_decorators import marshal_with
-from manager_rest.rest.rest_utils import (
-    get_args_and_verify_arguments,
-    get_json_and_verify_params,
-)
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import (
     models,
     get_storage_manager,
 )
+
+
+class _ProviderContextCreateArgs(pydantic.BaseModel):
+    name: str
+    context: Any
+
+
+class _IsUpdateQuery(pydantic.BaseModel):
+    update: Optional[bool] = False
 
 
 class ProviderContext(SecuredResource):
@@ -73,15 +80,13 @@ class ProviderContext(SecuredResource):
         """
         Create provider context
         """
-        request_dict = get_json_and_verify_params({'context', 'name'})
-        args = get_args_and_verify_arguments(
-            [Argument('update', type=boolean, default=False)]
-        )
-        update = args['update']
+        params = _ProviderContextCreateArgs.parse_obj(request.json)
+        args = _IsUpdateQuery.parse_obj(request.args)
+        update = args.update
         context = dict(
             id=PROVIDER_CONTEXT_ID,
-            name=request_dict['name'],
-            context=request_dict['context']
+            name=params.name,
+            context=params.context,
         )
 
         status_code = 200 if update else 201

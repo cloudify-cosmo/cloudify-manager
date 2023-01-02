@@ -202,8 +202,6 @@ class AgentsTest(base_test.BaseServerTestCase):
         self._agent('agent_1')
         response = self.patch('/agents/agent_1', {})
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json['message'],
-                         'Missing state in json request body')
 
     def test_update_invalid_state(self):
         self._agent('agent_1')

@@ -1,9 +1,11 @@
 import pytest
 import unittest
+from datetime import datetime
 from typing import Dict, Any
 from unittest import mock
 
-from datetime import datetime
+import dateutil.parser
+import pytz
 
 from cloudify.models_states import VisibilityState, ExecutionState
 from cloudify_rest_client.exceptions import (
@@ -151,13 +153,12 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         )
         assert group.visibility == VisibilityState.TENANT
 
-        with self.assertRaisesRegex(
-                CloudifyClientError, 'visibility_states') as cm:
+        with self.assertRaisesRegex(CloudifyClientError, 'visibility') as cm:
             self.client.deployment_groups.put(
                 'group1',
                 visibility='invalid visibility'
             )
-        assert cm.exception.status_code == 409
+        assert cm.exception.status_code == 400
 
     def test_create_deployment(self):
         self.client.deployment_groups.put(
@@ -666,7 +667,7 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         self.client.deployment_groups.put(
             'group1',
             # add a deployment using all 3 ways: by id, by clone, by filter
-            deployments_from_group=['group2'],  # dep1
+            deployments_from_group='group2',  # dep1
             filter_id='filter1',  # dep2
             deployment_ids=['dep3'],
         )
@@ -693,7 +694,7 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         )
         self.client.deployment_groups.put(
             'group1',
-            deployments_from_group=['group2'],  # dep1
+            deployments_from_group='group2',  # dep1
             deployment_ids=['dep1'],
         )
         dep1 = self.client.deployments.get('dep1')
@@ -992,6 +993,21 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
                         'http_web_server_port': 8080,
                     }}
                 ])
+
+    def test_set_create_attrs(self):
+        other_user = models.User(username='other')
+        self.sm.put(other_user)
+        created_at = datetime(2010, 2, 3, 4, 5, 6, tzinfo=pytz.UTC)
+        self.client.deployment_groups.put(
+            'group1',
+            created_by=other_user.username,
+            created_at=created_at.isoformat(),
+            creation_counter=42,
+        )
+        group = models.DeploymentGroup.query.filter_by(id='group1').one()
+        assert group.creator == other_user
+        assert dateutil.parser.parse(group.created_at) == created_at
+        assert group.creation_counter == 42
 
 
 class ExecutionGroupsTestCase(base_test.BaseServerTestCase):

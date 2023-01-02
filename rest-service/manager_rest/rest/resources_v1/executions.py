@@ -1,8 +1,10 @@
 import uuid
 from datetime import datetime
 
-from flask_restful.reqparse import Argument
-from flask_restful.inputs import boolean
+import pydantic
+
+from flask import request
+from typing import Any, Dict, Optional
 
 from cloudify.models_states import ExecutionState
 from manager_rest import manager_exceptions, workflow_executor
@@ -17,9 +19,6 @@ from manager_rest.rest.rest_decorators import (
     not_while_cancelling
 )
 from manager_rest.rest.rest_utils import (
-    get_args_and_verify_arguments,
-    get_json_and_verify_params,
-    verify_and_convert_bool,
     parse_datetime_string,
     valid_user,
 )
@@ -32,8 +31,32 @@ from manager_rest.storage import (
 )
 
 
-class Executions(SecuredResource):
+class _ExecuteWorkflowArgs(pydantic.BaseModel):
+    deployment_id: str
+    workflow_id: str
+    created_by: Optional[str] = None
+    created_at: Optional[str] = None
+    started_at: Optional[str] = None
+    ended_at: Optional[str] = None
+    status: Optional[ExecutionState] = None
+    force_status: Optional[ExecutionState] = None
+    id: Optional[str] = None
+    error: Optional[Any] = ''
+    allow_custom_parameters: Optional[bool] = False
+    force: Optional[bool] = False
+    queue: Optional[bool] = False
+    dry_run: Optional[bool] = False
+    parameters: Optional[Dict[str, Any]] = {}
+    wait_after_fail: Optional[int] = 600
+    scheduled_time: Optional[str] = None
 
+
+class _ExecutionsListQuery(pydantic.BaseModel):
+    deployment_id: Optional[str] = None
+    include_system_workflows: Optional[bool] = False
+
+
+class Executions(SecuredResource):
     @swagger.operation(
         responseClass='List[{0}]'.format(models.Execution.__name__),
         nickname="list",
@@ -58,11 +81,7 @@ class Executions(SecuredResource):
     @marshal_with(models.Execution)
     def get(self, _include=None, **kwargs):
         """List executions"""
-        args = get_args_and_verify_arguments(
-            [Argument('deployment_id', required=False),
-             Argument('include_system_workflows', type=boolean,
-                      default=False)]
-        )
+        args = _ExecutionsListQuery.parse_obj(request.args)
         deployment_id_filter = ResourceManager.create_filters_dict(
             deployment_id=args.deployment_id)
         return get_resource_manager().list_executions(
@@ -75,43 +94,24 @@ class Executions(SecuredResource):
     @marshal_with(models.Execution)
     def post(self, **kwargs):
         """Execute a workflow"""
-        request_dict = get_json_and_verify_params({
-            'deployment_id': {'type': str},
-            'workflow_id': {'type': str},
-            'created_by': {'optional': True},
-            'created_at': {'optional': True},
-            'started_at': {'optional': True},
-            'ended_at': {'optional': True},
-            'status': {'optional': True},
-            'id': {'optional': True},
-            'error': {'optional': True},
-        })
+        args = _ExecuteWorkflowArgs.parse_obj(request.json)
+        allow_custom_parameters = args.allow_custom_parameters
+        force = args.force
+        dry_run = args.dry_run
+        queue = args.queue
 
-        allow_custom_parameters = verify_and_convert_bool(
-            'allow_custom_parameters',
-            request_dict.get('allow_custom_parameters', False))
-        force = verify_and_convert_bool(
-            'force',
-            request_dict.get('force', False))
-        dry_run = verify_and_convert_bool(
-            'dry_run',
-            request_dict.get('dry_run', False))
-        queue = verify_and_convert_bool(
-            'queue',
-            request_dict.get('queue', False))
-
-        deployment_id = request_dict['deployment_id']
-        workflow_id = request_dict['workflow_id']
-        parameters = request_dict.get('parameters', None)
-        wait_after_fail = request_dict.get('wait_after_fail', 600)
-        scheduled_time = request_dict.get('scheduled_time', None)
-        force_status = request_dict.get('force_status', None)
-        creator = request_dict.get('created_by')
-        created_at = request_dict.get('created_at')
-        started_at = request_dict.get('started_at')
-        ended_at = request_dict.get('ended_at')
-        execution_id = request_dict.get('id')
-        error = request_dict.get('error')
+        deployment_id = args.deployment_id
+        workflow_id = args.workflow_id
+        parameters = args.parameters
+        wait_after_fail = args.wait_after_fail
+        scheduled_time = args.scheduled_time
+        force_status = args.force_status
+        creator = args.created_by
+        created_at = args.created_at
+        started_at = args.started_at
+        ended_at = args.ended_at
+        execution_id = args.id
+        error = args.error
 
         if creator:
             check_user_action_allowed('set_owner', None, True)
@@ -264,8 +264,16 @@ class Executions(SecuredResource):
         return scheduled_utc
 
 
-class ExecutionsId(SecuredResource):
+class _ExecutionAction(pydantic.BaseModel):
+    action: str
 
+
+class _ExecutionStatusUpdate(pydantic.BaseModel):
+    status: ExecutionState
+    error: Optional[str] = ''
+
+
+class ExecutionsId(SecuredResource):
     @swagger.operation(
         responseClass=models.Execution,
         nickname="getById",
@@ -306,8 +314,8 @@ class ExecutionsId(SecuredResource):
         """
         Apply execution action (cancel, force-cancel) by id
         """
-        request_dict = get_json_and_verify_params({'action'})
-        action = request_dict['action']
+        args = _ExecutionAction.parse_obj(request.json)
+        action = args.action
 
         valid_actions = ['cancel', 'force-cancel', 'kill', 'resume',
                          'force-resume', 'requeue']
@@ -348,13 +356,10 @@ class ExecutionsId(SecuredResource):
     @authorize('execution_status_update')
     @marshal_with(models.Execution)
     def patch(self, execution_id, **kwargs):
-        """
-        Update execution status by id
-        """
-        request_dict = get_json_and_verify_params({'status'})
-
+        """Update execution status by id"""
+        args = _ExecutionStatusUpdate.parse_obj(request.json)
         return get_resource_manager().update_execution_status(
             execution_id,
-            request_dict['status'],
-            request_dict.get('error', '')
+            args.status,
+            args.error,
         )

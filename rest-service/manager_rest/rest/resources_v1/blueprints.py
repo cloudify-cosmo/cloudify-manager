@@ -206,4 +206,4 @@ class BlueprintsId(SecuredResource):
         # However, there is no handling of possible concurrency issue with
         # regard to that matter at the moment.
         get_resource_manager().delete_blueprint(blueprint_id, force=False)
-        return None, 204
+        return "", 204

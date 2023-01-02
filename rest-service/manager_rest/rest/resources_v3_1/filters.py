@@ -1,3 +1,6 @@
+import pydantic
+from typing import Any, List, Optional
+
 from flask import request
 
 from cloudify.models_states import VisibilityState
@@ -19,14 +22,12 @@ class BlueprintsFilters(SecuredResource):
     @rest_decorators.marshal_with(models.BlueprintsFilter)
     @rest_decorators.paginate
     @rest_decorators.sortable(models.BlueprintsFilter)
-    @rest_decorators.all_tenants
     @rest_decorators.search('id')
-    def get(self, _include=None, pagination=None, sort=None,
-            all_tenants=None, search=None):
+    def get(self, _include=None, pagination=None, sort=None, search=None):
         """List blueprints filters"""
 
         return list_resource_filters(models.BlueprintsFilter, _include,
-                                     pagination, sort, all_tenants, search)
+                                     pagination, sort, search)
 
 
 class DeploymentsFilters(SecuredResource):
@@ -34,33 +35,40 @@ class DeploymentsFilters(SecuredResource):
     @rest_decorators.marshal_with(models.DeploymentsFilter)
     @rest_decorators.paginate
     @rest_decorators.sortable(models.DeploymentsFilter)
-    @rest_decorators.all_tenants
     @rest_decorators.search('id')
-    def get(self, _include=None, pagination=None, sort=None,
-            all_tenants=None, search=None):
+    def get(self, _include=None, pagination=None, sort=None, search=None):
         """List deployments filters"""
 
         return list_resource_filters(models.DeploymentsFilter, _include,
-                                     pagination, sort, all_tenants, search)
+                                     pagination, sort, search)
 
 
 def list_resource_filters(filters_model, _include=None, pagination=None,
-                          sort=None, all_tenants=None, search=None):
-    get_all_results = rest_utils.verify_and_convert_bool(
-        '_get_all_results',
-        request.args.get('_get_all_results', False)
-    )
+                          sort=None, search=None):
+    args = rest_utils.ListQuery.parse_obj(request.args)
     result = get_storage_manager().list(
         filters_model,
         include=_include,
         substr_filters=search,
         pagination=pagination,
         sort=sort,
-        all_tenants=all_tenants,
-        get_all_results=get_all_results,
+        all_tenants=args.all_tenants,
+        get_all_results=args.get_all_results,
     )
 
     return result
+
+
+class _CreateFilterArgs(pydantic.BaseModel):
+    filter_rules: List[Any]
+    created_at: Optional[str] = None
+    created_by: Optional[str] = None
+    visibility: Optional[VisibilityState] = None
+
+
+class _UpdateFilterArgs(pydantic.BaseModel):
+    filter_rules: Optional[List[Any]] = None
+    visibility: Optional[VisibilityState] = None
 
 
 class FiltersId(SecuredResource):
@@ -71,21 +79,16 @@ class FiltersId(SecuredResource):
             raise manager_exceptions.BadParametersError(
                 f'All filters with a `{RESERVED_PREFIX}` prefix are reserved '
                 f'for internal use.')
-        request_dict = rest_utils.get_json_and_verify_params(
-            {'filter_rules': {'type': list}})
-        filter_rules = create_filter_rules_list(request_dict['filter_rules'],
+        args = _CreateFilterArgs.parse_obj(request.json)
+        filter_rules = create_filter_rules_list(args.filter_rules,
                                                 filtered_resource)
-        visibility = rest_utils.get_visibility_parameter(
-            optional=True, valid_values=VisibilityState.STATES)
-
         created_at = creator = None
-        if 'created_at' in request_dict:
+        if args.created_at is not None:
             check_user_action_allowed('set_timestamp', None, True)
-            created_at = rest_utils.parse_datetime_string(
-                request_dict['created_at'])
-        if 'created_by' in request_dict:
+            created_at = rest_utils.parse_datetime_string(args.created_at)
+        if args.created_by is not None:
             check_user_action_allowed('set_owner', None, True)
-            creator = rest_utils.valid_user(request_dict['created_by'])
+            creator = rest_utils.valid_user(args.created_by)
 
         now = get_formatted_timestamp()
         new_filter = filters_model(
@@ -93,7 +96,7 @@ class FiltersId(SecuredResource):
             value=filter_rules,
             created_at=created_at or now,
             updated_at=now,
-            visibility=visibility,
+            visibility=args.visibility,
             creator=creator,
         )
 
@@ -116,7 +119,7 @@ class FiltersId(SecuredResource):
         filter_elem = storage_manager.get(filters_model, filter_id)
         _verify_not_a_system_filter(filter_elem, 'delete')
         storage_manager.delete(filter_elem, validate_global=True)
-        return None, 204
+        return "", 204
 
     def patch(self, filters_model, filter_id, filtered_resource):
         """Update a filter by its ID
@@ -129,20 +132,17 @@ class FiltersId(SecuredResource):
                 'Update a filter request must include at least one parameter '
                 'to update')
 
-        request_dict = rest_utils.get_json_and_verify_params(
-            {'filter_rules': {'type': list, 'optional': True}})
+        args = _UpdateFilterArgs.parse_obj(request.json)
 
-        filter_rules = request_dict.get('filter_rules')
-        visibility = rest_utils.get_visibility_parameter(
-            optional=True, valid_values=VisibilityState.STATES)
+        filter_rules = args.filter_rules
 
         storage_manager = get_storage_manager()
         filter_elem = storage_manager.get(filters_model, filter_id)
         _verify_not_a_system_filter(filter_elem, 'update')
-        if visibility:
+        if args.visibility:
             get_resource_manager().validate_visibility_value(
-                filter_elem, visibility)
-            filter_elem.visibility = visibility
+                filter_elem, args.visibility)
+            filter_elem.visibility = args.visibility
         if filter_rules:
             new_filter_rules = create_filter_rules_list(filter_rules,
                                                         filtered_resource)

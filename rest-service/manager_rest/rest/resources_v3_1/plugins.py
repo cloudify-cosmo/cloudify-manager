@@ -1,5 +1,7 @@
-from flask import request as flask_request
-from werkzeug.exceptions import BadRequest
+import pydantic
+from typing import Any, Dict, List, Optional
+
+from flask import request
 
 from cloudify.models_states import VisibilityState
 
@@ -30,37 +32,53 @@ from manager_rest.rest import (resources_v2,
 
 
 class PluginsSetVisibility(SecuredResource):
-
     @authorize('resource_set_visibility')
     @rest_decorators.marshal_with(models.Plugin)
     def patch(self, plugin_id):
         """
         Set the plugin's visibility
         """
-        visibility = rest_utils.get_visibility_parameter()
+        args = rest_utils.SetVisibilityArgs.parse_obj(request.json)
         plugin = get_storage_manager().get(models.Plugin, plugin_id)
-        return get_resource_manager().set_visibility(plugin, visibility)
+        return get_resource_manager().set_visibility(plugin, args.visibility)
+
+
+class _PluginUploadArgs(pydantic.BaseModel):
+    visibility: Optional[VisibilityState] = None
 
 
 class Plugins(resources_v2.Plugins):
     @authorize('plugin_upload')
     @rest_decorators.marshal_with(models.Plugin)
     def post(self, **kwargs):
-        """
-        Upload a plugin
-        """
-
-        visibility = rest_utils.get_visibility_parameter(
-            optional=True,
-            is_argument=True,
-            valid_values=VisibilityState.STATES
-        )
+        """Upload a plugin"""
+        args = _PluginUploadArgs.parse_obj(request.args)
         with rest_utils.skip_nested_marshalling():
-            return super(Plugins, self).post(visibility=visibility)
+            return super(Plugins, self).post(visibility=args.visibility)
+
+
+class _CreatePluginUpdateArgs(pydantic.BaseModel):
+    plugin_names: Optional[List[str]] = []
+    all_to_latest: Optional[bool] = None
+    to_latest: Optional[List[str]] = []
+    all_to_minor: Optional[bool] = None
+    to_minor: Optional[List[str]] = []
+    mapping: Optional[Dict[str, Any]] = {}
+    force: Optional[bool] = False
+    auto_correct_types: Optional[bool] = False
+    reevaluate_active_statuses: Optional[bool] = False
+    all_tenants: Optional[bool] = None
+    created_by: Optional[str] = None
+    created_at: Optional[str] = None
+    update_id: Optional[str] = None
+    execution_id: Optional[str] = None
+    state: Optional[str] = None
+    affected_deployments: Optional[List[str]] = []
+    temp_blueprint_id: Optional[str] = None
+    deployments_per_tenant: Optional[dict] = None
 
 
 class PluginsUpdate(SecuredResource):
-
     @authorize('plugins_update_create')
     @rest_decorators.marshal_with(models.PluginsUpdate)
     def post(self, id, phase, **kwargs):
@@ -79,27 +97,8 @@ class PluginsUpdate(SecuredResource):
         :param phase: either PHASES.INITIAL or PHASES.FINAL (internal).
         """
         try:
-            args = rest_utils.get_json_and_verify_params({
-                PLUGIN_NAMES: {'type': list, 'optional': True},
-                ALL_TO_LATEST: {'type': bool, 'optional': True},
-                TO_LATEST: {'type': list, 'optional': True},
-                ALL_TO_MINOR: {'type': bool, 'optional': True},
-                TO_MINOR: {'type': list, 'optional': True},
-                MAPPING: {'type': dict, 'optional': True},
-                FORCE: {'type': bool, 'optional': True},
-                AUTO_CORRECT_TYPES: {'type': bool, 'optional': True},
-                REEVALUATE_ACTIVE_STATUSES: {'type': bool, 'optional': True},
-                'all_tenants': {'type': bool, 'optional': True},
-                'created_by': {'type': str, 'optional': True},
-                'created_at': {'type': str, 'optional': True},
-                'update_id': {'type': str, 'optional': True},
-                'execution_id': {'type': str, 'optional': True},
-                'state': {'type': str, 'optional': True},
-                'affected_deployments': {'type': list, 'optional': True},
-                'deployments_per_tenant': {'type': dict, 'optional': True},
-                'temp_blueprint_id': {'type': str, 'optional': True},
-            })
-        except BadRequest:
+            args = _CreatePluginUpdateArgs.parse_obj(request.json).dict()
+        except Exception:  # continue on any parsing error, even invalid json
             args = {}
 
         filter_args = [
@@ -116,12 +115,11 @@ class PluginsUpdate(SecuredResource):
 
         update_manager = get_plugins_updates_manager()
 
-        if any(arg in args for arg in ['created_by', 'created_at',
-                                       'update_id',
-                                       'execution_id', 'state',
-                                       'affected_deployments',
-                                       'deployments_per_tenant',
-                                       'temp_blueprint_id']):
+        if any(arg is not None in args for arg in [
+            'created_by', 'created_at', 'update_id', 'execution_id', 'state',
+            'affected_deployments', 'temp_blueprint_id',
+            'deployments_per_tenant',
+        ]):
             check_user_action_allowed('set_plugin_update_details')
             if not args.get('state'):
                 raise manager_exceptions.BadParametersError(
@@ -225,6 +223,26 @@ class PluginsUpdates(SecuredResource):
         return plugins_update
 
 
+class _PluginForceInstallArgs(pydantic.BaseModel):
+    action: str
+    managers: Optional[List[str]] = None
+    agents: Optional[List[str]] = None
+
+
+class _PluginUpdateArgs(pydantic.BaseModel):
+    state: str
+    agent: Optional[str] = None
+    manager: Optional[str] = None
+    error: Optional[str] = None
+
+
+class _PluginSetOwnerArgs(pydantic.BaseModel):
+    creator: Optional[str] = None
+    blueprint_labels: Optional[Dict[str, Any]] = None
+    labels: Optional[Dict[str, Any]] = None
+    resource_tags: Optional[Dict[str, Any]] = None
+
+
 class PluginsId(resources_v2_1.PluginsId):
     @authorize('plugin_upload')
     @rest_decorators.marshal_with(models.Plugin)
@@ -234,23 +252,17 @@ class PluginsId(resources_v2_1.PluginsId):
         This method is for internal use only.
         """
         sm = get_storage_manager()
-        action_dict = rest_utils.get_json_and_verify_params({
-            'action': {'type': str},
-        })
+        params = _PluginForceInstallArgs.parse_obj(request.json)
         plugin = sm.get(models.Plugin, plugin_id)
-        if action_dict.get('action') == 'install':
-            install_dict = rest_utils.get_json_and_verify_params({
-                'managers': {'type': list, 'optional': True},
-                'agents': {'type': list, 'optional': True},
-            })
+        if params.action == 'install':
             get_resource_manager().install_plugin(
                 plugin,
-                manager_names=install_dict.get('managers'),
-                agent_names=install_dict.get('agents'),
+                manager_names=params.managers,
+                agent_names=params.agents,
             )
             return get_resource_manager().install_plugin(plugin)
         else:
-            raise manager_exceptions.UnknownAction(action_dict.get('action'))
+            raise manager_exceptions.UnknownAction(params.action)
 
     @authorize('plugin_upload', allow_if_execution=True)
     def put(self, plugin_id, **kwargs):
@@ -259,14 +271,9 @@ class PluginsId(resources_v2_1.PluginsId):
         Only updating the state is supported right now.
         This method is for internal use only.
         """
-        request_dict = rest_utils.get_json_and_verify_params({
-            'agent': {'type': str, 'optional': True},
-            'manager': {'type': str, 'optional': True},
-            'state': {'type': str},
-            'error': {'type': str, 'optional': True},
-        })
-        agent_name = request_dict.get('agent')
-        manager_name = request_dict.get('manager')
+        params = _PluginUpdateArgs.parse_obj(request.json)
+        agent_name = params.agent
+        manager_name = params.manager
         if agent_name and manager_name:
             raise manager_exceptions.ConflictError(
                 'Expected agent or manager, got both')
@@ -292,7 +299,7 @@ class PluginsId(resources_v2_1.PluginsId):
             # response = plugin.to_response()
             get_resource_manager().set_plugin_state(
                 plugin=plugin, manager=manager, agent=agent,
-                state=request_dict['state'], error=request_dict.get('error'))
+                state=params.state, error=params.error)
         except manager_exceptions.SQLStorageException as e:
             # plugin was most likely deleted concurrently - refetch it
             # to confirm: the .get() will throw a 404
@@ -308,21 +315,19 @@ class PluginsId(resources_v2_1.PluginsId):
 
         Only updating the ownership is supported right now.
         """
-        request_dict = rest_utils.get_json_and_verify_params({
-            'creator': {'type': str, 'optional': True},
-            'blueprint_labels': {'type': dict, 'optional': True},
-            'labels': {'type': dict, 'optional': True},
-        })
+        params = _PluginSetOwnerArgs.parse_obj(request.json)
         sm = get_storage_manager()
         plugin = sm.get(models.Plugin, plugin_id)
-        if 'creator' in request_dict:
+        if params.creator:
             check_user_action_allowed('set_owner', None, True)
-            creator = rest_utils.valid_user(request_dict['creator'])
+            creator = rest_utils.valid_user(params.creator)
             plugin.creator = creator
-        for key in ['blueprint_labels', 'labels', 'resource_tags']:
-            if key not in request_dict:
-                continue
-            setattr(plugin, key, request_dict[key])
+        if params.blueprint_labels is not None:
+            plugin.blueprint_labels = params.blueprint_labels
+        if params.labels is not None:
+            plugin.labels = params.labels
+        if params.resource_tags is not None:
+            plugin.resource_tags = params.resource_tags
         sm.update(plugin)
         return plugin.to_response()
 
@@ -341,7 +346,7 @@ class PluginsYaml(SecuredResource):
         """
         Download plugin yaml
         """
-        dsl_version = flask_request.args.get('dsl_version')
+        dsl_version = request.args.get('dsl_version')
         plugin = get_storage_manager().get(models.Plugin, plugin_id)
         yaml_file_path = plugin.yaml_file_path(dsl_version)
         return get_storage_handler().proxy(yaml_file_path)

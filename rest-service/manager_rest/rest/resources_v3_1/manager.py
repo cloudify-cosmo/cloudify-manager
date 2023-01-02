@@ -18,10 +18,10 @@ import shutil
 import tempfile
 import tarfile
 import zipfile
-from typing import Any
 
 from flask import request, send_file
-from flask_restful.reqparse import Argument
+import pydantic
+from typing import Any, Optional
 
 from cloudify.constants import MANAGER_RESOURCES_PATH
 from manager_rest.manager_exceptions import (
@@ -29,7 +29,6 @@ from manager_rest.manager_exceptions import (
     UploadFileMissing,
 )
 from manager_rest.security import SecuredResource, premium_only
-from manager_rest.rest import rest_utils
 from manager_rest.storage import get_storage_manager, models
 from manager_rest.security.authorization import (
     authorize,
@@ -127,6 +126,10 @@ else:
     RabbitMQBrokersId = _CommunityBrokersId
 
 
+class _ListManagersQuery(pydantic.BaseModel):
+    hostname: Optional[str] = None
+
+
 class Managers(managers_base):
     @marshal_with(models.Manager)
     @paginate
@@ -137,10 +140,8 @@ class Managers(managers_base):
         :param hostname: optional hostname to return only a specific manager
         :param _include: optional, what columns to include in the response
         """
-        args = rest_utils.get_args_and_verify_arguments([
-            Argument('hostname', type=str, required=False)
-        ])
-        hostname = args.get('hostname')
+        args = _ListManagersQuery.parse_obj(request.args)
+        hostname = args.hostname
         if hostname:
             return get_storage_manager().list(
                 models.Manager,
@@ -197,9 +198,18 @@ class FileServerIndex(SecuredResource):
         return {'files': files_list}, 200
 
 
+class _FSProxyGetArgs(pydantic.BaseModel):
+    archive: Optional[bool] = False
+
+
+class _FSProxyPutArgs(pydantic.BaseModel):
+    extract: Optional[bool] = False
+
+
 class FileServerProxy(SecuredResource):
-    def __init__(self):
-        self.storage_handler = get_storage_handler()
+    @property
+    def storage_handler(self):
+        return get_storage_handler()
 
     def get(self, path=None, **_):
         rel_path = _resource_relative_path(path)
@@ -207,14 +217,11 @@ class FileServerProxy(SecuredResource):
         if not path:
             return {}, 404
 
-        args = rest_utils.get_args_and_verify_arguments([
-            Argument('archive', type=bool, required=False)
-        ])
-        as_archive = args.get('archive', False)
+        args = _FSProxyGetArgs.parse_obj(request.args)
 
         if not _is_resource_path_directory(rel_path):
             return self.storage_handler.proxy(rel_path)
-        elif not as_archive:
+        elif not args.archive:
             files_list = [os.path.relpath(file_name, rel_path)
                           for file_name in self.storage_handler.list(rel_path)]
             return {'files': files_list}, 200
@@ -253,17 +260,14 @@ class FileServerProxy(SecuredResource):
             return result
 
     def put(self, path=None):
-        args = rest_utils.get_args_and_verify_arguments([
-            Argument('extract', type=bool, required=False)
-        ])
-        extract = args.get('extract', False)
+        args = _FSProxyPutArgs.parse_obj(request.args)
 
         _, tmp_file_name = tempfile.mkstemp()
         with open(tmp_file_name, 'wb') as tmp_file:
             tmp_file.write(request.data)
             tmp_file.close()
 
-        if not extract:
+        if not args.extract:
             return self.storage_handler.move(tmp_file_name, path)
 
         try:

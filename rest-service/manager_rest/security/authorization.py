@@ -1,3 +1,4 @@
+import pydantic
 from functools import wraps
 
 from flask import request
@@ -10,8 +11,11 @@ from manager_rest.storage.models import Tenant
 from manager_rest.storage import get_storage_manager
 from manager_rest.constants import CLOUDIFY_TENANT_HEADER
 from manager_rest.manager_exceptions import NotFoundError, ForbiddenError
-from manager_rest.rest.rest_utils import (get_json_and_verify_params,
-                                          request_use_all_tenants)
+from manager_rest.rest.rest_utils import request_use_all_tenants
+
+
+class _WithTenantArgs(pydantic.BaseModel):
+    tenant_name: str
 
 
 def authorize(action,
@@ -27,8 +31,8 @@ def authorize(action,
             elif get_tenant_from == 'param':
                 tenant_name = kwargs['tenant_name']
             elif get_tenant_from == 'data':
-                tenant_name = get_json_and_verify_params(
-                    {'tenant_name': {'type': str}}).get('tenant_name')
+                data = _WithTenantArgs.parse_obj(request.json)
+                tenant_name = data.tenant_name
 
             if allow_if_execution:
                 if current_execution and (

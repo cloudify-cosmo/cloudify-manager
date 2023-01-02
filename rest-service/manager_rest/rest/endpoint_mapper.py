@@ -160,7 +160,8 @@ def setup_resources(api):
     }
 
     # Set version endpoint as a non versioned endpoint
-    api.add_resource(resources_v1.Version, '/api/version', endpoint='version')
+    # api.add_resource(
+    #   resources_v1.Version, '/api/version', endpoint='version')
     for resource, endpoint_suffix in resources_endpoints.items():
         if isinstance(endpoint_suffix, str):
             _set_versioned_urls(api, resource, endpoint_suffix)
@@ -174,10 +175,11 @@ def _set_versioned_urls(api, resource_name, endpoint_suffix):
     for version in SUPPORTED_API_VERSIONS:
         version_name, resources_impl = version
         if hasattr(resources_impl, resource_name):
-            resource = getattr(resources_impl, resource_name)
+            resource = getattr(resources_impl, resource_name).as_view(
+                f'{version_name}/{endpoint_suffix}')
         # 'resource' will persist throughout iterations, holding a reference
         # to the latest impl.
         if resource:
             endpoint = '{0}/{1}'.format(version_name, endpoint_suffix)
             url = '/api/{0}'.format(endpoint)
-            api.add_resource(resource, url, endpoint=endpoint)
+            api.add_url_rule(url, view_func=resource)

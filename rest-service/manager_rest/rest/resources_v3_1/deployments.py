@@ -1,15 +1,16 @@
 from base64 import b64decode, b64encode
-from builtins import staticmethod
+from datetime import datetime
 import os
 from shutil import rmtree
 from tempfile import mkdtemp
-from typing import Optional
 import uuid
 import zipfile
 
+from typing import Optional, Any, List, Dict
+import pydantic
+
+
 from flask import request
-from flask_restful.inputs import boolean
-from flask_restful.reqparse import Argument
 from sqlalchemy import and_ as sql_and
 
 
@@ -50,6 +51,9 @@ from manager_rest.rest import (
     swagger,
 )
 from manager_rest.rest.responses import Label
+from manager_rest.rest.resources_v1.deployments import (
+    _DeploymentCreateArgs as v1_DeploymentCreateArgs
+)
 from ..responses_v2 import ListResponse
 
 
@@ -58,22 +62,40 @@ EXTERNAL_SOURCE = 'external_source'
 EXTERNAL_TARGET = 'external_target'
 
 
+class _DeploymentCreateArgs(v1_DeploymentCreateArgs):
+    description: Optional[str] = None
+    deployment_status: Optional[str] = None
+    installation_status: Optional[str] = None
+    skip_plugins_validation: Optional[bool] = False
+    site_name: Optional[str] = None
+    runtime_only_evaluation: Optional[bool] = False
+    display_name: Optional[str] = None
+    labels: Optional[List[Dict[str, str]]] = []
+    created_at: Optional[str] = None
+    created_by: Optional[str] = None
+    workdir_zip: Optional[Any] = None
+    workflows: Optional[Dict[str, Any]] = None
+    groups: Optional[Dict[str, Any]] = None
+    scaling_groups: Optional[Dict[str, Any]] = None
+    policy_triggers: Optional[Dict[str, Any]] = None
+    policy_types: Optional[Dict[str, Any]] = None
+    outputs: Optional[Dict[str, Any]] = None
+    resource_tags: Optional[Dict[str, Any]] = None
+    capabilities: Optional[Dict[str, Any]] = None
+    visibility: Optional[VisibilityState] = VisibilityState.TENANT
+
+
+class _DeploymentCreateQuery(pydantic.BaseModel):
+    private_resource: Optional[bool] = None
+    async_create: Optional[bool] = False
+
+
+class _DeploymentGetQuery(pydantic.BaseModel):
+    all_sub_deployments: Optional[bool] = True
+    include_workdir: Optional[bool] = False
+
+
 class DeploymentsId(resources_v1.DeploymentsId):
-
-    def create_request_schema(self):
-        request_schema = super(DeploymentsId, self).create_request_schema()
-        request_schema['skip_plugins_validation'] = {
-            'optional': True, 'type': bool}
-        request_schema['site_name'] = {'optional': True, 'type': str}
-        request_schema['runtime_only_evaluation'] = {
-            'optional': True, 'type': bool
-        }
-        request_schema['display_name'] = {'optional': True, 'type': str}
-        return request_schema
-
-    def get_skip_plugin_validation_flag(self, request_dict):
-        return request_dict.get('skip_plugins_validation', False)
-
     def _error_from_create(self, execution):
         """Map a failed create-dep-env execution to a REST error response"""
         if execution.status != ExecutionState.FAILED or not execution.error:
@@ -180,40 +202,28 @@ class DeploymentsId(resources_v1.DeploymentsId):
     @rest_decorators.marshal_with(models.Deployment)
     @rest_decorators.not_while_cancelling
     def put(self, deployment_id, **kwargs):
-        """
-        Create a deployment
-        """
+        """Create a deployment"""
         rest_utils.validate_inputs({'deployment_id': deployment_id},
                                    validate_value_begins_with_letter=False)
-        request_schema = self.create_request_schema()
-        request_dict = rest_utils.get_json_and_verify_params(request_schema)
+        request_dict = _DeploymentCreateArgs.parse_obj(request.json).dict()
         blueprint_id = request_dict['blueprint_id']
         bypass_maintenance = is_bypass_maintenance_mode()
-        args = rest_utils.get_args_and_verify_arguments([
-            Argument('private_resource', type=boolean),
-            Argument('async_create', type=boolean, default=False)
-        ])
-        if args.async_create and request_dict.get('workdir_zip'):
+        args = _DeploymentCreateQuery.parse_obj(request.args)
+        if args.async_create and request_dict['workdir_zip']:
             raise DeploymentCreationError(
                 'Unable to create deployment asynchronously with provided '
                 'workdir zip.'
             )
         created_at = owner = None
-        if request_dict.get('created_at'):
+        if request_dict['created_at']:
             check_user_action_allowed('set_timestamp', None, True)
             created_at = rest_utils.parse_datetime_string(
                 request_dict['created_at'])
 
-        if request_dict.get('created_by'):
+        if request_dict['created_by']:
             check_user_action_allowed('set_owner', None, True)
             owner = rest_utils.valid_user(request_dict['created_by'])
-        visibility = rest_utils.get_visibility_parameter(
-            optional=True,
-            valid_values=VisibilityState.STATES
-        )
-        inputs = request_dict.get('inputs', {})
-        skip_plugins_validation = self.get_skip_plugin_validation_flag(
-            request_dict)
+        inputs = request_dict['inputs']
         rm = get_resource_manager()
         sm = get_storage_manager()
         blueprint = sm.get(models.Blueprint, blueprint_id)
@@ -230,7 +240,7 @@ class DeploymentsId(resources_v1.DeploymentsId):
         site_name = _get_site_name(request_dict)
         site = sm.get(models.Site, site_name) if site_name else None
 
-        skip_create_dep_env = bool(request_dict.get('workdir_zip'))
+        skip_create_dep_env = bool(request_dict['workdir_zip'])
         if not skip_create_dep_env:
             # create_dep_env will use and populate some attrs if it is running
             # so don't provide them beforehand or we will try (and fail) to
@@ -245,33 +255,32 @@ class DeploymentsId(resources_v1.DeploymentsId):
         rm.cleanup_failed_deployment(deployment_id)
         try:
             with sm.transaction():
-                if not skip_plugins_validation:
+                if not request_dict['skip_plugins_validation']:
                     rm.check_blueprint_plugins_installed(blueprint.plan)
                 deployment = rm.create_deployment(
                     blueprint,
                     deployment_id,
                     private_resource=args.private_resource,
-                    visibility=visibility,
+                    visibility=request_dict['visibility'],
                     site=site,
-                    runtime_only_evaluation=request_dict.get(
-                        'runtime_only_evaluation', False),
+                    runtime_only_evaluation=request_dict[
+                        'runtime_only_evaluation'],
                     created_at=created_at,
                     created_by=owner,
-                    workflows=request_dict.get('workflows'),
-                    groups=request_dict.get('groups'),
-                    scaling_groups=request_dict.get('scaling_groups'),
-                    policy_triggers=request_dict.get('policy_triggers'),
-                    policy_types=request_dict.get('policy_types'),
+                    workflows=request_dict['workflows'],
+                    groups=request_dict['groups'],
+                    scaling_groups=request_dict['scaling_groups'],
+                    policy_triggers=request_dict['policy_triggers'],
+                    policy_types=request_dict['policy_types'],
                     inputs=request_dict.get('inputs'),
-                    outputs=request_dict.get('outputs'),
-                    resource_tags=request_dict.get('resource_tags'),
-                    capabilities=request_dict.get('capabilities'),
-                    description=request_dict.get('description'),
-                    deployment_status=request_dict.get('deployment_status'),
-                    installation_status=request_dict.get(
-                        'installation_status'),
+                    outputs=request_dict['outputs'],
+                    resource_tags=request_dict['resource_tags'],
+                    capabilities=request_dict['capabilities'],
+                    description=request_dict['description'],
+                    deployment_status=request_dict['deployment_status'],
+                    installation_status=request_dict['installation_status'],
+                    labels=request_dict.get('labels'),
                     display_name=request_dict.get('display_name'),
-                    labels=request_dict.get('labels')
                 )
                 if skip_create_dep_env:
                     tmpdir_path = mkdtemp()
@@ -296,11 +305,12 @@ class DeploymentsId(resources_v1.DeploymentsId):
                     # We don't execute the create_dep_env when a workdir is
                     # provided- this is part of a restore or similar
                     return deployment, 201
+
                 create_execution = \
                     deployment.make_create_environment_execution(
                         inputs=inputs,
                         labels=labels,
-                        display_name=request_dict.get('display_name'),
+                        display_name=request_dict['display_name'],
                     )
                 try:
                     messages = rm.prepare_executions(
@@ -312,7 +322,8 @@ class DeploymentsId(resources_v1.DeploymentsId):
                     rm.delete_deployment(deployment)
                     raise
         except ValueError as e:
-            raise manager_exceptions.BadParametersError(e)
+            raise manager_exceptions.BadParametersError(str(e))
+
         workflow_executor.execute_workflow(messages)
         if not args.async_create:
             rest_utils.wait_for_execution(sm, deployment.create_execution.id)
@@ -396,10 +407,7 @@ class DeploymentsId(resources_v1.DeploymentsId):
     @authorize('deployment_get')
     @rest_decorators.marshal_with(models.Deployment)
     def get(self, deployment_id, _include=None, **kwargs):
-        args = rest_utils.get_args_and_verify_arguments([
-            Argument('all_sub_deployments', type=boolean, default=True),
-            Argument('include_workdir', type=boolean, default=False),
-        ])
+        args = _DeploymentGetQuery.parse_obj(request.args)
         if _include:
             if not args.all_sub_deployments and 'id' not in _include:
                 # we will need to use id in the _populate_direct method, so it
@@ -433,13 +441,11 @@ class DeploymentsSetVisibility(SecuredResource):
     @authorize('deployment_set_visibility')
     @rest_decorators.marshal_with(models.Deployment)
     def patch(self, deployment_id):
-        """
-        Set the deployment's visibility
-        """
-        visibility = rest_utils.get_visibility_parameter()
+        """Set the deployment's visibility"""
+        args = rest_utils.SetVisibilityArgs.parse_obj(request.json)
         return get_resource_manager().set_deployment_visibility(
             deployment_id,
-            visibility
+            args.visibility,
         )
 
 
@@ -458,6 +464,10 @@ class DeploymentsIdCapabilities(SecuredResource):
         return dict(deployment_id=deployment_id, capabilities=capabilities)
 
 
+class _DeploymentsSetSiteArgs(pydantic.BaseModel):
+    site_name: Optional[str] = None
+
+
 class DeploymentsSetSite(SecuredResource):
 
     @authorize('deployment_set_site')
@@ -466,7 +476,8 @@ class DeploymentsSetSite(SecuredResource):
         """
         Set the deployment's site
         """
-        site_name = _get_site_name(request.json)
+        request_dict = _DeploymentsSetSiteArgs.parse_obj(request.json).dict()
+        site_name = _get_site_name(request_dict)
         storage_manager = get_storage_manager()
         deployment = storage_manager.get(models.Deployment, deployment_id)
         site = None
@@ -488,12 +499,27 @@ class DeploymentsSetSite(SecuredResource):
 
 
 def _get_site_name(request_dict):
-    if 'site_name' not in request_dict:
+    if not request_dict['site_name']:
         return None
 
     site_name = request_dict['site_name']
     rest_utils.validate_inputs({'site_name': site_name})
     return site_name
+
+
+class _CreateIDDArgs(pydantic.BaseModel):
+    source_deployment_id: str
+    inter_deployment_dependencies: List[Any]
+
+
+class _IDDParams(pydantic.BaseModel):
+    dependency_creator: str
+    source_deployment: str
+    target_deployment: Optional[str] = None
+    target_deployment_func: Optional[Dict[str, Any]] = None
+    external_source: Optional[Dict[str, Any]] = None
+    external_target: Optional[Dict[str, Any]] = None
+    is_component_deletion: Optional[bool] = False
 
 
 class InterDeploymentDependencies(SecuredResource):
@@ -579,11 +605,7 @@ class InterDeploymentDependencies(SecuredResource):
         :return: a list of InterDeploymentDependency IDs.
         """
         sm = get_storage_manager()
-
-        params = rest_utils.get_json_and_verify_params({
-            'source_deployment_id': {'type': str},
-            'inter_deployment_dependencies': {'type': list}
-        })
+        params = _CreateIDDArgs.parse_obj(request.json).dict()
 
         dependencies = params.get('inter_deployment_dependencies')
 
@@ -653,14 +675,7 @@ class InterDeploymentDependencies(SecuredResource):
 
     @staticmethod
     def _verify_dependency_params():
-        return rest_utils.get_json_and_verify_params({
-            DEPENDENCY_CREATOR: {'type': str},
-            SOURCE_DEPLOYMENT: {'type': str},
-            TARGET_DEPLOYMENT: {'optional': True, 'type': str},
-            TARGET_DEPLOYMENT_FUNC: {'optional': True, 'type': dict},
-            EXTERNAL_SOURCE: {'optional': True, 'type': dict},
-            EXTERNAL_TARGET: {'optional': True, 'type': dict},
-        })
+        return _IDDParams.parse_obj(request.json).dict()
 
     @staticmethod
     def _get_put_dependency_params(sm):
@@ -742,7 +757,7 @@ class InterDeploymentDependencies(SecuredResource):
                     sm.delete(label)
                     break
 
-        return None, 204
+        return "", 204
 
     @staticmethod
     def _get_delete_dependency_params(sm):
@@ -802,6 +817,10 @@ class InterDeploymentDependencies(SecuredResource):
         return inter_deployment_dependencies
 
 
+class _UpdateIDDArgs(pydantic.BaseModel):
+    inter_deployment_dependencies: Optional[List[Any]] = []
+
+
 class InterDeploymentDependenciesId(SecuredResource):
     @swagger.operation(
         responseClass=models.InterDeploymentDependencies,
@@ -823,12 +842,8 @@ class InterDeploymentDependenciesId(SecuredResource):
         :return: a list of InterDeploymentDependency IDs.
         """
         sm = get_storage_manager()
-
-        params = rest_utils.get_json_and_verify_params({
-            'inter_deployment_dependencies': {'type': list}
-        })
-
-        dependencies = params.get('inter_deployment_dependencies')
+        params = _UpdateIDDArgs.parse_obj(request.json)
+        dependencies = params.inter_deployment_dependencies
         if len(dependencies) > 0 and EXTERNAL_SOURCE in dependencies[0]:
             source_deployment = None
         else:
@@ -862,26 +877,68 @@ class DeploymentGroups(SecuredResource):
     @rest_decorators.sortable(models.DeploymentGroup)
     @rest_decorators.create_filters(models.DeploymentGroup)
     @rest_decorators.paginate
-    @rest_decorators.all_tenants
-    def get(self, _include=None, filters=None, pagination=None, sort=None,
-            all_tenants=None):
+    def get(self, _include=None, filters=None, pagination=None, sort=None):
         if _include and 'deployment_ids' in _include:
             # If we don't do this, this include will result in lots of queries
             _include.remove('deployment_ids')
             _include.append('deployments')
-        get_all_results = rest_utils.verify_and_convert_bool(
-            '_get_all_results',
-            request.args.get('_get_all_results', False)
-        )
+        args = rest_utils.ListQuery.parse_obj(request.args)
         return get_storage_manager().list(
             models.DeploymentGroup,
             include=_include,
             filters=filters,
             pagination=pagination,
             sort=sort,
-            all_tenants=all_tenants,
-            get_all_results=get_all_results
+            all_tenants=args.all_tenants,
+            get_all_results=args.get_all_results
         )
+
+
+class _NewGroupDeploymentSpec(pydantic.BaseModel):
+    id: Optional[str] = None
+    display_name: Optional[str] = None
+    skip_plugins_validation: Optional[bool] = False
+    labels: Optional[List[Dict[str, str]]] = []
+    runtime_only_evaluation: Optional[bool] = False
+    inputs: Optional[Dict[str, Any]] = {}
+    site_name: Optional[str] = None
+
+
+class _DepGroupAddDeploymentsArgs(pydantic.BaseModel):
+    deployment_ids: Optional[List[str]] = None
+    filter_id: Optional[str] = None
+    filter_rules: Optional[List[Dict[str, Any]]] = None
+    deployments_from_group: Optional[str] = None
+    new_deployments: Optional[List[_NewGroupDeploymentSpec]] = None
+
+
+class _DepGroupRemoveDeploymentsArgs(pydantic.BaseModel):
+    deployment_ids: Optional[List[str]] = None
+    filter_id: Optional[str] = None
+    filter_rules: Optional[List[Dict[str, Any]]] = None
+    deployments_from_group: Optional[str] = None
+
+
+class _DepGroupChangeArgs(pydantic.BaseModel):
+    add: Optional[_DepGroupAddDeploymentsArgs] = {}
+    remove: Optional[_DepGroupRemoveDeploymentsArgs] = {}
+
+
+class _DepGroupCreateArgs(_DepGroupAddDeploymentsArgs, pydantic.BaseModel):
+    description: Optional[str] = None
+    visibility: Optional[VisibilityState] = VisibilityState.TENANT
+    labels: Optional[List[Dict[str, str]]] = []
+    blueprint_id: Optional[str] = None
+    default_inputs: Optional[Dict[str, Any]] = None
+    created_by: Optional[str] = None
+    created_at: Optional[datetime] = None
+    creation_counter: Optional[int] = None
+
+
+class _DepGroupDeleteArgs(pydantic.BaseModel):
+    delete_deployments: Optional[bool] = False
+    force: Optional[bool] = False
+    delete_logs: Optional[bool] = False
 
 
 class DeploymentGroupsId(SecuredResource):
@@ -894,28 +951,11 @@ class DeploymentGroupsId(SecuredResource):
     @rest_decorators.marshal_with(models.DeploymentGroup, force_get_data=True)
     @rest_decorators.not_while_cancelling
     def put(self, group_id):
-        request_dict = rest_utils.get_json_and_verify_params({
-            'description': {'optional': True},
-            'visibility': {'optional': True},
-            'labels': {'optional': True},
-            'blueprint_id': {'optional': True},
-            'default_inputs': {'optional': True},
-            'filter_id': {'optional': True},
-            'filter_rules': {'optional': True},
-            'deployment_ids': {'optional': True},
-            'new_deployments': {'optional': True},
-            'deployments_from_group': {'optional': True},
-            'created_by': {'optional': True},
-            'created_at': {'optional': True},
-            'creation_counter': {'optional': True}
-        })
-
-        created_at = creator = None
+        request_dict = _DepGroupCreateArgs.parse_obj(request.json).dict()
         if request_dict.get('created_at'):
             check_user_action_allowed('set_timestamp', None, True)
-            created_at = rest_utils.parse_datetime_string(
-                request_dict['created_at'])
 
+        creator = None
         if request_dict.get('created_by'):
             check_user_action_allowed('set_owner', None, True)
             creator = rest_utils.valid_user(request_dict['created_by'])
@@ -930,12 +970,12 @@ class DeploymentGroupsId(SecuredResource):
                 # flush so the newly-created group gets an ID, so that its
                 # ._storage_id can be used as a FK target
                 db.session.flush()
-            if 'creation_counter' in request_dict:
+            if request_dict.get('creation_counter') is not None:
                 group.creation_counter = request_dict['creation_counter']
             if creator:
                 group.creator = creator
-            if created_at:
-                group.created_at = created_at
+            if request_dict.get('created_at'):
+                group.created_at = request_dict['created_at']
             self._set_group_attributes(sm, group, request_dict)
             changed_deps = set()
             if request_dict.get('labels') is not None:
@@ -965,10 +1005,7 @@ class DeploymentGroupsId(SecuredResource):
     @rest_decorators.marshal_with(models.DeploymentGroup, force_get_data=True)
     @rest_decorators.not_while_cancelling
     def patch(self, group_id):
-        request_dict = rest_utils.get_json_and_verify_params({
-            'add': {'optional': True},
-            'remove': {'optional': True},
-        })
+        request_dict = _DepGroupChangeArgs.parse_obj(request.json).dict()
         sm = get_storage_manager()
         with sm.transaction():
             group = sm.get(models.DeploymentGroup, group_id)
@@ -1237,7 +1274,7 @@ class DeploymentGroupsId(SecuredResource):
             if not site_name:
                 continue
             try:
-                new_dep_spec['site'] = sites[site_name]
+                new_dep_spec['site_name'] = sites[site_name]
             except KeyError:
                 raise manager_exceptions.NotFoundError(
                     f'Site {site_name} does not exist'
@@ -1266,7 +1303,7 @@ class DeploymentGroupsId(SecuredResource):
             visibility=group.visibility,
             runtime_only_evaluation=new_dep_spec.get(
                 'runtime_only_evaluation', False),
-            site=new_dep_spec.get('site'),
+            site=new_dep_spec.get('site_name'),
         )
         group.creation_counter += 1
         dep.guaranteed_unique = is_id_unique
@@ -1378,11 +1415,7 @@ class DeploymentGroupsId(SecuredResource):
 
     @authorize('deployment_group_delete')
     def delete(self, group_id):
-        args = rest_utils.get_args_and_verify_arguments([
-            Argument('delete_deployments', type=boolean, default=False),
-            Argument('force', type=boolean, default=False),
-            Argument('delete_logs', type=boolean, default=False),
-        ])
+        args = _DepGroupDeleteArgs.parse_obj(request.args)
         sm = get_storage_manager()
         rm = get_resource_manager()
 
@@ -1406,7 +1439,7 @@ class DeploymentGroupsId(SecuredResource):
             workflow_executor.execute_workflow(messages)
 
         sm.delete(group)
-        return None, 204
+        return "", 204
 
 
 def _create_inter_deployment_dependency(

@@ -3,11 +3,10 @@ import traceback
 from datetime import datetime
 from os.path import join
 from urllib.parse import quote as unquote
+import pydantic
+from typing import Any, Dict, List, Optional
 
 from flask import request
-
-from flask_restful.inputs import boolean
-from flask_restful.reqparse import Argument
 
 from cloudify.models_states import VisibilityState, BlueprintUploadState
 
@@ -28,11 +27,10 @@ from manager_rest.rest import (
     swagger,
 )
 from manager_rest.storage import models, get_storage_manager
-from manager_rest.utils import get_formatted_timestamp, remove, current_tenant
 from manager_rest.rest.rest_utils import (get_labels_from_plan,
-                                          get_labels_list,
-                                          get_args_and_verify_arguments)
+                                          get_labels_list)
 from manager_rest.rest.responses import Label
+from manager_rest.utils import get_formatted_timestamp, remove, current_tenant
 from manager_rest.manager_exceptions import (ConflictError,
                                              IllegalActionError,
                                              BadParametersError,
@@ -49,13 +47,13 @@ class BlueprintsSetVisibility(SecuredResource):
         """
         Set the blueprint's visibility
         """
-        visibility = rest_utils.get_visibility_parameter()
+        args = rest_utils.SetVisibilityArgs.parse_obj(request.json)
         blueprint = get_storage_manager().get(models.Blueprint, blueprint_id)
-        return get_resource_manager().set_visibility(blueprint, visibility)
+        return get_resource_manager().set_visibility(
+            blueprint, args.visibility)
 
 
 class BlueprintsIcon(SecuredResource):
-
     @authorize('blueprint_upload')
     @rest_decorators.marshal_with(models.Blueprint)
     def patch(self, blueprint_id):
@@ -73,6 +71,45 @@ class BlueprintsIcon(SecuredResource):
         return blueprint
 
 
+class _BlueprintUpdateArgs(pydantic.BaseModel):
+    class Config:
+        extra = 'forbid'
+
+    plan: Optional[Dict[str, Any]] = None
+    description: Optional[str] = None
+    main_file_name: Optional[str] = None
+    state: Optional[str] = None
+    error: Optional[str] = None
+    error_traceback: Optional[str] = None
+    labels: Optional[List[Any]] = None
+    creator: Optional[str] = None
+    created_at: Optional[str] = None
+    upload_execution: Optional[str] = None
+    visibility: Optional[VisibilityState] = None
+    requirements: Optional[dict] = None
+
+
+class _BlueprintUpdateQuery(pydantic.BaseModel):
+    visibility: Optional[VisibilityState] = None
+
+
+class _BlueprintUploadQuery(pydantic.BaseModel):
+    async_upload: Optional[bool] = False
+    created_by: Optional[str] = None
+    created_at: Optional[str] = None
+    labels: Optional[List[Any]] = []
+    visibility: Optional[VisibilityState] = None
+    blueprint_archive_url: Optional[str] = None
+    state: Optional[str] = None
+    skip_execution: Optional[bool] = False
+    application_file_name: Optional[str] = ''
+    private_resource: Optional[bool] = None
+
+
+class _BlueprintDeleteQuery(pydantic.BaseModel):
+    force: Optional[bool] = False
+
+
 class BlueprintsId(resources_v2.BlueprintsId):
     @authorize('blueprint_upload')
     @rest_decorators.marshal_with(models.Blueprint)
@@ -83,24 +120,22 @@ class BlueprintsId(resources_v2.BlueprintsId):
         rm = get_resource_manager()
         sm = get_storage_manager()
         rest_utils.validate_inputs({'blueprint_id': blueprint_id})
-
-        args = None
+        args_source = None
         form_params = request.form.get('params')
         if form_params:
-            args = json.loads(form_params)
-        if not args:
-            args = request.args.to_dict(flat=False)
+            args_source = json.loads(form_params)
+        if not args_source:
+            args_source = request.args
+        args = _BlueprintUploadQuery.parse_obj(args_source)
 
-        async_upload = args.get('async_upload', False)
-        created_at = args.get('created_at')
-        created_by = args.get('created_by')
-        labels = args.get('labels', [])
-        visibility = args.get('visibility')
-        private_resource = args.get('private_resource')
-        application_file_name = args.get('application_file_name', '')
-        skip_execution = args.get('skip_execution', False)
-        state = args.get('state')
-        blueprint_url = args.get('blueprint_archive_url')
+        labels = args.labels
+        visibility = args.visibility
+        private_resource = args.private_resource
+        application_file_name = args.application_file_name
+        skip_execution = args.skip_execution
+        state = args.state
+        blueprint_url = args.blueprint_archive_url
+        async_upload = args.async_upload
 
         if blueprint_url:
             if (
@@ -111,17 +146,15 @@ class BlueprintsId(resources_v2.BlueprintsId):
                     "Can pass blueprint as only one of: URL via query "
                     "parameters, multi-form or chunked.")
 
+        created_at = args.created_at
         if created_at:
             check_user_action_allowed('set_timestamp', None, True)
             created_at = rest_utils.parse_datetime_string(created_at)
 
+        created_by = args.created_by
         if created_by:
             check_user_action_allowed('set_owner', None, True)
             created_by = rest_utils.valid_user(created_by)
-
-        if visibility is not None:
-            rest_utils.validate_visibility(
-                visibility, valid_values=VisibilityState.STATES)
 
         unique_labels_check = []
         for label in labels:
@@ -226,15 +259,12 @@ class BlueprintsId(resources_v2.BlueprintsId):
     )
     @authorize('blueprint_delete')
     def delete(self, blueprint_id, **kwargs):
-        """
-        Delete blueprint by id
-        """
-        query_args = get_args_and_verify_arguments(
-            [Argument('force', type=boolean, default=False)])
+        """Delete blueprint by id"""
+        args = _BlueprintDeleteQuery.parse_obj(request.args)
         get_resource_manager().delete_blueprint(
             blueprint_id,
-            force=query_args.force)
-        return None, 204
+            force=args.force)
+        return "", 204
 
     @authorize('blueprint_upload')
     @rest_decorators.marshal_with(models.Blueprint)
@@ -250,36 +280,18 @@ class BlueprintsId(resources_v2.BlueprintsId):
             raise IllegalActionError('Update a blueprint request must include '
                                      'at least one parameter to update')
 
-        request_schema = {
-            'plan': {'type': dict, 'optional': True},
-            'requirements': {'type': dict, 'optional': True},
-            'description': {'type': str, 'optional': True},
-            'main_file_name': {'type': str, 'optional': True},
-            'visibility': {'type': str, 'optional': True},
-            'state': {'type': str, 'optional': True},
-            'error': {'type': str, 'optional': True},
-            'error_traceback': {'type': str, 'optional': True},
-            'labels': {'type': list, 'optional': True},
-            'creator': {'type': str, 'optional': True},
-            'created_at': {'type': str, 'optional': True},
-            'upload_execution': {'type': str, 'optional': True},
-        }
-        request_dict = rest_utils.get_json_and_verify_params(request_schema)
+        args = _BlueprintUpdateArgs.parse_obj(request.json)
+        query = _BlueprintUpdateQuery.parse_obj(request.args)
         created_at = creator = None
-        if request_dict.get('created_at'):
+        if args.created_at is not None:
             check_user_action_allowed('set_timestamp', None, True)
             created_at = rest_utils.parse_datetime_string(
-                request_dict['created_at'])
+                args.created_at)
 
-        if request_dict.get('creator'):
+        if args.creator is not None:
             check_user_action_allowed('set_owner', None, True)
-            creator = rest_utils.valid_user(request_dict['creator'])
+            creator = rest_utils.valid_user(args.creator)
 
-        invalid_params = set(request_dict.keys()) - set(request_schema.keys())
-        if invalid_params:
-            raise BadParametersError(
-                "Unknown parameters: {}".format(','.join(invalid_params))
-            )
         sm = get_storage_manager()
         blueprint = sm.get(models.Blueprint, blueprint_id)
         # if finished blueprint validation - cleanup DB entry
@@ -302,7 +314,7 @@ class BlueprintsId(resources_v2.BlueprintsId):
             return blueprint
 
         # set blueprint visibility
-        visibility = request_dict.get('visibility')
+        visibility = query.visibility
         if visibility:
             if visibility not in VisibilityState.STATES:
                 raise BadParametersError(
@@ -312,26 +324,28 @@ class BlueprintsId(resources_v2.BlueprintsId):
             blueprint.visibility = visibility
 
         # set other blueprint attributes.
-        if 'plan' in request_dict:
-            blueprint.plan = request_dict['plan']
-        if 'requirements' in request_dict:
-            blueprint.requirements = request_dict['requirements']
-        if 'description' in request_dict:
-            blueprint.description = request_dict['description']
-        if 'main_file_name' in request_dict:
-            blueprint.main_file_name = request_dict['main_file_name']
-        if 'creator' in request_dict:
+        if args.plan is not None:
+            blueprint.plan = args.plan
+        if args.description is not None:
+            blueprint.description = args.description
+        if args.requirements:
+            blueprint.requirements = args.requirements
+        if args.main_file_name is not None:
+            blueprint.main_file_name = args.main_file_name
+        if creator is not None:
             blueprint.creator = creator
-        if 'upload_execution' in request_dict:
+        if created_at is not None:
+            blueprint.created_at = created_at
+        if args.upload_execution is not None:
             blueprint.upload_execution = sm.get(
-                models.Execution, request_dict['upload_execution'])
+                models.Execution, args.upload_execution)
 
-        if request_dict.get('plan'):
-            imported_blueprints = request_dict['plan']\
+        if args.plan:
+            imported_blueprints = args.plan\
                 .get(constants.IMPORTED_BLUEPRINTS, {})
             _validate_imported_blueprints(sm, blueprint, imported_blueprints)
         # set blueprint state
-        state = request_dict.get('state')
+        state = args.state
         if state:
             if state not in BlueprintUploadState.STATES:
                 raise BadParametersError(
@@ -340,8 +354,8 @@ class BlueprintsId(resources_v2.BlueprintsId):
                 )
 
             blueprint.state = state
-            blueprint.error = request_dict.get('error')
-            blueprint.error_traceback = request_dict.get('error_traceback')
+            blueprint.error = args.error
+            blueprint.error_traceback = args.error_traceback
 
             # On finalizing the blueprint upload, extract archive to file
             # server
@@ -360,8 +374,8 @@ class BlueprintsId(resources_v2.BlueprintsId):
                         tenant=blueprint.tenant.name)
 
         labels_list = None
-        if request_dict.get('labels') is not None:
-            raw_list = request_dict['labels']
+        if args.labels is not None:
+            raw_list = args.labels_list
             if all(
                 'key' in label and 'value' in label
                 for label in raw_list
@@ -400,6 +414,11 @@ def _validate_imported_blueprints(sm, blueprint, imported_blueprints):
                 f'is unavailable: {imported_blueprint}')
 
 
+class _BlueprintValidateArgs(rest_utils.SetVisibilityArgs):
+    application_file_name: Optional[str] = None
+    blueprint_archive_url: Optional[str] = None
+
+
 class BlueprintsIdValidate(BlueprintsId):
     @authorize('blueprint_upload')
     @rest_decorators.marshal_with(models.Blueprint)
@@ -407,22 +426,20 @@ class BlueprintsIdValidate(BlueprintsId):
         """
         Validate a blueprint (id specified)
         """
-        rm = get_resource_manager()
         sm = get_storage_manager()
-        args = None
+        rm = get_resource_manager()
+        args_source = {}
         form_params = request.form.get('params')
         if form_params:
-            args = json.loads(form_params)
-        if not args:
-            args = request.args.to_dict(flat=False)
+            args_source = json.loads(form_params)
+        if not args_source:
+            args_source = request.args.to_dict(flat=False)
+        args = _BlueprintValidateArgs.parse_obj(args_source)
 
-        rest_utils.validate_inputs({'blueprint_id': blueprint_id})
-        visibility = args.pop('visibility')
+        visibility = args.visibility
         if visibility is not None:
             rest_utils.validate_visibility(
                 visibility, valid_values=VisibilityState.STATES)
-        application_file_name = args.pop('application_file_name', '')
-        blueprint_url = args.pop('blueprint_archive_url', None)
 
         with sm.transaction():
             blueprint = models.Blueprint(
@@ -430,27 +447,27 @@ class BlueprintsIdValidate(BlueprintsId):
                 id=blueprint_id,
                 description=None,
                 main_file_name=None,
-                visibility=None,
+                visibility=visibility,
                 state=BlueprintUploadState.VALIDATING,
             )
 
             sm.put(blueprint)
             blueprint.upload_execution, messages = rm.upload_blueprint(
                 blueprint_id,
-                application_file_name,
-                blueprint_url,
+                args.application_file_name,
+                args.blueprint_archive_url,
                 config.instance.file_server_root,     # for the import resolver
                 config.instance.marketplace_api_url,  # for the import resolver
                 validate_only=True,
             )
 
         try:
-            if not blueprint_url:
+            if not args.blueprint_archive_url:
                 upload_manager.upload_blueprint_archive_to_file_server(
                     blueprint_id)
             workflow_executor.execute_workflow(messages)
         except Exception:
-            sm.sm.delete(blueprint)
+            sm.delete(blueprint)
             upload_manager.cleanup_blueprint_archive_from_file_server(
                 blueprint_id, current_tenant.name)
             raise

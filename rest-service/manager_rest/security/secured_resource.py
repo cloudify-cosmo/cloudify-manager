@@ -15,6 +15,7 @@
 
 from functools import wraps
 
+from flask.views import MethodView
 from flask_restful import Resource
 from flask_restful.utils import unpack
 from werkzeug.exceptions import HTTPException
@@ -108,8 +109,9 @@ def allow_on_community(func):
     return func
 
 
-class SecuredResource(Resource):
-    method_decorators = [authenticate]
+class SecuredResource(MethodView):
+    init_every_request = False
+    decorators = [authenticate]
 
 
 class MissingPremiumFeatureResource(Resource):

@@ -963,7 +963,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         node2 = self.client.nodes.get('dep1', 'http_web_server2')
         self.assertEqual('9090', node2.properties['port'])
         with self.assertRaisesRegex(
-                CloudifyClientError, 'inputs parameter is expected'):
+                CloudifyClientError, 'dict'):
             self.put_deployment(
                 deployment_id='dep2',
                 blueprint_id='b1122',
@@ -1255,7 +1255,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                             site_name=self.SITE_NAME)
         deployment = self.client.deployments.get(resource_id)
         self.assertEqual(deployment.site_name, self.SITE_NAME)
-        self.assertEqual(deployment.visibility, VisibilityState.TENANT)
+        self.assertEqual(deployment.visibility, VisibilityState.TENANT.value)
 
     def test_creation_failure_invalid_site_visibility(self):
         self.client.sites.create(self.SITE_NAME,
