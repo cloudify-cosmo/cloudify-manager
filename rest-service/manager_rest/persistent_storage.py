@@ -1,7 +1,6 @@
 import os
 import shutil
 import tempfile
-import zlib
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from dataclasses import dataclass
@@ -21,12 +20,10 @@ LAST_MODIFIED_FMT = '%Y-%m-%dT%H:%M:%S.%f%z'
 class FileInfo:
     """FileInfo is a class used to represent information about a file"""
     filepath: str
-    checksum: str
     mtime: str
 
-    def __init__(self, filepath: str, checksum: str, mtime: str):
+    def __init__(self, filepath: str, mtime: str):
         self.filepath = filepath
-        self.checksum = checksum
         self.mtime = mtime
 
     @classmethod
@@ -35,19 +32,16 @@ class FileInfo:
                                             tz=timezone.utc)
         return FileInfo(
             filepath=descriptive_filepath,
-            checksum=str(_local_file_checksum(filepath)),
             mtime=file_mtime.isoformat(),
         )
 
     @classmethod
     def from_s3_file(cls,
                      filepath: ElementTree.Element,
-                     last_modified: ElementTree.Element,
-                     etag: ElementTree.Element):
+                     last_modified: ElementTree.Element):
         file_mtime = datetime.strptime(last_modified.text, LAST_MODIFIED_FMT)
         return FileInfo(
             filepath=filepath.text,
-            checksum=etag.text.strip('"'),
             mtime=file_mtime.isoformat(),
         )
 
@@ -201,7 +195,6 @@ class S3StorageHandler(FileStorageHandler):
             yield FileInfo.from_s3_file(
                 contents.find('s3:Key', self.XML_NS),
                 contents.find('s3:LastModified', self.XML_NS),
-                contents.find('s3:ETag', self.XML_NS),
             )
 
     def move(self, src_path: str, dst_path: str):
@@ -266,18 +259,6 @@ class S3StorageHandler(FileStorageHandler):
 
 def _file_is_empty(file_name):
     return os.stat(file_name).st_size == 0
-
-
-def _local_file_checksum(path: str):
-    """Returns an Adler-32 checksum of file.  The function is used to check
-     whether the contents of the file has be modified, so the use of a
-     non-cryptographically strong algorithm should not be a cause for concern.
-    """
-    with open(path, "rb") as fh:
-        checksum = zlib.adler32(b'')
-        while chunk := fh.read(8192):
-            checksum = zlib.adler32(chunk, checksum)
-    return checksum
 
 
 def init_storage_handler(config):
