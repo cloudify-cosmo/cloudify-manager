@@ -50,7 +50,7 @@ except ImportError:
     manager_premium = None
 
 
-INDEX_JSON_FILENAME = '.index.json'
+INDEX_JSON_FILENAME = '.cloudify-index.json'
 RESOURCES_PATH = '/resources/'
 
 
@@ -219,9 +219,12 @@ class FileServerProxy(SecuredResource):
         if not _is_resource_path_directory(rel_path):
             return self.storage_handler.proxy(rel_path)
         elif not as_archive:
-            file_list = [fi.serialize(rel_path)
-                         for fi in self.storage_handler.list(rel_path)]
-            return file_list, 200
+            files_metadata = {
+                f_path: f_mtime
+                for f_info in self.storage_handler.list(rel_path)
+                for f_path, f_mtime in f_info.serialize(rel_path).items()
+            }
+            return files_metadata, 200
         else:
             archive_file_name, download_file_name =\
                 self._prepare_directory_archive(rel_path)
@@ -237,7 +240,7 @@ class FileServerProxy(SecuredResource):
 
     def _prepare_directory_archive(self, path):
         tmp_dir_name = tempfile.mkdtemp()
-        metadata = []
+        metadata = {}
         for file_info in self.storage_handler.list(path):
             src_path = os.path.join(
                 path,
@@ -252,7 +255,7 @@ class FileServerProxy(SecuredResource):
                 os.makedirs(dst_dir)
             with self.storage_handler.get(src_path) as tmp_file_name:
                 shutil.copy2(tmp_file_name, dst_path)
-            metadata.append(file_info.serialize(path))
+            metadata.update(file_info.serialize(path))
 
         with open(os.path.join(tmp_dir_name, INDEX_JSON_FILENAME), 'wt',
                   encoding='utf-8') as fp:
@@ -270,7 +273,7 @@ class FileServerProxy(SecuredResource):
 
     def put(self, path=None):
         args = rest_utils.get_args_and_verify_arguments([
-            Argument('extract', type=bool, required=False)
+            Argument('extract', type=bool, default=False, required=False)
         ])
         extract = args.get('extract', False)
 

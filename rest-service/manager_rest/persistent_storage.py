@@ -51,8 +51,7 @@ class FileInfo:
         else:
             file_path = self.filepath
 
-        return {"filepath": file_path,
-                "mtime": self.mtime}
+        return {file_path: self.mtime}
 
 
 class FileStorageHandler:
