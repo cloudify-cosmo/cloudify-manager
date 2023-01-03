@@ -34,16 +34,13 @@ location /composer {
   proxy_set_header   Host             $http_host;
   proxy_hide_header X-Powered-By;
 
-  location ~* ^/composer/static/(.*)$ {
-    gzip_static on;
-    proxy_pass http://cloudify-composer/static/$1;
-  }
+  proxy_pass http://cloudify-composer/;
+  proxy_intercept_errors on;
+  error_page 404 = /composer;
 
-  location ~* \.(?:css|js|map|jpe?g|gif|png)$ {
-    proxy_pass         http://cloudify-composer-backend;
-  }
+  gzip_static on;
 
-  location /composer {
+  location /composer/backend/ {
     proxy_pass         http://cloudify-composer-backend;
     add_header X-Frame-Options SAMEORIGIN always;
     add_header X-Xss-Protection "1; mode=block" always;
