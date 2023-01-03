@@ -186,7 +186,7 @@ class SnapshotRestore(object):
 
         for resource in [
             'sites', 'secrets', 'plugins', 'blueprints_filters',
-            'deployments_filter', 'blueprints',
+            'deployments_filters', 'blueprints',
             # Everything after this point requires blueprints and plugins
             'deployments', 'deployment_groups', 'executions',
             'execution_groups', 'events', 'execution_schedules',
