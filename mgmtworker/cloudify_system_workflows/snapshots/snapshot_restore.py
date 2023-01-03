@@ -167,6 +167,7 @@ class SnapshotRestore(object):
         self._post_restore_commands = []
 
         self._tempdir = None
+        self._metadata = None
         self._snapshot_version = None
         self._client = get_rest_client()
         self._manager_version = utils.get_manager_version(self._client)
@@ -175,143 +176,158 @@ class SnapshotRestore(object):
             self._config.snapshot_restore_threads)
         self._new_tenants = []
         self._tenant_clients = {}
+        self._snapshot_files = {}
 
-    def _new_restore(self):
-        self._new_restore_parse_and_restore('tenants')
-        self._new_restore_parse_and_restore('permissions')
-        self._new_restore_parse_and_restore('user_groups')
-        self._new_restore_parse_and_restore('users')
+    def _new_restore(self, zipfile):
+        self._new_restore_parse_and_restore('tenants', zipfile)
+        self._new_restore_parse_and_restore('permissions', zipfile)
+        self._new_restore_parse_and_restore('user_groups', zipfile)
+        self._new_restore_parse_and_restore('users', zipfile)
 
         for resource in [
             'sites', 'secrets', 'plugins', 'blueprints_filters',
-            'deployments_filter', 'blueprints',
+            'deployments_filters', 'blueprints',
             # Everything after this point requires blueprints and plugins
             'deployments', 'deployment_groups', 'executions',
             'execution_groups', 'events', 'execution_schedules',
             'deployment_updates', 'plugins_update',
         ]:
             for tenant in self._new_tenants:
-                self._new_restore_parse_and_restore(resource, tenant=tenant)
+                self._new_restore_parse_and_restore(resource, zipfile,
+                                                    tenant=tenant)
 
-    def _new_restore_parse_and_restore(self, entity_type, tenant=None):
+    def _new_restore_parse_and_restore(self, entity_type, zipfile,
+                                       tenant=None):
         if entity_type == 'events':
-            self._new_restore_events(tenant)
+            self._new_restore_events(tenant, zipfile)
             return
 
         if tenant:
-            ctx.logger.info('Restoring %s for %s', entity_type, tenant)
-            component_base = os.path.join(self._tempdir, 'tenants', tenant,
-                                          entity_type + '{idx}.json')
+            dump_files = self._snapshot_files['tenants'].get(tenant, {}).get(
+                entity_type)
+            if dump_files:
+                ctx.logger.info('Restoring %s for %s', entity_type, tenant)
+            else:
+                ctx.logger.debug('No %s found for %s', entity_type, tenant)
+                return
         else:
-            ctx.logger.info('Restoring %s', entity_type)
-            component_base = os.path.join(self._tempdir, 'mgmt',
-                                          entity_type + '{idx}.json')
+            dump_files = self._snapshot_files['mgmt'].get(entity_type)
+            if dump_files:
+                ctx.logger.info('Restoring %s', entity_type)
+            else:
+                ctx.logger.debug('No %s found"', entity_type)
+                return
 
-        current_idx = 0
-        while True:
-            current_file = component_base.format(idx=current_idx)
+        for filename in dump_files:
             ctx.logger.debug('Checking for data to restore in %s',
-                             current_file)
-            if not os.path.exists(current_file):
-                ctx.logger.debug('No more %s to restore%s',
-                                 entity_type,
-                                 ' for {}'.format(tenant) if tenant else '')
-                break
+                             filename)
 
-            with open(current_file) as data_handle:
+            extract_path = os.path.join(self._tempdir, filename)
+
+            zipfile.extract(filename, self._tempdir)
+
+            with open(extract_path) as data_handle:
                 data = json.load(data_handle)
+            os.unlink(extract_path)
 
-            self._new_restore_entities(entity_type, data, current_idx, tenant)
+            self._new_restore_entities(entity_type, data, zipfile, tenant)
 
-            current_idx += 1
-
-    def _new_restore_events(self, tenant):
+    def _new_restore_events(self, tenant, zipfile):
         client = self._tenant_clients.setdefault(
             tenant, get_rest_client(tenant=tenant))
 
         for event_type in ['executions', 'execution_groups']:
-            subdir_base = os.path.join(
-                self._tempdir, 'tenants', tenant,
-                'events', event_type, 'events' + '{idx}')
+            dump_files = self._snapshot_files['tenants'].get(tenant, {}).get(
+                event_type + '_events')
+            if dump_files:
+                ctx.logger.info('Restoring %s events for %s', event_type,
+                                tenant)
+            else:
+                ctx.logger.debug('No %s events for %s', event_type, tenant)
+                return
 
-            ctx.logger.info('Restoring %s events for %s', event_type, tenant)
+            for filename in dump_files:
+                events_path = os.path.join(self._tempdir, filename)
+                events_file = os.path.split(events_path)[1]
+                related_id = events_file[:-len('.json')]
+                ctx.logger.debug('Restoring logs and events for %s in %s',
+                                 related_id, tenant)
 
-            current_idx = 0
-            while True:
-                current_dir = subdir_base.format(idx=current_idx)
-                if not os.path.exists(current_dir):
-                    break
+                zipfile.extract(filename, self._tempdir)
+                with open(events_path) as events_handle:
+                    data = json.load(events_handle)
+                os.unlink(events_path)
 
-                for events_file in os.listdir(current_dir):
-                    related_id = events_file[:-len('.json')]
-                    events_path = os.path.join(current_dir, events_file)
-                    ctx.logger.debug('Restoring logs and events for %s in %s',
-                                     related_id, tenant)
+                events = {}
+                logs = {}
+                logger_names = set()
+                for item in data:
+                    manager = item.pop('manager_name')
+                    agent = item.pop('agent_name')
+                    logger_name = (manager, agent)
+                    logger_names.add(logger_name)
 
-                    with open(events_path) as events_handle:
-                        data = json.load(events_handle)
-
-                    events = {}
-                    logs = {}
-                    logger_names = set()
-                    for item in data:
-                        manager = item.pop('manager_name')
-                        agent = item.pop('agent_name')
-                        logger_name = (manager, agent)
-                        logger_names.add(logger_name)
-
-                        if item['type'] == 'cloudify_event':
-                            item['context'] = {
-                                'source_id': item.pop('source_id'),
-                                'target_id': item.pop('target_id'),
-                                # This looks wrong, but it's a legacy thing
-                                'node_id': item.pop('node_instance_id'),
-                            }
-                            item['message'] = {
-                                'text': item.pop('message'),
-                            }
-                            events.setdefault(logger_name, []).append(item)
-                        elif item['type'] == 'cloudify_log':
-                            item['context'] = {
-                                'operation': item.pop('operation'),
-                                'source_id': item.pop('source_id'),
-                                'target_id': item.pop('target_id'),
-                                # This looks wrong, but it's a legacy thing
-                                'node_id': item.pop('node_instance_id'),
-                            }
-                            item['message'] = {
-                                'text': item.pop('message'),
-                            }
-                            logs.setdefault(logger_name, []).append(item)
-                        else:
-                            ctx.logger.warn(
-                                'Log/event parsing failed on %s',
-                                item,
-                            )
-
-                    for logger_name in logger_names:
-                        manager, agent = logger_name
-                        kwargs = {
-                            'events': events.pop(logger_name, []),
-                            'logs': logs.pop(logger_name, []),
-                            'manager_name': manager,
-                            'agent_name': agent,
+                    if item['type'] == 'cloudify_event':
+                        item['context'] = {
+                            'source_id': item.pop('source_id'),
+                            'target_id': item.pop('target_id'),
+                            # This looks wrong, but it's a legacy thing
+                            'node_id': item.pop('node_instance_id'),
                         }
-                        if event_type == 'executions':
-                            kwargs['execution_id'] = related_id
-                        elif event_type == 'execution_groups':
-                            kwargs['execution_group_id'] = related_id
+                        item['message'] = {
+                            'text': item.pop('message'),
+                        }
+                        events.setdefault(logger_name, []).append(item)
+                    elif item['type'] == 'cloudify_log':
+                        item['context'] = {
+                            'operation': item.pop('operation'),
+                            'source_id': item.pop('source_id'),
+                            'target_id': item.pop('target_id'),
+                            # This looks wrong, but it's a legacy thing
+                            'node_id': item.pop('node_instance_id'),
+                        }
+                        item['message'] = {
+                            'text': item.pop('message'),
+                        }
+                        logs.setdefault(logger_name, []).append(item)
+                    else:
+                        ctx.logger.warn(
+                            'Log/event parsing failed on %s',
+                            item,
+                        )
 
-                        client.events.create(**kwargs)
-                current_idx += 1
+                for logger_name in logger_names:
+                    manager, agent = logger_name
+                    kwargs = {
+                        'events': events.pop(logger_name, []),
+                        'logs': logs.pop(logger_name, []),
+                        'manager_name': manager,
+                        'agent_name': agent,
+                    }
+                    if event_type == 'executions':
+                        kwargs['execution_id'] = related_id
+                    elif event_type == 'execution_groups':
+                        kwargs['execution_group_id'] = related_id
 
-    def _new_restore_sub_entities(self, sub_entity_type, entity_id, tenant):
+                    client.events.create(**kwargs)
+
+    def _new_restore_sub_entities(self, sub_entity_type, entity_id, zipfile,
+                                  tenant):
         client = self._tenant_clients.setdefault(
             tenant, get_rest_client(tenant=tenant))
         entity_client = getattr(client, sub_entity_type)
 
-        subdir_base = os.path.join(self._tempdir, 'tenants', tenant,
-                                   sub_entity_type + '{idx}')
+        dump_files = self._snapshot_files['tenants'].get(tenant, {}).get(
+            sub_entity_type, [])
+        target_file = None
+        for dump_file in dump_files:
+            if dump_file.endswith('/' + entity_id + '.json'):
+                target_file = dump_file
+                break
+        if not target_file:
+            ctx.logger.debug('No %s found for %s in %s', sub_entity_type,
+                             entity_id, tenant)
+            return
 
         ctx.logger.debug('Searching for %s for %s',
                          sub_entity_type, entity_id)
@@ -323,49 +339,35 @@ class SnapshotRestore(object):
         elif sub_entity_type == 'tasks_graphs':
             kwargs['execution_id'] = entity_id
 
-        current_idx = 0
-        while True:
-            current_dir = subdir_base.format(idx=current_idx)
+        extract_path = os.path.join(self._tempdir, target_file)
 
-            if not os.path.exists(current_dir):
-                log = ctx.logger.debug
-                if sub_entity_type == 'agents':
-                    log = ctx.logger.debug
-                log('Could not find %s for %s', sub_entity_type, entity_id)
-                return
+        ctx.logger.debug('Restoring %s for %s',
+                         sub_entity_type, entity_id)
+        zipfile.extract(target_file, self._tempdir)
+        with open(extract_path) as sub_entity_handle:
+            kwargs[sub_entity_type] = json.load(sub_entity_handle)
+        os.unlink(extract_path)
 
-            target_file = os.path.join(current_dir, entity_id + '.json')
+        if sub_entity_type == 'agents':
+            for agent in kwargs[sub_entity_type]:
+                agent['name'] = agent.pop('id')
+                entity_client.create(create_rabbitmq_user=True,
+                                     **agent)
+        elif sub_entity_type == 'tasks_graphs':
+            for graph in kwargs[sub_entity_type]:
+                graph['graph_id'] = graph.pop('id')
+                entity_client.create(**graph)
+        else:
+            if sub_entity_type == 'node_instances':
+                for n_i in kwargs[sub_entity_type]:
+                    n_i['creator'] = n_i.pop('created_by')
+                    self._inject_broker_config(
+                        n_i['runtime_properties'])
+            elif sub_entity_type == 'nodes':
+                for node in kwargs[sub_entity_type]:
+                    node['creator'] = node.pop('created_by')
 
-            ctx.logger.debug('Restoring %s for %s',
-                             sub_entity_type, entity_id)
-            if os.path.exists(target_file):
-                with open(target_file) as sub_entity_handle:
-                    kwargs[sub_entity_type] = json.load(sub_entity_handle)
-
-                if sub_entity_type == 'agents':
-                    for agent in kwargs[sub_entity_type]:
-                        agent['name'] = agent.pop('id')
-                        entity_client.create(create_rabbitmq_user=True,
-                                             **agent)
-                elif sub_entity_type == 'tasks_graphs':
-                    for graph in kwargs[sub_entity_type]:
-                        graph['graph_id'] = graph.pop('id')
-                        entity_client.create(**graph)
-                else:
-                    if sub_entity_type == 'node_instances':
-                        for n_i in kwargs[sub_entity_type]:
-                            n_i['creator'] = n_i.pop('created_by')
-                            self._inject_broker_config(
-                                n_i['runtime_properties'])
-                    elif sub_entity_type == 'nodes':
-                        for node in kwargs[sub_entity_type]:
-                            node['creator'] = node.pop('created_by')
-
-                    entity_client.create_many(**kwargs)
-
-                return
-
-            current_idx += 1
+            entity_client.create_many(**kwargs)
 
     def _inject_broker_config(self, runtime_props):
         if (
@@ -381,13 +383,29 @@ class SnapshotRestore(object):
            'broker_ssl_enabled': True,
         }
 
-    def _new_restore_entities(self, entity_type, data, idx, tenant=None):
+    def _get_associated_archive(self, tenant, entity_type, entity_id,
+                                zipfile):
+        dump_files = self._snapshot_files['tenants'].get(tenant, {}).get(
+            entity_type + '_archives', [])
+        suffix = {
+            'plugins': '.zip',
+            'blueprints': '.zip',
+            'deployments': '.b64zip',
+        }[entity_type]
+
+        for dump_file in dump_files:
+            if dump_file.endswith('/' + entity_id + suffix):
+                extract_path = os.path.join(self._tempdir, dump_file)
+                zipfile.extract(dump_file, self._tempdir)
+                return extract_path
+
+    def _new_restore_entities(self, entity_type, data, zipfile, tenant=None):
         if tenant:
             client = self._tenant_clients.setdefault(
                 tenant, get_rest_client(tenant=tenant))
         else:
             client = self._client
-        ctx.logger.debug('Restoring %s from index %s', entity_type, idx)
+        ctx.logger.info('Restoring %s', entity_type)
         entity_client = getattr(client, entity_type)
         restore_func = None
 
@@ -430,9 +448,8 @@ class SnapshotRestore(object):
                 entity['is_prehashed'] = True
                 tenant_roles = entity.pop('tenant_roles')
             elif entity_type == 'plugins':
-                entity['plugin_path'] = os.path.join(
-                    self._tempdir, 'tenants', tenant,
-                    f'plugins{idx}', entity['id'] + '.zip')
+                entity['plugin_path'] = self._get_associated_archive(
+                    tenant, entity_type, entity['id'], zipfile)
                 entity['_plugin_id'] = entity.pop('id')
                 entity['_uploaded_at'] = entity.pop('uploaded_at')
                 entity['plugin_title'] = entity.pop('title')
@@ -443,9 +460,8 @@ class SnapshotRestore(object):
                 entity['filter_rules'] = entity.pop('value')
                 restore_func = entity_client.create
             elif entity_type == 'blueprints':
-                entity['archive_location'] = os.path.join(
-                    self._tempdir, 'tenants', tenant,
-                    f'blueprints{idx}', entity['id'] + '.zip')
+                entity['archive_location'] = self._get_associated_archive(
+                    tenant, entity_type, entity['id'], zipfile)
                 entity['skip_execution'] = True
                 entity['blueprint_id'] = entity.pop('id')
                 entity['blueprint_filename'] = entity.pop('main_file_name')
@@ -460,12 +476,12 @@ class SnapshotRestore(object):
                         extra_details[detail_name] = detail
                 restore_func = entity_client.publish_archive
             elif entity_type == 'deployments':
-                workdir_location = os.path.join(
-                    self._tempdir, 'tenants', tenant,
-                    f'deployments{idx}', entity['id'] + '.b64zip')
-                if os.path.exists(workdir_location):
+                workdir_location = self._get_associated_archive(
+                    tenant, entity_type, entity['id'], zipfile)
+                if workdir_location and os.path.exists(workdir_location):
                     with open(workdir_location) as workdir_handle:
                         entity['_workdir_zip'] = workdir_handle.read()
+                    os.unlink(workdir_location)
                 else:
                     entity['_workdir_zip'] = EMPTY_B64_ZIP
                 entity['deployment_id'] = entity.pop('id')
@@ -526,15 +542,60 @@ class SnapshotRestore(object):
                 if extra_details:
                     client.blueprints.update(entity['blueprint_id'],
                                              extra_details)
+                os.unlink(entity['archive_location'])
             elif entity_type == 'deployments':
                 for sub_entity_type in ['nodes', 'node_instances', 'agents']:
                     self._new_restore_sub_entities(sub_entity_type,
                                                    entity['deployment_id'],
+                                                   zipfile,
                                                    tenant)
             elif entity_type == 'executions':
                 self._new_restore_sub_entities('tasks_graphs',
                                                entity['execution_id'],
+                                               zipfile,
                                                tenant)
+            elif entity_type == 'plugins':
+                os.unlink(entity['plugin_path'])
+
+    def scan_snapshot(self, zipfile):
+        tree = {
+            'metadata': None,
+            'mgmt': {},
+            'tenants': {},
+        }
+        for entry in zipfile.filelist:
+            if entry.is_dir():
+                continue
+            filename = entry.filename
+            if filename == 'metadata.json':
+                tree['metadata'] = filename
+            elif filename.count('/') >= 2:
+                parts = filename.split('/')
+                if parts[0] == 'mgmt':
+                    entity_type = parts[1]
+                    tree['mgmt'].setdefault(entity_type, []).append(filename)
+                elif parts[0] == 'tenants':
+                    tenant = parts[1]
+                    entity_type = parts[2]
+                    tree['tenants'].setdefault(tenant, {}).setdefault(
+                        entity_type, []).append(filename)
+                else:
+                    # This is probably an old snapshot
+                    ctx.logger.debug('Unexpected file in snapshot: %s',
+                                     filename)
+            else:
+                # This is probably an old snapshot
+                ctx.logger.debug('Unexpected file in snapshot: %s', filename)
+        self._snapshot_files = tree
+
+        metadata_path = os.path.join(self._tempdir, METADATA_FILENAME)
+        if not tree['metadata']:
+            raise NonRecoverableError('No metadata found in snapshot.')
+        zipfile.extract(tree['metadata'], self._tempdir)
+        with open(metadata_path, 'r') as metadata_handle:
+            self._metadata = json.load(metadata_handle)
+        self._snapshot_version = ManagerVersion(self._metadata[M_VERSION])
+        os.unlink(metadata_path)
 
     def restore(self):
         self._mark_manager_restoring()
@@ -544,26 +605,31 @@ class SnapshotRestore(object):
                          'snapshot_path: {0}'.format(snapshot_path))
         new_snapshot = False
         try:
-            metadata = self._extract_snapshot_archive(snapshot_path)
-            version = ManagerVersion(metadata[M_VERSION])
+            with ZipFile(snapshot_path, 'r') as zipf:
+                self.scan_snapshot(zipf)
 
-            if (
-                version.major >= 7
-                or version.major == 6 and version.minor > 4
-            ):
-                new_snapshot = True
-                self._new_restore()
-                return
+                if (
+                    self._snapshot_version.major >= 7
+                    or (
+                        self._snapshot_version.major == 6
+                        and self._snapshot_version.minor > 4
+                    )
+                ):
+                    new_snapshot = True
+                    self._new_restore(zipf)
+                    return
 
-            self._snapshot_version = version
-            schema_revision = metadata.get(
+                zipf.extractall(self._tempdir)
+
+            schema_revision = self._metadata.get(
                 M_SCHEMA_REVISION,
                 self.SCHEMA_REVISION_4_0,
             )
-            stage_revision = metadata.get(M_STAGE_SCHEMA_REVISION) or ''
+            stage_revision = self._metadata.get(M_STAGE_SCHEMA_REVISION) or ''
             if stage_revision and self._premium_enabled:
                 stage_revision = re.sub(r".*\n", '', stage_revision)
-            composer_revision = metadata.get(M_COMPOSER_SCHEMA_REVISION) or ''
+            composer_revision = self._metadata.get(
+                M_COMPOSER_SCHEMA_REVISION) or ''
             if composer_revision == '20170601133017-4_1-init.js':
                 # Old composer metadata always incorrectly put the first
                 # migration not the last one. As we don't support anything
@@ -1088,19 +1154,6 @@ class SnapshotRestore(object):
             self._client.blueprints.list(_all_tenants=True,
                                          _include=['id'],
                                          _get_all_results=True).items
-
-    def _extract_snapshot_archive(self, snapshot_path):
-        """Extract the snapshot archive to a temp folder
-
-        :param snapshot_path: Path to the snapshot archive
-        :return: A dict representing the metadata json file
-        """
-        ctx.logger.debug('Extracting snapshot: {0}'.format(snapshot_path))
-        with ZipFile(snapshot_path, 'r') as zipf:
-            zipf.extractall(self._tempdir)
-        with open(os.path.join(self._tempdir, METADATA_FILENAME), 'r') as f:
-            metadata = json.load(f)
-        return metadata
 
     def _get_snapshot_path(self):
         """Calculate the snapshot path from the config + snapshot ID"""
