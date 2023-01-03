@@ -1747,7 +1747,7 @@ class ResourceManager(object):
         missing_parents = set(parent_ids) - {d.id for d in parents}
         if missing_parents:
             raise manager_exceptions.DeploymentParentNotFound(
-                f'Deployment(s) referenced by `csys-obj-parent` not found: '
+                f'Environment referenced by `csys-obj-parent` not found: '
                 f'{ ",".join(missing_parents) }'
             )
         all_ancestors = models.DeploymentLabelsDependencies\
