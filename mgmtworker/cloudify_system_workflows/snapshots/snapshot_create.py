@@ -298,8 +298,8 @@ class SnapshotCreate(object):
                         zip_file.write(yaml_dest, 'plugin.yaml')
                         zip_file.write(entity_dest,
                                        os.path.basename(entity_dest))
-                    os.remove(yaml_dest)
-                    os.remove(entity_dest)
+                    os.unlink(yaml_dest)
+                    os.unlink(entity_dest)
                     entity_dest = zip_dest
             self._zip_handle.write(
                 entity_dest, os.path.relpath(entity_dest, self._tempdir))
