@@ -14,10 +14,10 @@
                 "type": "NOPLocalWorkflowTask",
                 "parameters": {
                     "on_success": {
-                        "path": "cloudify.plugins.workflows.check_drift_on_success"
+                        "path": "whatever"
                     },
                     "on_failure": {
-                        "path": "cloudify.plugins.workflows.check_drift_on_failure_ignore_failure"
+                        "path": "someother"
                     },
                     "retried_task": null,
                     "current_retries": 0,

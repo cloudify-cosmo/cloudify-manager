@@ -23,14 +23,10 @@
                     "send_task_events": false,
                     "retry_interval": 30,
                     "total_retries": 0,
-                    "info": "Validating node instance before creation: nothing to do",
+                    "info": "Validating stuff",
                     "error": null,
-                    "containing_subgraph": "57d3eca2-73ab-4d34-afe1-47d3b929118f",
-                    "task_kwargs": {
-                        "node_instance_id": "cloud_resource_4ch148",
-                        "event": "Validating node instance before creation: nothing to do",
-                        "additional_context": null
-                    }
+                    "containing_subgraph": "somesubgraph",
+                    "task_kwargs": {}
                 },
                 "manager_name": "i-033a355130693f2d0",
                 "agent_name": null
