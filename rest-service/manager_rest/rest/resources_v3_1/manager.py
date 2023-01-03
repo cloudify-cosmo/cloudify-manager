@@ -16,17 +16,20 @@
 import os
 
 from flask import request
+from flask_restful import Resource
 from flask_restful.reqparse import Argument
 
 from cloudify._compat import text_type
 from cloudify.constants import MANAGER_RESOURCES_PATH
+from manager_rest import config
+from manager_rest.manager_exceptions import NoAuthProvided
 from manager_rest.security import SecuredResource, premium_only
+from manager_rest.security.user_handler import get_token_status
 from manager_rest.rest import rest_utils
 from manager_rest.storage import get_storage_manager, models
 from manager_rest.security.authorization import (
     authorize,
     is_user_action_allowed,
-    check_user_action_allowed,
 )
 from manager_rest.rest.rest_decorators import (
     marshal_with,
@@ -180,13 +183,33 @@ class FileServerIndex(SecuredResource):
         return {'files': files_list}, 200
 
 
-class MonitoringAuth(SecuredResource):
+class MonitoringAuth(Resource):
     """Auth endpoint for monitoring.
 
     Users who access /monitoring need to first pass through auth_request
     proxying to here. If this returns 200, the user has full access
     to local prometheus.
+
+    Note: This is a subclass of Resource, not SecuredResource, because this
+    does authentication in a special way.
     """
     def get(self, **_):
-        check_user_action_allowed("monitoring")
-        return "", 200
+        # this request checks for stage's auth cookie and authenticates that
+        # way, so that users can access monitoring once they've logged in
+        # to stage.
+        # Only this endpoint allows cookie login, because other endpoints
+        # don't have any CSRF protection, and this one is read-only anyway.
+        if token := request.cookies.get('XSRF-TOKEN'):
+            user = get_token_status(token)
+            monitoring_allowed_roles = set(
+                config.instance.authorization_permissions
+                .get('monitoring', [])
+            )
+            if (
+                user.is_bootstrap_admin
+                # only check system roles, and not tenant roles, because
+                # monitoring is not a tenant-specific action
+                or set(user.system_roles) & monitoring_allowed_roles
+            ):
+                return "", 200
+        raise NoAuthProvided()
