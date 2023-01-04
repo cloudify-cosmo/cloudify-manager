@@ -13,7 +13,10 @@ from manager_rest.rest import (
 )
 from manager_rest.rest.responses_v2 import ListResponse
 from manager_rest.security import SecuredResource
-from manager_rest.security.authorization import authorize
+from manager_rest.security.authorization import (
+    authorize,
+    check_user_action_allowed,
+)
 from manager_rest.storage import (
     get_storage_manager,
     models,
@@ -96,6 +99,11 @@ class Plugins(SecuredResource):
             Argument('created_by'),
         ])
 
+        created_by = args.created_by
+        if created_by:
+            check_user_action_allowed('set_owner', None, True)
+            created_by = rest_utils.valid_user(created_by)
+
         resource_manager.assert_no_snapshot_creation_running_or_queued()
         plugins = []
         wagon_infos = upload_manager.upload_plugin(**kwargs)
@@ -128,6 +136,7 @@ class Plugins(SecuredResource):
                 blueprint_labels=wagon_info.get('blueprint_labels'),
                 labels=wagon_info.get('labels'),
                 resource_tags=wagon_info.get('resource_tags'),
+                creator=created_by,
             )
             sm.put(plugin)
             plugins.append(plugin)
