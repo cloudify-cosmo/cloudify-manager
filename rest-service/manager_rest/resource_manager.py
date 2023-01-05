@@ -1325,7 +1325,7 @@ class ResourceManager(object):
                     component_dep_id = None
                 if component_dep_id:
                     components_deployment_ids.append(component_dep_id)
-        return components_deployment_ids
+        return set(components_deployment_ids)
 
     def _retrieve_all_component_executions(self, components_deployment_ids):
         executions = []
