@@ -47,7 +47,6 @@ MOCK_CLIENT_RESPONSES = {
         'plugins': {
             'list': [{'id': 'plugin_t1'}],
             'download': 'abc123',
-            'download_yaml': 'def456',
         },
         'secrets': {
             'export': [{'id': 'secrets_list_t1'}],
@@ -121,7 +120,6 @@ MOCK_CLIENT_RESPONSES = {
         'plugins': {
             'list': [{'id': 'plugin_t2'}],
             'download': 'abc123',
-            'download_yaml': 'def456',
         },
         'secrets': {
             'export': [{'id': 'secrets_list_t2'}],
@@ -406,18 +404,10 @@ def _assert_snapshot_status_update(snap_id, success, client):
 def _check_zip_and_delete(paths, unlink, zipfile, base_dir, zip_idx=0):
     zip_writer = zipfile['zipfiles'][zip_idx].__enter__.return_value.write
 
-    if len(paths) == 2 and paths[0].endswith('.wgn'):
-        # This is a plugin, the yaml file naming doesn't behave the way the
-        # rest of the zip calls do
-        expected_zip_calls = [
-            mock.call(paths[0], paths[0][len(base_dir) + 1:]),
-            mock.call(paths[1], 'plugin.yaml'),
-        ]
-    else:
-        expected_zip_calls = [
-            mock.call(path, path[len(base_dir) + 1:])
-            for path in paths
-        ]
+    expected_zip_calls = [
+        mock.call(path, path[len(base_dir) + 1:])
+        for path in paths
+    ]
 
     zip_writer.assert_has_calls(expected_zip_calls, any_order=True)
     unlink.assert_has_calls([
@@ -513,25 +503,9 @@ def _assert_tenants(tempdir, clients, unlink, zipfile):
                     os.path.join(sub_dir, entity['id'] + '.zip')
                     for entity in data
                 ]
-                for plugin_file in plugin_files:
-                    expected_call = mock.call(
-                        plugin_file, 'w', compression=8, allowZip64=True)
-                    # Each of the plugin bundles should have been created
-                    position = zipfile['base'].call_args_list.index(
-                        expected_call)
-
-                    plugin_base = os.path.splitext(plugin_file)[0]
-                    base_dir = os.path.dirname(plugin_base)
-                    plugin_files = [
-                        plugin_base + '.wgn',
-                        plugin_base + '.yaml',
-                    ]
-
-                    _check_zip_and_delete(plugin_files, unlink, zipfile,
-                                          base_dir, zip_idx=position)
-                    # Make sure we add the plugin zip to the snapshot
-                    _check_zip_and_delete([plugin_file], unlink, zipfile,
-                                          tempdir)
+                # Make sure we add the plugin zip to the snapshot
+                _check_zip_and_delete(plugin_files, unlink, zipfile,
+                                      tempdir)
             elif r_type == 'blueprints':
                 stored_blueprints = set(os.listdir(sub_dir))
                 expected_blueprints = {blueprint['id'] + '.zip'
@@ -674,20 +648,14 @@ def _check_tenant_calls(tenant, tenant_mock_data, client, tenant_dir):
     for entity_type, commands in tenant_mock_data.items():
         mock_entity_base = getattr(client, entity_type)
         for command in commands:
-            if 'download' in command:
-                if command == 'download':
-                    if entity_type == 'plugins':
-                        extension = 'wgn'
-                    else:
-                        extension = 'zip'
-                    dest = os.path.join(
-                        tenant_dir, f'{entity_type}_archives',
-                        f'{{}}.{extension}')
-                elif command == 'download_yaml':
-                    dest = os.path.join(tenant_dir,
-                                        f'{entity_type}_archives', '{}.yaml')
+            if command == 'download':
+                dest = os.path.join(
+                    tenant_dir, f'{entity_type}_archives', '{}.zip')
+                kwargs = {}
+                if entity_type == 'plugins':
+                    kwargs = {'full_archive': True}
                 expected_calls = {
-                    _Call((entity['id'], dest.format(entity['id'])), {},
+                    _Call((entity['id'], dest.format(entity['id'])), kwargs,
                           f'{entity_type}.{command}')
                     for entity in tenant_mock_data[entity_type]['list']
                 }

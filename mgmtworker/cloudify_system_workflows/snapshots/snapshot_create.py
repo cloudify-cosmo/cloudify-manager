@@ -266,7 +266,7 @@ class SnapshotCreate(object):
                                 dump_type + '_archives')
         os.makedirs(dest_dir, exist_ok=True)
         suffix = {
-            'plugins': '.wgn',
+            'plugins': '.zip',
             'blueprints': '.zip',
             'deployments': '.b64zip',
         }[dump_type]
@@ -283,24 +283,11 @@ class SnapshotCreate(object):
                 with open(entity_dest, 'w') as dump_handle:
                     dump_handle.write(b64_zip)
             else:
-                getattr(client, dump_type).download(entity_id, entity_dest)
                 if dump_type == 'plugins':
-                    yaml_dest = os.path.join(dest_dir, entity_id + '.yaml')
-                    client.plugins.download_yaml(entity_id, yaml_dest)
-                    # We need the wagon and yaml as a zip when restoring
-                    zip_dest = os.path.join(dest_dir, entity_id + '.zip')
-                    with zipfile.ZipFile(
-                        zip_dest,
-                        'w',
-                        compression=zipfile.ZIP_DEFLATED,
-                        allowZip64=True,
-                    ) as zip_file:
-                        zip_file.write(yaml_dest, 'plugin.yaml')
-                        zip_file.write(entity_dest,
-                                       os.path.basename(entity_dest))
-                    os.unlink(yaml_dest)
-                    os.unlink(entity_dest)
-                    entity_dest = zip_dest
+                    getattr(client, dump_type).download(entity_id, entity_dest,
+                                                        full_archive=True)
+                else:
+                    getattr(client, dump_type).download(entity_id, entity_dest)
             self._zip_handle.write(
                 entity_dest, os.path.relpath(entity_dest, self._tempdir))
             os.unlink(entity_dest)

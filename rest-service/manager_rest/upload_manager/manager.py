@@ -347,10 +347,9 @@ def _do_upload_plugin(data_id, plugin_dir):
         )
         wagons = files_in_folder(plugin_dir, '*.wgn')
         yamls = files_in_folder(plugin_dir, '*.yaml')
-        if len(wagons) != 1 or len(yamls) < 1:
+        if len(wagons) != 1:
             raise manager_exceptions.InvalidPluginError(
-                "Archive must include one wgn file "
-                "and at least one yaml file"
+                "Archive must include one wgn file"
             )
         plugins = [(data_id, wagons[0], yamls)]
     else:
