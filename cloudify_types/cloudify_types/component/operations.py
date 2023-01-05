@@ -358,15 +358,17 @@ def _diff_deployment(deployment_spec, deployment):
         # not drifted.
         deployment_id, _, _suffix = deployment_id.rpartition('-')
 
-    if spec_deployment_id := deployment_spec.get('id'):
+    spec_deployment_id = deployment_spec.get('id')
+    if spec_deployment_id:
         if deployment_id != spec_deployment_id:
             deployment_drift.append('id')
 
-    if spec_labels := {
+    spec_labels = {
         list(label.items())[0]
         for label in deployment_spec.get('labels', [])
         if label
-    }:
+    }
+    if spec_labels:
         deployment_labels = deployment.labels or []
         current_labels = {
             (label['key'], label['value'])
@@ -376,7 +378,8 @@ def _diff_deployment(deployment_spec, deployment):
         if current_labels != spec_labels:
             deployment_drift.append('labels')
 
-    if spec_inputs := deployment_spec.get('inputs'):
+    spec_inputs = deployment_spec.get('inputs')
+    if spec_inputs:
         if spec_inputs != deployment.inputs:
             deployment_drift.append('inputs')
 
@@ -395,15 +398,17 @@ def _diff_blueprint(blueprint_spec, blueprint):
     if not blueprint_spec:
         return blueprint_spec
 
-    if spec_blueprint_id := blueprint_spec.get('id'):
+    spec_blueprint_id = blueprint_spec.get('id')
+    if spec_blueprint_id:
         if spec_blueprint_id != blueprint.id:
             blueprint_drift.append('id')
 
-    if spec_labels := {
+    spec_labels = {
         list(label.items())[0]
         for label in blueprint_spec.get('labels', [])
         if label
-    }:
+    }
+    if spec_labels:
         blueprint_labels = blueprint.labels or []
         current_labels = {
             (label['key'], label['value'])
@@ -450,15 +455,18 @@ def check_drift(timeout=EXECUTIONS_TIMEOUT, **kwargs):
     if modified_keys:
         drift['capabilities'] = modified_keys
 
-    if deployment_drift := _diff_deployment(
+    deployment_drift = _diff_deployment(
         node_properties.get('deployment', {}),
         deployment,
-    ):
+    )
+    if deployment_drift:
         drift['deployment'] = deployment_drift
-    if blueprint_drift := _diff_blueprint(
+
+    blueprint_drift = _diff_blueprint(
         node_properties.get('blueprint', {}),
         blueprint,
-    ):
+    )
+    if blueprint_drift:
         drift['blueprint'] = blueprint_drift
 
     return drift or None

@@ -199,7 +199,8 @@ class MonitoringAuth(Resource):
         # to stage.
         # Only this endpoint allows cookie login, because other endpoints
         # don't have any CSRF protection, and this one is read-only anyway.
-        if token := request.cookies.get('XSRF-TOKEN'):
+        token = request.cookies.get('XSRF-TOKEN')
+        if token:
             user = get_token_status(token)
             monitoring_allowed_roles = set(
                 config.instance.authorization_permissions

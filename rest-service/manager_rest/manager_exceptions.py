@@ -13,15 +13,13 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import typing
-
 from flask import jsonify
 
 INTERNAL_SERVER_ERROR_CODE = 'internal_server_error'
 
 
 class ManagerException(Exception):
-    additional_headers: typing.ClassVar[dict[str, str]] = {}
+    additional_headers = {}
     error_code = INTERNAL_SERVER_ERROR_CODE
     status_code = 500
 
