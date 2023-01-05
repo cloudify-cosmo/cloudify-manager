@@ -909,6 +909,44 @@ class SearchesTestCase(base_test.BaseServerTestCase):
         )
         assert [sg.name for sg in search] == []
 
+    def test_list_workflows(self):
+        bp = models.Blueprint(
+            id='bp',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        for ix, (label_value, workflows) in enumerate([
+            ('val1', None),
+            ('val1', {}),
+            ('val1', {'wf1': {}}),
+            ('val1', {'wf1': {}, 'wf2': {}, 'wf3': {}}),
+            ('val2', {'wf4': {}}),
+        ]):
+            self._create_deployment(
+                f'd{ix}',
+                bp=bp,
+                workflows=workflows,
+                labels=[
+                    models.DeploymentLabel(
+                        key='label',
+                        value=label_value,
+                        creator=self.user,
+                    )
+                ],
+            )
+
+        workflows = self.client.workflows.list(
+            filter_rules=[
+                {
+                    'key': 'label',
+                    'values': ['val1'],
+                    'type': 'label',
+                    'operator': 'any_of'
+                },
+            ]
+        )
+        assert {w.id for w in workflows} == {'wf1', 'wf2', 'wf3'}
+
     def _create_nodes(self, blueprint_id='bp', deployment_id='dep',
                       node_ids=None, node_types=None,
                       node_type_hierarchies=None,
