@@ -1321,7 +1321,7 @@ class ResourceManager(object):
                 try:
                     # this is set in Component's create operation
                     component_dep_id = runtime_props['deployment']['id']
-                except KeyError:
+                except (TypeError, KeyError):
                     component_dep_id = None
                 if component_dep_id:
                     components_deployment_ids.append(component_dep_id)
