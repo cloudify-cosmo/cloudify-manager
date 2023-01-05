@@ -178,10 +178,10 @@ class PluginsArchive(SecuredResource):
         plugin = get_storage_manager().get(models.Plugin, plugin_id)
 
         storage = get_storage_handler()
-        base_path = f'{FILE_SERVER_PLUGINS_FOLDER}/{plugin_id}'
+        base_path = os.path.join(FILE_SERVER_PLUGINS_FOLDER, plugin_id)
 
         if request.args.get('full_archive'):
-            archive_path = f'{base_path}/plugin_archive.zip'
+            archive_path = os.path.join(base_path, 'plugin_archive.zip')
 
             try:
                 storage.find(archive_path)
@@ -192,7 +192,7 @@ class PluginsArchive(SecuredResource):
             if not archive_exists:
                 tempdir = tempfile.mkdtemp()
                 try:
-                    temp_archive_dir = f'{tempdir}/archive'
+                    temp_archive_dir = os.path.join(tempdir, 'archive')
                     os.makedirs(temp_archive_dir)
                     temp_zip_path = os.path.join(tempdir,
                                                  'plugin_archive.zip')
