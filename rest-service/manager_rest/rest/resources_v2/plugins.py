@@ -183,10 +183,6 @@ class PluginsArchive(SecuredResource):
         if request.args.get('full_archive'):
             archive_path = f'{base_path}/plugin_archive.zip'
 
-            with open('/tmp/ilikecake', 'w') as fh:
-                fh.write('%s\n' % archive_path)
-                fh.write('%s\n' % list(storage.list(archive_path)))
-
             try:
                 storage.find(archive_path)
                 archive_exists = True
