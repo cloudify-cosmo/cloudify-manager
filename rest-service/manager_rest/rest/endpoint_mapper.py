@@ -90,6 +90,7 @@ def setup_resources(api):
         'UsersActive': 'users/active/<string:username>',
         'UsersUnlock': 'users/unlock/<string:username>',
         'FileServerAuth': 'file-server-auth',
+        'MonitoringAuth': 'monitoring-auth',
         'FileServerIndex': 'file-server-index',
         'LdapAuthentication': 'ldap',
         'Secrets': 'secrets',

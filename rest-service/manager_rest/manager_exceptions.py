@@ -19,6 +19,7 @@ INTERNAL_SERVER_ERROR_CODE = 'internal_server_error'
 
 
 class ManagerException(Exception):
+    additional_headers = {}
     error_code = INTERNAL_SERVER_ERROR_CODE
     status_code = 500
 
