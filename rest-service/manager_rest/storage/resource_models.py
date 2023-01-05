@@ -639,7 +639,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
 
     def _list_workflows(self):
         if self.workflows is None:
-            return None
+            return []
 
         return [Workflow(name=wf_name,
                          created_at=None,
