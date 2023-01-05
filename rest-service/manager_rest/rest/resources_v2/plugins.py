@@ -209,7 +209,7 @@ class PluginsArchive(SecuredResource):
                     shutil.rmtree(tempdir)
             return storage.proxy(archive_path)
         else:
-            plugin_path = f'{base_path}/{plugin.archive_name}'
+            plugin_path = os.path.join(base_path, plugin.archive_name)
             return storage.proxy(plugin_path)
 
 
