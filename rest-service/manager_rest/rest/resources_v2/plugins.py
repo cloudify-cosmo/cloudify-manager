@@ -1,8 +1,14 @@
 from datetime import datetime
+import os
+import shutil
+import tempfile
 
+from flask import request
 from flask_restful.reqparse import Argument
 from flask_restful.inputs import boolean
 
+from cloudify.zip_utils import make_zip64_archive
+from manager_rest import manager_exceptions
 from manager_rest import upload_manager
 from manager_rest.persistent_storage import get_storage_handler
 from manager_rest.resource_manager import get_resource_manager
@@ -170,10 +176,41 @@ class PluginsArchive(SecuredResource):
         """
         # Verify plugin exists.
         plugin = get_storage_manager().get(models.Plugin, plugin_id)
-        plugin_path = f'{FILE_SERVER_PLUGINS_FOLDER}/{plugin_id}'\
-                      f'/{plugin.archive_name}'
 
-        return get_storage_handler().proxy(plugin_path)
+        storage = get_storage_handler()
+        base_path = os.path.join(FILE_SERVER_PLUGINS_FOLDER, plugin_id)
+
+        if request.args.get('full_archive'):
+            archive_path = os.path.join(base_path, 'plugin_archive.zip')
+
+            try:
+                storage.find(archive_path)
+                archive_exists = True
+            except manager_exceptions.NotFoundError:
+                archive_exists = False
+
+            if not archive_exists:
+                tempdir = tempfile.mkdtemp()
+                try:
+                    temp_archive_dir = os.path.join(tempdir, 'archive')
+                    os.makedirs(temp_archive_dir)
+                    temp_zip_path = os.path.join(tempdir,
+                                                 'plugin_archive.zip')
+
+                    for path in storage.list(base_path):
+                        dest = os.path.join(temp_archive_dir,
+                                            os.path.split(path)[1])
+                        with storage.get(path) as retrieved:
+                            shutil.copy(retrieved, dest)
+
+                    make_zip64_archive(temp_zip_path, temp_archive_dir)
+                    storage.move(temp_zip_path, archive_path)
+                finally:
+                    shutil.rmtree(tempdir)
+            return storage.proxy(archive_path)
+        else:
+            plugin_path = os.path.join(base_path, plugin.archive_name)
+            return storage.proxy(plugin_path)
 
 
 class PluginsId(SecuredResource):
