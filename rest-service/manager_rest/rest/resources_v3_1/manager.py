@@ -12,7 +12,7 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-
+import json
 import os
 import shutil
 import tempfile
@@ -50,6 +50,7 @@ except ImportError:
     manager_premium = None
 
 
+INDEX_JSON_FILENAME = '.cloudify-index.json'
 RESOURCES_PATH = '/resources/'
 
 
@@ -218,46 +219,61 @@ class FileServerProxy(SecuredResource):
         if not _is_resource_path_directory(rel_path):
             return self.storage_handler.proxy(rel_path)
         elif not as_archive:
-            files_list = [os.path.relpath(file_name, rel_path)
-                          for file_name in self.storage_handler.list(rel_path)]
-            return {'files': files_list}, 200
+            files_metadata = {
+                f_path: f_mtime
+                for f_info in self.storage_handler.list(rel_path)
+                for f_path, f_mtime in f_info.serialize(rel_path).items()
+            }
+            return files_metadata, 200
         else:
-            tmp_dir_name = tempfile.mkdtemp()
-            for download_file_name in self.storage_handler.list(rel_path):
-                src_path = os.path.join(
-                    rel_path,
-                    os.path.relpath(download_file_name, rel_path),
-                )
-                dst_path = os.path.join(
-                    tmp_dir_name,
-                    os.path.relpath(src_path, rel_path),
-                )
-                dst_dir = os.path.dirname(dst_path)
-                if not os.path.isdir(dst_dir):
-                    os.makedirs(dst_dir)
-                with self.storage_handler.get(src_path) as tmp_file_name:
-                    shutil.copy2(tmp_file_name, dst_path)
-
-            archive_file_name = _create_archive(tmp_dir_name)
-            shutil.rmtree(tmp_dir_name)
-
-            if stripped := rel_path.rstrip('/'):
-                download_file_name = f"{os.path.basename(stripped)}.tar.gz"
-            else:
-                download_file_name = 'resource.tar.gz'
+            archive_file_name, download_file_name =\
+                self._prepare_directory_archive(rel_path)
 
             result = send_file(
                 archive_file_name,
                 download_name=download_file_name,
                 as_attachment=True,
             )
-            os.remove(archive_file_name)
 
+            os.remove(archive_file_name)
             return result
+
+    def _prepare_directory_archive(self, path):
+        tmp_dir_name = tempfile.mkdtemp()
+        metadata = {}
+        for file_info in self.storage_handler.list(path):
+            src_path = os.path.join(
+                path,
+                os.path.relpath(file_info.filepath, path),
+            )
+            dst_path = os.path.join(
+                tmp_dir_name,
+                os.path.relpath(src_path, path),
+            )
+            dst_dir = os.path.dirname(dst_path)
+            if not os.path.isdir(dst_dir):
+                os.makedirs(dst_dir)
+            with self.storage_handler.get(src_path) as tmp_file_name:
+                shutil.copy2(tmp_file_name, dst_path)
+            metadata.update(file_info.serialize(path))
+
+        with open(os.path.join(tmp_dir_name, INDEX_JSON_FILENAME), 'wt',
+                  encoding='utf-8') as fp:
+            json.dump(metadata, fp)
+
+        archive_file_name = _create_archive(tmp_dir_name)
+        shutil.rmtree(tmp_dir_name)
+
+        if stripped := path.rstrip('/'):
+            download_file_name = f"{os.path.basename(stripped)}.tar.gz"
+        else:
+            download_file_name = 'resource.tar.gz'
+
+        return archive_file_name, download_file_name
 
     def put(self, path=None):
         args = rest_utils.get_args_and_verify_arguments([
-            Argument('extract', type=bool, required=False)
+            Argument('extract', type=bool, default=False, required=False)
         ])
         extract = args.get('extract', False)
 
@@ -273,6 +289,11 @@ class FileServerProxy(SecuredResource):
             tmp_dir_name = _extract_archive(tmp_file_name)
         finally:
             os.remove(tmp_file_name)
+
+        try:
+            os.remove(os.path.join(tmp_dir_name, INDEX_JSON_FILENAME))
+        except FileNotFoundError:
+            pass
 
         for dir_path, _, file_names in os.walk(tmp_dir_name):
             for file_name in file_names:

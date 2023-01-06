@@ -11,6 +11,8 @@ services:
       - ssl:/etc/cloudify/ssl:ro
       - mgmtworker_workdir:/opt/mgmtworker/work
       - ./resources/rest-service/cloudify/types:/opt/manager/resources/cloudify/types
+    environment:
+      CFY_RESOURCES_ROOT: /opt/manager/resources
     networks:
       - cloudify
     restart: unless-stopped
@@ -108,7 +110,7 @@ services:
       ssh:
         - default
     environment:
-      ENTRYPOINT: localhost
+      ENTRYPOINT: nginx
     depends_on:
       - postgresql
       - certs_creator

@@ -169,12 +169,12 @@ def _update_blueprint_archive(tenant_name, blueprint_id):
     with tempfile.TemporaryDirectory(dir=file_server_root) as tmpdir:
         os.chdir(tmpdir)
         os.mkdir('blueprint')
-        for src_file_path in get_storage_handler().list(blueprint_dir):
+        for src_fi in get_storage_handler().list(blueprint_dir):
             file_rel_path = \
-                src_file_path.replace(blueprint_dir, '').lstrip('/')
+                src_fi.filepath.replace(blueprint_dir, '').lstrip('/')
             dst_file_path = os.path.join(tmpdir, 'blueprint', file_rel_path)
 
-            with get_storage_handler().get(src_file_path) as tmp_file_name:
+            with get_storage_handler().get(src_fi.filepath) as tmp_file_name:
                 dst_dir_path = os.path.dirname(file_rel_path)
                 if dst_dir_path:
                     os.makedirs(

@@ -2,6 +2,8 @@ import os
 import shutil
 import tempfile
 from contextlib import contextmanager
+from datetime import datetime, timezone
+from dataclasses import dataclass
 from xml.etree import ElementTree
 
 import requests
@@ -9,6 +11,47 @@ from flask import current_app
 
 from manager_rest import manager_exceptions
 from manager_rest.rest.rest_utils import make_streaming_response
+
+
+LAST_MODIFIED_FMT = '%Y-%m-%dT%H:%M:%S.%f%z'
+
+
+@dataclass(slots=True)
+class FileInfo:
+    """FileInfo is a class used to represent information about a file"""
+    filepath: str
+    mtime: str
+
+    def __init__(self, filepath: str, mtime: str):
+        self.filepath = filepath
+        self.mtime = mtime
+
+    @classmethod
+    def from_local_file(cls, descriptive_filepath: str, filepath: str):
+        file_mtime = datetime.fromtimestamp(os.stat(filepath).st_mtime,
+                                            tz=timezone.utc)
+        return FileInfo(
+            filepath=descriptive_filepath,
+            mtime=file_mtime.isoformat(),
+        )
+
+    @classmethod
+    def from_s3_file(cls,
+                     filepath: ElementTree.Element,
+                     last_modified: ElementTree.Element):
+        file_mtime = datetime.strptime(last_modified.text, LAST_MODIFIED_FMT)
+        return FileInfo(
+            filepath=filepath.text,
+            mtime=file_mtime.isoformat(),
+        )
+
+    def serialize(self, rel_path=None):
+        if rel_path:
+            file_path = os.path.relpath(self.filepath, rel_path)
+        else:
+            file_path = self.filepath
+
+        return {file_path: self.mtime}
 
 
 class FileStorageHandler:
@@ -24,7 +67,7 @@ class FileStorageHandler:
         """Return a path to local copy of a file specified by path"""
         raise NotImplementedError('Should be implemented in subclasses')
 
-    def list(self, path: str):
+    def list(self, path: str) -> [FileInfo]:
         """List files in the path location"""
         raise NotImplementedError('Should be implemented in subclasses')
 
@@ -63,15 +106,17 @@ class LocalStorageHandler(FileStorageHandler):
         """Return a path to local copy of a file specified by path"""
         yield os.path.join(self.base_uri, path)
 
-    def list(self, path: str):
+    def list(self, path: str) -> [FileInfo]:
         # list all files in path and its subdirectories, but not path
         list_root = os.path.join(self.base_uri, path)
         for dir_path, _, file_names in os.walk(list_root):
             for name in file_names:
-                yield os.path.join(
+                file_path = os.path.join(
                     path,
                     os.path.relpath(os.path.join(dir_path, name), list_root)
                 )
+                file_abs_path = os.path.join(self.base_uri, file_path)
+                yield FileInfo.from_local_file(file_path, file_abs_path)
 
     def move(self, src_path: str, dst_path: str):
         full_dst_path = os.path.join(self.base_uri, dst_path)
@@ -106,7 +151,7 @@ class S3StorageHandler(FileStorageHandler):
 
     def find(self, path: str, suffixes=None):
         prefix, _, file_name = path.rpartition('/')
-        files_in_prefix = list(self.list(prefix))
+        files_in_prefix = [fi.filepath for fi in self.list(prefix)]
 
         if file_name in files_in_prefix:
             return path
@@ -133,7 +178,7 @@ class S3StorageHandler(FileStorageHandler):
             temp_file.seek(0)
             yield temp_file.name
 
-    def list(self, path: str):
+    def list(self, path: str) -> [FileInfo]:
         params = {}
         if path:
             params.update({'prefix': path})
@@ -146,8 +191,10 @@ class S3StorageHandler(FileStorageHandler):
         xml_et = ElementTree.fromstring(response.content)
 
         for contents in xml_et.findall('s3:Contents', self.XML_NS):
-            key = contents.find('s3:Key', self.XML_NS)
-            yield key.text
+            yield FileInfo.from_s3_file(
+                contents.find('s3:Key', self.XML_NS),
+                contents.find('s3:LastModified', self.XML_NS),
+            )
 
     def move(self, src_path: str, dst_path: str):
         if os.path.isfile(src_path):
