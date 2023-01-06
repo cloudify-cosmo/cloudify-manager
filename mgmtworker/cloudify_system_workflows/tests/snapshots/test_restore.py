@@ -15,7 +15,79 @@ from cloudify_system_workflows.snapshots.snapshot_restore import (
 )
 
 
+PARTIAL_TENANTS = {'anothertenant'}
 TENANTS = {'default_tenant', 'shared', 'other'}
+PARTIAL_SNAP_EXPECTED_CALLS = {
+    'tenants': {
+        'create': {
+            'expected': {
+                None: [
+                    mock.call(rabbitmq_password='apassword',
+                              tenant_name='arbitrary'),
+                ],
+            },
+            'sort_key': 'tenant_name',
+        },
+    },
+    'executions': {
+        'create': {
+            'expected': {
+                'anothertenant': [
+                    mock.call(
+                        created_at='2022-11-25T15:13:17.930Z',
+                        ended_at='2022-11-25T15:13:19.979Z',
+                        error='',
+                        parameters={},
+                        workflow_id='upload_blueprint',
+                        started_at='2022-11-25T15:13:18.858Z',
+                        allow_custom_parameters=True,
+                        deployment_id='',
+                        created_by='admin',
+                        execution_id='anexecid',
+                        force_status='terminated',
+                        dry_run=False,
+                    ),
+                ],
+            },
+            'sort_key': 'execution_id',
+        },
+    },
+    'tasks_graphs': {
+        'create': {
+            'expected': {
+                'anothertenant': [
+                    mock.call(
+                        created_at='2022-11-25T15:14:39.191Z',
+                        name='update_check_drift',
+                        execution_id='anexecid',
+                        operations=[
+                            {
+                                'created_at': '2022-11-25T15:14:39.191Z',
+                                'id': '184e9c1a-b951-4954-a566-60dc5822453a',
+                                'name': 'NOP',
+                                'state': 'pending',
+                                'dependencies': [],
+                                'type': 'NOPLocalWorkflowTask',
+                                'parameters': {},
+                                'manager_name': None,
+                                'agent_name': None
+                            },
+                        ],
+                        graph_id='6d4e2e5e-87aa-471b-a1e0-4bc8a48a4ec3'
+                    ),
+                    mock.call(
+                        created_at='2022-11-25T15:14:19.203Z',
+                        name='install',
+                        execution_id='otherexec',
+                        operations=[],
+                        graph_id='595734d3-1535-4894-b366-ae36e52ca27c'
+                    )
+                ],
+            },
+            'sort_key': '',
+        },
+    },
+}
 EXPECTED_CALLS = {
     'tenants': {
         'create': {
@@ -1097,8 +1169,24 @@ def test_restore_snapshot(mock_ctx, mock_get_client, mock_zipfile,
                           mock_manager_restoring, mock_mkdir,
                           mock_no_rmtree, mock_unlink,
                           mock_manager_finished_restoring):
-    snap_id = 'testsnapshot'
+    _test_restore('testsnapshot', 'snapshot_contents', EXPECTED_CALLS,
+                  TENANTS, mock_mkdir, mock_manager_restoring,
+                  mock_manager_finished_restoring, mock_unlink)
 
+
+def test_restore_partial_snapshot(mock_ctx, mock_get_client, mock_zipfile,
+                                  mock_manager_restoring, mock_mkdir,
+                                  mock_no_rmtree, mock_unlink,
+                                  mock_manager_finished_restoring):
+    _test_restore('testpartialsnapshot', 'partial_snapshot_contents',
+                  PARTIAL_SNAP_EXPECTED_CALLS, PARTIAL_TENANTS, mock_mkdir,
+                  mock_manager_restoring, mock_manager_finished_restoring,
+                  mock_unlink)
+
+
+def _test_restore(snap_id, snap_contents_dir, calls, tenants,
+                  mock_mkdir, mock_manager_restoring,
+                  mock_manager_finished_restoring, mock_unlink):
     tempdir = mkdtemp('-test-snap-restore-data')
     mock_mkdir.return_value = tempdir
 
@@ -1121,7 +1209,7 @@ def test_restore_snapshot(mock_ctx, mock_get_client, mock_zipfile,
 
         snap_res._get_snapshot_path = mock.Mock(
             return_value=os.path.join(
-                os.path.dirname(__file__), 'snapshot_contents',
+                os.path.dirname(__file__), snap_contents_dir,
             )
         )
 
@@ -1130,8 +1218,9 @@ def test_restore_snapshot(mock_ctx, mock_get_client, mock_zipfile,
         snap_res.restore()
 
         mock_manager_restoring.assert_called_once_with()
-        _assert_mgmt_restores(snap_res._client)
-        _assert_tenant_restores(snap_res._tenant_clients, tempdir)
+        _assert_mgmt_restores(snap_res._client, calls)
+        _assert_tenant_restores(snap_res._tenant_clients, tempdir, calls,
+                                tenants)
         mock_manager_finished_restoring.assert_called_once_with()
         _assert_cleanup(FakeZipFile(snap_res._get_snapshot_path(), 'r'),
                         tempdir,
@@ -1155,15 +1244,15 @@ def _assert_cleanup(zipfile, tempdir, unlink):
                             any_order=True)
 
 
-def _assert_mgmt_restores(client):
-    _check_calls(client, None, None)
+def _assert_mgmt_restores(client, calls):
+    _check_calls(client, None, None, calls)
 
 
-def _assert_tenant_restores(clients, tempdir):
-    assert TENANTS == set(clients)
+def _assert_tenant_restores(clients, tempdir, calls, tenants):
+    assert tenants == set(clients)
 
-    for tenant in TENANTS:
-        _check_calls(clients[tenant], tenant, tempdir)
+    for tenant in tenants:
+        _check_calls(clients[tenant], tenant, tempdir, calls)
 
 
 def _sort_events(events_call_list):
@@ -1181,11 +1270,11 @@ def _sort_events(events_call_list):
                   key=lambda x: json.dumps(x.kwargs, sort_keys=True))
 
 
-def _check_calls(client, tenant, tempdir):
-    for group in EXPECTED_CALLS:
+def _check_calls(client, tenant, tempdir, calls):
+    for group in calls:
         group_client = getattr(client, group)
-        for call in EXPECTED_CALLS[group]:
-            expected_calls = EXPECTED_CALLS[group][call]['expected'].get(
+        for call in calls[group]:
+            expected_calls = calls[group][call]['expected'].get(
                 tenant, {})
             call_client = getattr(group_client, call)
             if not any([expected_calls, call_client.call_args_list]):
@@ -1195,7 +1284,7 @@ def _check_calls(client, tenant, tempdir):
                 expected = _sort_events(expected_calls)
                 results = _sort_events(call_client.call_args_list)
             else:
-                sort_key = EXPECTED_CALLS[group][call]['sort_key']
+                sort_key = calls[group][call]['sort_key']
                 expected = sorted(expected_calls,
                                   key=lambda x: getattr(x, sort_key))
                 results = sorted(call_client.call_args_list,
