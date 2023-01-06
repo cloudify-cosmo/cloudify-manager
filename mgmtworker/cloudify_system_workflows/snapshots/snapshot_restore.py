@@ -195,6 +195,11 @@ class SnapshotRestore(object):
             for tenant in self._new_tenants:
                 self._new_restore_parse_and_restore(resource, zipfile,
                                                     tenant=tenant)
+        for sub_entity_type in ['nodes', 'node_instances', 'agents',
+                                'tasks_graphs']:
+            for tenant in self._new_tenants:
+                self._find_and_restore_sub_entities(sub_entity_type,
+                                                    zipfile, tenant)
 
     def _new_restore_parse_and_restore(self, entity_type, zipfile,
                                        tenant=None):
@@ -310,6 +315,20 @@ class SnapshotRestore(object):
                         kwargs['execution_group_id'] = related_id
 
                     client.events.create(**kwargs)
+
+    def _find_and_restore_sub_entities(self, sub_entity_type, zipfile,
+                                       tenant):
+        for entry in zipfile.filelist:
+            if not entry.is_dir():
+                parts = entry.filename.rsplit('/', 1)
+                if len(parts) == 2:
+                    base, data_file = parts
+                else:
+                    continue
+                if base == f'tenants/{tenant}/{sub_entity_type}':
+                    entity_id = data_file[:-len('.json')]
+                    self._new_restore_sub_entities(sub_entity_type, entity_id,
+                                                   zipfile, tenant)
 
     def _new_restore_sub_entities(self, sub_entity_type, entity_id, zipfile,
                                   tenant):
@@ -427,7 +446,6 @@ class SnapshotRestore(object):
             kwargs = entity
 
             if entity_type == 'tenants':
-                self._new_tenants.append(entity['name'])
                 if entity['name'] == 'default_tenant':
                     ctx.logger.info('Skipping creation of default tenant')
                     continue
@@ -543,17 +561,6 @@ class SnapshotRestore(object):
                     client.blueprints.update(entity['blueprint_id'],
                                              extra_details)
                 os.unlink(entity['archive_location'])
-            elif entity_type == 'deployments':
-                for sub_entity_type in ['nodes', 'node_instances', 'agents']:
-                    self._new_restore_sub_entities(sub_entity_type,
-                                                   entity['deployment_id'],
-                                                   zipfile,
-                                                   tenant)
-            elif entity_type == 'executions':
-                self._new_restore_sub_entities('tasks_graphs',
-                                               entity['execution_id'],
-                                               zipfile,
-                                               tenant)
             elif entity_type == 'plugins':
                 os.unlink(entity['plugin_path'])
 
@@ -565,6 +572,9 @@ class SnapshotRestore(object):
         }
         for entry in zipfile.filelist:
             if entry.is_dir():
+                parts = entry.filename.strip('/').split('/')
+                if len(parts) == 2 and parts[0] == 'tenants':
+                    self._new_tenants.append(parts[1])
                 continue
             filename = entry.filename
             if filename == 'metadata.json':
