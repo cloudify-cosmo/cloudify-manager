@@ -12,7 +12,7 @@ services:
       - mgmtworker_workdir:/opt/mgmtworker/work
       - ./resources/rest-service/cloudify/types:/opt/manager/resources/cloudify/types
     environment:
-      CFY_RESOURCES_ROOT: /tmp/resources
+      CFY_RESOURCES_ROOT: /opt/manager/resources
     networks:
       - cloudify
     restart: unless-stopped
