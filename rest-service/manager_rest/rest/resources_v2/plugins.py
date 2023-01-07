@@ -197,7 +197,8 @@ class PluginsArchive(SecuredResource):
                     temp_zip_path = os.path.join(tempdir,
                                                  'plugin_archive.zip')
 
-                    for path in storage.list(base_path):
+                    for fileinfo in storage.list(base_path):
+                        path = fileinfo.filepath
                         dest = os.path.join(temp_archive_dir,
                                             os.path.split(path)[1])
                         with storage.get(path) as retrieved:
