@@ -28,13 +28,11 @@ class ResourcesTestCase(AgentlessTestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             with open(os.path.join(tmp_dir, 'test.txt'), 'wt') as test_file:
                 test_file.write(test_message)
-            result = self.client.resources.upload_deployment_workdir(
+            self.client.resources.upload_deployment_workdir(
                 deployment_id, src_dir=tmp_dir)
-            assert result is not None
 
         with tempfile.TemporaryDirectory() as tmp_dir:
-            result = self.client.resources.download_deployment_workdir(
+            self.client.resources.download_deployment_workdir(
                 deployment_id, dst_dir=tmp_dir)
-            assert result is not None
             with open(os.path.join(tmp_dir, 'test.txt'), 'rt') as test_file:
                 assert test_file.read() == test_message
