@@ -122,7 +122,22 @@ class DeploymentResourceTest(AgentlessTestCase):
                 'updated_content': UPDATED_CONTENT,
             })
 
-        self.execute_workflow('uninstall', deployment_id,)
+        test_resource_path = join(base_dep_dir,
+                                  'default_tenant',
+                                  deployment_id,
+                                  'resources/crud-test.txt')
+
+        # check if test_resource_path is uploaded and contains UPDATED_CONTENT
+        self.execute_on_manager('test -f {0}'.format(test_resource_path))
+        _, tmp_file_name = tempfile.mkstemp()
+        self.copy_file_from_manager(source=test_resource_path,
+                                    target=tmp_file_name)
+
+        with open(tmp_file_name) as test_file:
+            assert test_file.read().strip() == UPDATED_CONTENT
+
+        self.execute_workflow('uninstall', deployment_id)
+
         self.client.deployments.delete(deployment_id)
         wait_for_deployment_deletion_to_complete(deployment_id, self.client)
         with pytest.raises(CalledProcessError):

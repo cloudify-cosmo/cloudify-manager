@@ -532,37 +532,23 @@ def configure_connection(ctx, **kwargs):
 
 @operation
 def create_file_in_workdir(ctx, file_path: str, content: str):
-    ctx.logger.info('Will attempt to create a file in deployment workdir')
-    ctx.logger.info('ctx: %s', ctx)
-    ctx.logger.info('ctx.deployment: %s', ctx.deployment)
-    ctx.logger.info('local_resources_root: %s', ctx.get_local_resources_root())
-    ctx.logger.info('file_path: %s', file_path)
-    ctx.logger.info('content: %s', content)
-    local_resources_root = ctx.get_local_resources_root()
-    _write_file(os.path.join(local_resources_root, file_path), content)
+    ctx.logger.info(f"Creating '{file_path}' in deployment workdir")
+    deployment_workdir = ctx.local_deployment_workdir()
+    _write_file(os.path.join(deployment_workdir, file_path), content)
 
 
 @operation
 def update_file_in_workdir(ctx, file_path: str, content: str):
-    ctx.logger.info('Will attempt to update a file in deployment workdir')
-    ctx.logger.info('ctx: %s', ctx)
-    ctx.logger.info('ctx.deployment: %s', ctx.deployment)
-    ctx.logger.info('local_resources_root: %s', ctx.get_local_resources_root())
-    ctx.logger.info('file_path: %s', file_path)
-    ctx.logger.info('content: %s', content)
-    local_resources_root = ctx.get_local_resources_root()
-    _write_file(os.path.join(local_resources_root, file_path), content)
+    ctx.logger.info(f"Updating '{file_path}' in deployment workdir")
+    deployment_workdir = ctx.local_deployment_workdir()
+    _write_file(os.path.join(deployment_workdir, file_path), content)
 
 
 @operation
 def delete_file_in_workdir(ctx, file_path: str):
-    ctx.logger.info('Will attempt to delete a file in deployment workdir')
-    ctx.logger.info('ctx: %s', ctx)
-    ctx.logger.info('ctx.deployment: %s', ctx.deployment)
-    ctx.logger.info('local_resources_root: %s', ctx.get_local_resources_root())
-    ctx.logger.info('file_path: %s', file_path)
-    local_resources_root = ctx.get_local_resources_root()
-    os.remove(os.path.join(local_resources_root, file_path))
+    ctx.logger.info(f"Deleting '{file_path}' from deployment workdir")
+    deployment_workdir = ctx.local_deployment_workdir()
+    os.remove(os.path.join(deployment_workdir, file_path))
 
 
 def _write_file(absolute_file_path: str, content: str):

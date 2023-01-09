@@ -463,3 +463,8 @@ class UnsupportedFileServerType(ManagerException):
 class FileServerException(ManagerException):
     error_code = 'file_server_exception'
     status_code = 500
+
+
+class MultipleFilesUploadException(ManagerException):
+    error_code = 'multiple_files_upload_exception'
+    status_code = 500
