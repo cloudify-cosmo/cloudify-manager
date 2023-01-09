@@ -18,6 +18,7 @@ import shutil
 import tempfile
 import tarfile
 import zipfile
+from datetime import datetime
 from typing import Any
 
 from flask import request, send_file
@@ -30,6 +31,7 @@ from manager_rest.manager_exceptions import (
     ArchiveTypeError,
     UploadFileMissing,
     NoAuthProvided,
+    MultipleFilesUploadException,
 )
 from manager_rest.security import SecuredResource, premium_only
 from manager_rest.security.user_handler import get_token_status
@@ -276,11 +278,28 @@ class FileServerProxy(SecuredResource):
             Argument('extract', type=bool, default=False, required=False)
         ])
         extract = args.get('extract', False)
+        file_mtime = None
 
-        _, tmp_file_name = tempfile.mkstemp()
-        with open(tmp_file_name, 'wb') as tmp_file:
-            tmp_file.write(request.data)
-            tmp_file.close()
+        if request.files:
+            if len(request.files) > 1:
+                raise MultipleFilesUploadException(
+                    'Multiple files upload is not supported')
+            _, tmp_file_name = tempfile.mkstemp()
+            for uploaded_file in request.files.values():
+                with open(tmp_file_name, 'wb') as tmp_file:
+                    tmp_file.write(uploaded_file.stream.read())
+            try:
+                file_mtime = request.form.get('mtime')
+            except AttributeError:
+                pass
+        else:
+            _, tmp_file_name = tempfile.mkstemp()
+            with open(tmp_file_name, 'wb') as tmp_file:
+                tmp_file.write(request.data)
+
+        if file_mtime:
+            file_timestamp = datetime.fromisoformat(file_mtime).timestamp()
+            os.utime(tmp_file_name, (file_timestamp, file_timestamp))
 
         if not extract:
             return self.storage_handler.move(tmp_file_name, path)
