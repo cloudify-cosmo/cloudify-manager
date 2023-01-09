@@ -138,11 +138,6 @@ class DeploymentResourceTest(AgentlessTestCase):
 
         self.execute_workflow('uninstall', deployment_id)
 
-        # TODO mateumann 2023-01-05:
-        # check that test_resource_path does not exist on manager
-        # with pytest.raises(CalledProcessError):
-        #     self.execute_on_manager('test -f {0}'.format(test_resource_path))
-
         self.client.deployments.delete(deployment_id)
         wait_for_deployment_deletion_to_complete(deployment_id, self.client)
         with pytest.raises(CalledProcessError):
