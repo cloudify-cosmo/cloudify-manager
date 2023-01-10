@@ -417,6 +417,7 @@ def _check_zip_and_delete(paths, unlink, zipfile, base_dir, zip_idx=0):
 
 
 def _check_tenant_dir_in_zip(tenant_name, zipfile, base_dir):
+    zip_writer = zipfile['zipfiles'][0].__enter__.return_value.write
     path = os.path.join(base_dir, 'tenants', tenant_name)
     expected_zip_calls = [
         mock.call(path, path[len(base_dir) + 1:]),
