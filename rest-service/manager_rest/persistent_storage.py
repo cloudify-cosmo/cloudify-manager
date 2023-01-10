@@ -109,6 +109,8 @@ class LocalStorageHandler(FileStorageHandler):
     def list(self, path: str) -> [FileInfo]:
         # list all files in path and its subdirectories, but not path
         list_root = os.path.join(self.base_uri, path)
+        if not os.path.exists(list_root):
+            raise manager_exceptions.NotFoundError()
         for dir_path, _, file_names in os.walk(list_root):
             for name in file_names:
                 file_path = os.path.join(

@@ -242,13 +242,16 @@ def do_upload_blueprint(client, blueprint):
     # binaries to the client_args
     is_directory = False
     if _is_internal_path(blueprint_archive):
+        res = ctx.get_resource(blueprint_archive)
         try:
-            res = ctx.get_resource(blueprint_archive)
-            assert 'files' in json.loads(res)
-            is_directory = True
+            res_dict = json.loads(res)
+            if isinstance(res_dict, dict):
+                is_directory = True
+        except json.JSONDecodeError:
+            pass
+        if is_directory:
             blueprint_archive = ctx.download_directory(blueprint_archive)
-        except (ValueError, AssertionError):
-            # blueprint_archive path is not a directory -> proceed normally
+        else:
             blueprint_archive = ctx.download_resource(blueprint_archive)
 
     try:
