@@ -416,6 +416,14 @@ def _check_zip_and_delete(paths, unlink, zipfile, base_dir, zip_idx=0):
     ], any_order=True)
 
 
+def _check_tenant_dir_in_zip(tenant_name, zipfile, base_dir):
+    path = os.path.join(base_dir, 'tenants', tenant_name)
+    expected_zip_calls = [
+        mock.call(path, path[len(base_dir) + 1:]),
+    ]
+    zip_writer.assert_has_calls(expected_zip_calls, any_order=True)
+
+
 def _check_snapshot_top_level(tempdir, unlink, zipfile):
     top_level_data = set(os.listdir(tempdir))
     assert top_level_data == {'mgmt', 'tenants', constants.METADATA_FILENAME}
@@ -458,6 +466,7 @@ def _assert_tenants(tempdir, clients, unlink, zipfile):
 
     for tenant in tenants:
         tenant_dir = os.path.join(tenants_dir, tenant)
+        _check_tenant_dir_in_zip(tenant, zipfile, tempdir)
 
         for r_type, methods_data in MOCK_CLIENT_RESPONSES[tenant].items():
             if r_type == 'secrets':
