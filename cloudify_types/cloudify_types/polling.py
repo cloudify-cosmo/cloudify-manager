@@ -35,7 +35,7 @@ def verify_blueprint_uploaded(blueprint_id, client):
     if state in BlueprintUploadState.FAILED_STATES:
         raise NonRecoverableError(
             f'Blueprint {blueprint_id} upload failed (state: {state})')
-    return state == BlueprintUploadState.UPLOADED
+    return state in BlueprintUploadState.END_STATES
 
 
 def wait_for_blueprint_to_upload(
