@@ -8,6 +8,9 @@ inputs:
   resource_path:
     display_label: Path of a file in deployment's working directory
     type: string
+  removed_in_the_middle_file_path:
+    display_label: Path of a file that is removed from the manager during the test
+    type: string
   resource_content:
     display_label: File's content
     type: textarea
@@ -34,6 +37,10 @@ node_templates:
           inputs:
             file_path: {get_input: resource_path}
             content: {get_input: updated_content}
+        prestop:
+          implementation: testmockoperations.testmockoperations.tasks.assert_file_does_not_exist
+          inputs:
+            file_path: { get_input: removed_in_the_middle_file_path }
         delete:
           implementation: testmockoperations.testmockoperations.tasks.delete_file_in_workdir
           inputs:
