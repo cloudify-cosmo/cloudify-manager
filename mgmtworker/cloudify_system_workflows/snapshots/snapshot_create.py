@@ -194,12 +194,18 @@ class SnapshotCreate(object):
         get_kwargs = {}
         suffix = '.json'
         if tenant_name:
+            add_tenant_dir = False
             if tenant_name not in self._tenant_clients:
+                add_tenant_dir = True
                 self._tenant_clients[tenant_name] = get_rest_client(
                     tenant=tenant_name)
             client = self._tenant_clients[tenant_name]
             dump_dir = os.path.join(self._tempdir, 'tenants', tenant_name)
-            os.makedirs(dump_dir, exist_ok=True)
+            if add_tenant_dir:
+                os.makedirs(dump_dir, exist_ok=True)
+                self._zip_handle.write(dump_dir,
+                                       os.path.relpath(dump_dir,
+                                                       self._tempdir))
             destination_base = os.path.join(dump_dir, dump_type)
             get_kwargs = {'tenant_name': tenant_name}
         else:

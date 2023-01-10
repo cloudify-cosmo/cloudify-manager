@@ -174,7 +174,7 @@ class SnapshotRestore(object):
         self._encryption_key = None
         self._semaphore = threading.Semaphore(
             self._config.snapshot_restore_threads)
-        self._new_tenants = []
+        self._new_tenants = set()
         self._tenant_clients = {}
         self._snapshot_files = {}
 
@@ -574,7 +574,7 @@ class SnapshotRestore(object):
             if entry.is_dir():
                 parts = entry.filename.strip('/').split('/')
                 if len(parts) == 2 and parts[0] == 'tenants':
-                    self._new_tenants.append(parts[1])
+                    self._new_tenants.add(parts[1])
                 continue
             filename = entry.filename
             if filename == 'metadata.json':
