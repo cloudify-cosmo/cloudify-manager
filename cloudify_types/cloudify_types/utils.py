@@ -257,13 +257,17 @@ def do_upload_blueprint(client, blueprint):
                 entity_id=blueprint_id,
                 path=os.path.join(blueprint_archive, blueprint_file_name),
                 labels=labels,
-                skip_size_limit=True)
+                skip_size_limit=True,
+                async_upload=True,
+            )
         else:
             client.blueprints._upload(
                 blueprint_id=blueprint_id,
                 archive_location=blueprint_archive,
                 application_file_name=blueprint_file_name,
-                labels=labels)
+                labels=labels,
+                async_upload=True,
+            )
         wait_for_blueprint_to_upload(blueprint_id, client)
     except CloudifyClientError as ex:
         if 'already exists' not in str(ex):
