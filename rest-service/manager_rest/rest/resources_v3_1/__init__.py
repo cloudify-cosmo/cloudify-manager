@@ -26,7 +26,6 @@ from .manager import (                           # NOQA
     RabbitMQBrokers,
     RabbitMQBrokersId,
     DBNodes,
-    FileServerIndex,
     FileServerProxy,
     MonitoringAuth,
 )
