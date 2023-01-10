@@ -25,7 +25,6 @@ from flask import request, send_file
 from flask_restful import Resource
 from flask_restful.reqparse import Argument
 
-from cloudify.constants import MANAGER_RESOURCES_PATH
 from manager_rest import config
 from manager_rest.manager_exceptions import (
     ArchiveTypeError,
@@ -180,27 +179,6 @@ class DBNodes(dbnodes_base):
     def get(self, pagination=None):
         """List DB nodes from database"""
         return get_storage_manager().list(models.DBNodes)
-
-
-class FileServerIndex(SecuredResource):
-    def get(self, **_):
-        """
-        Index a directory tree on the Cloudify file server
-        """
-        uri = request.headers['X-Original-Uri'].strip('/')
-        if not uri.startswith('resources/'):
-            return {}, 404
-
-        dir_path = os.path.join(MANAGER_RESOURCES_PATH,
-                                uri.replace('resources/', '', 1))
-        files_list = []
-        for path, dir, files in os.walk(dir_path):
-            for name in files:
-                if not name.startswith('.'):
-                    files_list.append(
-                        os.path.join(path, name).replace(dir_path+'/', ""))
-
-        return {'files': files_list}, 200
 
 
 class FileServerProxy(SecuredResource):
