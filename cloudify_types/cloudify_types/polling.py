@@ -31,7 +31,11 @@ def poll_with_timeout(pollster,
 
 def verify_blueprint_uploaded(blueprint_id, client):
     blueprint = client.blueprints.get(blueprint_id)
-    return blueprint['state'] == BlueprintUploadState.UPLOADED
+    state = blueprint['state']
+    if state in BlueprintUploadState.FAILED_STATES:
+        raise NonRecoverableError(
+            f'Blueprint {blueprint_id} upload failed (state: {state})')
+    return state in BlueprintUploadState.END_STATES
 
 
 def wait_for_blueprint_to_upload(
