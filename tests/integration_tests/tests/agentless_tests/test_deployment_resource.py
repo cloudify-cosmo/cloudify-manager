@@ -118,6 +118,7 @@ class DeploymentResourceTest(AgentlessTestCase):
             deployment_id=deployment_id,
             inputs={
                 'resource_path': 'resources/crud-test.txt',
+                'removed_in_the_middle_file_path': RESOURCE_PATH,
                 'resource_content': RESOURCE_CONTENT,
                 'updated_content': UPDATED_CONTENT,
             })
@@ -136,7 +137,15 @@ class DeploymentResourceTest(AgentlessTestCase):
         with open(tmp_file_name) as test_file:
             assert test_file.read().strip() == UPDATED_CONTENT
 
+        # Remove the file on the manager and run a workflow which will check if
+        # it was removed from the mgmtworker's resources directory
+        self.client.resources.delete_deployment_file(
+            deployment_id, RESOURCE_PATH)
         self.execute_workflow('uninstall', deployment_id)
+
+        # check that test_resource_path does not exist on manager
+        with pytest.raises(CalledProcessError):
+            self.execute_on_manager('test -f {0}'.format(test_resource_path))
 
         self.client.deployments.delete(deployment_id)
         wait_for_deployment_deletion_to_complete(deployment_id, self.client)
