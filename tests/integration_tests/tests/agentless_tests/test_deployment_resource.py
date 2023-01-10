@@ -139,7 +139,8 @@ class DeploymentResourceTest(AgentlessTestCase):
 
         # Remove the file on the manager and run a workflow which will check if
         # it was removed from the mgmtworker's resources directory
-        self.execute_on_manager(f'rm {full_resource_path}')
+        self.client.resources.delete_deployment_file(
+            deployment_id, RESOURCE_PATH)
         self.execute_workflow('uninstall', deployment_id)
 
         # check that test_resource_path does not exist on manager
