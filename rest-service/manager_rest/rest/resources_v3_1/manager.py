@@ -207,6 +207,17 @@ class FileServerProxy(SecuredResource):
     def __init__(self):
         self.storage_handler = get_storage_handler()
 
+    def delete(self, path=None, **_):
+        rel_path = _resource_relative_path(path)
+
+        if not path:
+            return {}, 404
+
+        if not _is_resource_path_directory(rel_path):
+            return self.storage_handler.delete(rel_path)
+
+        raise NotImplementedError('Removing directories is not supported')
+
     def get(self, path=None, **_):
         rel_path = _resource_relative_path(path)
 
