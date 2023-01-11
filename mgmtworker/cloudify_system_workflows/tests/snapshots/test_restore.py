@@ -1016,6 +1016,17 @@ EXPECTED_CALLS = {
             'sort_key': 'update_id',
         },
     },
+    'secrets_providers': {
+        'create': {
+            'expected': {
+                'other': [
+                    mock.call(_type='something',
+                              name='whatever'),
+                ],
+            },
+            'sort_key': 'name',
+        },
+    },
 }
 
 
