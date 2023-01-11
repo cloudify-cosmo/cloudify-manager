@@ -185,8 +185,8 @@ class SnapshotRestore(object):
         self._new_restore_parse_and_restore('users', zipfile)
 
         for resource in [
-            'sites', 'secrets', 'plugins', 'blueprints_filters',
-            'deployments_filters', 'blueprints',
+            'sites', 'secrets_providers', 'secrets', 'plugins',
+            'blueprints_filters', 'deployments_filters', 'blueprints',
             # Everything after this point requires blueprints and plugins
             'deployments', 'deployment_groups', 'executions',
             'execution_groups', 'events', 'execution_schedules',
@@ -534,6 +534,8 @@ class SnapshotRestore(object):
                     'deployments_to_update', None)
                 entity['force'] = entity.pop('forced', None)
                 restore_func = entity_client.inject
+            elif entity_type == 'secrets_providers':
+                entity['_type'] = entity.pop('type', None)
 
             if not restore_func:
                 restore_func = entity_client.create

@@ -112,6 +112,9 @@ MOCK_CLIENT_RESPONSES = {
             'list': [{'id': 'some_operation_t2',
                       'tasks_graph_id': 'tasks_graphs_list_t1'}],
         },
+        'secrets_providers': {
+            'list': [{'name': 'happyprovider'}],
+        },
     },
     'tenant2': {
         'sites': {
@@ -176,6 +179,9 @@ MOCK_CLIENT_RESPONSES = {
         'operations': {
             'list': [{'id': 'some_operation_t2',
                       'tasks_graph_id': 'tasks_graph_list_t2'}],
+        },
+        'secrets_providers': {
+            'list': [{'name': 'something'}],
         },
     },
 }

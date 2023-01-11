@@ -83,6 +83,9 @@ INCLUDES = {
     'operations': ['agent_name', 'created_at', 'dependencies', 'id',
                    'manager_name', 'name', 'parameters', 'state', 'type',
                    'tasks_graph_id'],
+    'secrets_providers': ['created_at', 'name', 'visibility', 'type',
+                          'connection_parameters', 'created_by',
+                          'created_at'],
 }
 GET_DATA = [
     'users', 'user_groups',
@@ -171,6 +174,7 @@ class SnapshotCreate(object):
         """Dump objects from a tenant."""
         self._dump_objects('sites', tenant_name)
         self._dump_objects('plugins', tenant_name)
+        self._dump_objects('secrets_providers', tenant_name)
         self._dump_objects('secrets', tenant_name)
         self._dump_objects('blueprints', tenant_name)
         self._dump_objects('deployments', tenant_name)
