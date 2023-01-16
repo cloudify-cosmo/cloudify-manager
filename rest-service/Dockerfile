@@ -1,4 +1,4 @@
-FROM python:3.10-slim
+FROM python:3.11-slim
 
 ENV WORKER_COUNT=4
 ENV MAX_WORKER_COUNT=4
@@ -43,7 +43,7 @@ RUN --mount=type=ssh \
     -r requirements_ssh.txt
 
 RUN mkdir /src
-COPY docker/cloudify.pth /usr/local/lib/python3.10/site-packages/cloudify.pth
+COPY docker/cloudify.pth /usr/local/lib/python3.11/site-packages/cloudify.pth
 
 RUN mkdir -p \
       /var/log/cloudify/rest \

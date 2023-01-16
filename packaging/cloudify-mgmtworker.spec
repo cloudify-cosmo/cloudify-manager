@@ -33,7 +33,7 @@ Requires:       python3 >= 3.6
 BuildRequires:  python3 >= 3.6
 
 
-Source0:        https://cloudify-cicd.s3.amazonaws.com/python-build-packages/cfy-python3.10-%{ARCHITECTURE}.tgz
+Source0:        https://cloudify-cicd.s3.amazonaws.com/python-build-packages/cfy-python3.11-%{ARCHITECTURE}.tgz
 
 %description
 Cloudify's Management worker
@@ -44,7 +44,7 @@ sudo tar xf %{S:0} -C /
 %build
 
 # Create the venv with the custom Python symlinked in
-/opt/python3.10/bin/python3.10 -m venv /opt/mgmtworker/env
+/opt/python3.11/bin/python3.11 -m venv /opt/mgmtworker/env
 
 %{PIP_INSTALL} --upgrade pip "setuptools<=63.2"
 %{PIP_INSTALL} -r "${RPM_SOURCE_DIR}/packaging/mgmtworker/requirements.txt"

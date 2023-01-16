@@ -31,7 +31,7 @@ BuildRequires:  git, sudo
 Requires:      postgresql-libs, sudo, nginx
 Requires(pre):  shadow-utils
 
-Source0:        https://cloudify-cicd.s3.amazonaws.com/python-build-packages/cfy-python3.10-%{ARCHITECTURE}.tgz
+Source0:        https://cloudify-cicd.s3.amazonaws.com/python-build-packages/cfy-python3.11-%{ARCHITECTURE}.tgz
 
 %description
 Cloudify's REST Service.
@@ -43,7 +43,7 @@ sudo tar xf %{S:0} -C /
 %build
 
 # Create the venv with the custom Python symlinked in
-/opt/python3.10/bin/python3.10 -m venv %_manager_env
+/opt/python3.11/bin/python3.11 -m venv %_manager_env
 
 %_manager_env/bin/pip install --upgrade pip setuptools
 %_manager_env/bin/pip install 'gunicorn>20,<21'
