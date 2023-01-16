@@ -1,8 +1,10 @@
+from flask import request as flask_request
 from werkzeug.exceptions import BadRequest
 
 from cloudify.models_states import VisibilityState
 
 from manager_rest import manager_exceptions
+from manager_rest.persistent_storage import get_storage_handler
 from manager_rest.rest import swagger
 from manager_rest.security import SecuredResource
 from manager_rest.plugins_update.constants import PHASES
@@ -25,19 +27,6 @@ from manager_rest.rest import (resources_v2,
                                resources_v2_1,
                                rest_decorators,
                                rest_utils)
-
-
-class PluginsSetGlobal(SecuredResource):
-
-    @authorize('resource_set_global')
-    @rest_decorators.marshal_with(models.Plugin)
-    def patch(self, plugin_id):
-        """
-        Set the plugin's visibility to global
-        """
-        plugin = get_storage_manager().get(models.Plugin, plugin_id)
-        return get_resource_manager().set_visibility(plugin,
-                                                     VisibilityState.GLOBAL)
 
 
 class PluginsSetVisibility(SecuredResource):
@@ -107,6 +96,7 @@ class PluginsUpdate(SecuredResource):
                 'execution_id': {'type': str, 'optional': True},
                 'state': {'type': str, 'optional': True},
                 'affected_deployments': {'type': list, 'optional': True},
+                'deployments_per_tenant': {'type': dict, 'optional': True},
                 'temp_blueprint_id': {'type': str, 'optional': True},
             })
         except BadRequest:
@@ -130,6 +120,7 @@ class PluginsUpdate(SecuredResource):
                                        'update_id',
                                        'execution_id', 'state',
                                        'affected_deployments',
+                                       'deployments_per_tenant',
                                        'temp_blueprint_id']):
             check_user_action_allowed('set_plugin_update_details')
             if not args.get('state'):
@@ -164,6 +155,8 @@ class PluginsUpdate(SecuredResource):
                 )._storage_id
             plugins_update.deployments_to_update = args.get(
                 'affected_deployments', [])
+            plugins_update.deployments_per_tenant = args.get(
+                'deployments_per_tenant', {})
             if args.get('temp_blueprint_id'):
                 plugins_update.temp_blueprint = update_manager.sm.get(
                     models.Blueprint, args['temp_blueprint_id'])
@@ -348,9 +341,7 @@ class PluginsYaml(SecuredResource):
         """
         Download plugin yaml
         """
+        dsl_version = flask_request.args.get('dsl_version')
         plugin = get_storage_manager().get(models.Plugin, plugin_id)
-        return rest_utils.make_streaming_response(
-            plugin_id,
-            plugin.file_server_path,
-            'yaml'
-        )
+        yaml_file_path = plugin.yaml_file_path(dsl_version)
+        return get_storage_handler().proxy(yaml_file_path)

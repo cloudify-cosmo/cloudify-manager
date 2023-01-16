@@ -12,33 +12,47 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-
+import json
 import os
-import requests
-from xml.etree import ElementTree
+import shutil
+import tempfile
+import tarfile
+import zipfile
+from datetime import datetime
 from typing import Any
 
 from flask import request, send_file
+from flask_restful import Resource
 from flask_restful.reqparse import Argument
 
-from cloudify.constants import MANAGER_RESOURCES_PATH
 from manager_rest import config
+from manager_rest.manager_exceptions import (
+    ArchiveTypeError,
+    UploadFileMissing,
+    NoAuthProvided,
+    MultipleFilesUploadException,
+)
 from manager_rest.security import SecuredResource, premium_only
+from manager_rest.security.user_handler import get_token_status
 from manager_rest.rest import rest_utils
 from manager_rest.storage import get_storage_manager, models
 from manager_rest.security.authorization import (
     authorize,
     is_user_action_allowed,
-    check_user_action_allowed,
 )
 from manager_rest.rest.rest_decorators import (
     marshal_with,
     paginate
 )
+from manager_rest.persistent_storage import get_storage_handler
 try:
     from cloudify_premium import manager as manager_premium
 except ImportError:
     manager_premium = None
+
+
+INDEX_JSON_FILENAME = '.cloudify-index.json'
+RESOURCES_PATH = '/resources/'
 
 
 # community base classes for the managers and brokers endpoints:
@@ -167,158 +181,229 @@ class DBNodes(dbnodes_base):
         return get_storage_manager().list(models.DBNodes)
 
 
-class FileServerIndex(SecuredResource):
-    def get(self, **_):
-        """
-        Index a directory tree on the Cloudify file server
-        """
-        uri = request.headers['X-Original-Uri'].strip('/')
-        if not uri.startswith('resources/'):
-            return {}, 404
-
-        dir_path = os.path.join(MANAGER_RESOURCES_PATH,
-                                uri.replace('resources/', '', 1))
-        files_list = []
-        for path, dir, files in os.walk(dir_path):
-            for name in files:
-                if not name.startswith('.'):
-                    files_list.append(
-                        os.path.join(path, name).replace(dir_path+'/', ""))
-
-        return {'files': files_list}, 200
-
-
 class FileServerProxy(SecuredResource):
-    def _is_resource_uri_directory(self, uri):
-        return uri.endswith('/')
+    def __init__(self):
+        self.storage_handler = get_storage_handler()
 
-    def _get_minio_bucket_files(self, prefix):
-        file_server_protocol = 'http'
-        file_server_host = 'fileserver'
-        file_server_port = '9000'
-        bucket_name = 'resources'
-        bucket_files = []
+    def delete(self, path=None, **_):
+        rel_path = _resource_relative_path(path)
 
-        url = '{}://{}:{}/{}?prefix={}'.format(
-            file_server_protocol,
-            file_server_host,
-            file_server_port,
-            bucket_name,
-            prefix,
-        )
-        response = requests.get(url)
-
-        xml_ns = {'s3': 'http://s3.amazonaws.com/doc/2006-03-01/'}
-        xml_et = ElementTree.fromstring(response.content)
-
-        for contents in xml_et.findall('s3:Contents', xml_ns):
-            key = contents.find('s3:Key', xml_ns)
-            bucket_files.append(key.text)
-
-        return bucket_files
-
-    def _get_minio_file_response(self, uri):
-        uri = uri.replace(
-            'resources',
-            'resources-minio',
-        )
-
-        file_full_name = uri.split('/')[-1]
-        file_info = file_full_name.split('.', 1)
-        file_name = file_info[0]
-        file_extension = file_info[1] if len(file_info) > 1 else ''
-
-        response = rest_utils.make_streaming_response(
-            file_name,
-            uri,
-            file_extension,
-        )
-
-        return response
-
-    def _get_local_file_index(self, dir_path):
-        files_list = []
-
-        for path, _, files in os.walk(dir_path):
-            for name in files:
-                if not name.startswith('.'):
-                    files_list.append(
-                        os.path.join(path, name).replace(
-                            MANAGER_RESOURCES_PATH,
-                            "/resources",
-                        )
-                    )
-
-        return files_list
-
-    def _get_minio_fileserver_response(self, uri):
-        relative_path = uri.replace('/resources/', '', 1)
-        uri_is_directory = self._is_resource_uri_directory(uri)
-
-        bucket_files = self._get_minio_bucket_files(relative_path)
-
-        if not len(bucket_files):
+        if not path:
             return {}, 404
 
-        if uri_is_directory:
-            files_list = []
+        if not _is_resource_path_directory(rel_path):
+            return self.storage_handler.delete(rel_path)
 
-            for bucket_file in bucket_files:
-                file_path = f"/resources/{bucket_file}"
-                files_list.append(file_path)
+        raise NotImplementedError('Removing directories is not supported')
 
-            return {'files': files_list}, 200
-        else:
-            response = self._get_minio_file_response(uri)
+    def get(self, path=None, **_):
+        rel_path = _resource_relative_path(path)
 
-            return response
-
-    def _get_local_fileserver_response(self, uri):
-        relative_path = uri.replace('/resources/', '', 1)
-        uri_is_directory = self._is_resource_uri_directory(uri)
-
-        dir_path = os.path.join(
-            MANAGER_RESOURCES_PATH,
-            relative_path,
-        )
-
-        if uri_is_directory:
-            if not os.path.isdir(dir_path):
-                return {}, 404
-
-            files_list = self._get_local_file_index(dir_path)
-
-            return {'files': files_list}, 200
-        else:
-            if not os.path.isfile(dir_path):
-                return {}, 404
-
-            return send_file(dir_path, as_attachment=True)
-
-    def get(self, **_):
-        original_uri = request.headers['X-Original-Uri']
-
-        if not original_uri.startswith('/resources/'):
+        if not path:
             return {}, 404
 
-        file_server_type = config.instance.file_server_type
+        args = rest_utils.get_args_and_verify_arguments([
+            Argument('archive', type=bool, required=False)
+        ])
+        as_archive = args.get('archive', False)
 
-        if file_server_type == 'minio':
-            return self._get_minio_fileserver_response(original_uri)
+        if not _is_resource_path_directory(rel_path):
+            return self.storage_handler.proxy(rel_path)
+        elif not as_archive:
+            files_metadata = {
+                f_path: f_mtime
+                for f_info in self.storage_handler.list(rel_path)
+                for f_path, f_mtime in f_info.serialize(rel_path).items()
+            }
+            return files_metadata, 200
+        else:
+            archive_file_name, download_file_name =\
+                self._prepare_directory_archive(rel_path)
 
-        if file_server_type == 'local':
-            return self._get_local_fileserver_response(original_uri)
+            result = send_file(
+                archive_file_name,
+                download_name=download_file_name,
+                as_attachment=True,
+            )
 
-        return {}, 404
+            os.remove(archive_file_name)
+            return result
+
+    def _prepare_directory_archive(self, path):
+        tmp_dir_name = tempfile.mkdtemp()
+        metadata = {}
+        for file_info in self.storage_handler.list(path):
+            src_path = os.path.join(
+                path,
+                os.path.relpath(file_info.filepath, path),
+            )
+            dst_path = os.path.join(
+                tmp_dir_name,
+                os.path.relpath(src_path, path),
+            )
+            dst_dir = os.path.dirname(dst_path)
+            if not os.path.isdir(dst_dir):
+                os.makedirs(dst_dir)
+            with self.storage_handler.get(src_path) as tmp_file_name:
+                shutil.copy2(tmp_file_name, dst_path)
+            metadata.update(file_info.serialize(path))
+
+        with open(os.path.join(tmp_dir_name, INDEX_JSON_FILENAME), 'wt',
+                  encoding='utf-8') as fp:
+            json.dump(metadata, fp)
+
+        archive_file_name = _create_archive(tmp_dir_name)
+        shutil.rmtree(tmp_dir_name)
+
+        if stripped := path.rstrip('/'):
+            download_file_name = f"{os.path.basename(stripped)}.tar.gz"
+        else:
+            download_file_name = 'resource.tar.gz'
+
+        return archive_file_name, download_file_name
+
+    def put(self, path=None):
+        args = rest_utils.get_args_and_verify_arguments([
+            Argument('extract', type=bool, default=False, required=False)
+        ])
+        extract = args.get('extract', False)
+        file_mtime = None
+
+        if request.files:
+            if len(request.files) > 1:
+                raise MultipleFilesUploadException(
+                    'Multiple files upload is not supported')
+            _, tmp_file_name = tempfile.mkstemp()
+            for uploaded_file in request.files.values():
+                with open(tmp_file_name, 'wb') as tmp_file:
+                    tmp_file.write(uploaded_file.stream.read())
+            try:
+                file_mtime = request.form.get('mtime')
+            except AttributeError:
+                pass
+        else:
+            _, tmp_file_name = tempfile.mkstemp()
+            with open(tmp_file_name, 'wb') as tmp_file:
+                tmp_file.write(request.data)
+
+        if file_mtime:
+            file_timestamp = datetime.fromisoformat(file_mtime).timestamp()
+            os.utime(tmp_file_name, (file_timestamp, file_timestamp))
+
+        if not extract:
+            return self.storage_handler.move(tmp_file_name, path)
+
+        try:
+            tmp_dir_name = _extract_archive(tmp_file_name)
+        finally:
+            os.remove(tmp_file_name)
+
+        try:
+            os.remove(os.path.join(tmp_dir_name, INDEX_JSON_FILENAME))
+        except FileNotFoundError:
+            pass
+
+        for dir_path, _, file_names in os.walk(tmp_dir_name):
+            for file_name in file_names:
+                src = os.path.join(tmp_dir_name, dir_path, file_name)
+                dst = os.path.join(
+                    os.path.dirname(path),
+                    os.path.relpath(
+                        os.path.join(dir_path, file_name),
+                        tmp_dir_name,
+                    ),
+                )
+
+                self.storage_handler.move(src, dst)
+        shutil.rmtree(tmp_dir_name)
+        return "", 200
+
+    def post(self, path=None):
+        if not request.files:
+            raise UploadFileMissing('File upload error: no files provided')
+
+        for _, file in request.files.items():
+            _, tmp_file_name = tempfile.mkstemp()
+            with open(tmp_file_name, 'wb') as tmp_file:
+                tmp_file.write(file.stream.read())
+                tmp_file.close()
+            self.storage_handler.move(
+                tmp_file_name,
+                os.path.join(path or '', file.filename)
+            )
+        return "", 200
 
 
-class MonitoringAuth(SecuredResource):
+class MonitoringAuth(Resource):
     """Auth endpoint for monitoring.
 
     Users who access /monitoring need to first pass through auth_request
     proxying to here. If this returns 200, the user has full access
     to local prometheus.
+
+    Note: This is a subclass of Resource, not SecuredResource, because this
+    does authentication in a special way.
     """
     def get(self, **_):
-        check_user_action_allowed("monitoring")
-        return "", 200
+        # this request checks for stage's auth cookie and authenticates that
+        # way, so that users can access monitoring once they've logged in
+        # to stage.
+        # Only this endpoint allows cookie login, because other endpoints
+        # don't have any CSRF protection, and this one is read-only anyway.
+        if token := request.cookies.get('XSRF-TOKEN'):
+            user = get_token_status(token)
+            monitoring_allowed_roles = set(
+                config.instance.authorization_permissions
+                .get('monitoring', [])
+            )
+            if (
+                user.is_bootstrap_admin
+                # only check system roles, and not tenant roles, because
+                # monitoring is not a tenant-specific action
+                or set(user.system_roles) & monitoring_allowed_roles
+            ):
+                return "", 200
+        raise NoAuthProvided()
+
+
+def _extract_archive(file_name, dst_dir=None):
+    archive_type = _archive_type(file_name).lower()
+    if dst_dir is None:
+        dst_dir = tempfile.mkdtemp()
+    match archive_type:
+        case 'tar':
+            with tarfile.open(file_name, 'r:*') as archive:
+                archive.extractall(path=dst_dir)
+            return dst_dir
+        case 'zip':
+            with zipfile.ZipFile(file_name) as archive:
+                archive.extractall(path=dst_dir)
+            return dst_dir
+    raise ArchiveTypeError(f'Unknown archive type {archive_type}')
+
+
+def _create_archive(dir_name):
+    _, tmp_file_name = tempfile.mkstemp(suffix='.tar.gz')
+    with tarfile.open(tmp_file_name, 'w:gz') as archive:
+        archive.add(dir_name, arcname='./')
+    return tmp_file_name
+
+
+def _archive_type(file_name):
+    if tarfile.is_tarfile(file_name):
+        return 'tar'
+    if zipfile.is_zipfile(file_name):
+        return 'zip'
+
+
+def _is_resource_path_directory(path):
+    return path.endswith('/')
+
+
+def _resource_relative_path(uri=None):
+    if not uri:
+        uri = request.headers['X-Original-Uri']
+        if not uri.startswith(RESOURCES_PATH):
+            return None
+
+    return uri

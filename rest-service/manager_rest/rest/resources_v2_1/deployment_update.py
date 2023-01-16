@@ -33,11 +33,13 @@ from manager_rest.utils import (create_filter_params_list_description,
 from manager_rest.resource_manager import get_resource_manager
 from .. import rest_decorators
 from ..rest_utils import (
-    verify_and_convert_bool,
     get_json_and_verify_params,
-    wait_for_execution,
     lookup_and_validate_user,
+    parse_datetime_string,
     remove_invalid_keys,
+    valid_user,
+    verify_and_convert_bool,
+    wait_for_execution,
 )
 
 
@@ -57,27 +59,17 @@ class DeploymentUpdate(SecuredResource):
             sm = get_storage_manager()
             return sm.get(models.DeploymentUpdate, id)
 
-    @authorize('deployment_update_create')
-    @rest_decorators.marshal_with(models.DeploymentUpdate)
-    def put(self, id, phase):
-        """DEPRECATED.
-
-        This method is implemented for backward-compatibility only.
-        """
-        return self._initiate(id)
-
     @rest_decorators.marshal_with(models.DeploymentUpdate)
     def _initiate(self, deployment_id):
         sm = get_storage_manager()
         rm = get_resource_manager()
-
         preview = verify_and_convert_bool(
             'preview', request.json.get('preview', False))
         runtime_eval = request.json.get('runtime_only_evaluation')
         force = verify_and_convert_bool(
             'force', request.json.get('force', False))
 
-        with sm.transaction():
+        with sm.transaction() as tx:
             blueprint, inputs, reinstall_list = \
                 self._get_and_validate_blueprint_and_inputs(deployment_id,
                                                             request.json)
@@ -104,6 +96,7 @@ class DeploymentUpdate(SecuredResource):
                 'runtime_only_evaluation': runtime_eval,
                 'force': force,
                 'workflow_id': request.json.get('workflow_id', None),
+                'reinstall_list': reinstall_list,
             }
             # boolean params
             for name, default in [
@@ -131,21 +124,27 @@ class DeploymentUpdate(SecuredResource):
                 allow_custom_parameters=True,
             )
             sm.put(update_exec)
-            dep_up.execution = update_exec
-            sm.put(dep_up)
-            dep_up.set_deployment(deployment)
-            messages = rm.prepare_executions(
-                [update_exec],
-                allow_overlapping_running_wf=True,
-                force=force,
-            )
             if current_execution and \
                     current_execution.workflow_id == 'csys_update_deployment':
                 # if we're created from a update_deployment workflow, join its
                 # exec-groups, for easy tracking
                 for exec_group in current_execution.execution_groups:
                     exec_group.executions.append(update_exec)
-                db.session.commit()
+            dep_up.execution = update_exec
+            sm.put(dep_up)
+            dep_up.set_deployment(deployment)
+            try:
+                messages = rm.prepare_executions(
+                    [update_exec],
+                    allow_overlapping_running_wf=True,
+                    force=force,
+                )
+            except manager_exceptions.DependentExistsError:
+                dep_up.state = STATES.FAILED
+                sm.update(dep_up)
+                tx.force_commit = True
+                raise
+
         workflow_executor.execute_workflow(messages)
         if preview:
             wait_for_execution(sm, dep_up.execution.id)
@@ -198,13 +197,32 @@ class DeploymentUpdateId(SecuredResource):
             'deployment_id': {'type': str, 'required': True},
             'state': {'optional': True},
             'inputs': {'optional': True},
-            'blueprint_id': {'optional': True}
+            'blueprint_id': {'optional': True},
+            'created_at': {'optional': True},
+            'created_by': {'optional': True},
+            'execution_id': {'optional': True},
         })
         sm = get_storage_manager()
-        if not current_execution:
+        if params.get('execution_id') is None and not current_execution:
+            # Only allow non-execution creation of dep updates for restores
             raise manager_exceptions.ForbiddenError(
                 'Deployment update objects can only be created by executions')
 
+        if params.get('execution_id'):
+            execution = sm.get(models.Execution,
+                               params['execution_id'])
+        else:
+            execution = current_execution
+        created_at = None
+        if params.get('created_at'):
+            check_user_action_allowed('set_timestamp', None, True)
+            created_at = parse_datetime_string(params['created_at'])
+        created_by = None
+        if params.get('created_by'):
+            check_user_action_allowed('set_owner', None, True)
+            created_by = valid_user(params['created_by'])
+
+        add_steps = False
         with sm.transaction():
             dep = sm.get(models.Deployment, params['deployment_id'])
             dep_upd = sm.get(models.DeploymentUpdate, update_id,
@@ -212,15 +230,67 @@ class DeploymentUpdateId(SecuredResource):
             if dep_upd is None:
                 dep_upd = models.DeploymentUpdate(
                     id=update_id,
-                    _execution_fk=current_execution._storage_id
+                    _execution_fk=execution._storage_id,
                 )
             dep_upd.state = params.get('state') or STATES.UPDATING
             dep_upd.new_inputs = params.get('inputs')
             if params.get('blueprint_id'):
                 dep_upd.new_blueprint = sm.get(
                     models.Blueprint, params['blueprint_id'])
+            if created_at:
+                dep_upd.created_at = created_at
+            if created_by:
+                dep_upd.creator = created_by
+            if params.get('old_blueprint_id'):
+                dep_upd.old_blueprint = sm.get(
+                    models.Blueprint, params['old_blueprint_id'])
+            for attr in [
+                'runtime_only_evaluation', 'deployment_plan', 'steps',
+                'deployment_update_node_instances', 'modified_entity_ids',
+                'central_plugins_to_install', 'central_plugins_to_uninstall',
+                'old_inputs', 'deployment_update_nodes', 'visibility',
+            ]:
+                if params.get(attr) is not None:
+                    if attr == 'steps':
+                        add_steps = True
+                    else:
+                        setattr(dep_upd, attr, params[attr])
             dep_upd.set_deployment(dep)
-            return dep_upd
+
+        if add_steps:
+            steps_to_add = self._prepare_raw_steps(
+                dep_upd, params['steps'])
+            with sm.transaction():
+                db.session.execute(
+                    models.DeploymentUpdateStep.__table__.insert(),
+                    steps_to_add,
+                )
+
+        return dep_upd
+
+    def _prepare_raw_steps(self, dep_update, raw_steps):
+        if any(item.get('created_by') for item in raw_steps):
+            check_user_action_allowed('set_owner')
+
+        valid_params = {'action', '_creator_id', '_deployment_update_fk',
+                        'entity_id', 'entity_type', 'id', 'private_resource',
+                        'resource_availability', '_tenant_id',
+                        'topology_order', 'visibility'}
+
+        user_lookup_cache: Dict[str, models.User] = {}
+
+        for raw_step in raw_steps:
+            raw_step['_tenant_id'] = dep_update._tenant_id
+
+            created_by = lookup_and_validate_user(raw_step.get('created_by'),
+                                                  user_lookup_cache)
+            raw_step['_creator_id'] = created_by.id
+            raw_step['_deployment_update_fk'] = dep_update._storage_id
+            raw_step['visibility'] = dep_update.visibility
+
+            remove_invalid_keys(raw_step, valid_params)
+
+        return raw_steps
 
     @authorize('deployment_update_update')
     @rest_decorators.marshal_with(models.DeploymentUpdate)

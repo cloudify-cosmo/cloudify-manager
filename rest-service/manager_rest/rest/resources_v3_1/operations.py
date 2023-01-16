@@ -433,7 +433,7 @@ class TasksGraphsId(SecuredResource):
             'graph_id': {'optional': True},
         })
         created_at = params.get('created_at')
-        operations = params.get('operations', [])
+        operations = params.get('operations') or []
         if params.get('graph_id'):
             check_user_action_allowed('set_execution_details')
         if created_at or any(op.get('created_at') for op in operations):

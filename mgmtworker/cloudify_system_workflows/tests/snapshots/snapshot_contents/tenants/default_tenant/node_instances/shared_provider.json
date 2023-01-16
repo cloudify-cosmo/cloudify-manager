@@ -1,0 +1,34 @@
+[
+    {
+        "id": "vm_93pf5z",
+        "visibility": "tenant",
+        "host_id": "vm_93pf5z",
+        "index": 1,
+        "relationships": [],
+        "runtime_properties": {
+            "some": "property"
+        },
+        "system_properties": {},
+        "scaling_groups": [],
+        "state": "started",
+        "has_configuration_drift": false,
+        "is_status_check_ok": true,
+        "node_id": "vm",
+        "created_by": "admin"
+    },
+    {
+        "id": "proxy_node_t13ji",
+        "visibility": "tenant",
+        "host_id": null,
+        "index": 1,
+        "relationships": [],
+        "runtime_properties": {},
+        "system_properties": {},
+        "scaling_groups": [],
+        "state": "started",
+        "has_configuration_drift": false,
+        "is_status_check_ok": true,
+        "node_id": "proxy_node",
+        "created_by": "admin"
+    }
+]

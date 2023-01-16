@@ -1,0 +1,76 @@
+tosca_definitions_version: cloudify_dsl_1_5
+
+imports:
+  - cloudify/types/types.yaml
+
+inputs:
+  a_node_id:
+    type: node_id
+    constraints:
+      - valid_values:
+          - node1
+          - node2
+          - not-a-node1
+          - not-a-node2
+          - not-a-node3
+      - name_pattern:
+          starts_with: "node"
+  a_node_type:
+    type: node_type
+    constraints:
+      - valid_values:
+          - type1
+          - type2
+          - not-a-type1
+          - not-a-type2
+          - not-a-type3
+  a_scaling_group:
+    type: scaling_group
+    constraints:
+      - name_pattern:
+          contains: "node"
+  a_operation_name:
+    type: operation_name
+    constraints:
+      - name_pattern:
+          starts_with: "cloudify"
+
+node_types:
+  type1:
+    derived_from: cloudify.nodes.Root
+  type2:
+    derived_from: cloudify.nodes.Root
+  type3:
+    derived_from: cloudify.nodes.Root
+  child1:
+    derived_from: type1
+
+node_templates:
+  node1:
+    type: type1
+  node2:
+    type: type2
+  node3:
+    type: type3
+  child1:
+    type: child1
+
+groups:
+  first_node:
+    members: [node1]
+  other_nodes:
+    members: [node2, node3]
+  children:
+    members: [child1]
+
+policies:
+  scale_policy_nodes:
+    type: cloudify.policies.scaling
+    properties:
+      default_instances: 1
+    targets: [first_node, other_nodes]
+  scale_policy_children:
+    type: cloudify.policies.scaling
+    properties:
+      default_instances: 1
+    targets: [children]

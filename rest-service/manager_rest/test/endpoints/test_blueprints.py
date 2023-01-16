@@ -15,20 +15,24 @@
 
 import os
 import uuid
-import mock
 import tempfile
 import shutil
+from unittest import mock
 
 import pytest
 
+from cloudify.exceptions import WorkflowFailed, InvalidBlueprintImport
+from cloudify.models_states import VisibilityState
+from cloudify_rest_client.exceptions import (
+    BlueprintInUseError,
+    CloudifyClientError,
+)
+
 from manager_rest import archiving
 from manager_rest.test import base_test
+from manager_rest.storage import models
 from manager_rest.storage.resource_models import Blueprint, db
-
-from cloudify_rest_client import exceptions
-from cloudify.exceptions import WorkflowFailed, InvalidBlueprintImport
-
-from .test_utils import generate_progress_func
+from manager_rest.test.endpoints.test_utils import generate_progress_func
 
 try:
     import bz2
@@ -54,19 +58,19 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         self.assertEqual(0, len(result))
 
     def test_get_nonexistent_blueprint(self):
-        with self.assertRaises(exceptions.CloudifyClientError) as context:
+        with self.assertRaises(CloudifyClientError) as context:
             self.client.blueprints.get('15')
         self.assertEqual(404, context.exception.status_code)
 
     def test_upload_blueprint_illegal_id(self):
         # try id with whitespace
-        self.assertRaisesRegex(exceptions.CloudifyClientError,
+        self.assertRaisesRegex(CloudifyClientError,
                                'contains illegal characters',
                                self.client.blueprints.upload,
                                'path',
                                'illegal id')
         # try id that starts with a number
-        self.assertRaisesRegex(exceptions.CloudifyClientError,
+        self.assertRaisesRegex(CloudifyClientError,
                                'must begin with a letter',
                                self.client.blueprints.upload,
                                'path',
@@ -83,7 +87,7 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
     def test_post_blueprint_already_exists(self):
         self.put_blueprint()
         self.assertRaisesRegex(
-            exceptions.CloudifyClientError,
+            CloudifyClientError,
             '409: blueprint with id=blueprint already exists',
             self.put_blueprint)
 
@@ -216,6 +220,20 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         self.assertEqual('b1', blueprints[0].id)
         self.assertEqual('b0', blueprints[1].id)
 
+    def test_upload_skip_execution(self):
+        bp_path = os.path.join(
+            self.get_blueprint_path('mock_blueprint'),
+            'blueprint_with_inputs.yaml',
+        )
+        self.client.blueprints.upload(bp_path, 'b0', skip_execution=True)
+
+        assert not self.client.executions.list(workflow_id='upload_blueprint')
+
+        outfile = os.path.join(self.tmpdir, 'skip-execution-blueprint')
+        self.addCleanup(self.quiet_delete, outfile)
+        self.client.blueprints.download('b0', output_file=outfile)
+        assert os.path.exists(outfile)
+
     def test_blueprint_download_progress(self):
         tmp_dir = '/tmp/tmp_upload_blueprint'
         tmp_local_path = '/tmp/blueprint.bl'
@@ -303,11 +321,11 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
                            'blueprint_with_2_layer_blueprint_import.yaml',
                            app_blueprint_id)
 
-        self.assertRaises(exceptions.BlueprintInUseError,
+        self.assertRaises(BlueprintInUseError,
                           self.client.blueprints.delete,
                           first_blueprint_id)
 
-        self.assertRaises(exceptions.BlueprintInUseError,
+        self.assertRaises(BlueprintInUseError,
                           self.client.blueprints.delete,
                           second_blueprint_id)
 
@@ -329,7 +347,7 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
                            'blueprint_with_blueprint_import.yaml',
                            app_blueprint_id)
 
-        self.assertRaises(exceptions.BlueprintInUseError,
+        self.assertRaises(BlueprintInUseError,
                           self.client.blueprints.delete,
                           first_blueprint_id)
 
@@ -359,7 +377,7 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         blueprint_path = os.path.join(
             self.get_blueprint_path('mock_blueprint'),
             blueprint_file)
-        with self.assertRaises(exceptions.CloudifyClientError) as context:
+        with self.assertRaises(CloudifyClientError) as context:
             self.client.blueprints.validate(blueprint_path, blueprint_id)
         self.assertEqual(400, context.exception.status_code)
         self.assertIn(
@@ -399,7 +417,7 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
                            'blueprint_with_inputs.yaml',
                            blueprint_id)
         self.assertRaisesRegex(
-            exceptions.CloudifyClientError,
+            CloudifyClientError,
             'Invalid state: `{0}`'.format(new_state),
             self.client.blueprints.update,
             blueprint_id,
@@ -412,7 +430,7 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
                            'blueprint_with_inputs.yaml',
                            blueprint_id)
         self.assertRaisesRegex(
-            exceptions.CloudifyClientError,
+            CloudifyClientError,
             'Unknown parameters: abc',
             self.client.blueprints.update,
             blueprint_id,
@@ -425,7 +443,7 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
                            'blueprint_with_inputs.yaml',
                            blueprint_id)
         self.assertRaisesRegex(
-            exceptions.CloudifyClientError,
+            CloudifyClientError,
             'visibility parameter is expected to be of type {}'.format(
                 str.__name__),
             self.client.blueprints.update,
@@ -433,7 +451,7 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
             {'visibility': 123}
         )
         self.assertRaisesRegex(
-            exceptions.CloudifyClientError,
+            CloudifyClientError,
             'plan parameter is expected to be of type dict',
             self.client.blueprints.update,
             blueprint_id,
@@ -465,3 +483,28 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         self.assertEqual(len(blueprints), 1)
         self.assertEqual(blueprints[0], bp2)
         self.assert_metadata_filtered(blueprints, 1)
+
+    def test_update_blueprint_set_visibility(self):
+        bp = models.Blueprint(
+            id='bp1',
+            visibility=VisibilityState.PRIVATE,
+            tenant=self.tenant,
+            creator=self.user,
+        )
+        with self.assertRaisesRegex(CloudifyClientError, 'visibility'):
+            # already private, can't set again
+            self.client.blueprints.set_visibility(
+                bp.id, VisibilityState.PRIVATE)
+        assert bp.visibility == VisibilityState.PRIVATE
+
+        self.client.blueprints.set_visibility(bp.id, VisibilityState.TENANT)
+        assert bp.visibility == VisibilityState.TENANT
+
+        self.client.blueprints.set_visibility(bp.id, VisibilityState.GLOBAL)
+        assert bp.visibility == VisibilityState.GLOBAL
+
+        with self.assertRaisesRegex(CloudifyClientError, 'wider'):
+            # already has wider visibility, can't move back from global!
+            self.client.blueprints.set_visibility(
+                bp.id, VisibilityState.TENANT)
+        assert bp.visibility == VisibilityState.GLOBAL

@@ -30,6 +30,8 @@ class SecretsListResponse(BaseResponse):
         'tenant_name': fields.String,
         'created_by': fields.String,
         'is_hidden_value': fields.Boolean,
+        'provider_name': fields.String,
+        'provider_options': fields.Raw,
     }
 
 
@@ -55,18 +57,6 @@ class UserResponse(BaseResponse):
 
 @swagger.model
 class TenantResponse(BaseResponse):
-
-    resource_fields = {
-        'name': fields.String,
-        'groups': fields.Raw,
-        'users': fields.Raw,
-        'user_roles': fields.Raw
-    }
-
-
-@swagger.model
-class TenantDetailsResponse(BaseResponse):
-
     resource_fields = {
         'name': fields.String,
         'groups': fields.Raw,

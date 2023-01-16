@@ -3,13 +3,13 @@ import os
 from cloudify.models_states import LogBundleState, ExecutionState
 
 from manager_rest import config, manager_exceptions, workflow_executor
+from manager_rest.persistent_storage import get_storage_handler
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.rest import rest_decorators, rest_utils, swagger
 from manager_rest.storage import get_storage_manager, models
 from manager_rest.resource_manager import get_resource_manager
-from manager_rest.constants import (FILE_SERVER_LOG_BUNDLES_FOLDER,
-                                    FILE_SERVER_RESOURCES_FOLDER)
+from manager_rest.constants import FILE_SERVER_LOG_BUNDLES_FOLDER
 
 
 def _get_bundle_path(bundle_id):
@@ -141,14 +141,7 @@ class LogBundlesIdArchive(SecuredResource):
                 'Failed log bundle cannot be downloaded'
             )
 
-        log_bundle_uri = '{0}/{1}/{2}.zip'.format(
-            FILE_SERVER_RESOURCES_FOLDER,
-            FILE_SERVER_LOG_BUNDLES_FOLDER,
-            log_bundle_id
-        )
+        log_bundle_uri = f'{FILE_SERVER_LOG_BUNDLES_FOLDER}'\
+                         f'/{log_bundle_id}.zip'
 
-        return rest_utils.make_streaming_response(
-            log_bundle_id,
-            log_bundle_uri,
-            'zip'
-        )
+        return get_storage_handler().proxy(log_bundle_uri)

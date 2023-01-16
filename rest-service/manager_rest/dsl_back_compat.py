@@ -2,15 +2,15 @@ import os
 
 import yaml
 
-from dsl_parser.constants import TYPES_BASED_ON_DB_ENTITIES
+from dsl_parser.constants import OBJECT_BASED_TYPES
 
 
-def create_bc_plugin_yaml(yamls, archive_target_path, logger):
+def create_bc_plugin_yaml(yamls, archive_target_path):
     if not yamls:
         raise RuntimeError("At least one yaml file must be provided")
 
     if any(filename.endswith('_1_3.yaml') for filename in yamls):
-        return None, None
+        return []
 
     # take the first yaml file - this is the default behaviour
     with open(yamls[0]) as fh:
@@ -34,7 +34,7 @@ def create_bc_plugin_yaml(yamls, archive_target_path, logger):
         for path, element in nodes.items():
             if not element or not isinstance(element, dict):
                 continue
-            if element.get('type') in TYPES_BASED_ON_DB_ENTITIES:
+            if element.get('type') in OBJECT_BASED_TYPES:
                 _substitute_tree_node(
                     plugin_yaml, path + ('type', ), 'string')
                 _remove_tree_node(
@@ -57,11 +57,13 @@ def create_bc_plugin_yaml(yamls, archive_target_path, logger):
             modifications_required |= True
 
     if modifications_required:
+        target_yaml = os.path.join(archive_target_path, 'plugin_1_3.yaml')
         save_bc_plugin_yaml(
-            os.path.join(archive_target_path, 'plugin_1_3.yaml'),
-            plugin_yaml
+            target_yaml,
+            plugin_yaml,
         )
-        logger.info('backward compatible plugin yaml created')
+        return [target_yaml]
+    return []
 
 
 def save_bc_plugin_yaml(file_path, plugin_yaml):

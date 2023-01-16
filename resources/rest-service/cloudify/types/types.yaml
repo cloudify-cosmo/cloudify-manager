@@ -793,7 +793,7 @@ workflows:
       node_instances_active: ['all', 'partial']
     parameters:
       run_by_dependency_order:
-        default: false
+        default: true
       type_names:
         type: list
         item_type: node_type
@@ -926,7 +926,8 @@ workflows:
     mapping: default_workflows.cloudify.plugins.workflows.execute_operation
     is_cascading: false
     parameters:
-      operation: {}
+      operation:
+        type: operation_name
       operation_kwargs:
         default: {}
       allow_kwargs_override:

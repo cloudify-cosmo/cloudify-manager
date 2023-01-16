@@ -160,13 +160,13 @@ def convert_to_int(value):
             'invalid parameter, should be int, got: {0}'.format(value))
 
 
-def make_streaming_response(res_id, res_path, archive_type):
+def make_streaming_response(res_path: str):
     response = make_response()
     response.headers['Content-Description'] = 'File Transfer'
     response.headers['Cache-Control'] = 'no-cache'
     response.headers['Content-Type'] = 'application/octet-stream'
     response.headers['Content-Disposition'] = \
-        'attachment; filename={0}.{1}'.format(res_id, archive_type)
+        f'attachment; filename="{os.path.basename(res_path)}"'
     response.headers['X-Accel-Redirect'] = res_path
     response.headers['X-Accel-Buffering'] = 'yes'
     return response
@@ -373,6 +373,35 @@ def get_deployment_plan(parsed_deployment,
             str(e))
 
 
+def _normalize_plan_dependencies(dependencies, dep_plan_filter_func):
+    """Normalize the dependencies coming from deployment plan to be a list.
+
+    Before 7.0.0, plan dependencies were a dict and didn't contain context.
+    This function returns the 7.0.0+ format, either directly, or
+    based on the old format.
+    """
+    idds = []
+    if not dependencies:
+        return idds
+    if isinstance(dependencies, list):
+        idds = dependencies
+    elif isinstance(dependencies, dict):
+        for dependency_creator, target_deployment_attr in dependencies.items():
+            idd = {
+                'function_identifier': dependency_creator,
+                'target_deployment': target_deployment_attr,
+                'context': {},
+            }
+            idds.append(idd)
+    else:
+        raise TypeError(
+            f'IDDs must be a list or a dict, but got {type(dependencies)}')
+    return [
+        idd for idd in idds
+        if dep_plan_filter_func(idd['function_identifier'])
+    ]
+
+
 def update_deployment_dependencies_from_plan(deployment_id,
                                              deployment_plan,
                                              storage_manager,
@@ -381,20 +410,15 @@ def update_deployment_dependencies_from_plan(deployment_id,
     curr_dependencies = {} if curr_dependencies is None else curr_dependencies
 
     new_dependencies = deployment_plan.setdefault(
-        INTER_DEPLOYMENT_FUNCTIONS, {})
-    new_dependencies_dict = {
-        creator: (target[0], target[1])
-        for creator, target in new_dependencies.items()
-        if dep_plan_filter_func(creator)
-    }
+        INTER_DEPLOYMENT_FUNCTIONS, [])
+    new_dependencies = _normalize_plan_dependencies(
+        new_dependencies, dep_plan_filter_func)
     source_deployment = storage_manager.get(models.Deployment,
                                             deployment_id,
                                             all_tenants=True)
-    dependents = source_deployment.get_all_dependents()
-    for dependency_creator, target_deployment_attr \
-            in new_dependencies_dict.items():
-        target_deployment_id = target_deployment_attr[0]
-        target_deployment_func = target_deployment_attr[1]
+    for idd in new_dependencies:
+        dependency_creator = idd['function_identifier']
+        target_deployment_id, target_deployment_func = idd['target_deployment']
         target_deployment = storage_manager.get(
             models.Deployment, target_deployment_id, all_tenants=True) \
             if target_deployment_id else None
@@ -427,11 +451,6 @@ def update_deployment_dependencies_from_plan(deployment_id,
                 or not hasattr(curr_target_deployment, 'id')):
             continue
             # upcoming: handle the case of external dependencies
-        if target_deployment._storage_id in dependents:
-            raise manager_exceptions.ConflictError(
-                f'cyclic dependency between {source_deployment.id} '
-                f'and {target_deployment.id}')
-    return new_dependencies_dict
 
 
 def update_inter_deployment_dependencies(sm, deployment):
@@ -511,9 +530,20 @@ def _add_new_consumer_labels(sm, source_id, consumer_labels_to_add):
 
 
 def _evaluate_target_func(target_dep_func, source_dep_id):
+    if not target_dep_func:
+        return target_dep_func
+    context = None
+    # 7.0.0+ IDDs are of the form {'function': func, 'context': {}},
+    # but pre-7.0.0 (un-migrated snapshots?) there's only func
+    if 'function' in target_dep_func and 'context' in target_dep_func:
+        context = target_dep_func['context']
+        target_dep_func = target_dep_func['function']
     if get_function(target_dep_func):
         evaluated_func = evaluate_intrinsic_functions(
-            {'target_deployment': target_dep_func}, source_dep_id)
+            {'target_deployment': target_dep_func},
+            source_dep_id,
+            context=context,
+        )
         return evaluated_func.get('target_deployment')
 
     return target_dep_func
@@ -522,6 +552,13 @@ def _evaluate_target_func(target_dep_func, source_dep_id):
 def _get_deployment_from_target_func(sm, target_dep_func, source_dep_id):
     target_dep_id = _evaluate_target_func(target_dep_func, source_dep_id)
     if target_dep_id:
+        if not isinstance(target_dep_id, str):
+            # raise early so that we don't try to pass a non-str to the db,
+            # which would cause a completely unreadable db-side error
+            raise ValueError(
+                f'function {target_dep_func} must return a string, but it '
+                f'returned {target_dep_id} ({type(target_dep_id)})'
+            )
         return sm.get(models.Deployment, target_dep_id, fail_silently=True,
                       all_tenants=True)
 

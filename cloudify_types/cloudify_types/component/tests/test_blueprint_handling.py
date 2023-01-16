@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import mock
+from unittest import mock
 
 from cloudify.state import current_ctx
 from cloudify.exceptions import NonRecoverableError
@@ -56,19 +56,6 @@ class TestBlueprint(ComponentTestBase):
             self.cfy_mock_client.blueprints._upload = (
                 mock.MagicMock(
                     side_effect=CloudifyClientError('already exists')))
-            mock_client.return_value = self.cfy_mock_client
-
-            blueprint_params = dict()
-            blueprint_params['blueprint'] = {}
-            blueprint_params['blueprint']['id'] = 'blu_name'
-            blueprint_params['blueprint']['blueprint_archive'] = self.archive
-            self.resource_config['resource_config'] = blueprint_params
-
-            output = upload_blueprint(**self.resource_config)
-            self.assertTrue(output)
-
-    def test_upload_blueprint_success(self):
-        with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             mock_client.return_value = self.cfy_mock_client
 
             blueprint_params = dict()
@@ -156,17 +143,18 @@ class TestBlueprint(ComponentTestBase):
                 upload_blueprint(**self.resource_config)
 
     def test_upload_blueprint(self):
+        blueprint = {
+            'id': 'test',
+            EXTERNAL_RESOURCE: False,
+            'labels': [{'foo': 'bar'}],
+            'blueprint_archive': self.archive,
+        }
+
+        self.cfy_mock_client.blueprints.set_existing_objects([blueprint])
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
-            labels = [{'foo': 'bar'}]
-            blueprint_params = dict()
-            blueprint_params['blueprint'] = {}
-            blueprint_params['blueprint']['id'] = 'test'
-            blueprint_params['blueprint'][EXTERNAL_RESOURCE] = False
-            blueprint_params['blueprint']['labels'] = labels
-            blueprint_params['blueprint']['blueprint_archive'] = self.archive
-
-            self.resource_config['resource_config'] = blueprint_params
-
+            self.resource_config['resource_config'] = {
+                'blueprint': blueprint,
+            }
             mock_client.return_value = self.cfy_mock_client
 
             output = upload_blueprint(**self.resource_config)

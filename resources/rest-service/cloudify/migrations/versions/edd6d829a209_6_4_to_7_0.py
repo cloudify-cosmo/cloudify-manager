@@ -5,7 +5,6 @@ Revises: 272e61bf5f4a
 Create Date: 2022-10-13 12:23:56.327514
 
 """
-from datetime import datetime
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
@@ -45,18 +44,26 @@ def upgrade():
     drop_service_management_config()
     add_users_created_at_index()
     create_secrets_providers_table()
+    add_secrets_schema()
+    add_secrets_provider_options()
+    add_secrets_provider_relationship()
+    add_s3_client_config()
+    add_blueprint_requirements_column()
 
 
 def downgrade():
+    drop_blueprint_requirements_column()
+    drop_s3_client_config()
     downgrade_users_roles_constraints()
     remove_json_columns()
     remove_p_from_pickle_columns()
     add_service_management_config()
     drop_users_created_at_index()
+    drop_secrets_provider_relationship()
     drop_secrets_providers_table()
+    drop_secrets_schema()
+    drop_secrets_provider_options()
 
-
-# Upgrade functions
 
 def add_p_to_pickle_columns():
     op.alter_column('blueprints',
@@ -273,8 +280,6 @@ def upgrade_users_roles_constraints():
                           'users_roles', 'users', ['user_id'], ['id'],
                           ondelete='CASCADE')
 
-
-# Downgrade functions
 
 def remove_p_from_pickle_columns():
     op.alter_column('blueprints',
@@ -611,7 +616,7 @@ def add_users_created_at_index():
         users_table
         .update()
         .where(users_table.c.created_at.is_(None))
-        .values(created_at=datetime.utcnow())
+        .values(created_at=sa.func.now())
     )
     op.alter_column(
         'users', 'created_at',
@@ -633,3 +638,135 @@ def drop_users_created_at_index():
         existing_type=postgresql.TIMESTAMP(),
         nullable=True,
     )
+
+
+def add_secrets_schema():
+    op.add_column('secrets',
+                  sa.Column('schema', JSONString(), nullable=True))
+
+
+def add_secrets_provider_options():
+    op.add_column(
+        'secrets',
+        sa.Column(
+            'provider_options',
+            sa.Text,
+            nullable=True,
+        ),
+    )
+
+
+def drop_secrets_schema():
+    op.drop_column('secrets', 'schema')
+
+
+def drop_secrets_provider_options():
+    op.drop_column(
+        'secrets',
+        'provider_options',
+    )
+
+
+def add_secrets_provider_relationship():
+    op.add_column(
+        'secrets',
+        sa.Column(
+            '_secrets_provider_fk',
+            sa.Integer(),
+            nullable=True,
+        ),
+    )
+    op.create_index(
+        op.f(
+            'secrets__secrets_provider_fk_idx',
+        ),
+        'secrets',
+        [
+            '_secrets_provider_fk',
+        ],
+        unique=False,
+    )
+    op.create_foreign_key(
+        op.f(
+            'secrets__secrets_provider_fk_fkey',
+        ),
+        'secrets',
+        'secrets_providers',
+        [
+            '_secrets_provider_fk',
+        ],
+
+        [
+            '_storage_id',
+        ],
+        ondelete='CASCADE',
+    )
+
+
+def drop_secrets_provider_relationship():
+    op.drop_constraint(
+        op.f(
+            'secrets__secrets_provider_fk_fkey'
+        ), 'secrets',
+        type_='foreignkey',
+    )
+    op.drop_index(
+        op.f(
+            'secrets__secrets_provider_fk_idx',
+        ),
+        table_name='secrets',
+    )
+    op.drop_column(
+        'secrets',
+        '_secrets_provider_fk',
+    )
+
+
+def add_s3_client_config():
+    op.bulk_insert(
+        config_table,
+        [
+            {
+                'name': 's3_server_url',
+                'value': 'http://fileserver:9000',
+                'scope': 'rest',
+                'schema': {'type': 'string'},
+                'is_editable': True,
+            },
+            {
+                'name': 's3_resources_bucket',
+                'value': 'resources',
+                'scope': 'rest',
+                'schema': {'type': 'string'},
+                'is_editable': True,
+            },
+            {
+                'name': 's3_client_timeout',
+                'value': 5.0,
+                'scope': 'rest',
+                'schema': {'type': 'float'},
+                'is_editable': True,
+            },
+        ]
+    )
+
+
+def drop_s3_client_config():
+    for key in ['s3_server_url', 's3_resources_bucket', 's3_client_timeout']:
+        op.execute(
+            config_table.delete().where(
+                (config_table.c.name == op.inline_literal(key))
+                & (config_table.c.scope == op.inline_literal('rest'))
+            )
+        )
+
+
+def add_blueprint_requirements_column():
+    op.add_column(
+        'blueprints',
+        sa.Column('requirements', JSONString(), nullable=True),
+    )
+
+
+def drop_blueprint_requirements_column():
+    op.drop_column('blueprints', 'requirements')

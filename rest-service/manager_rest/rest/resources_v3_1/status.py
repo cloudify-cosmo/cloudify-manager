@@ -186,7 +186,7 @@ def _lookup_supervisor_service_status(service_name):
 def _check_rabbitmq(services):
     name = 'RabbitMQ'
     try:
-        with get_amqp_client():
+        with get_amqp_client(connect_timeout=3):
             extra_info = {'connection_check': ServiceStatus.HEALTHY}
             _add_or_update_service(services,
                                    name,

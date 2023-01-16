@@ -1,6 +1,6 @@
 FROM python:3.10-slim
 
-ENV WORKER_COUNT=1
+ENV WORKER_COUNT=4
 ENV MAX_WORKER_COUNT=4
 ENV MAX_REQUESTS=1000
 ENV PORT=8100
@@ -11,8 +11,7 @@ ENV POSTGRES_HOST=postgresql
 ENV POSTGRES_USER=cloudify
 ENV POSTGRES_PASSWORD=cloudify
 # FILE_SERVER_TYPE=minio or local
-ENV FILE_SERVER_TYPE=minio
-ENV CONFIG_FILE_PATH=/opt/rest-service/docker/config.yaml
+ENV FILE_SERVER_TYPE=s3
 
 RUN --mount=type=cache,target=/root/.cache \
     apt-get update \
@@ -30,18 +29,18 @@ RUN mkdir -p -m 0600 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
 
 WORKDIR /opt
 
-COPY . rest-service
+COPY requirements.txt requirements.txt
+COPY requirements_ssh.txt requirements_ssh.txt
 
 RUN --mount=type=cache,target=/root/.cache \
     pip install \
       --upgrade pip \
-      -r rest-service/requirements.txt \
-      rest-service/ \
-      gunicorn
+      gunicorn \
+      -r requirements.txt
 
 RUN --mount=type=ssh \
     pip install \
-    -r rest-service/requirements_ssh.txt
+    -r requirements_ssh.txt
 
 RUN mkdir /src
 COPY docker/cloudify.pth /usr/local/lib/python3.10/site-packages/cloudify.pth
@@ -50,5 +49,12 @@ RUN mkdir -p \
       /var/log/cloudify/rest \
       /opt/manager \
       /run/cloudify-restservice
+
+ADD https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager-install/master/cfy_manager/components/restservice/config/license_key.pem.pub /opt/manager/license_key.pem.pub
+
+COPY . rest-service
+
+RUN --mount=type=cache,target=/root/.cache \
+    pip install rest-service/
 
 ENTRYPOINT /opt/rest-service/docker/entrypoint.sh

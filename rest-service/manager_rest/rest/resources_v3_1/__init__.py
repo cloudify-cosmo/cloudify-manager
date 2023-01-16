@@ -26,7 +26,6 @@ from .manager import (                           # NOQA
     RabbitMQBrokers,
     RabbitMQBrokersId,
     DBNodes,
-    FileServerIndex,
     FileServerProxy,
     MonitoringAuth,
 )
@@ -42,7 +41,6 @@ from .plugins import (                           # NOQA
     PluginsUpdates,
     PluginsUpdateId,
     PluginsId,
-    PluginsSetGlobal,
     PluginsSetVisibility,
     PluginsYaml,
 )
@@ -62,7 +60,6 @@ from .blueprints import (                        # NOQA
     BlueprintsId,
     BlueprintsIdArchive,
     BlueprintsIdValidate,
-    BlueprintsSetGlobal,
     BlueprintsSetVisibility,
     BlueprintsIcon,
 )
@@ -144,4 +141,5 @@ from .community_contacts import (  # NOQA
 
 from .secrets_provider import (  # NOQA
     SecretsProvider,
+    SecretsProviderKey,
 )

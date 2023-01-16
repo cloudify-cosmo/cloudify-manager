@@ -13,8 +13,10 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import json
 import os
 import pytest
+import textwrap
 
 from integration_tests import AgentlessTestCase
 
@@ -91,3 +93,31 @@ class MiscManagerTest(AgentlessTestCase):
                         'Verifying compressed log exists: {0}...'.format(
                             compressed_log_path))
                     self.assertTrue(self.file_exists(compressed_log_path))
+
+    def test_undeclared_permissions(self):
+        """Check that all default permissions are declared.
+
+        This test might fail after you add some new permissions to
+        authorization.conf, and forget to add them to the default permissions
+        list. Then, this will remind you.
+        """
+        permissions_source = self.execute_on_manager([
+            '/opt/manager/env/bin/python',
+            '-c',
+            textwrap.dedent('''
+                import json
+                from manager_rest import permissions
+                print(json.dumps(permissions.PERMISSIONS))
+            ''')
+        ])
+        default_permissions = set(json.loads(permissions_source))
+        existing_permission_names = {
+            p['permission'] for p in self.client.permissions.list()
+        }
+        extra_permissions = existing_permission_names - default_permissions
+        assert not extra_permissions, (
+            "Some permissions declared in the default authorization.conf "
+            "were not found in the default permissions list in restservice. "
+            "Edit manager_rest/permissions.py, and add the new "
+            f"permissions there: {extra_permissions}"
+        )

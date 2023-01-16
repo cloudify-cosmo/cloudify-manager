@@ -15,6 +15,7 @@ from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import text
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy import or_ as sql_or, and_ as sql_and
+from sqlalchemy.dialects.postgresql import JSONB
 
 from cloudify.constants import TERMINATED_STATES as TERMINATED_TASK_STATES
 from cloudify.cryptography_utils import encrypt
@@ -35,6 +36,7 @@ from dsl_parser import constants, tasks
 from manager_rest import premium_enabled
 from manager_rest.maintenance import get_maintenance_state
 from manager_rest.constants import (
+    COMPONENT_TYPE,
     DEFAULT_TENANT_NAME,
     FILE_SERVER_BLUEPRINTS_FOLDER,
     FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
@@ -135,10 +137,13 @@ class ResourceManager(object):
             with self.sm.transaction():
                 execution = self.sm.get(
                     models.Execution, execution_id, locking=True)
-                override_status = self._update_finished_execution_dependencies(
-                    execution)
+                override_status, override_error = \
+                    self._update_finished_execution_dependencies(
+                        execution)
                 if override_status is not None:
                     status = override_status
+                if override_error is not None:
+                    error = override_error
 
         affected_parent_deployments = set()
         execution = self.sm.get(models.Execution, execution_id)
@@ -302,7 +307,7 @@ class ResourceManager(object):
 
         except Exception as e:
             execution.status = ExecutionState.FAILED
-            execution.error = str(e)
+            execution.error = f'Error dequeueing execution: {e}'
             return False, []
         else:
             flag_modified(execution, 'parameters')
@@ -492,25 +497,30 @@ class ResourceManager(object):
         if execution._deployment_fk:
             deployment = execution.deployment
         else:
-            return
+            return None, None
 
         workflow_id = execution.workflow_id
         if workflow_id == 'delete_deployment_environment':
-            return
+            return None, None
 
         try:
             update_inter_deployment_dependencies(self.sm, deployment)
         except Exception as e:
             now = datetime.utcnow()
+            error_message = (
+                'Failed updating dependencies of deployment '
+                f'{deployment.id}: {e}'
+            )
             new_log = models.Log(
                 reported_timestamp=now,
                 timestamp=now,
                 execution=execution,
-                message=f'Failed updating dependencies of deployment '
-                        f'{deployment.id}: {e}'
+                message=error_message,
+                level='error',
             )
             self.sm.put(new_log)
-            return ExecutionState.FAILED
+            return ExecutionState.FAILED, error_message
+        return None, None
 
     def _validate_execution_update(self, current_status, future_status):
         if current_status in ExecutionState.END_STATES:
@@ -1162,7 +1172,7 @@ class ResourceManager(object):
             except Exception as e:
                 errors.append(e)
                 exc.status = ExecutionState.FAILED
-                exc.error = str(e)
+                exc.error = f'Error preparing execution: {e}'
                 self.sm.update(exc)
                 continue
 
@@ -1301,39 +1311,6 @@ class ResourceManager(object):
         """
         return wf_id == 'uninstall_plugin'
 
-    def _retrieve_components_from_deployment(self, deployment_id_filter):
-        return [node.id for node in
-                self.sm.list(models.Node,
-                             include=['type_hierarchy', 'id'],
-                             filters=deployment_id_filter,
-                             get_all_results=True)
-                if 'cloudify.nodes.Component' in node.type_hierarchy]
-
-    def _retrieve_all_components_dep_ids(self, components_ids, deployment_id):
-        components_deployment_ids = []
-        for component in components_ids:
-            node_instance_filter = self.create_filters_dict(
-                deployment_id=deployment_id, node_id=component)
-
-            node_instance = self.sm.list(
-                models.NodeInstance,
-                filters=node_instance_filter,
-                get_all_results=True,
-                include=['runtime_properties',
-                         'id']
-            ).items[0]
-
-            component_deployment_props = node_instance.runtime_properties.get(
-                'deployment', {})
-
-            # This runtime property is set when a Component node is starting
-            # install workflow.
-            component_deployment_id = component_deployment_props.get(
-                'id', None)
-            if component_deployment_id:
-                components_deployment_ids.append(component_deployment_id)
-        return components_deployment_ids
-
     def _retrieve_all_component_executions(self, components_deployment_ids):
         executions = []
         for deployment_id in components_deployment_ids:
@@ -1351,12 +1328,34 @@ class ResourceManager(object):
         return executions
 
     def _find_all_components_deployment_id(self, deployment_id):
-        deployment_id_filter = self.create_filters_dict(
-            deployment_id=deployment_id)
-        components_node_ids = self._retrieve_components_from_deployment(
-            deployment_id_filter)
-        return self._retrieve_all_components_dep_ids(components_node_ids,
-                                                     deployment_id)
+        runtime_props_col = db.cast(
+            models.NodeInstance.runtime_properties, JSONB)
+        node_type_hierarchy_col = db.cast(models.Node.type_hierarchy, JSONB)
+
+        # select ni.runtime_props['deployment']['id'] for all NIs of all
+        # nodes that have Component in their type_hierarchy, for the given
+        # deployment
+        query = (
+            db.session.query(
+                runtime_props_col['deployment']['id'].label('deployment_id'),
+            )
+            .join(models.Node)
+            .join(models.Deployment)
+            .filter(
+                # has_key is the postgres array-contains `?` operator
+                # (it is not py2's dict.has_key, so let's NOQA this, because
+                # otherwise flake8 will think it is)
+                node_type_hierarchy_col.has_key(COMPONENT_TYPE)  # noqa
+            )
+            .filter(models.Deployment.id == deployment_id)
+            .distinct()
+        )
+        component_deployment_ids = [
+            row.deployment_id
+            for row in query.all()
+            if row.deployment_id
+        ]
+        return component_deployment_ids
 
     def _find_all_components_executions(self, deployment_id):
         components_deployment_ids = self._find_all_components_deployment_id(
@@ -1739,41 +1738,6 @@ class ResourceManager(object):
         delete_types = self.get_object_types_from_labels(labels_to_delete)
         return created_types, delete_types
 
-    def get_missing_deployment_parents(self, parents):
-        if not parents:
-            return
-        result = self.sm.list(
-            models.Deployment,
-            include=['id'],
-            filters={'id': lambda col: col.in_(parents)},
-            get_all_results=True,
-        ).items
-        _existing_parents = [_parent.id for _parent in result]
-        missing_parents = set(parents) - set(_existing_parents)
-        return missing_parents
-
-    def verify_deployment_parents_existence(self, parents, resource_id,
-                                            resource_type):
-        missing_parents = self.get_missing_deployment_parents(parents)
-        if missing_parents:
-            raise manager_exceptions.DeploymentParentNotFound(
-                '{0} {1}: is referencing deployments'
-                ' using label `csys-obj-parent` that does not exist, '
-                'make sure that deployment(s) {2} exist before creating '
-                '{3}'.format(resource_type.capitalize(),
-                             resource_id,
-                             ','.join(missing_parents), resource_type)
-            )
-
-    def verify_attaching_deployment_to_parents(self, dep, parents):
-        self.verify_deployment_parents_existence(parents, dep, 'deployment')
-        dependent_ids = [d.id for d in dep.get_all_dependents()]
-        for parent_id in parents:
-            if parent_id in dependent_ids:
-                raise manager_exceptions.ConflictError(
-                    f'cyclic dependency between {dep.id} and {parent_id}'
-                )
-
     def add_deployment_to_labels_graph(self, deployments, parent_ids):
         if not deployments or not parent_ids:
             return
@@ -1783,7 +1747,7 @@ class ResourceManager(object):
         missing_parents = set(parent_ids) - {d.id for d in parents}
         if missing_parents:
             raise manager_exceptions.DeploymentParentNotFound(
-                f'Deployment(s) referenced by `csys-obj-parent` not found: '
+                f'Environment referenced by `csys-obj-parent` not found: '
                 f'{ ",".join(missing_parents) }'
             )
         all_ancestors = models.DeploymentLabelsDependencies\
@@ -2592,17 +2556,6 @@ class ResourceManager(object):
                 execution.workflow_id, execution.deployment.id,
                 formatted_dependencies)
             return
-        # If part of a deployment update - mark the update as failed
-        if execution.workflow_id in ('update', 'csys_new_deployment_update'):
-            dep_update = self.sm.get(
-                models.DeploymentUpdate,
-                None,
-                filters={'deployment_id': execution.deployment.id,
-                         'state': UpdateStates.UPDATING}
-            )
-            if dep_update:
-                dep_update.state = UpdateStates.FAILED
-                self.sm.update(dep_update)
         raise manager_exceptions.DependentExistsError(
             f"Can't execute workflow `{execution.workflow_id}` on deployment "
             f"{execution.deployment.id} - existing installations depend "
@@ -2957,14 +2910,25 @@ def create_secret(key, secret, tenant, created_at=None,
                   updated_at=None, creator=None):
     sm = get_storage_manager()
     timestamp = utils.get_formatted_timestamp()
+
+    if provider_options := secret.get('provider_options'):
+        provider_options = encrypt(
+            json.dumps(
+                secret.get('provider_options'),
+            ),
+        )
+
     new_secret = models.Secret(
         id=key,
         value=encrypt(secret['value']),
+        schema=secret.get('schema'),
         created_at=created_at or timestamp,
         updated_at=updated_at or timestamp,
         visibility=secret['visibility'],
         is_hidden_value=secret['is_hidden_value'],
-        tenant=tenant
+        tenant=tenant,
+        provider=secret.get('provider'),
+        provider_options=provider_options,
     )
     if creator:
         new_secret.creator = creator
@@ -2975,6 +2939,13 @@ def create_secret(key, secret, tenant, created_at=None,
 def update_secret(existing_secret, secret):
     existing_secret.value = encrypt(secret['value'])
     existing_secret.updated_at = utils.get_formatted_timestamp()
+    if provider_options := secret.get('provider_options'):
+        existing_secret.provider_options = encrypt(
+            json.dumps(
+                provider_options,
+            ),
+        )
+
     return get_storage_manager().update(existing_secret, validate_global=True)
 
 

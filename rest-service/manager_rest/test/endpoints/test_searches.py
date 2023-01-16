@@ -765,28 +765,62 @@ class SearchesTestCase(base_test.BaseServerTestCase):
 
     def test_scaling_groups_search_by_params(self):
         bp, _ = self._create_deployment('d1', scaling_groups={
-            "first": {"members": ["node1"], "properties": {}},
-            "second": {"members": ["node2"], "properties": {}},
-            "other": {"members": ["node3, node4"], "properties": {}},
+            "first1": {"members": ["node1"], "properties": {}},
+            "second1": {"members": ["node2"], "properties": {}},
+            "other1": {"members": ["node3, node4"], "properties": {}},
         })
         self._create_deployment('d2', bp=bp, scaling_groups={
-            "first": {"members": ["node1"], "properties": {}},
-            "second": {"members": ["node2"], "properties": {}},
-            "third": {"members": ["node3"], "properties": {}},
+            "first2": {"members": ["node1"], "properties": {}},
+            "second2": {"members": ["node2"], "properties": {}},
+            "third2": {"members": ["node3"], "properties": {}},
         })
 
         search = self.client.deployments.scaling_groups.list(
             deployment_id='d1')
-        assert {sg.name for sg in search} == {'first', 'second', 'other'}
+        assert {sg.name for sg in search} == {'first1', 'second1', 'other1'}
 
         search = self.client.deployments.scaling_groups.list(
-            deployment_id='d2', _search='first')
-        assert [(sg.deployment_id, sg.name) for sg in search] == \
-               [('d2', 'first')]
+            deployment_id='d2', _search='first2')
+        assert [sg.name for sg in search] == ['first2']
 
         search = self.client.deployments.scaling_groups.list(
             deployment_id='deployment-which-does-not-exist')
         assert [sg.name for sg in search] == []
+
+    def test_scaling_groups_search_deployment_id_behaviour(self):
+        bp, _ = self._create_deployment('d1', scaling_groups={
+            "first1": {"members": ["node1"], "properties": {}},
+            "second1": {"members": ["node2"], "properties": {}},
+            "other1": {"members": ["node3, node4"], "properties": {}},
+        })
+        self._create_deployment('d2', bp=bp, scaling_groups={
+            "first2": {"members": ["node1"], "properties": {}},
+            "second2": {"members": ["node2"], "properties": {}},
+            "third2": {"members": ["node3"], "properties": {}},
+        })
+
+        with self.assertRaises(CloudifyClientError) as cm:
+            self.client.deployments.scaling_groups.list(
+                deployment_id='d1',
+                constraints={'deployment_id': 'd1'}
+            )
+        assert cm.exception.error_code == 'bad_parameters_error'
+        assert 'not both' in str(cm.exception)
+
+        with self.assertRaises(CloudifyClientError) as cm:
+            self.client.deployments.scaling_groups.list(
+                deployment_id='d1',
+                constraints={'deployment_id': ''}
+            )
+        assert cm.exception.error_code == 'bad_parameters_error'
+        assert 'not both' in str(cm.exception)
+
+        search = self.client.deployments.scaling_groups.list(
+            deployment_id='',
+            constraints={'deployment_id': 'd1'},
+            _search='other1'
+        )
+        assert [sg.name for sg in search] == ['other1']
 
     def test_scaling_groups_search_by_name_pattern_constraints(self):
         bp, _ = self._create_deployment('d1', scaling_groups={
@@ -874,6 +908,44 @@ class SearchesTestCase(base_test.BaseServerTestCase):
             }
         )
         assert [sg.name for sg in search] == []
+
+    def test_list_workflows(self):
+        bp = models.Blueprint(
+            id='bp',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        for ix, (label_value, workflows) in enumerate([
+            ('val1', None),
+            ('val1', {}),
+            ('val1', {'wf1': {}}),
+            ('val1', {'wf1': {}, 'wf2': {}, 'wf3': {}}),
+            ('val2', {'wf4': {}}),
+        ]):
+            self._create_deployment(
+                f'd{ix}',
+                bp=bp,
+                workflows=workflows,
+                labels=[
+                    models.DeploymentLabel(
+                        key='label',
+                        value=label_value,
+                        creator=self.user,
+                    )
+                ],
+            )
+
+        workflows = self.client.workflows.list(
+            filter_rules=[
+                {
+                    'key': 'label',
+                    'values': ['val1'],
+                    'type': 'label',
+                    'operator': 'any_of'
+                },
+            ]
+        )
+        assert {w.id for w in workflows} == {'wf1', 'wf2', 'wf3'}
 
     def _create_nodes(self, blueprint_id='bp', deployment_id='dep',
                       node_ids=None, node_types=None,

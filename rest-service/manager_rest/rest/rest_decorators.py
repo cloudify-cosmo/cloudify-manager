@@ -119,7 +119,13 @@ class marshal_with(object):
                 else:
                     data = self.wrap_with_response_object(
                         data, fields_to_include)
+
+                    if data is None:
+                        return None, code, headers
+
                     return marshal(data, fields_to_include), code, headers
+            elif response is None:
+                return None, 204
             else:
                 response = self.wrap_with_response_object(
                     response, fields_to_include)
@@ -143,6 +149,8 @@ class marshal_with(object):
             if isinstance(data, User):
                 kwargs['include_hash'] = self._include_hash()
             return data.to_response(**kwargs)
+        elif data is None:
+            return None
         raise RuntimeError('Unexpected response data (type {0}) {1}'.format(
             type(data), data))
 
@@ -425,21 +433,27 @@ def evaluate_functions(func):
     return wrapper
 
 
-def no_external_authenticator(action):
-    def no_external_authenticator_dec(func):
+def check_external_authenticator(action):
+    def _deco(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            if (
+            configured = (
                 current_app.external_auth
                 and current_app.external_auth.configured()
-            ):
-                raise manager_exceptions.IllegalActionError(
-                    'Action `{0}` is not available when '
-                    'using external authentication'.format(action)
-                )
+            )
+            if configured:
+                handler = current_app.external_auth.action_handler(action)
+                if not handler:
+                    raise manager_exceptions.IllegalActionError(
+                        'Action `{0}` is not available when '
+                        'using external authentication'.format(action)
+                    )
+                result = handler(*args, **kwargs)
+                if result is not None:
+                    return result
             return func(*args, **kwargs)
         return wrapper
-    return no_external_authenticator_dec
+    return _deco
 
 # endregion
 

@@ -1,0 +1,20 @@
+[
+    {
+        "created_at": "2022-11-25T15:14:35.397Z",
+        "id": "someupdateid",
+        "state": "successful",
+        "deployments_to_update": null,
+        "deployments_per_tenant": {
+            "default_tenant": [
+                "dep1",
+                "dep2"
+            ]
+        },
+        "forced": false,
+        "all_tenants": false,
+        "blueprint_id": "fakecloudmore",
+        "temp_blueprint_id": null,
+        "execution_id": "someexecid",
+        "created_by": "admin"
+    }
+]

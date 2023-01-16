@@ -1,6 +1,9 @@
-import mock
+from unittest import mock
+
 import pytest
 
+from cloudify_rest_client.blueprints import Blueprint
+from cloudify_rest_client.deployments import Deployment
 from cloudify_rest_client.responses import ListResponse
 from cloudify_system_workflows.deployment_environment import create
 
@@ -43,9 +46,11 @@ def blueprint_plan(mock_ctx):
 @pytest.fixture
 def mock_client(blueprint_plan):
     client = mock.Mock()
-    client.blueprints.get = lambda bp: mock.Mock(
-        plan=blueprint_plan
-    )
+    bp = Blueprint({'plan': blueprint_plan})
+    dep = Deployment({})
+    client.blueprints.get.return_value = bp
+    client.deployments.set_attributes.return_value = dep
+
     client.node_instances.list = lambda node_id, _offset: ListResponse(
         [], {'pagination': {'total': 0, 'size': 1000}})
     client.evaluate.functions = lambda dep, ctx, obj: {'payload': obj}
@@ -114,3 +119,50 @@ def test_labels_from_plan_and_kwargs(mock_ctx, mock_client, blueprint_plan):
     assert len(call.kwargs['labels']) == 2
     assert {'a': 'b'} in call.kwargs['labels']
     assert {'a': 'c'} in call.kwargs['labels']
+
+
+def test_inputs(mock_ctx, mock_client, blueprint_plan):
+    def parse_inputs(obj):
+        if 'input_constraints' in obj:
+            # we're in the "evaluate input constraints" call
+            constraints = obj['input_constraints']
+            assert constraints['a'][0]['valid_values'] == \
+                   ['x', {'get_secret': 's1'}]
+            assert constraints['b'][0]['valid_values'] == \
+                   [{'get_secret': 's1'}, {'get_secret': 's2'}]
+
+            # Mock parse values
+            constraints['a'][0]['valid_values'] = ['x', 'y']
+            constraints['b'][0]['valid_values'] = ['y', 'z']
+        return obj
+
+    blueprint_plan['inputs'] = {
+        'a': {
+            'type': 'string',
+            'constraints': [{
+                'valid_values': [
+                    'x',
+                    {'get_secret': 's1'},
+                ]
+            }]
+        },
+        'b': {
+            'type': 'string',
+            'constraints': [{
+                'valid_values': [
+                    {'get_secret': 's1'},
+                    {'get_secret': 's2'},
+                ]
+            }]
+        },
+
+    }
+
+    mock_client.evaluate.functions = lambda dep, ctx, obj: {
+        'payload': parse_inputs(obj)
+    }
+    create(mock_ctx, inputs={'a': 'x', 'b': 'z'})
+    call = mock_client.deployments.set_attributes.mock_calls[0]
+    assert len(call.kwargs['inputs']) == 2
+    assert call.kwargs['inputs'].get('a') == 'x'
+    assert call.kwargs['inputs'].get('b') == 'z'

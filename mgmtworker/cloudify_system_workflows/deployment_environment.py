@@ -98,6 +98,133 @@ def _get_deployment_labels(new_labels, plan_labels):
     return [{k: v} for k, v in labels]
 
 
+def _evaluate_inputs(ctx, client, plan):
+    """Mutate the plan by evaluating inputs (if any)
+
+    This only evaluates inputs constraints. Other input attributes
+    (specifically: the default) need to not be evaluated here, because
+    they support lazy-evaluation.
+    """
+    if 'inputs' in plan:
+        input_constraints = {
+            inp_name: constraints
+            for inp_name, inp in plan['inputs'].items()
+            if (constraints := inp and inp.get('constraints'))
+        }
+        if not input_constraints:
+            return
+        try:
+            evaluated_constraints = client.evaluate.functions(
+                ctx.deployment.id, {},
+                {
+                    'input_constraints': input_constraints,
+                }
+            )['payload']['input_constraints']
+        except CloudifyClientError as e:
+            if e.status_code == 500:
+                raise ValueError(
+                    "Error evaluating deployment inputs. This could happen "
+                    "if the inputs contain an intrinsic function which "
+                    "requires the deployment to be parsed. {}".format(e))
+            raise
+        for inp_name, inp_constraints in evaluated_constraints.items():
+            plan['inputs'][inp_name]['constraints'] = inp_constraints
+
+
+def _format_required_capabilities(capabilities):
+    """Format the required capabilities into a human-readable format.
+
+    >>> _format_required_capabilities([])
+    ''
+    >>> _format_required_capabilities([["a"], ["b", 0]])
+    'a, b.0'
+    >>> _format_required_capabilities([["a", "b", "c", "d"]])
+    'a.b.c.d'
+    """
+    return ', '.join(
+        '.'.join(str(part) for part in cap)
+        for cap in capabilities
+    )
+
+
+def _get_deployment_parent(ctx, deployment):
+    """Fetch the parent of the given deployment.
+
+    Based on labels, look up the parent deployment.
+    If the given deployment has multiple csys-obj-parent labels attached,
+    only one parent is returned, and the order is undefined.
+    """
+    parent_id = None
+    for label in deployment.labels:
+        if label['key'] == 'csys-obj-parent':
+            parent_id = label['value']
+            break
+    if not parent_id:
+        return None
+    return ctx.get_deployment(parent_id)
+
+
+def _find_missing_capabilities(required_capabilities, parent_capabilities):
+    """Return which required capabilities are missing from the parent.
+
+    A capability is considered missing if it doesn't exist at all, or if
+    a key/index in it isn't available. For example, if available parent
+    capabilities are {"a": "b"}, then ["b"] would be missing, ["a", 0]
+    would be missing, but ["a"] would be not missing.
+    """
+    if not parent_capabilities:
+        return required_capabilities
+    missing_capabilities = []
+
+    for required_cap in required_capabilities:
+        name = required_cap[0]
+        if name not in parent_capabilities:
+            missing_capabilities.append(required_cap)
+            continue
+        value = parent_capabilities[name]['value']
+        for index in required_cap[1:]:
+            try:
+                value = value[index]
+            except (KeyError, IndexError, TypeError):
+                missing_capabilities.append(required_cap)
+                break
+    return missing_capabilities
+
+
+def _check_blueprint_requirements(ctx, deployment, blueprint):
+    """Check blueprint requirements, and possibly throw an error.
+
+    If the new deployment doesn't satisfy the blueprint requirements,
+    an error is raised.
+    """
+    requirements = blueprint.requirements
+    if not requirements:
+        return
+    required_parent_caps = requirements.get('parent_capabilities', [])
+    if required_parent_caps:
+        ctx.logger.debug(
+            'Required parent capabilities: %s',
+            required_parent_caps,
+        )
+        parent = _get_deployment_parent(ctx, deployment)
+        if not parent:
+            cap_message = _format_required_capabilities(required_parent_caps)
+            raise ValueError(
+                f'Environment not found, but environment capabilities are '
+                f'required: {cap_message}'
+            )
+        missing_capabilities = _find_missing_capabilities(
+            required_parent_caps,
+            parent.capabilities,
+        )
+        if missing_capabilities:
+            cap_message = _format_required_capabilities(missing_capabilities)
+            raise ValueError(
+                f'Environment {parent.id} does not have the required '
+                f'capabilities: {cap_message}'
+            )
+
+
 @workflow
 def create(ctx, labels=None, inputs=None, skip_plugins_validation=False,
            display_name=None, **_):
@@ -105,12 +232,14 @@ def create(ctx, labels=None, inputs=None, skip_plugins_validation=False,
     bp = client.blueprints.get(ctx.blueprint.id)
     plan_node_ids = [n['id'] for n in bp.plan.get('nodes', [])]
     existing_ni_ids = get_instance_ids_by_node_ids(client, plan_node_ids)
+    _evaluate_inputs(ctx, client, bp.plan)
+
     deployment_plan = tasks.prepare_deployment_plan(
         bp.plan,
         inputs=inputs,
         runtime_only_evaluation=ctx.deployment.runtime_only_evaluation,
         get_secret_method=client.secrets.get,
-        values_getter=GetValuesWithRest(client),
+        values_getter=GetValuesWithRest(client, bp.id),
         existing_ni_ids=existing_ni_ids,
     )
     nodes = deployment_plan['nodes']
@@ -121,7 +250,7 @@ def create(ctx, labels=None, inputs=None, skip_plugins_validation=False,
         deployment_plan.get('labels', {}))
 
     ctx.logger.info('Setting deployment attributes')
-    client.deployments.set_attributes(
+    deployment = client.deployments.set_attributes(
         ctx.deployment.id,
         description=deployment_plan['description'],
         workflows=deployment_plan['workflows'],
@@ -135,6 +264,8 @@ def create(ctx, labels=None, inputs=None, skip_plugins_validation=False,
         labels=labels_to_create,
         resource_tags=deployment_plan.get('resource_tags'),
     )
+
+    _check_blueprint_requirements(ctx, deployment, bp)
 
     ctx.logger.info('Creating %d nodes', len(nodes))
     client.nodes.create_many(ctx.deployment.id, nodes)

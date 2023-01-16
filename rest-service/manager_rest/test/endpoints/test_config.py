@@ -13,7 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import mock
+from unittest import mock
 
 from manager_rest import manager_exceptions
 from manager_rest.test import base_test

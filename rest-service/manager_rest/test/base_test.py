@@ -13,26 +13,26 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import os
 import json
-import time
-import uuid
-import shutil
 import logging
-import unittest
+import os
+import shutil
 import tempfile
-import sqlalchemy.exc
-from sqlalchemy.orm.session import close_all_sessions
+import time
+import traceback
+import unittest
+import uuid
 from typing import List
+from unittest.mock import Mock, patch
 
 import psycopg2
 import requests
-import traceback
+import sqlalchemy.exc
 
-from flask_migrate import Migrate, upgrade
-from mock import Mock, patch
 from flask.testing import FlaskClient
+from flask_migrate import Migrate, upgrade
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+from sqlalchemy.orm.session import close_all_sessions
 from urllib.parse import quote as urlquote
 
 from cloudify_rest_client import CloudifyClient
@@ -134,6 +134,23 @@ class TestClient(FlaskClient):
             constants.DEFAULT_TENANT_NAME
         )
         return super(TestClient, self).open(*args, **kwargs)
+
+
+def copy_resources(file_server_root):
+    resources_path = os.path.normpath(os.path.join(
+        # rest-service/manager-rest/tests/
+        os.path.dirname(os.path.abspath(__file__)),
+        '..',  # rest-service/manager-rest/
+        '..',  # rest-service/
+        '..',  # repo root
+        'resources',
+        'rest-service',
+        'cloudify',
+    ))
+    shutil.copytree(
+        resources_path,
+        os.path.join(file_server_root, 'cloudify'),
+    )
 
 
 class BaseServerTestCase(unittest.TestCase):
@@ -274,6 +291,7 @@ class BaseServerTestCase(unittest.TestCase):
                         client.deployments.scaling_groups.api = \
                             mock_http_client
                         client.secrets_providers.api = mock_http_client
+                        client.resources.api = mock_http_client
 
         return client
 
@@ -292,7 +310,8 @@ class BaseServerTestCase(unittest.TestCase):
         for patcher in cls._patchers:
             patcher.start()
 
-        cls._reset_app()
+        copy_resources(cls.server_configuration.file_server_root)
+        server.app = server.CloudifyFlaskApp(False)
         cls._handle_flask_app_and_db()
         cls.client = cls.create_client()
 
@@ -405,29 +424,6 @@ class BaseServerTestCase(unittest.TestCase):
         cls.maintenance_mode_dir = tempfile.mkdtemp(prefix='maintenance-')
         fd, cls.tmp_conf_file = tempfile.mkstemp(prefix='conf-file-')
         os.close(fd)
-
-    @classmethod
-    def _reset_app(cls):
-        utils.copy_resources(cls.server_configuration.file_server_root)
-        server.reset_app(cls.server_configuration)
-
-        cls._set_hash_mechanism_to_plaintext()
-
-    @staticmethod
-    def _set_hash_mechanism_to_plaintext():
-        """
-        Hashing is the most time consuming task we perform during unittesets,
-        so we will not encrypt user passwords during tests, as this should
-        be tested elsewhere more in depth
-        """
-        security = server.app.extensions['security']
-        security.password_hash = 'plaintext'
-        security.hashing_schemes = ['plaintext']
-        record = security.pwd_context._config._records[('plaintext', None)]
-        security.pwd_context._config._records[(None, None)] = record
-        security.hashing_context._config._records[(None, None)] = record
-        security.hashing_context._config._records[('plaintext', None)] = record
-        security.hashing_context._config.schemes = ('plaintext',)
 
     @classmethod
     def _handle_flask_app_and_db(cls):
@@ -1024,36 +1020,3 @@ class BaseServerTestCase(unittest.TestCase):
         self.client.users.create(username, password, role='default')
         self.client.tenants.add_user(username, tenant, role=role)
         return self.create_client_with_tenant(username, password)
-
-    def _put_mock_blueprint(self):
-        blueprint_id = str(uuid.uuid4())
-        now = utils.get_formatted_timestamp()
-        return self.sm.put(
-            models.Blueprint(
-                id=blueprint_id,
-                created_at=now,
-                updated_at=now,
-                main_file_name='abcd',
-                plan={})
-        )
-
-    @staticmethod
-    def _get_mock_deployment(deployment_id, blueprint):
-        now = utils.get_formatted_timestamp()
-        deployment = models.Deployment(
-            id=deployment_id,
-            display_name=deployment_id,
-            created_at=now,
-            updated_at=now,
-        )
-        deployment.blueprint = blueprint
-        return deployment
-
-    def put_mock_deployments(self, source_deployment, target_deployment):
-        blueprint = self._put_mock_blueprint()
-        source_deployment = self._get_mock_deployment(source_deployment,
-                                                      blueprint)
-        self.sm.put(source_deployment)
-        target_deployment = self._get_mock_deployment(target_deployment,
-                                                      blueprint)
-        self.sm.put(target_deployment)

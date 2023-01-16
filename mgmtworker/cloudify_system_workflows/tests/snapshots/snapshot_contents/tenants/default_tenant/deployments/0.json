@@ -1,0 +1,82 @@
+[
+    {
+        "created_at": "2022-11-25T15:13:28.779Z",
+        "id": "shared_provider",
+        "visibility": "tenant",
+        "description": "Do some stuff.\n",
+        "inputs": {
+            "agent_user": "ec2-user"
+        },
+        "groups": {},
+        "policy_triggers": {
+            "policy": "stuff"
+        },
+        "policy_types": {
+            "policy": "type"
+        },
+        "outputs": {},
+        "capabilities": {
+            "cap": "something"
+        },
+        "scaling_groups": {},
+        "workflows": [
+            {
+                "name": "whatever"
+            },
+            {
+                "name": "other"
+            }
+        ],
+        "runtime_only_evaluation": false,
+        "installation_status": "active",
+        "deployment_status": "good",
+        "display_name": "shared_provider",
+        "resource_tags": {},
+        "blueprint_id": "shared_provider",
+        "created_by": "admin",
+        "labels": []
+    },
+    {
+        "created_at": "2022-11-25T15:13:49.658Z",
+        "id": "fakeclouddeps-123",
+        "visibility": "tenant",
+        "description": null,
+        "inputs": {},
+        "groups": {},
+        "policy_triggers": {
+            "policy": "trig"
+        },
+        "policy_types": {
+            "policy": "type2"
+        },
+        "outputs": {},
+        "capabilities": {},
+        "scaling_groups": {},
+        "workflows": [
+            {
+                "name": "someother"
+            }
+        ],
+        "runtime_only_evaluation": false,
+        "installation_status": "active",
+        "deployment_status": "good",
+        "display_name": "fakeclouddeps-123",
+        "resource_tags": {},
+        "blueprint_id": "fakecloud",
+        "created_by": "admin",
+        "labels": [
+            {
+                "key": "general_usefulness",
+                "value": "low",
+                "created_at": "2022-11-25T15:13:51.006Z",
+                "created_by": "admin"
+            },
+            {
+                "key": "cake",
+                "value": "untrue",
+                "created_at": "2022-11-25T15:13:51.006Z",
+                "created_by": "admin"
+            }
+        ]
+    }
+]

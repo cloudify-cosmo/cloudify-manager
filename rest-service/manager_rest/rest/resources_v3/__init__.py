@@ -30,7 +30,6 @@ from .secrets import (          # NOQA
     SecretsKey,
     SecretsExport,
     SecretsImport,
-    SecretsSetGlobal,
     SecretsSetVisibility,
 )
 

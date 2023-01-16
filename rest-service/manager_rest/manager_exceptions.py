@@ -153,13 +153,6 @@ class UnauthorizedError(ManagerException):
 
 class NoAuthProvided(UnauthorizedError):
     """Not authorized, because authentication was not provided."""
-
-    additional_headers: typing.ClassVar[dict[str, str]] = {
-        # if the user received this error in a browser, they'll be greeted
-        # with the basic auth prompt, rather than just an error page
-        'WWW-Authenticate': 'Basic',
-    }
-
     def __init__(self, *args, **kwargs):
         super().__init__('No authentication info provided', *args, **kwargs)
 
@@ -354,6 +347,11 @@ class PluginInstallationTimeout(ManagerException):
     status_code = 400
 
 
+class UploadFileMissing(ManagerException):
+    error_code = 'upload_missing_file'
+    status_code = 400
+
+
 class PluginDistributionNotSupported(PluginInstallationError):
     pass
 
@@ -447,6 +445,26 @@ class BadFilterRule(ManagerException):
         )
 
 
+class FailedDependency(ManagerException):
+    error_code = 'failed_dependency'
+    status_code = 400
+
+
 class NotListeningLDAPServer(ManagerException):
     error_code = 'not_running_ldap_server'
+    status_code = 500
+
+
+class UnsupportedFileServerType(ManagerException):
+    error_code = 'unsupported_file_server_type'
+    status_code = 500
+
+
+class FileServerException(ManagerException):
+    error_code = 'file_server_exception'
+    status_code = 500
+
+
+class MultipleFilesUploadException(ManagerException):
+    error_code = 'multiple_files_upload_exception'
     status_code = 500

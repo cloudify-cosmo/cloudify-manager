@@ -1,5 +1,8 @@
-from os.path import join
 import json
+import traceback
+from datetime import datetime
+from os.path import join
+from urllib.parse import quote as unquote
 
 from flask import request
 
@@ -16,8 +19,7 @@ from manager_rest.security.authorization import (
     check_user_action_allowed,
 )
 from manager_rest.resource_manager import get_resource_manager
-from manager_rest.upload_manager import (UploadedBlueprintsManager,
-                                         UploadedBlueprintsValidator)
+from manager_rest import upload_manager, workflow_executor
 from manager_rest.rest import (
     rest_utils,
     resources_v1,
@@ -26,7 +28,7 @@ from manager_rest.rest import (
     swagger,
 )
 from manager_rest.storage import models, get_storage_manager
-from manager_rest.utils import get_formatted_timestamp, remove
+from manager_rest.utils import get_formatted_timestamp, remove, current_tenant
 from manager_rest.rest.rest_utils import (get_labels_from_plan,
                                           get_labels_list,
                                           get_args_and_verify_arguments)
@@ -37,19 +39,6 @@ from manager_rest.manager_exceptions import (ConflictError,
                                              ImportedBlueprintNotFound)
 from manager_rest import config
 from manager_rest.constants import FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER
-
-
-class BlueprintsSetGlobal(SecuredResource):
-
-    @authorize('resource_set_global')
-    @rest_decorators.marshal_with(models.Blueprint)
-    def patch(self, blueprint_id):
-        """
-        Set the blueprint's visibility to global
-        """
-        blueprint = get_storage_manager().get(models.Blueprint, blueprint_id)
-        return get_resource_manager().set_visibility(blueprint,
-                                                     VisibilityState.GLOBAL)
 
 
 class BlueprintsSetVisibility(SecuredResource):
@@ -76,10 +65,10 @@ class BlueprintsIcon(SecuredResource):
         # Get the blueprint to verify if it exists (in the current context)
         blueprint = get_storage_manager().get(models.Blueprint, blueprint_id)
         if request.data:
-            UploadedBlueprintsManager().update_icon_file(
+            upload_manager.update_blueprint_icon_file(
                 blueprint.tenant_name, blueprint_id)
         else:
-            UploadedBlueprintsManager().remove_icon_file(
+            upload_manager.remove_blueprint_icon_file(
                 blueprint.tenant_name, blueprint_id)
         return blueprint
 
@@ -91,6 +80,8 @@ class BlueprintsId(resources_v2.BlueprintsId):
         """
         Upload a blueprint (id specified)
         """
+        rm = get_resource_manager()
+        sm = get_storage_manager()
         rest_utils.validate_inputs({'blueprint_id': blueprint_id})
 
         args = None
@@ -141,53 +132,92 @@ class BlueprintsId(resources_v2.BlueprintsId):
             unique_labels_check.append((parsed_key, parsed_value))
         rest_utils.test_unique_labels(unique_labels_check)
 
-        # Fail fast if trying to upload a duplicate blueprint.
-        # Allow overriding an existing blueprint which failed to upload
-        current_tenant = request.headers.get('tenant')
-        override_failed = False
+        visibility = rm.get_resource_visibility(
+            models.Blueprint, blueprint_id, visibility, private_resource)
 
+        with sm.transaction():
+            if failed_bp := self._failed_blueprint(
+                sm, blueprint_id, visibility,
+            ):
+                sm.delete(failed_bp)
+
+        with sm.transaction():
+            blueprint = models.Blueprint(
+                plan=None,
+                id=blueprint_id,
+                description=None,
+                created_at=created_at or datetime.now(),
+                updated_at=datetime.now(),
+                main_file_name=unquote(application_file_name),
+                visibility=visibility,
+                state=state or BlueprintUploadState.PENDING,
+                creator=created_by,
+            )
+            sm.put(blueprint)
+
+            if not blueprint_url:
+                blueprint.state = BlueprintUploadState.UPLOADING
+
+            if not skip_execution:
+                blueprint.upload_execution, messages = rm.upload_blueprint(
+                    blueprint_id,
+                    application_file_name,
+                    blueprint_url,
+                    labels=labels,
+                    # for the import resolver
+                    file_server_root=config.instance.file_server_root,
+                    marketplace_api_url=config.instance.marketplace_api_url,
+                )
+            else:
+                messages = []
+                async_upload = True
+
+        try:
+            if not blueprint_url:
+                upload_manager.upload_blueprint_archive_to_file_server(
+                    blueprint_id)
+            if messages:
+                workflow_executor.execute_workflow(messages)
+        except Exception as e:
+            blueprint.state = BlueprintUploadState.FAILED_UPLOADING
+            blueprint.error = str(e)
+            blueprint.error_traceback = traceback.format_exc()
+            sm.update(blueprint)
+            upload_manager.cleanup_blueprint_archive_from_file_server(
+                blueprint_id, current_tenant.name)
+            raise
+
+        if not async_upload:
+            return rest_utils.get_uploaded_blueprint(sm, blueprint)
+        return blueprint, 201
+
+    def _failed_blueprint(self, sm, blueprint_id, visibility):
+        current_tenant = request.headers.get('tenant')
         if visibility == VisibilityState.GLOBAL:
-            existing_duplicates = get_storage_manager().list(
+            # TODO shouldn't this need an all_tenants=True or the like?
+            existing_duplicates = sm.list(
                 models.Blueprint, filters={'id': blueprint_id})
             if existing_duplicates:
                 if existing_duplicates[0].state in \
                         BlueprintUploadState.FAILED_STATES:
-                    override_failed = True
-                else:
-                    raise ConflictError(
-                        "Can't set or create the resource `{0}`, its "
-                        "visibility can't be global because it also exists in "
-                        "other tenants".format(blueprint_id))
+                    return existing_duplicates[0]
+                raise ConflictError(
+                    f"Can't set or create the resource `{blueprint_id}`, its "
+                    "visibility can't be global because it also exists in "
+                    "other tenants"
+                )
         else:
-            existing_duplicates = get_storage_manager().list(
+            existing_duplicates = sm.list(
                 models.Blueprint, filters={'id': blueprint_id,
                                            'tenant_name': current_tenant})
             if existing_duplicates:
                 if existing_duplicates[0].state in \
                         BlueprintUploadState.FAILED_STATES:
-                    override_failed = True
-                else:
-                    raise ConflictError(
-                        'blueprint with id={0} already exists on tenant {1} '
-                        'or with global visibility'.format(blueprint_id,
-                                                           current_tenant))
-        response = UploadedBlueprintsManager().\
-            receive_uploaded_data(data_id=blueprint_id,
-                                  visibility=visibility,
-                                  override_failed=override_failed,
-                                  labels=labels,
-                                  created_at=created_at,
-                                  owner=created_by,
-                                  private_resource=private_resource,
-                                  application_file_name=application_file_name,
-                                  skip_execution=skip_execution,
-                                  state=state,
-                                  blueprint_url=blueprint_url)
-        if not async_upload:
-            sm = get_storage_manager()
-            blueprint, _ = response
-            response = rest_utils.get_uploaded_blueprint(sm, blueprint)
-        return response
+                    return existing_duplicates[0]
+                raise ConflictError(
+                    f'blueprint with id={blueprint_id} already exists on '
+                    f'tenant {current_tenant} or with global visibility'
+                )
 
     @swagger.operation(
         responseClass=models.Blueprint,
@@ -222,6 +252,7 @@ class BlueprintsId(resources_v2.BlueprintsId):
 
         request_schema = {
             'plan': {'type': dict, 'optional': True},
+            'requirements': {'type': dict, 'optional': True},
             'description': {'type': str, 'optional': True},
             'main_file_name': {'type': str, 'optional': True},
             'visibility': {'type': str, 'optional': True},
@@ -234,7 +265,6 @@ class BlueprintsId(resources_v2.BlueprintsId):
             'upload_execution': {'type': str, 'optional': True},
         }
         request_dict = rest_utils.get_json_and_verify_params(request_schema)
-
         created_at = creator = None
         if request_dict.get('created_at'):
             check_user_action_allowed('set_timestamp', None, True)
@@ -251,12 +281,17 @@ class BlueprintsId(resources_v2.BlueprintsId):
                 "Unknown parameters: {}".format(','.join(invalid_params))
             )
         sm = get_storage_manager()
-        rm = get_resource_manager()
         blueprint = sm.get(models.Blueprint, blueprint_id)
-
         # if finished blueprint validation - cleanup DB entry
         # and uploaded blueprints folder
         if blueprint.state == BlueprintUploadState.VALIDATING:
+            # unattach .upload_execution from the blueprint before deleting it
+            # so that the execution is not deleted via cascade (the user still
+            # needs to be able to fetch the execution & logs to view the
+            # results of validation)
+            blueprint.upload_execution = None
+            sm.update(blueprint)
+
             uploaded_blueprint_path = join(
                 config.instance.file_server_root,
                 FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
@@ -279,6 +314,8 @@ class BlueprintsId(resources_v2.BlueprintsId):
         # set other blueprint attributes.
         if 'plan' in request_dict:
             blueprint.plan = request_dict['plan']
+        if 'requirements' in request_dict:
+            blueprint.requirements = request_dict['requirements']
         if 'description' in request_dict:
             blueprint.description = request_dict['description']
         if 'main_file_name' in request_dict:
@@ -309,7 +346,7 @@ class BlueprintsId(resources_v2.BlueprintsId):
             # On finalizing the blueprint upload, extract archive to file
             # server
             if state == BlueprintUploadState.UPLOADED:
-                UploadedBlueprintsManager(). \
+                upload_manager. \
                     extract_blueprint_archive_to_file_server(
                         blueprint_id=blueprint_id,
                         tenant=blueprint.tenant.name)
@@ -317,7 +354,7 @@ class BlueprintsId(resources_v2.BlueprintsId):
             # If failed for any reason, cleanup the blueprint archive from
             # server
             elif state in BlueprintUploadState.FAILED_STATES:
-                UploadedBlueprintsManager(). \
+                upload_manager. \
                     cleanup_blueprint_archive_from_file_server(
                         blueprint_id=blueprint_id,
                         tenant=blueprint.tenant.name)
@@ -370,6 +407,8 @@ class BlueprintsIdValidate(BlueprintsId):
         """
         Validate a blueprint (id specified)
         """
+        rm = get_resource_manager()
+        sm = get_storage_manager()
         args = None
         form_params = request.form.get('params')
         if form_params:
@@ -383,13 +422,39 @@ class BlueprintsIdValidate(BlueprintsId):
             rest_utils.validate_visibility(
                 visibility, valid_values=VisibilityState.STATES)
         application_file_name = args.pop('application_file_name', '')
-        blueprint_archive_url = args.pop('blueprint_archive_url', None)
+        blueprint_url = args.pop('blueprint_archive_url', None)
 
-        return UploadedBlueprintsValidator().\
-            receive_uploaded_data(data_id=blueprint_id,
-                                  visibility=visibility,
-                                  application_file_name=application_file_name,
-                                  blueprint_url=blueprint_archive_url)
+        with sm.transaction():
+            blueprint = models.Blueprint(
+                plan=None,
+                id=blueprint_id,
+                description=None,
+                main_file_name=None,
+                visibility=None,
+                state=BlueprintUploadState.VALIDATING,
+            )
+
+            sm.put(blueprint)
+            blueprint.upload_execution, messages = rm.upload_blueprint(
+                blueprint_id,
+                application_file_name,
+                blueprint_url,
+                config.instance.file_server_root,     # for the import resolver
+                config.instance.marketplace_api_url,  # for the import resolver
+                validate_only=True,
+            )
+
+        try:
+            if not blueprint_url:
+                upload_manager.upload_blueprint_archive_to_file_server(
+                    blueprint_id)
+            workflow_executor.execute_workflow(messages)
+        except Exception:
+            sm.sm.delete(blueprint)
+            upload_manager.cleanup_blueprint_archive_from_file_server(
+                blueprint_id, current_tenant.name)
+            raise
+        return blueprint, 201
 
 
 class BlueprintsIdArchive(resources_v1.BlueprintsIdArchive):
@@ -402,5 +467,5 @@ class BlueprintsIdArchive(resources_v1.BlueprintsIdArchive):
         a system workflow, to the manager's file server
         This method is for internal use only.
         """
-        UploadedBlueprintsManager(). \
-            upload_archive_to_file_server(blueprint_id=blueprint_id)
+        upload_manager. \
+            upload_blueprint_archive_to_file_server(blueprint_id=blueprint_id)

@@ -1,7 +1,16 @@
-from uuid import uuid4
+from datetime import datetime
+import os
+import shutil
+import tempfile
 
 from flask import request
+from flask_restful.reqparse import Argument
+from flask_restful.inputs import boolean
 
+from cloudify.zip_utils import make_zip64_archive
+from manager_rest import manager_exceptions
+from manager_rest import upload_manager
+from manager_rest.persistent_storage import get_storage_handler
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.rest import (
     rest_decorators,
@@ -10,19 +19,16 @@ from manager_rest.rest import (
 )
 from manager_rest.rest.responses_v2 import ListResponse
 from manager_rest.security import SecuredResource
-from manager_rest.security.authorization import authorize
+from manager_rest.security.authorization import (
+    authorize,
+    check_user_action_allowed,
+)
 from manager_rest.storage import (
     get_storage_manager,
     models,
 )
-from manager_rest.upload_manager import (
-    UploadedPluginsManager,
-    UploadedCaravanManager,
-)
 from manager_rest.utils import create_filter_params_list_description
-from manager_rest.constants import (FILE_SERVER_PLUGINS_FOLDER,
-                                    FILE_SERVER_RESOURCES_FOLDER
-                                    )
+from manager_rest.constants import FILE_SERVER_PLUGINS_FOLDER
 
 
 class Plugins(SecuredResource):
@@ -87,30 +93,71 @@ class Plugins(SecuredResource):
     @authorize('plugin_upload')
     @rest_decorators.marshal_with(models.Plugin)
     def post(self, **kwargs):
-        """
-        Upload a plugin
-        """
-        storage_manager = get_storage_manager()
-        is_caravan = False
-        get_resource_manager().assert_no_snapshot_creation_running_or_queued()
-        try:
-            plugins, code = UploadedCaravanManager().receive_uploaded_data(
-                **kwargs)
-            is_caravan = True
-        except UploadedCaravanManager.InvalidCaravanException:
-            plugin, code = UploadedPluginsManager().receive_uploaded_data(
-                data_id=request.args.get('id', str(uuid4())),
-                **kwargs
+        """Upload a plugin"""
+        sm = get_storage_manager()
+        resource_manager = get_resource_manager()
+
+        args = rest_utils.get_args_and_verify_arguments([
+            Argument('title'),
+            Argument('private_resource', type=boolean),
+            Argument('visibility'),
+            Argument('uploaded_at'),
+            Argument('created_by'),
+        ])
+
+        created_by = args.created_by
+        if created_by:
+            check_user_action_allowed('set_owner', None, True)
+            created_by = rest_utils.valid_user(created_by)
+
+        resource_manager.assert_no_snapshot_creation_running_or_queued()
+        plugins = []
+        wagon_infos = upload_manager.upload_plugin(**kwargs)
+        for wagon_info in wagon_infos:
+            plugin_id = wagon_info['id']
+            visibility = resource_manager.get_resource_visibility(
+                models.Plugin,
+                plugin_id,
+                args.visibility,
+                args.private_resource,
             )
-            plugins = [plugin]
+            build_props = wagon_info.get('build_server_os_properties') or {}
+            plugin = models.Plugin(
+                id=plugin_id,
+                title=args.title or wagon_info.get('package_name'),
+                package_name=wagon_info.get('package_name'),
+                package_version=wagon_info.get('package_version'),
+                archive_name=wagon_info.get('archive_name'),
+                package_source=wagon_info.get('package_source'),
+                supported_platform=wagon_info.get('supported_platform'),
+                distribution=build_props.get('distribution'),
+                distribution_version=build_props.get('distribution_version'),
+                distribution_release=build_props.get('distribution_release'),
+                wheels=wagon_info.get('wheels') or [],
+                excluded_wheels=wagon_info.get('excluded_wheels'),
+                supported_py_versions=wagon_info.get(
+                    'supported_python_versions'),
+                uploaded_at=args.uploaded_at or datetime.utcnow(),
+                visibility=visibility,
+                blueprint_labels=wagon_info.get('blueprint_labels'),
+                labels=wagon_info.get('labels'),
+                resource_tags=wagon_info.get('resource_tags'),
+                creator=created_by,
+            )
+            sm.put(plugin)
+            plugins.append(plugin)
 
-        if is_caravan:
-            storage_plugins = storage_manager.list(models.Plugin)
-
-            return ListResponse(items=storage_plugins.items,
-                                metadata=storage_plugins.metadata), code
-        else:
-            return plugins[0], code
+        if len(plugins) > 1:
+            return ListResponse(
+                items=plugins,
+                metadata={
+                    'pagination': {
+                        'total': len(plugins),
+                        'size': len(plugins),
+                        'offset': 0,
+                    },
+                }), 201
+        return plugins[0], 201
 
 
 class PluginsArchive(SecuredResource):
@@ -129,17 +176,42 @@ class PluginsArchive(SecuredResource):
         """
         # Verify plugin exists.
         plugin = get_storage_manager().get(models.Plugin, plugin_id)
-        plugin_path = '{0}/{1}/{2}/{3}'.format(
-            FILE_SERVER_RESOURCES_FOLDER,
-            FILE_SERVER_PLUGINS_FOLDER,
-            plugin_id,
-            plugin.archive_name)
 
-        return rest_utils.make_streaming_response(
-            plugin_id,
-            plugin_path,
-            'wgn'
-        )
+        storage = get_storage_handler()
+        base_path = os.path.join(FILE_SERVER_PLUGINS_FOLDER, plugin_id)
+
+        if request.args.get('full_archive'):
+            archive_path = os.path.join(base_path, 'plugin_archive.zip')
+
+            try:
+                storage.find(archive_path)
+                archive_exists = True
+            except manager_exceptions.NotFoundError:
+                archive_exists = False
+
+            if not archive_exists:
+                tempdir = tempfile.mkdtemp()
+                try:
+                    temp_archive_dir = os.path.join(tempdir, 'archive')
+                    os.makedirs(temp_archive_dir)
+                    temp_zip_path = os.path.join(tempdir,
+                                                 'plugin_archive.zip')
+
+                    for fileinfo in storage.list(base_path):
+                        path = fileinfo.filepath
+                        dest = os.path.join(temp_archive_dir,
+                                            os.path.split(path)[1])
+                        with storage.get(path) as retrieved:
+                            shutil.copy(retrieved, dest)
+
+                    make_zip64_archive(temp_zip_path, temp_archive_dir)
+                    storage.move(temp_zip_path, archive_path)
+                finally:
+                    shutil.rmtree(tempdir)
+            return storage.proxy(archive_path)
+        else:
+            plugin_path = os.path.join(base_path, plugin.archive_name)
+            return storage.proxy(plugin_path)
 
 
 class PluginsId(SecuredResource):

@@ -1,0 +1,6 @@
+[
+    {
+        "name": "arbitrary",
+        "rabbitmq_password": "apassword"
+    }
+]

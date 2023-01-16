@@ -108,6 +108,13 @@ class ResourceSearches(SecuredResource):
                                         request_dict.get('filter_rules'),
                                         constraints)
 
+        sort_labels = None
+        if sort:
+            sort_labels = {k.split(":", 1)[1]: v
+                           for k, v in sort.items() if k.startswith('label:')}
+            sort = {k: v
+                    for k, v in sort.items() if not k.startswith('label:')}
+
         result = sm.list(
             resource_model,
             include=_include,
@@ -115,9 +122,10 @@ class ResourceSearches(SecuredResource):
             substr_filters=search,
             pagination=pagination,
             sort=sort,
+            sort_labels=sort_labels,
             all_tenants=all_tenants,
             get_all_results=get_all_results,
-            filter_rules=filter_rules
+            filter_rules=filter_rules,
         )
 
         return ListResponse(items=result.items, metadata=result.metadata)
@@ -200,11 +208,41 @@ class NodesSearches(ResourceSearches):
     def post(self, _include=None, pagination=None, sort=None,
              all_tenants=None, search=None, **kwargs):
         """List Nodes using filter rules or DSL constraints"""
-        deployment_id, _ = retrieve_deployment_id_and_constraints(
-            dep_id_required=True)
+        blueprint_id, deployment_id, constraints = \
+            retrieve_constraints(id_required=True)
+
+        if blueprint_id:
+            sm = get_storage_manager()
+            blueprint = sm.get(models.Blueprint, blueprint_id,
+                               all_tenants=all_tenants)
+            return self.nodes_from_plan(blueprint, search, constraints)
+
         filters = {'deployment_id': deployment_id}
+        rf = 'operation_name' if 'operation_name_specs' in constraints \
+            else 'id'
         return super().post(models.Node, None, _include, filters, pagination,
-                            sort, all_tenants, search, None, **kwargs)
+                            sort, all_tenants, search, None,
+                            resource_field=rf, **kwargs)
+
+    @staticmethod
+    def nodes_from_plan(blueprint, search_value, constraints):
+        results, filtered = [], 0
+        for node in blueprint.plan['nodes']:
+            if node_matches(node, search_value, **constraints):
+                results.append(node)
+            else:
+                filtered += 1
+        return ListResponse(
+            items=results,
+            metadata={
+                'filtered': filtered,
+                'pagination': {
+                    'offset': 0,
+                    'size': len(results),
+                    'total': len(results) + filtered,
+                }
+            }
+        )
 
 
 class NodeTypesSearches(ResourceSearches):
@@ -218,10 +256,19 @@ class NodeTypesSearches(ResourceSearches):
     def post(self, _include=None, pagination=None, sort=None,
              all_tenants=None, search=None, **kwargs):
         """List Nodes using filter rules or DSL constraints"""
-        deployment_id, constraints = retrieve_deployment_id_and_constraints(
-            dep_id_required=True)
+        blueprint_id, deployment_id, constraints = \
+            retrieve_constraints(id_required=True)
         if 'name_pattern' in constraints:
             constraints['type_specs'] = constraints.pop('name_pattern')
+
+        if blueprint_id:
+            sm = get_storage_manager()
+            blueprint = sm.get(models.Blueprint, blueprint_id,
+                               all_tenants=all_tenants)
+            return self.node_types_from_plan(blueprint,
+                                             search['type'],
+                                             constraints)
+
         if 'valid_values' in constraints:
             constraints['valid_values'] = extend_node_type_valid_values(
                 deployment_id, constraints['valid_values'])
@@ -230,6 +277,26 @@ class NodeTypesSearches(ResourceSearches):
                             sort, all_tenants, search, None,
                             constraints=constraints,
                             resource_field='type', **kwargs)
+
+    @staticmethod
+    def node_types_from_plan(blueprint, search_value, constraints):
+        results, filtered = [], 0
+        for node in blueprint.plan['nodes']:
+            if node_type_matches(node, search_value, **constraints):
+                results.append(node)
+            else:
+                filtered += 1
+        return ListResponse(
+            items=results,
+            metadata={
+                'filtered': filtered,
+                'pagination': {
+                    'offset': 0,
+                    'size': len(results),
+                    'total': len(results) + filtered,
+                }
+            }
+        )
 
 
 class NodeInstancesSearches(ResourceSearches):
@@ -244,7 +311,7 @@ class NodeInstancesSearches(ResourceSearches):
     def post(self, _include=None, pagination=None, sort=None,
              all_tenants=None, search=None, **kwargs):
         """List NodeInstances using filter rules"""
-        deployment_id, constraints = retrieve_deployment_id_and_constraints()
+        _, deployment_id, constraints = retrieve_constraints()
         if 'name_pattern' in constraints:
             constraints['id_specs'] = constraints.pop('name_pattern')
         args = rest_utils.get_args_and_verify_arguments([
@@ -330,8 +397,7 @@ class CapabilitiesSearches(ResourceSearches):
     def post(self, search=None, _include=None,
              pagination=None, all_tenants=None, **kwargs):
         """List capabilities using DSL constraints"""
-        deployment_id, constraints = \
-            retrieve_deployment_id_and_constraints(dep_id_required=True)
+        _, deployment_id, constraints = retrieve_constraints(id_required=True)
         if 'name_pattern' in constraints:
             constraints['capability_key_specs'] = \
                 constraints.pop('name_pattern')
@@ -435,14 +501,23 @@ class ScalingGroupsSearches(ResourceSearches):
     @rest_decorators.all_tenants
     def post(self, _include=None, pagination=None, all_tenants=None, **kwargs):
         """List scaling groups using DSL constraints"""
-        deployment_id, constraints = \
-            retrieve_deployment_id_and_constraints(dep_id_required=True)
+        blueprint_id, deployment_id, constraints = \
+            retrieve_constraints(id_required=True)
         if 'name_pattern' in constraints:
             constraints['scaling_group_name_specs'] = \
                 constraints.pop('name_pattern')
-        args = rest_utils.get_args_and_verify_arguments([
+        search_value = rest_utils.get_args_and_verify_arguments([
             Argument('_search', required=False),
-        ])
+        ]).get('_search')
+
+        if blueprint_id:
+            sm = get_storage_manager()
+            blueprint = sm.get(models.Blueprint, blueprint_id,
+                               all_tenants=all_tenants)
+            return self.build_response(blueprint.plan['scaling_groups'],
+                                       search_value,
+                                       constraints)
+
         get_all_results = rest_utils.verify_and_convert_bool(
             '_get_all_results',
             request.args.get('_get_all_results', False)
@@ -456,35 +531,40 @@ class ScalingGroupsSearches(ResourceSearches):
             all_tenants=all_tenants,
             get_all_results=get_all_results,
         )
-        metadata = deployments.metadata
+        return self.build_response({k: v for dep in deployments
+                                    for k, v in dep.scaling_groups.items()},
+                                   search_value,
+                                   constraints)
 
-        results, filtered_out = [], 0
-        for dep in deployments:
-            if not dep.scaling_groups:
-                continue
-            for name, scaling_group in dep.scaling_groups.items():
-                if scaling_group_name_matches(
-                        name, constraints, args.get('_search')):
-                    results.append({
-                        'deployment_id': dep.id,
-                        'name': name,
-                        'members': scaling_group.get('members'),
-                        'properties': scaling_group.get('properties'),
-                    })
-                else:
-                    filtered_out += 1
-
-        metadata['filtered'] = filtered_out
-        metadata['pagination']['total'] = len(results) + filtered_out
+    @staticmethod
+    def build_response(scaling_groups, search_value, constraints):
+        results, filtered = [], 0
+        for name, specs in scaling_groups.items():
+            if scaling_group_name_matches(name, search_value, **constraints):
+                results.append({
+                    'name': name,
+                    'members': specs.get('members'),
+                    'properties': specs.get('properties'),
+                })
+            else:
+                filtered += 1
         return ListResponse(
             items=results,
-            metadata=metadata
+            metadata={
+                'filtered': filtered,
+                'pagination': {
+                    'offset': 0,
+                    'size': len(results),
+                    'total': len(results) + filtered,
+                }
+            }
         )
 
 
-def retrieve_deployment_id_and_constraints(dep_id_required=False):
+def retrieve_constraints(id_required=False):
     args = rest_utils.get_args_and_verify_arguments([
         Argument('deployment_id', required=False),
+        Argument('blueprint_id', required=False),
     ])
     request_dict = rest_utils.get_json_and_verify_params(
         {'constraints': {'optional': True, 'type': dict}})
@@ -493,14 +573,24 @@ def retrieve_deployment_id_and_constraints(dep_id_required=False):
         raise manager_exceptions.BadParametersError(
             "You should provide either a valid 'deployment_id' parameter "
             "or have a 'deployment_id' key in the constraints, not both.")
-    deployment_id = args.get('deployment_id') \
-        or constraints.get('deployment_id')
-    # A deployment ID is necessary if constraints are provided
-    if (constraints or dep_id_required) and not deployment_id:
+    if args.get('blueprint_id') and 'blueprint_id' in constraints:
         raise manager_exceptions.BadParametersError(
-            "Please provide a valid 'deployment_id' parameter or have "
-            "a 'deployment_id' key in the constraints.")
-    return deployment_id, constraints
+            "You should provide either a valid 'blueprint_id' parameter "
+            "or have a 'blueprint_id' key in the constraints, not both.")
+    deployment_id = \
+        args.get('deployment_id') or constraints.pop('deployment_id', None)
+    blueprint_id = \
+        args.get('blueprint_id') or constraints.pop('blueprint_id', None)
+    if (constraints or id_required) \
+            and not deployment_id and not blueprint_id:
+        raise manager_exceptions.BadParametersError(
+            "Please provide a valid 'blueprint_id' or 'deployment_id' "
+            "parameter or have a relevant key in the constraints.")
+    if blueprint_id and deployment_id:
+        raise manager_exceptions.BadParametersError(
+            "You should provide either 'blueprint_id' or 'deployment_id' "
+            "constraints, not both.")
+    return blueprint_id, deployment_id, constraints
 
 
 def capability_matches(capability_key, capability, constraints, search_value):
@@ -532,29 +622,41 @@ def capability_matches(capability_key, capability, constraints, search_value):
     return True
 
 
-def scaling_group_name_matches(scaling_group_name, constraints, search_value):
-    for constraint, specification in constraints.items():
-        if constraint == 'scaling_group_name_specs':
-            for operator, value in specification.items():
-                if operator == 'contains':
+def scaling_group_name_matches(scaling_group_name,
+                               search_value,
+                               valid_values=None,
+                               scaling_group_name_specs=None):
+    """Verify if scaling_group_name matches the constraints.
+    :param scaling_group_name: name of a scaling group to test.
+    :param search_value: value of an input/parameter of type node_id,
+                         if provided, must exactly match `node_id`.
+    :param valid_values: a list of allowed values for the `node_id`.
+    :param scaling_group_name_specs: a dictionary describing a name_pattern
+                                     constraint for `scaling_group_name`.
+    :return: `True` if `scaling_group_name` matches the constraints provided
+             with the other three parameters.
+    """
+    if scaling_group_name_specs:
+        for operator, value in scaling_group_name_specs.items():
+            match operator:
+                case 'contains':
                     if value not in scaling_group_name:
                         return False
-                elif operator == 'starts_with':
+                case 'starts_with':
                     if not scaling_group_name.startswith(str(value)):
                         return False
-                elif operator == 'ends_with':
+                case 'ends_with':
                     if not scaling_group_name.endswith(str(value)):
                         return False
-                elif operator == 'equals_to':
+                case 'equals_to':
                     if scaling_group_name != str(value):
                         return False
-                else:
+                case _:
                     raise NotImplementedError('Unknown scaling group name '
                                               f'pattern operator: {operator}')
-        elif constraint == 'valid_values':
-            if scaling_group_name not in specification:
-                return False
-
+    if valid_values:
+        if scaling_group_name not in valid_values:
+            return False
     if search_value:
         return scaling_group_name == search_value
 
@@ -579,3 +681,100 @@ def extend_node_type_valid_values(deployment_id, valid_values):
             th = node.type_hierarchy
             results.update(th[th.index(value):])
     return list(results)
+
+
+def node_matches(node, search_value, valid_values=None,
+                 id_specs=None, operation_name_specs=None):
+    """Verify if node matches the constraints. If id_specs is set node['id']
+    will be tested, if operation_name_specs - these will be node['operation']
+    keys (i.e. operation names).
+
+    :param node: a node to test.
+    :param search_value: value of an input/parameter, if provided, must match
+                         node['id'] or one of the operation names.
+    :param valid_values: a list of allowed values either.
+    :param id_specs: a dictionary describing a name_pattern constraint
+                     for node['id'].
+    :param operation_name_specs: a dictionary describing a name_pattern
+                                 constraint for one of the operation names.
+    :return: `True` if `node` matches the constraints provided with the other
+             parameters.
+    """
+    if id_specs:
+        for operator, value in id_specs.items():
+            match operator:
+                case 'contains':
+                    if value not in node['id']:
+                        return False
+                case 'starts_with':
+                    if not node['id'].startswith(str(value)):
+                        return False
+                case 'ends_with':
+                    if not node['id'].endswith(str(value)):
+                        return False
+                case 'equals_to':
+                    if node['id'] != str(value):
+                        return False
+                case _:
+                    raise NotImplementedError('Unknown operation name '
+                                              f'pattern operator: {operator}')
+    if valid_values:
+        if id_specs and node['id'] not in valid_values:
+            return False
+        if operation_name_specs and all(op not in valid_values
+                                        for op in node['operations'].keys()):
+            return False
+    if search_value:
+        if id_specs:
+            return node['id'] == search_value
+        if operation_name_specs:
+            return any(op == search_value for op in node['operations'].keys())
+
+    return True
+
+
+def node_type_matches(node, search_value, valid_values=None, type_specs=None):
+    """Verify if node_type matches the constraints.
+
+    :param node: node to test (whole dict).
+    :param search_value: value of an input/parameter of type node_type,
+                         if provided, must exactly match `node_type`.
+    :param valid_values: a list of allowed values for the `node_type`.
+    :param type_specs: a dictionary describing a name_pattern constraint
+                       for `node_type`.
+    :return: `True` if `node_type` matches the constraints provided with
+             the other three parameters.
+    """
+    node_type = node['type']
+    if type_specs:
+        for operator, value in type_specs.items():
+            match operator:
+                case 'contains':
+                    if value not in node_type:
+                        return False
+                case 'starts_with':
+                    if not node_type.startswith(str(value)):
+                        return False
+                case 'ends_with':
+                    if not node_type.endswith(str(value)):
+                        return False
+                case 'equals_to':
+                    if node_type != str(value):
+                        return False
+                case _:
+                    raise NotImplementedError('Unknown operation name '
+                                              f'pattern operator: {operator}')
+    if valid_values:
+        valid_values_with_children = set(valid_values)
+        for value in valid_values:
+            if value not in valid_values_with_children:
+                continue
+            th = node['type_hierarchy']
+            if value in th:
+                valid_values_with_children.update(th[th.index(value):])
+        if node_type not in valid_values_with_children:
+            return False
+    if search_value:
+        return node_type == search_value
+
+    return True

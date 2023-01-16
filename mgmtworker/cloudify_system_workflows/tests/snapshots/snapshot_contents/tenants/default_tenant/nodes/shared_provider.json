@@ -1,0 +1,10 @@
+[
+    {
+        "id": "somenode",
+        "created_by": "someone"
+    },
+    {
+        "id": "othernode",
+        "created_by": "other"
+    }
+]

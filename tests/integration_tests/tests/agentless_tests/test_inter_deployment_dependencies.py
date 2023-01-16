@@ -126,6 +126,240 @@ class TestInterDeploymentDependenciesInfrastructure(AgentlessTestCase):
         with self.assertRaises(RuntimeError):
             self.wait_for_execution_to_end(exc)
 
+    def test_dependency_func_with_context(self):
+        """Check that IDD-creating-functions can use context
+
+        Specifically, get_capability must be able to fetch things from
+        SELF and TARGET.
+        """
+        bp1_yaml = """
+tosca_definitions_version: cloudify_dsl_1_4
+imports:
+    - cloudify/types/types.yaml
+capabilities:
+    cap1:
+        value: capability value
+"""
+        bp2_yaml = """
+tosca_definitions_version: cloudify_dsl_1_4
+imports:
+    - cloudify/types/types.yaml
+    - plugin:cloudmock
+node_types:
+    t1:
+        derived_from: cloudify.nodes.Root
+        properties:
+            prop1: {}
+            x: {}
+node_templates:
+    rel_target:
+        type: t1
+        properties:
+            x: ""
+            prop1: cap1
+    n1:
+        type: t1
+        properties:
+            prop1: d1
+            x:
+                get_capability:
+                    - {get_attribute: [SELF, prop1]}
+                    - cap1
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                create:
+                    implementation: cloudmock.cloudmock.tasks.store_inputs
+                    inputs:
+                        lifecycle_operation:
+                            get_capability:
+                                - {get_attribute: [SELF, prop1]}
+                                - {get_attribute: [rel_target, prop1]}
+        relationships:
+            - target: rel_target
+              type: cloudify.relationships.depends_on
+              source_interfaces:
+                cloudify.interfaces.relationship_lifecycle:
+                    establish:
+                        implementation: cloudmock.cloudmock.tasks.store_inputs
+                        inputs:
+                            rel_operation:
+                                get_capability:
+                                    - {get_attribute: [SOURCE, prop1]}
+                                    - {get_attribute: [TARGET, prop1]}
+"""
+        self.upload_blueprint_resource(
+            self.make_yaml_file(bp1_yaml),
+            blueprint_id='bp1',
+        )
+        self.upload_blueprint_resource(
+            self.make_yaml_file(bp2_yaml),
+            blueprint_id='bp2',
+        )
+        dep1 = self.deploy(blueprint_id='bp1', deployment_id='d1')
+        dep2 = self.deploy(blueprint_id='bp2', deployment_id='d2')
+        exc = self.client.executions.create(dep2.id, 'install')
+        self.wait_for_execution_to_end(exc)
+
+        idds = self.client.inter_deployment_dependencies.list(
+            source_deployment_id=dep2.id)
+        for idd in idds:
+            # we have declared IDDs using several ways, but they all point
+            # to dep1 in the end
+            assert idd.target_deployment_id == dep1.id
+            # ...they all come from a function...
+            assert idd.target_deployment_func.get('function')
+            # ...and they all declare some context
+            assert idd.target_deployment_func.get('context')
+
+        nodes = self.client.nodes.list(
+            deployment_id=dep2.id,
+            id='n1',
+            evaluate_functions=True,
+        )
+        assert len(nodes) == 1
+        assert nodes[0].properties['x'] == 'capability value'
+        nis = self.client.node_instances.list(
+            deployment_id=dep2.id,
+            node_id='n1',
+        )
+        assert len(nis) == 1
+        assert nis[0].runtime_properties['lifecycle_operation'] == \
+            'capability value'
+        assert nis[0].runtime_properties['rel_operation'] == \
+            'capability value'
+
+    def test_idd_with_context_multiple_instances(self):
+        """Check that IDDs can come from functions in scaled instances.
+
+        A somewhat complex blueprint!
+        First, the node `rel_target` (two instances of it) each fetch a
+        different entry from the input list, and store it in their runtime
+        properties.
+        Then, two instances of node `n1` run a lifecycle operation, and a
+        relationship operation, fetching a capability from a deployment given
+        by their related `rel_target` instance, with the capability name
+        based on their own property.
+        Finally, we check that since we've had two instances of the scaling
+        group, we've seen capability values coming from BOTH related
+        deployments.
+        """
+        bp1_yaml = """
+tosca_definitions_version: cloudify_dsl_1_4
+imports:
+    - cloudify/types/types.yaml
+inputs:
+    value: {}
+capabilities:
+    cap1:
+        value: {get_input: value}
+"""
+        bp2_yaml = """
+tosca_definitions_version: cloudify_dsl_1_4
+imports:
+    - cloudify/types/types.yaml
+    - plugin:cloudmock
+node_types:
+    t1:
+        derived_from: cloudify.nodes.Root
+        properties:
+            cap_name:
+                default: ""
+inputs:
+    dep_id:
+        type: list
+        default:
+            - null   # index is 0-based
+            - d1
+            - d2
+
+node_templates:
+    rel_target:
+        type: t1
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                create:
+                    implementation: cloudmock.cloudmock.tasks.store_inputs
+                    inputs:
+                        dep_id:
+                            get_input:
+                                - dep_id
+                                - {get_attribute: [SELF, node_instance_index]}
+    n1:
+        type: t1
+        properties:
+            cap_name: cap1
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                create:
+                    implementation: cloudmock.cloudmock.tasks.store_inputs
+                    inputs:
+                        lifecycle_operation:
+                            get_capability:
+                                - {get_attribute: [rel_target, dep_id]}
+                                - {get_attribute: [SELF, cap_name]}
+        relationships:
+            - target: rel_target
+              type: cloudify.relationships.depends_on
+              source_interfaces:
+                cloudify.interfaces.relationship_lifecycle:
+                    establish:
+                        implementation: cloudmock.cloudmock.tasks.store_inputs
+                        inputs:
+                            rel_operation:
+                                get_capability:
+                                    - {get_attribute: [rel_target, dep_id]}
+                                    - {get_attribute: [SOURCE, cap_name]}
+groups:
+  group1:
+    members: [n1, rel_target]
+policies:
+  policy:
+    type: cloudify.policies.scaling
+    targets: [group1]
+    properties:
+      default_instances: 2
+"""
+        self.upload_blueprint_resource(
+            self.make_yaml_file(bp1_yaml),
+            blueprint_id='bp1',
+        )
+        self.upload_blueprint_resource(
+            self.make_yaml_file(bp2_yaml),
+            blueprint_id='bp2',
+        )
+        dep1 = self.deploy(
+            blueprint_id='bp1',
+            deployment_id='d1',
+            inputs={'value': 'value1'},
+        )
+        dep2 = self.deploy(
+            blueprint_id='bp1',
+            deployment_id='d2',
+            inputs={'value': 'value2'},
+        )
+        dep3 = self.deploy(
+            blueprint_id='bp2',
+            deployment_id='d3',
+            # I wish this wasn't required, but otherwise get_input is angry
+            # when it tries to be evaluated up-front, at the get_attribute
+            # call in its arguments
+            runtime_only_evaluation=True,
+        )
+        exc = self.client.executions.create(dep3.id, 'install')
+        self.wait_for_execution_to_end(exc)
+
+        idds = self.client.inter_deployment_dependencies.list(
+            source_deployment_id=dep3.id)
+        assert {idd.target_deployment_id for idd in idds} == {dep1.id, dep2.id}
+        nis = self.client.node_instances.list(
+            deployment_id=dep3.id,
+            node_id='n1',
+        )
+        assert {ni.runtime_properties['lifecycle_operation'] for ni in nis} ==\
+            {'value1', 'value2'}
+        assert {ni.runtime_properties['rel_operation'] for ni in nis} ==\
+            {'value1', 'value2'}
+
     def _test_dependencies_are_updated(self, skip_uninstall):
         self._assert_dependencies_count(0)
         self._prepare_dep_update_test_resources()
@@ -251,8 +485,10 @@ class TestInterDeploymentDependenciesInfrastructure(AgentlessTestCase):
                 self.assertEqual(dependency.target_deployment_id,
                                  SR_DEPLOYMENT)
                 secret_func = {'get_secret': 'shared_resource_deployment_key'}
-                self.assertEqual(dependency['target_deployment_func'],
-                                 secret_func)
+                self.assertEqual(
+                    dependency['target_deployment_func']['function'],
+                    secret_func,
+                )
             else:
                 self.fail('Unexpected dependency creator "{0}"'
                           ''.format(dependency.dependency_creator))

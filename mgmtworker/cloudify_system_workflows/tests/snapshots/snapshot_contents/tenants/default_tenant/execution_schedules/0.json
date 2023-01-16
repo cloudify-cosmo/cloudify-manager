@@ -1,0 +1,24 @@
+[
+    {
+        "created_at": "2022-11-25T15:14:26.861Z",
+        "id": "validate_agents",
+        "since": "2022-12-09T15:14:00.000Z",
+        "until": null,
+        "rule": {
+            "rrule": "RRULE:FREQ=DAILY;INTERVAL=3"
+        },
+        "slip": 0,
+        "workflow_id": "validate_agents",
+        "parameters": {},
+        "execution_arguments": {
+            "allow_custom_parameters": false,
+            "force": false,
+            "is_dry_run": false,
+            "wait_after_fail": 600
+        },
+        "stop_on_fail": false,
+        "enabled": true,
+        "deployment_id": "shared_provider",
+        "created_by": "admin"
+    }
+]

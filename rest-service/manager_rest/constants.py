@@ -213,3 +213,4 @@ DEPLOYMENT_UPDATE_ACTION_TYPES = DeploymentUpdateActionTypes(
     REMOVE='remove',
     MODIFY='modify',
 )
+COMPONENT_TYPE = 'cloudify.nodes.Component'

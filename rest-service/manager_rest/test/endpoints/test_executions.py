@@ -1,24 +1,9 @@
-#########
-# Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
-import mock
-import uuid
 import hashlib
 import unittest
-from itertools import dropwhile
+import uuid
 from datetime import datetime, timedelta
+from itertools import dropwhile
+from unittest import mock
 
 from flask import Flask
 
@@ -33,8 +18,48 @@ from manager_rest.test.base_test import BaseServerTestCase
 
 
 class ExecutionsTestCase(BaseServerTestCase):
-
     DEPLOYMENT_ID = 'deployment'
+
+    def setUp(self):
+        super().setUp()
+        self.bp = models.Blueprint(
+            id='bp1',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        self.EXEC_NOT_SET_STATES = [
+            ExecutionState.PENDING] + ExecutionState.WAITING_STATES
+        self.EXEC_SET_STATES = [
+            state for state in ExecutionState.STATES
+            if state not in self.EXEC_NOT_SET_STATES
+        ]
+
+    def _deployment(self, deployment_id=None, **kwargs):
+        deployment_id = deployment_id or self.DEPLOYMENT_ID
+        dep_kwargs = {
+            'id': deployment_id,
+            'blueprint': self.bp,
+            'workflows': {
+                'some_workflow': {'operation': ''},
+            },
+            'creator': self.user,
+            'tenant': self.tenant,
+        }
+        dep_kwargs.update(kwargs)
+        return models.Deployment(**dep_kwargs)
+
+    def _execution(self, **kwargs):
+        exc_id = kwargs['id'] or 'execution_{}'.format(uuid.uuid4())
+        exc_kwargs = {
+            'created_at': datetime.utcnow(),
+            'id': exc_id,
+            'is_system_workflow': False,
+            'workflow_id': 'install',
+            'creator': self.user,
+            'tenant': self.tenant,
+        }
+        exc_kwargs.update(kwargs)
+        return models.Execution(**exc_kwargs)
 
     def _test_start_execution_dep_env(self, task_state, expected_ex):
         _, deployment_id, _, _ = self.put_deployment(self.DEPLOYMENT_ID)
@@ -443,6 +468,416 @@ class ExecutionsTestCase(BaseServerTestCase):
                 self.fail()
             except exceptions.CloudifyClientError as e:
                 self.assertEqual(expected_status_code, e.status_code)
+
+    def test_restore_not_set_latest_from_none(self):
+        for state in self.EXEC_NOT_SET_STATES:
+            with self.subTest():
+                dep_id = f'dep_{state}'
+                deployment = self._deployment(dep_id)
+                assert self.sm.get(
+                    models.Deployment, dep_id).latest_execution is None
+                self.client.executions.create(
+                    deployment_id=dep_id,
+                    workflow_id='some_workflow',
+                    force_status=state,
+                    started_at="2122-11-25T15:13:17.930Z",
+                )
+                assert deployment.latest_execution is None,\
+                    f'Latest execution should not be set for {state}'
+
+    def test_restore_set_latest_from_none(self):
+        for state in self.EXEC_SET_STATES:
+            with self.subTest():
+                dep_id = f'dep_{state}'
+                deployment = self._deployment(dep_id)
+                assert self.sm.get(
+                    models.Deployment, dep_id).latest_execution is None
+                timestamp = "2122-11-25T15:13:17.930Z"
+                self.client.executions.create(
+                    deployment_id=dep_id,
+                    workflow_id='some_workflow',
+                    force_status=state,
+                    started_at=timestamp,
+                )
+                assert deployment.latest_execution.started_at == timestamp,\
+                    f'Latest execution should be set for {state}'
+
+    def test_restore_not_set_latest_with_older_not_running(self):
+        """We should not set latest execution when provided an execution
+        that did not run.
+        """
+        for state in self.EXEC_NOT_SET_STATES:
+            with self.subTest():
+                dep_id = f'dep_{state}'
+                old_execution_id = f'oldexec_{state}'
+                new_execution_id = f'newexec_{state}'
+                prev_timestamp = "2022-11-25T15:13:17.930Z"
+                timestamp = "2122-11-25T15:13:17.930Z"
+                deployment = self._deployment(dep_id)
+                execution = self._execution(id=old_execution_id,
+                                            started_at=prev_timestamp)
+                deployment.latest_execution = execution
+
+                self.client.executions.create(
+                    execution_id=new_execution_id,
+                    deployment_id=dep_id,
+                    workflow_id='some_workflow',
+                    force_status=state,
+                    started_at=timestamp,
+                )
+
+                assert deployment.latest_execution.id == old_execution_id,\
+                    f'Latest execution should not be changed for {state}'
+
+    def test_restore_set_latest_with_older(self):
+        """We should update the latest execution if we see a create_dep_env
+        execution that is newer than the current one, if it ran.
+        """
+        for state in self.EXEC_SET_STATES:
+            with self.subTest():
+                dep_id = f'dep_{state}'
+                old_execution_id = f'oldexec_{state}'
+                new_execution_id = f'newexec_{state}'
+                prev_timestamp = "2022-11-25T15:13:17.930Z"
+                timestamp = "2122-11-25T15:13:17.930Z"
+                deployment = self._deployment(dep_id)
+                execution = self._execution(id=old_execution_id,
+                                            started_at=prev_timestamp)
+                deployment.latest_execution = execution
+
+                self.client.executions.create(
+                    execution_id=new_execution_id,
+                    deployment_id=dep_id,
+                    workflow_id='some_workflow',
+                    force_status=state,
+                    started_at=timestamp,
+                )
+
+                assert deployment.latest_execution.id == new_execution_id,\
+                    f'Latest execution should be changed for {state}'
+
+    def test_restore_not_set_latest_with_newer(self):
+        """We should never update the latest execution if it is newer than the
+        execution we are restoring.
+        """
+        for state in ExecutionState.STATES:
+            with self.subTest():
+                dep_id = f'dep_{state}'
+                old_execution_id = f'myexec_{state}'
+                prev_timestamp = "2222-11-25T15:13:17.930Z"
+                timestamp = "2122-11-25T15:13:17.930Z"
+                deployment = self._deployment(dep_id)
+                execution = self._execution(id=old_execution_id,
+                                            started_at=prev_timestamp)
+                deployment.latest_execution = execution
+
+                self.client.executions.create(
+                    deployment_id=dep_id,
+                    workflow_id='some_workflow',
+                    force_status=state,
+                    started_at=timestamp,
+                )
+
+                assert deployment.latest_execution.id == old_execution_id,\
+                    f'Latest execution should not be changed for {state}'
+
+    def test_restore_not_set_create_exec_from_none(self):
+        for state in self.EXEC_NOT_SET_STATES:
+            with self.subTest():
+                dep_id = f'dep_{state}'
+                timestamp = "2122-11-25T15:13:17.930Z"
+                execution_id = f'create_for_{state}'
+                deployment = self._deployment(dep_id)
+
+                self.client.executions.create(
+                    execution_id=execution_id,
+                    deployment_id=dep_id,
+                    workflow_id='create_deployment_environment',
+                    force_status=state,
+                    started_at=timestamp,
+                )
+
+                assert deployment.create_execution is None,\
+                    f'Create execution should not be set for {state}'
+
+    def test_restore_set_create_exec_from_none(self):
+        for state in self.EXEC_SET_STATES:
+            with self.subTest():
+                dep_id = f'dep_{state}'
+                timestamp = "2122-11-25T15:13:17.930Z"
+                execution_id = f'create_for_{state}'
+                deployment = self._deployment(dep_id)
+
+                self.client.executions.create(
+                    execution_id=execution_id,
+                    deployment_id=dep_id,
+                    workflow_id='create_deployment_environment',
+                    force_status=state,
+                    started_at=timestamp,
+                )
+
+                assert deployment.create_execution.id == execution_id,\
+                    f'Create execution should be set for {state}'
+
+    def test_restore_not_set_create_with_older_not_running(self):
+        """We should not set create execution when provided an execution
+        that did not run.
+        """
+        for state in self.EXEC_NOT_SET_STATES:
+            with self.subTest():
+                dep_id = f'dep_{state}'
+                old_execution_id = f'oldexec_{state}'
+                new_execution_id = f'newexec_{state}'
+                prev_timestamp = "2022-11-25T15:13:17.930Z"
+                timestamp = "2122-11-25T15:13:17.930Z"
+                deployment = self._deployment(dep_id)
+                execution = self._execution(id=old_execution_id,
+                                            status=ExecutionState.TERMINATED,
+                                            started_at=prev_timestamp)
+                deployment.create_execution = execution
+
+                self.client.executions.create(
+                    execution_id=new_execution_id,
+                    deployment_id=dep_id,
+                    workflow_id='create_deployment_environment',
+                    force_status=state,
+                    started_at=timestamp,
+                )
+
+                assert deployment.create_execution.id == old_execution_id,\
+                    f'Create execution should not be changed for {state}'
+
+    def test_restore_set_create_with_older(self):
+        """We should update the create execution if we see a create_dep_env
+        execution that is newer than the current one, if it ran.
+        """
+        for state in self.EXEC_SET_STATES:
+            with self.subTest():
+                dep_id = f'dep_{state}'
+                old_execution_id = f'oldexec_{state}'
+                new_execution_id = f'newexec_{state}'
+                prev_timestamp = "2022-11-25T15:13:17.930Z"
+                timestamp = "2122-11-25T15:13:17.930Z"
+                deployment = self._deployment(dep_id)
+                execution = self._execution(id=old_execution_id,
+                                            status=ExecutionState.TERMINATED,
+                                            started_at=prev_timestamp)
+                deployment.create_execution = execution
+
+                self.client.executions.create(
+                    execution_id=new_execution_id,
+                    deployment_id=dep_id,
+                    workflow_id='create_deployment_environment',
+                    force_status=state,
+                    started_at=timestamp,
+                )
+
+                assert deployment.create_execution.id == new_execution_id,\
+                    f'Create execution should be changed for {state}'
+
+    def test_restore_not_set_create_with_newer(self):
+        """We should never update the create execution if it is newer than the
+        execution we are restoring.
+        """
+        for state in ExecutionState.STATES:
+            with self.subTest():
+                dep_id = f'dep_{state}'
+                old_execution_id = f'myexec_{state}'
+                prev_timestamp = "2222-11-25T15:13:17.930Z"
+                timestamp = "2122-11-25T15:13:17.930Z"
+                deployment = self._deployment(dep_id)
+                execution = self._execution(id=old_execution_id,
+                                            status=ExecutionState.TERMINATED,
+                                            started_at=prev_timestamp)
+                deployment.create_execution = execution
+
+                self.client.executions.create(
+                    deployment_id=dep_id,
+                    workflow_id='create_deployment_environment',
+                    force_status=state,
+                    started_at=timestamp,
+                )
+
+                assert deployment.create_execution.id == old_execution_id,\
+                    f'Create execution should not be changed for {state}'
+
+    def test_restore_not_set_upload_from_none(self):
+        for state in self.EXEC_NOT_SET_STATES:
+            with self.subTest():
+                bp_id = f'bp_{state}'
+                execution_id = f'upload_for_{state}'
+                bp1 = models.Blueprint(
+                    id=bp_id,
+                    creator=self.user,
+                    tenant=self.tenant,
+                )
+                bp2 = models.Blueprint(
+                    id=state,
+                    creator=self.user,
+                    tenant=self.tenant,
+                )
+
+                self.client.executions.create(
+                    execution_id=execution_id,
+                    workflow_id='upload_blueprint',
+                    deployment_id='',
+                    parameters={'blueprint_id': bp_id},
+                    force_status=state,
+                )
+
+                assert bp1.upload_execution is None,\
+                    f'Upload execution should not be set for {state}'
+                assert bp2.upload_execution is None,\
+                    f'Upload exec should not be set for other bp for {state}'
+
+    def test_restore_set_upload_from_none(self):
+        for state in self.EXEC_SET_STATES:
+            with self.subTest():
+                bp_id = f'bp_{state}'
+                exec_id = f'upload_for_{state}'
+                bp1 = models.Blueprint(
+                    id=bp_id,
+                    creator=self.user,
+                    tenant=self.tenant,
+                )
+                bp2 = models.Blueprint(
+                    id=state,
+                    creator=self.user,
+                    tenant=self.tenant,
+                )
+
+                self.client.executions.create(
+                    execution_id=exec_id,
+                    workflow_id='upload_blueprint',
+                    deployment_id='',
+                    parameters={'blueprint_id': bp_id},
+                    force_status=state,
+                )
+
+                assert bp1.upload_execution.id == exec_id,\
+                    f'Upload execution should be set for {state}'
+                assert bp2.upload_execution is None,\
+                    f'Upload exec should not be set for other bp for {state}'
+
+    def test_restore_not_set_upload_with_newer(self):
+        """We should never update the upload execution if it is newer than the
+        execution we are restoring.
+        """
+        for state in self.EXEC_SET_STATES:
+            with self.subTest():
+                bp_id = f'bp_{state}'
+                old_exec_id = f'old_upload_for_{state}'
+                exec_id = f'upload_for_{state}'
+                prev_timestamp = "2222-11-25T15:13:17.930Z"
+                timestamp = "2122-11-25T15:13:17.930Z"
+                bp1 = models.Blueprint(
+                    id=bp_id,
+                    creator=self.user,
+                    tenant=self.tenant,
+                )
+                bp2 = models.Blueprint(
+                    id=state,
+                    creator=self.user,
+                    tenant=self.tenant,
+                )
+                execution = self._execution(id=old_exec_id,
+                                            status=ExecutionState.TERMINATED,
+                                            started_at=prev_timestamp)
+                bp1.upload_execution = execution
+
+                self.client.executions.create(
+                    execution_id=exec_id,
+                    workflow_id='upload_blueprint',
+                    deployment_id='',
+                    parameters={'blueprint_id': bp_id},
+                    force_status=state,
+                    started_at=timestamp,
+                )
+
+                assert bp1.upload_execution.id == old_exec_id,\
+                    f'Upload execution should not be updated for {state}'
+                assert bp2.upload_execution is None,\
+                    f'Upload exec should not be set for other bp for {state}'
+
+    def test_restore_set_upload_with_older(self):
+        """We should update the upload execution if we see a upload_blueprint
+        execution that is newer than the current one, if it ran.
+        """
+        for state in self.EXEC_SET_STATES:
+            with self.subTest():
+                bp_id = f'bp_{state}'
+                old_exec_id = f'old_upload_for_{state}'
+                exec_id = f'upload_for_{state}'
+                prev_timestamp = "2022-11-25T15:13:17.930Z"
+                timestamp = "2122-11-25T15:13:17.930Z"
+                bp1 = models.Blueprint(
+                    id=bp_id,
+                    creator=self.user,
+                    tenant=self.tenant,
+                )
+                bp2 = models.Blueprint(
+                    id=state,
+                    creator=self.user,
+                    tenant=self.tenant,
+                )
+                execution = self._execution(id=old_exec_id,
+                                            status=ExecutionState.TERMINATED,
+                                            started_at=prev_timestamp)
+                bp1.upload_execution = execution
+
+                self.client.executions.create(
+                    execution_id=exec_id,
+                    workflow_id='upload_blueprint',
+                    deployment_id='',
+                    parameters={'blueprint_id': bp_id},
+                    force_status=state,
+                    started_at=timestamp,
+                )
+
+                assert bp1.upload_execution.id == exec_id,\
+                    f'Upload execution should not be updated for {state}'
+                assert bp2.upload_execution is None,\
+                    f'Upload exec should not be set for other bp for {state}'
+
+    def test_restore_not_set_upload_with_older(self):
+        """We should not set upload execution when provided an execution
+        that did not run.
+        """
+        for state in self.EXEC_NOT_SET_STATES:
+            with self.subTest():
+                bp_id = f'bp_{state}'
+                old_exec_id = f'old_upload_for_{state}'
+                exec_id = f'upload_for_{state}'
+                prev_timestamp = "2022-11-25T15:13:17.930Z"
+                timestamp = "2122-11-25T15:13:17.930Z"
+                bp1 = models.Blueprint(
+                    id=bp_id,
+                    creator=self.user,
+                    tenant=self.tenant,
+                )
+                bp2 = models.Blueprint(
+                    id=state,
+                    creator=self.user,
+                    tenant=self.tenant,
+                )
+                execution = self._execution(id=old_exec_id,
+                                            status=ExecutionState.TERMINATED,
+                                            started_at=prev_timestamp)
+                bp1.upload_execution = execution
+
+                self.client.executions.create(
+                    execution_id=exec_id,
+                    workflow_id='upload_blueprint',
+                    deployment_id='',
+                    parameters={'blueprint_id': bp_id},
+                    force_status=state,
+                    started_at=timestamp,
+                )
+
+                assert bp1.upload_execution.id == old_exec_id,\
+                    f'Upload execution should not be updated for {state}'
+                assert bp2.upload_execution is None,\
+                    f'Upload exec should not be set for other bp for {state}'
 
     def test_get_non_existent_execution(self):
         resource_path = '/executions/idonotexist'
@@ -1332,3 +1767,216 @@ class ExecutionQueueingTests(BaseServerTestCase):
         # hopefully we didn't dequeue anything from the "started" groups!
         for exc in dequeued:
             assert all(gr in queued_groups for gr in exc.execution_groups)
+
+
+class TestExecutionCascading(BaseServerTestCase):
+    def _deployment(self, **kwargs):
+        dep_kwargs = {
+            'blueprint': self.bp,
+            'workflows': {
+                'cascading': {'operation': '', 'is_cascading': True},
+                'noncascading': {'operation': '', 'is_cascading': False},
+            },
+            'creator': self.user,
+            'tenant': self.tenant,
+        }
+        dep_kwargs.update(kwargs)
+        return models.Deployment(**dep_kwargs)
+
+    def _node(self, **kwargs):
+        node_kwargs = {
+            'deploy_number_of_instances': 1,
+            'planned_number_of_instances': 1,
+            'max_number_of_instances': 1,
+            'min_number_of_instances': 1,
+            'number_of_instances': 1,
+            'type': 'cloudify.nodes.Component',
+            'type_hierarchy': [
+                'cloudify.nodes.Root',
+                'cloudify.nodes.Component',
+            ],
+            'creator': self.user,
+            'tenant': self.tenant,
+        }
+        node_kwargs.update(kwargs)
+        return models.Node(**node_kwargs)
+
+    def _instance(self, **kwargs):
+        instance_kwargs = {
+            'state': 'started',
+            'creator': self.user,
+            'tenant': self.tenant,
+        }
+        instance_kwargs.update(kwargs)
+        return models.NodeInstance(**instance_kwargs)
+
+    def setUp(self):
+        super().setUp()
+        self.bp = models.Blueprint(
+            id='bp1',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        self.base_dep = self._deployment(id='base')
+        self.component1 = self._deployment(id='component1')
+        self.component2 = self._deployment(id='component2')
+        self.component3 = self._deployment(id='component3')
+        self.all_deployments = [
+            self.base_dep,
+            self.component1,
+            self.component2,
+            self.component3,
+        ]
+
+        self.node1 = self._node(id='node1', deployment=self.base_dep)
+
+        self.node1_instance1 = self._instance(
+            id='node1_1',
+            node=self.node1,
+            runtime_properties={
+                'deployment': {'id': self.component1.id},
+            },
+        )
+        self.node1_instance2 = self._instance(
+            id='node1_2',
+            node=self.node1,
+            runtime_properties={
+                'deployment': {'id': self.component2.id},
+            },
+        )
+
+        self.node2 = self._node(
+            id='node2',
+            deployment=self.base_dep,
+            type='derived_type',
+            type_hierarchy=[
+                'cloudify.nodes.Root',
+                'cloudify.nodes.Component',
+                'derived_type',
+            ],
+        )
+
+        # node with 0 instances
+        self.node3 = self._node(
+            id='node3',
+            deployment=self.base_dep,
+        )
+
+        self.node2_instance1 = self._instance(
+            id='node2_1',
+            node=self.node2,
+            runtime_properties={
+                'deployment': {'id': self.component3.id},
+            },
+        )
+        # duplicated component id
+        self.node2_instance2 = self._instance(
+            id='node2_2',
+            node=self.node2,
+            runtime_properties={
+                'deployment': {'id': self.component3.id},
+            },
+        )
+
+        self.non_component_node = self._node(
+            id='node3',
+            deployment=self.base_dep,
+            type='cloudify.nodes.Root',
+            type_hierarchy=['cloudify.nodes.Root'],
+        )
+        self.non_component_instance = self._instance(
+            id='node3_1',
+            node=self.non_component_node,
+        )
+
+    def test_execution_start_noncascading(self):
+        """Noncascading workflow only runs an execution on the main deployment
+
+        No execution is started on the component deployments, because this
+        workflow is not cascading.
+        """
+        self.client.executions.start(self.base_dep.id, 'noncascading')
+        executions = self.client.executions.list()
+        assert len(executions) == 1
+        assert {e.deployment_id for e in executions} == {self.base_dep.id}
+
+    def test_execution_start_cascading(self):
+        """Cascading workflow runs an execution on all component deployments
+
+        An execution is started on the main deployment, and also on component
+        deployments.
+        """
+        self.client.executions.start(self.base_dep.id, 'cascading')
+        executions = self.client.executions.list()
+        assert len(executions) == 4
+        assert {e.deployment_id for e in executions} == {
+            self.base_dep.id,
+            self.component1.id,
+            self.component2.id,
+            self.component3.id,
+        }
+
+    def test_cancel_cascades(self):
+        """Cancelling an execution on the main deployment, cancels all.
+
+        Note: there's no difference between cascading and non-cascading
+        executions for cancel. The running execution of all component
+        deployments is cancelled.
+        """
+        for dep in self.all_deployments:
+            models.Execution(
+                id=f'{dep.id}_exc',
+                workflow_id='cascading',
+                status=ExecutionState.STARTED,
+                deployment=dep,
+                creator=self.user,
+                tenant=self.tenant,
+            )
+
+        execs = self.client.executions.list(deployment_id=self.base_dep.id)
+        assert len(execs) == 1
+        base_dep_exc = execs[0]
+        self.client.executions.cancel(base_dep_exc.id)
+
+        executions = self.client.executions.list()
+        assert len(executions) == 4
+        assert {e.status for e in executions} == {ExecutionState.CANCELLING}
+
+    def test_resume_cascades(self):
+        """Resuming an execution, resumes the most recent one in components.
+
+        Component deployments have their most recent execution resumed as well,
+        but not older executions.
+        """
+        old_executions = []
+        new_executions = []
+        for ix, exc_batch in enumerate([old_executions, new_executions]):
+            for dep in self.all_deployments:
+                exc = models.Execution(
+                    id=f'{dep.id}_exc_{ix}',
+                    workflow_id='noncascading',
+                    parameters={},
+                    status=ExecutionState.CANCELLED,
+                    deployment=dep,
+                    creator=self.user,
+                    tenant=self.tenant,
+                )
+                exc_batch.append(exc)
+
+        _, newer_exec = self.client.executions.list(
+            deployment_id=self.base_dep.id,
+            _sort='created_at'
+        )
+        self.client.executions.resume(newer_exec.id)
+
+        for dep in self.all_deployments:
+            execs = self.client.executions.list(
+                deployment_id=dep.id,
+                _sort='created_at'
+            )
+            assert len(execs) == 2
+            assert execs[0].status == ExecutionState.CANCELLED
+            # actual status depends on the mocking; probably TERMINATED
+            # (but if we change the mocks, maybe PENDING). Either way, not
+            # CANCELLED anymore.
+            assert execs[1].status != ExecutionState.CANCELLED

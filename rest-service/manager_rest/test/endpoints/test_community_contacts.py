@@ -1,7 +1,7 @@
-import mock
 import pytest
 from json import JSONDecodeError
 from typing import Dict, Any
+from unittest import mock
 
 from manager_rest import premium_enabled
 from manager_rest.test import base_test

@@ -56,6 +56,17 @@ def no_autoflush(f):
     return wrapper
 
 
+class _Transaction(object):
+    """A transaction controller yielded by `sm.transaction()`
+
+    This allows the in-transaction code to force the transaction to commit,
+    even if the block throws an exception (which would cause a rollback
+    instead otherwise).
+    """
+    def __init__(self):
+        self.force_commit = False
+
+
 class SQLStorageManager(object):
     def __init__(self, user=None, tenant=None):
         self._user = user
@@ -101,12 +112,16 @@ class SQLStorageManager(object):
         self._safe_commit()
 
         self._in_transaction = True
+        tx = _Transaction()
         try:
             with db.session.no_autoflush:
-                yield
+                yield tx
         except Exception:
             self._in_transaction = False
-            db.session.rollback()
+            if tx.force_commit:
+                self._safe_commit()
+            else:
+                db.session.rollback()
             raise
         else:
             self._in_transaction = False
@@ -184,7 +199,7 @@ class SQLStorageManager(object):
                 else:
                     query = query.order_by(column)
         if sort_labels:
-            labels_model = model_class.labels_model
+            labels_model = aliased(model_class.labels_model)
             for key, order in sort_labels.items():
                 ordering = (
                     db.select(

@@ -155,3 +155,50 @@ node_templates:
                                                  _include=['id', 'status'])
         self.assertEqual(1, len(executions))
         self.assertEqual(executions[0].status, Execution.FAILED)
+
+    def test_drift(self):
+        basic_blueprint_path = resource('dsl/empty_blueprint.yaml')
+        self.client.blueprints.upload(
+            basic_blueprint_path,
+            entity_id=self.basic_blueprint_id,
+            labels=[{'a': 'b'}],
+        )
+        wait_for_blueprint_upload(self.basic_blueprint_id, self.client, True)
+
+        deployment_id = 'd{0}'.format(uuid.uuid4())
+        main_blueprint = """
+tosca_definitions_version: cloudify_dsl_1_4
+
+imports:
+  - cloudify/types/types.yaml
+
+node_templates:
+
+  component_node:
+    type: cloudify.nodes.Component
+    properties:
+      resource_config:
+        blueprint:
+          external_resource: true
+          id: basic
+          labels:
+            - a: b
+        deployment:
+          id: component
+          auto_inc_suffix: true
+"""
+        blueprint_path = self.make_yaml_file(main_blueprint)
+        self.deploy_application(blueprint_path, deployment_id=deployment_id)
+        instances = self.client.node_instances.list(
+            deployment_id=deployment_id)
+        assert len(instances) == 1
+        assert not instances[0].has_configuration_drift
+
+        # even though the actual deployment id is different than the one in
+        # resource_config, that is only due to auto_inc_suffix, and that's
+        # not considered drift
+        self.execute_workflow('check_drift', deployment_id)
+        instances = self.client.node_instances.list(
+            deployment_id=deployment_id)
+        assert len(instances) == 1
+        assert not instances[0].has_configuration_drift

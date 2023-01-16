@@ -12,16 +12,17 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import pytest
-from typing import List, Dict
-
+import random
+import uuid
 from collections import namedtuple
 from copy import deepcopy
+from datetime import datetime, timedelta
 from random import choice
+from typing import List, Dict
 from unittest import TestCase
+from unittest.mock import patch, Mock
 
-from faker import Faker
-from mock import patch, Mock
+import pytest
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 from manager_rest.test import base_test
@@ -116,123 +117,114 @@ class SelectEventsBaseTest(base_test.BaseServerTestCase):
 
     def _populate_db(self):
         """Populate database with events and logs."""
-        fake = Faker()
-        session = db.session
-
-        tenant = Tenant(name='test_tenant')
-        session.add(tenant)
-        session.commit()
-
-        user = User(username=fake.name(), email=fake.email())
-        session.add(user)
-        session.commit()
+        timestamp = \
+            datetime.utcnow() - timedelta(seconds=random.randint(1, 10000))
 
         blueprints = [
             Blueprint(
-                id='blueprint_{}'.format(fake.uuid4()),
-                created_at=fake.date_time(),
-                main_file_name=fake.file_name(),
+                id=f'blueprint_{uuid.uuid4()}',
+                created_at=timestamp,
+                main_file_name='bp.yaml',
                 plan='<plan>',
-                _tenant_id=tenant.id,
-                _creator_id=user.id
+                tenant=self.tenant,
+                creator=self.user,
             )
             for _ in range(self.BLUEPRINT_COUNT)
         ]
-        session.add_all(blueprints)
-        session.commit()
+        db.session.add_all(blueprints)
 
         deployments = []
         for _ in range(self.DEPLOYMENT_COUNT):
             blueprint = choice(blueprints)
             deployments.append(Deployment(
-                id='deployment_{}'.format(fake.uuid4()),
-                created_at=fake.date_time(),
-                _blueprint_fk=blueprint._storage_id,
-                _creator_id=blueprint._creator_id,
-                _tenant_id=blueprint._tenant_id
+                id=f'deployment_{uuid.uuid4()}',
+                created_at=timestamp,
+                blueprint=blueprint,
+                tenant=self.tenant,
+                creator=self.user,
             ))
-        session.add_all(deployments)
-        session.commit()
+        db.session.add_all(deployments)
 
         executions = []
         for _ in range(self.EXECUTION_COUNT):
             deployment = choice(deployments)
             executions.append(Execution(
-                id='execution_{}'.format(fake.uuid4()),
-                created_at=fake.date_time(),
+                id=f'execution_{uuid.uuid4()}',
+                created_at=timestamp,
                 is_system_workflow=False,
-                workflow_id=fake.uuid4(),
-                _tenant_id=deployment._tenant_id,
-                _creator_id=deployment._creator_id,
-                _deployment_fk=deployment._storage_id,
+                workflow_id=str(uuid.uuid4()),
+                deployment=deployment,
+                tenant=self.tenant,
+                creator=self.user,
             ))
-        session.add_all(executions)
-        session.commit()
+        db.session.add_all(executions)
 
         nodes = []
         for _ in range(self.NODE_COUNT):
             deployment = choice(deployments)
             nodes.append(Node(
-                id='node_{}'.format(fake.uuid4()),
+                id=f'node_{uuid.uuid4()}',
                 deploy_number_of_instances=1,
                 max_number_of_instances=1,
                 min_number_of_instances=1,
                 number_of_instances=1,
                 planned_number_of_instances=1,
                 type='<type>',
-                _deployment_fk=deployment._storage_id,
-                _tenant_id=deployment._tenant_id,
-                _creator_id=deployment._creator_id,
+                deployment=deployment,
+                tenant=self.tenant,
+                creator=self.user,
             ))
-        session.add_all(nodes)
-        session.commit()
+        db.session.add_all(nodes)
 
         node_instances = []
         for _ in range(self.NODE_INSTANCE_COUNT):
             node = choice(nodes)
             node_instances.append(NodeInstance(
-                id='node_instance_{}'.format(fake.uuid4()),
+                id=f'node_instance_{uuid.uuid4()}',
                 state='<state>',
-                _node_fk=node._storage_id,
-                _tenant_id=node._tenant_id,
-                _creator_id=node._creator_id,
+                node=node,
+                tenant=self.tenant,
+                creator=self.user,
             ))
-        session.add_all(node_instances)
-        session.commit()
+        db.session.add_all(node_instances)
 
         def create_event():
             """Create new event using the execution created above."""
             execution = choice(executions)
+            timestamp = \
+                datetime.utcnow() - timedelta(seconds=random.randint(1, 10000))
             return Event(
-                id='event_{}'.format(fake.uuid4()),
-                timestamp=fake.date_time(),
-                reported_timestamp=fake.date_time(),
-                _execution_fk=execution._storage_id,
-                _tenant_id=execution._tenant_id,
-                _creator_id=execution._creator_id,
+                id=f'event_{uuid.uuid4()}',
+                timestamp=timestamp,
+                reported_timestamp=timestamp,
                 node_id=choice(node_instances).id,
                 operation='<operation>',
                 event_type=choice(self.EVENT_TYPES),
-                message=fake.sentence(),
+                message=str(uuid.uuid4()),
                 message_code='<message_code>',
+                execution=execution,
+                tenant=self.tenant,
+                creator=self.user,
             )
 
         def create_log():
             """Create new log using the execution created above."""
             execution = choice(executions)
+            timestamp = \
+                datetime.utcnow() - timedelta(seconds=random.randint(1, 10000))
             return Log(
-                id='log_{}'.format(fake.uuid4()),
-                timestamp=fake.date_time(),
-                reported_timestamp=fake.date_time(),
-                _execution_fk=execution._storage_id,
-                _tenant_id=execution._tenant_id,
-                _creator_id=execution._creator_id,
+                id=f'log_{uuid.uuid4()}',
+                timestamp=timestamp,
+                reported_timestamp=timestamp,
                 node_id=choice(node_instances).id,
                 operation='<operation>',
                 logger='<logger>',
                 level=choice(self.LOG_LEVELS),
-                message=fake.sentence(),
+                message=str(uuid.uuid4()),
                 message_code='<message_code>',
+                execution=execution,
+                tenant=self.tenant,
+                creator=self.user,
             )
 
         events = [
@@ -240,11 +232,10 @@ class SelectEventsBaseTest(base_test.BaseServerTestCase):
             for _ in range(self.EVENT_COUNT)
         ]
         sorted_events = sorted(events, key=lambda event: event.timestamp)
-        session.add_all(sorted_events)
-        session.commit()
+        db.session.add_all(sorted_events)
 
-        self.tenant = tenant
-        self.fake = fake
+        db.session.commit()
+
         self.blueprints = blueprints
         self.deployments = deployments
         self.executions = executions
@@ -453,7 +444,7 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
 
     def filter_by_message_helper(self, message_field):
         """Filter events by message field."""
-        word = self.fake.word()
+        word = 'searchforthis'
         filters = {
             message_field: ['%{0}%'.format(word)],
             'type': ['cloudify_event', 'cloudify_log']
@@ -680,9 +671,8 @@ class SelectEventsRangeFilterTest(SelectEventsBaseTest):
         :type include_to: bool
 
         """
-        fake = Faker()
-        from_datetime, to_datetime = sorted(
-            [fake.date_time(), fake.date_time()])
+        from_datetime = datetime.utcnow() - timedelta(seconds=500)
+        to_datetime = datetime.utcnow() - timedelta(seconds=200)
 
         range_filter = {}
         if include_from:

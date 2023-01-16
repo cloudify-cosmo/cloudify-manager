@@ -1,5 +1,6 @@
 import hashlib
 import itertools
+import re
 import uuid
 
 from os import path
@@ -26,18 +27,16 @@ from cloudify.models_states import (AgentState,
                                     DeploymentState)
 from cloudify.cryptography_utils import decrypt
 from dsl_parser.constants import (WORKFLOW_PLUGINS_TO_INSTALL,
-                                  TYPES_BASED_ON_DB_ENTITIES)
+                                  OBJECT_BASED_TYPES)
 from dsl_parser.constraints import extract_constraints, validate_input_value
 from dsl_parser import exceptions as dsl_exceptions
 
-from manager_rest import config, manager_exceptions
+from manager_rest import manager_exceptions
 from manager_rest.rest.responses import Workflow, Label
 from manager_rest.utils import (get_rrule,
-                                classproperty,
-                                files_in_folder)
+                                classproperty)
 from manager_rest.constants import (
     FILE_SERVER_PLUGINS_FOLDER,
-    FILE_SERVER_RESOURCES_FOLDER,
     AUDIT_OPERATIONS,
     DEPLOYMENT_UPDATE_ENTITY_TYPES,
     DEPLOYMENT_UPDATE_ACTION_TYPES,
@@ -56,11 +55,10 @@ from .relationships import (
     one_to_many_relationship,
     many_to_many_relationship
 )
-from manager_rest.storage.storage_manager import get_storage_manager
+from manager_rest.storage.storage_manager import SQLStorageManager
 
 if TYPE_CHECKING:
     from manager_rest.resource_manager import ResourceManager
-    from manager_rest.storage.storage_manager import SQLStorageManager
     hybrid_property = property
 else:
     from sqlalchemy.ext.hybrid import hybrid_property
@@ -89,6 +87,7 @@ class Blueprint(CreatedAtMixin, SQLResourceBase):
     main_file_name = db.Column(db.Text)
     plan_p = db.Column(db.PickleType(protocol=2))
     plan = db.Column(JSONString)
+    requirements = db.Column(JSONString)
     updated_at = db.Column(UTCDateTime)
     description = db.Column(db.Text)
     is_hidden = db.Column(db.Boolean, nullable=False, default=False)
@@ -177,7 +176,8 @@ class Plugin(SQLResourceBase):
             unique=True
         ),
     )
-    _extra_fields = {'installation_state': flask_fields.Raw}
+    _extra_fields = {'installation_state': flask_fields.Raw,
+                     'yaml_files_paths': flask_fields.List(flask_fields.Raw)}
 
     archive_name = db.Column(db.Text, nullable=False, index=True)
     distribution = db.Column(db.Text)
@@ -200,28 +200,40 @@ class Plugin(SQLResourceBase):
     labels = db.Column(JSONString)
     resource_tags = db.Column(JSONString)
 
-    def yaml_file_path(self):
-        plugin_dir = path.join(config.instance.file_server_root,
-                               FILE_SERVER_PLUGINS_FOLDER,
-                               self.id)
-        if not path.isdir(plugin_dir):
-            return None
-        yaml_files = files_in_folder(plugin_dir, '*.yaml')
-        return yaml_files[0] if yaml_files else None
+    @property
+    def yaml_files_paths(self):
+        """List all *.yaml files"""
+        # Imported here because of circular import
+        from manager_rest.persistent_storage import get_storage_handler
+        plugin_dir = path.join(FILE_SERVER_PLUGINS_FOLDER, self.id)
+        yaml_files = []
+        try:
+            for file_info in get_storage_handler().list(plugin_dir):
+                if file_info.filepath.endswith('.yaml'):
+                    yaml_files += [file_info.filepath]
+        except manager_exceptions.NotFoundError:
+            return []
+        return yaml_files
+
+    def yaml_file_path(self, dsl_version=None):
+        unknown_dsl_version_yaml_files_paths = []
+        for yaml_file_path in self.yaml_files_paths:
+            if not dsl_version:
+                return yaml_file_path
+
+            if yaml_file_path.endswith(f'{dsl_version}.yaml'):
+                return yaml_file_path
+            if not re.search(r"_\d_\d+.yaml$", yaml_file_path):
+                unknown_dsl_version_yaml_files_paths += [yaml_file_path]
+
+        if unknown_dsl_version_yaml_files_paths:
+            return unknown_dsl_version_yaml_files_paths[0]
+
+        return ''
 
     def _yaml_file_name(self):
         yaml_path = self.yaml_file_path()
         return path.basename(yaml_path) if yaml_path else ''
-
-    @property
-    def file_server_path(self):
-        file_name = self._yaml_file_name()
-        if not file_name:
-            return ''
-        return path.join(FILE_SERVER_RESOURCES_FOLDER,
-                         FILE_SERVER_PLUGINS_FOLDER,
-                         self.id,
-                         file_name)
 
     @property
     def yaml_url_path(self):
@@ -236,15 +248,12 @@ class Plugin(SQLResourceBase):
     @classproperty
     def response_fields(cls):
         fields = super(Plugin, cls).response_fields
-        fields['file_server_path'] = flask_fields.String
         fields['yaml_url_path'] = flask_fields.String
         return fields
 
     def to_response(self, include=None, get_data=False, **kwargs):
         include = include or self.response_fields
         plugin_dict = super(Plugin, self).to_response(include, **kwargs)
-        if not get_data:
-            plugin_dict['file_server_path'] = ''
         if 'installation_state' in plugin_dict \
                 and 'installation_state' in include:
             plugin_dict['installation_state'] = [
@@ -303,6 +312,22 @@ class _PluginState(SQLModelBase):
         return db.relationship('Agent', lazy='joined')
 
 
+class SecretsProvider(CreatedAtMixin, SQLResourceBase):
+    __tablename__ = 'secrets_providers'
+
+    name = db.Column(db.Text, nullable=False)
+    type = db.Column(db.Text, nullable=False)
+    connection_parameters = db.Column(db.Text, nullable=True)
+    updated_at = db.Column(UTCDateTime)
+
+    @classproperty
+    def resource_fields(cls):
+        fields = super().resource_fields
+        fields['connection_parameters'] = flask_fields.Raw
+
+        return fields
+
+
 class Secret(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'secrets'
     __table_args__ = (
@@ -316,6 +341,15 @@ class Secret(CreatedAtMixin, SQLResourceBase):
     value = db.Column(db.Text)
     updated_at = db.Column(UTCDateTime)
     is_hidden_value = db.Column(db.Boolean, nullable=False, default=False)
+    schema = db.Column(JSONString, nullable=True)
+    _secrets_provider_fk = foreign_key(
+        SecretsProvider._storage_id,
+        nullable=True,
+    )
+    provider_options = db.Column(
+        db.Text,
+        nullable=True,
+    )
 
     @hybrid_property
     def key(self):
@@ -325,20 +359,25 @@ class Secret(CreatedAtMixin, SQLResourceBase):
     def resource_fields(cls):
         fields = super(Secret, cls).resource_fields
         fields['key'] = fields.pop('id')
+        fields['value'] = flask_fields.Raw
+        fields['provider_name'] = flask_fields.String()
+        fields['provider_options'] = flask_fields.Raw
+
         return fields
 
     @classproperty
     def allowed_filter_attrs(cls):
-        return ['key']
+        return ['key', 'provider_name']
 
+    @declared_attr
+    def provider(cls):
+        return one_to_many_relationship(
+            cls,
+            SecretsProvider,
+            cls._secrets_provider_fk,
+        )
 
-class SecretsProvider(CreatedAtMixin, SQLResourceBase):
-    __tablename__ = 'secrets_providers'
-
-    name = db.Column(db.Text, nullable=False)
-    type = db.Column(db.Text, nullable=False)
-    connection_parameters = db.Column(JSONString, nullable=True)
-    updated_at = db.Column(UTCDateTime)
+    provider_name = association_proxy('provider', 'name')
 
 
 class Site(CreatedAtMixin, SQLResourceBase):
@@ -603,7 +642,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
 
     def _list_workflows(self):
         if self.workflows is None:
-            return None
+            return []
 
         return [Workflow(name=wf_name,
                          created_at=None,
@@ -1094,13 +1133,13 @@ class BlueprintsFilter(FilterBase):
     )
 
 
-def evaluate_workflow_parameters(deployment_id: str, parameters: dict):
+def evaluate_workflow_parameters(sm, deployment_id: str, parameters: dict):
     # Keep this import line here because of circular dependencies
     from manager_rest.dsl_functions import evaluate_intrinsic_functions
 
     to_evaluate = {k: v for k, v in parameters.items()
                    if isinstance(v, (list, dict))}
-    evaluated = evaluate_intrinsic_functions(to_evaluate, deployment_id)
+    evaluated = evaluate_intrinsic_functions(to_evaluate, deployment_id, sm=sm)
     parameters.update(evaluated)
 
 
@@ -1300,7 +1339,8 @@ class Execution(CreatedAtMixin, SQLResourceBase):
         for name, param in workflow_parameters.items():
             if 'default' in param:
                 parameters.setdefault(name, param['default'])
-        evaluate_workflow_parameters(deployment.id, parameters)
+        evaluate_sm = SQLStorageManager(user=self.creator, tenant=self.tenant)
+        evaluate_workflow_parameters(evaluate_sm, deployment.id, parameters)
 
         wrong_types = {}
         for name, param in workflow_parameters.items():
@@ -1327,12 +1367,14 @@ class Execution(CreatedAtMixin, SQLResourceBase):
                 continue
             param_type = param.get('type')
             param_item_type = param.get('item_type')
-            if param_type not in TYPES_BASED_ON_DB_ENTITIES \
+            if param_type not in OBJECT_BASED_TYPES \
                     and not constraints:
                 continue
             try:
-                getter = GetValuesWithStorageManager(get_storage_manager(),
-                                                     deployment.id)
+                getter = GetValuesWithStorageManager(
+                    evaluate_sm,
+                    deployment.id,
+                )
                 validate_input_value(name, constraints, parameters[name],
                                      param_type, param_item_type, getter)
             except (dsl_exceptions.DSLParsingException,
@@ -2119,7 +2161,7 @@ class Node(SQLResourceBase):
 
     @classproperty
     def allowed_filter_attrs(cls):
-        return ['id', 'type']
+        return ['id', 'type', 'operation_name']
 
     def to_dict(self, suppress_error=False):
         # some usages of the dict want 'name' instead of 'id' (notably,
@@ -2303,16 +2345,15 @@ class Agent(CreatedAtMixin, SQLResourceBase):
         self._set_parent(node_instance)
         self.node_instance = node_instance
 
-    def to_response(self, include=None, **kwargs):
-        include = include or self.response_fields
+    def to_response(self, include=None, get_data=False, **kwargs):
         agent_dict = super(Agent, self).to_response(include, **kwargs)
-        if 'rabbitmq_username' not in include:
-            agent_dict.pop('rabbitmq_username', None)
-        if 'rabbitmq_password' in include:
+
+        if get_data:
             agent_dict['rabbitmq_password'] = decrypt(
                 agent_dict['rabbitmq_password']
             )
         else:
+            agent_dict.pop('rabbitmq_username', None)
             agent_dict.pop('rabbitmq_password', None)
         return agent_dict
 

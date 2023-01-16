@@ -14,12 +14,17 @@
 
 import datetime
 
-from mock import MagicMock, Mock
+from unittest.mock import MagicMock, Mock
 
+from cloudify_rest_client.blueprints import Blueprint
+from cloudify_rest_client.deployments import Deployment
+from cloudify_rest_client.executions import Execution
+from cloudify_rest_client.secrets import Secret
 from cloudify_rest_client.responses import ListResponse
 
 
 class BaseMockClient(object):
+    item_cls = dict
     existing_objects = []
 
     def set_existing_objects(self, existing_objects):
@@ -38,22 +43,21 @@ class BaseMockClient(object):
     def get(self, object_id, **kwargs):
         for obj in self.existing_objects:
             if obj['id'] == object_id:
-                return obj
+                return self.item_cls(obj)
 
     def delete(self, *_, **__):
         return None
 
 
 class MockBlueprintsClient(BaseMockClient):
+    item_cls = Blueprint
 
     def _upload(self, *_, **__):
         return MagicMock(return_value={'id': 'test'})
 
-    def get(self, *_, **__):
-        return {'state': 'uploaded'}
-
 
 class MockDeploymentsClient(BaseMockClient):
+    item_cls = Deployment
 
     def __init__(self):
         super(MockDeploymentsClient, self).__init__()
@@ -68,6 +72,7 @@ class MockDeploymentsClient(BaseMockClient):
 
 
 class MockExecutionsClient(BaseMockClient):
+    item_cls = Execution
 
     def start(self, *_, **__):
         _return_value = {
@@ -90,7 +95,7 @@ class MockEventsClient(BaseMockClient):
 
 
 class MockSecretsClient(BaseMockClient):
-    pass
+    item_cls = Secret
 
 
 class MockDeploymentCapabilitiesClient(BaseMockClient):
@@ -109,3 +114,4 @@ class MockCloudifyRestClient(object):
         self.secrets = MockSecretsClient()
         self.plugins = MagicMock()
         self.inter_deployment_dependencies = Mock()
+        self.node_instances = Mock()

@@ -14,7 +14,6 @@ def setup_resources(api):
         'BlueprintsId': 'blueprints/<string:blueprint_id>',
         'BlueprintsIdValidate': 'blueprints/<string:blueprint_id>/validate',
         'BlueprintsIdArchive': 'blueprints/<string:blueprint_id>/archive',
-        'BlueprintsSetGlobal': 'blueprints/<string:blueprint_id>/set-global',
         'BlueprintsSetVisibility': 'blueprints/<string:blueprint_id>/'
                                    'set-visibility',
         'BlueprintsIcon': 'blueprints/<string:blueprint_id>/icon',
@@ -67,7 +66,6 @@ def setup_resources(api):
         'PluginsUpdateId': 'plugins-updates/<string:update_id>',
         'PluginsUpdates': 'plugins-updates',
         'PluginsArchive': 'plugins/<string:plugin_id>/archive',
-        'PluginsSetGlobal': 'plugins/<string:plugin_id>/set-global',
         'PluginsSetVisibility': 'plugins/<string:plugin_id>/set-visibility',
         'PluginsYaml': 'plugins/<string:plugin_id>/yaml',
         'MaintenanceMode': 'maintenance',
@@ -93,15 +91,13 @@ def setup_resources(api):
         'MonitoringAuth': 'monitoring-auth',
         'FileServerProxy': [
             'file-server-proxy/',
-            'file-server-proxy/<path:uri>',
+            'file-server-proxy/<path:path>',
         ],
-        'FileServerIndex': 'file-server-index',
         'LdapAuthentication': 'ldap',
         'Secrets': 'secrets',
         'SecretsExport': 'secrets/share/export',
         'SecretsImport': 'secrets/share/import',
         'SecretsKey': 'secrets/<string:key>',
-        'SecretsSetGlobal': 'secrets/<string:key>/set-global',
         'SecretsSetVisibility': 'secrets/<string:key>/set-visibility',
         'ManagerConfig': 'config',
         'ManagerConfigId': 'config/<string:name>',
@@ -158,9 +154,8 @@ def setup_resources(api):
         'CapabilitiesSearches': 'searches/capabilities',
         'ScalingGroupsSearches': 'searches/scaling-groups',
         'CommunityContacts': 'contacts',
-        'SecretsProvider': [
-            'secrets-providers',
-        ]
+        'SecretsProvider': 'secrets-providers',
+        'SecretsProviderKey': 'secrets-providers/<string:name>',
     }
 
     # Set version endpoint as a non versioned endpoint

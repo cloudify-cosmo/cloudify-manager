@@ -11,7 +11,7 @@ node_templates:
       resource_config:
         blueprint:
           id: basic
-          blueprint_archive: http://not-real.com/blueprint.zip
+          blueprint_archive: http://nonexistent.local/blueprint.zip
           main_file_name: blueprint.yaml
         deployment:
           id: component

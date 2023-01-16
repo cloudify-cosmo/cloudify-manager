@@ -1,4 +1,7 @@
-from manager_rest import config
+from datetime import datetime
+from unittest import mock
+
+from manager_rest import config, constants, permissions
 from manager_rest.configure_manager import (
     configure,
     dict_merge,
@@ -122,3 +125,215 @@ class TestConfigureManager(base_test.BaseServerTestCase):
         assert config.instance.amqp_host
         assert config.instance.amqp_username == 'username1'
         assert config.instance.amqp_password == 'password1'
+
+    def test_create_roles(self):
+        db.session.execute(models.Role.__table__.delete())
+        assert len(models.Role.query.all()) == 0
+
+        configure({
+            'roles': [
+                {
+                    'name': 'role1'
+                },
+                {
+                    'name': 'role2',
+                    'type': 'tenant_role',
+                    'description': 'descr1',
+                },
+            ]
+        })
+
+        # in the created roles, we expect the ones from the config...
+        expected_roles = {
+            ('role1', 'system_role', None),
+            ('role2', 'tenant_role', 'descr1'),
+        }
+        # ...and also the default roles as well
+        for default_role in permissions.ROLES:
+            expected_roles.add((
+                default_role['name'],
+                default_role['type'],
+                default_role['description'],
+            ))
+        roles = {
+            (r.name, r.type, r.description)
+            for r in models.Role.query.all()
+        }
+
+        assert roles == expected_roles
+
+    def test_create_roles_override(self):
+        db.session.execute(models.Role.__table__.delete())
+        assert len(models.Role.query.all()) == 0
+
+        # creating roles that are also default roles, still overrides their
+        # description
+        configure({
+            'roles': [
+                {
+                    'name': 'sys_admin',
+                    'description': 'descr',
+                },
+                {
+                    'name': constants.DEFAULT_TENANT_ROLE,
+                    'description': 'descr',
+                },
+            ]
+        })
+        roles = models.Role.query.all()
+        assert len(roles) == 2
+        assert all(r.description == 'descr' for r in roles)
+
+        # ...doing it again, updates them
+        configure({
+            'roles': [
+                {
+                    'name': 'sys_admin',
+                    'description': 'descr2',
+                },
+                {
+                    'name': constants.DEFAULT_TENANT_ROLE,
+                    'description': 'descr2',
+                },
+            ]
+        })
+
+        assert len(roles) == 2
+        assert all(r.description == 'descr2' for r in roles)
+
+    def test_create_permissions(self):
+        db.session.execute(models.Permission.__table__.delete())
+        assert len(models.Permission.query.all()) == 0
+        configure({})
+
+        created_permissions = models.Permission.query.all()
+        assert len(created_permissions) == len(permissions.PERMISSIONS)
+
+    def test_create_permissions_set_user(self):
+        db.session.execute(models.Permission.__table__.delete())
+        assert len(models.Permission.query.all()) == 0
+        configure({
+            'permissions': {
+                # you tried to deny sys_admin some of their permissions?
+                # fat chance, they'll get it anyway!
+                'user_get': ['user']
+            },
+        })
+
+        created_permissions = models.Permission.query.all()
+        # +1 because we created 1 additional permission: user_get for role=user
+        assert len(created_permissions) == len(permissions.PERMISSIONS) + 1
+        user_get_permissions = (
+            models.Permission.query
+            .filter_by(name='user_get')
+            .all()
+        )
+        assert len(user_get_permissions) == 2
+        assert {p.role_name for p in user_get_permissions} == \
+            {'user', 'sys_admin'}
+
+    def test_create_permissions_nonexistent_role(self):
+        with self.assertRaisesRegex(ValueError, 'something.*nonexistent'):
+            configure({
+                'permissions': {
+                    'something': ['nonexistent role']
+                },
+            })
+
+    def test_insert_manager_cert_config(self):
+        assert len(models.Manager.query.all()) == 0
+        configure({
+            'manager': {
+                'hostname': 'mgr1',
+                'private_ip': 'example.com',
+                'public_ip': 'example.com',
+                'ca_cert': 'cert-content-1',
+            },
+        })
+        assert len(models.Manager.query.all()) == 1
+        mgr = models.Manager.query.first()
+        assert mgr.hostname == 'mgr1'
+        assert mgr.ca_cert
+        assert mgr.ca_cert.value == 'cert-content-1'
+
+    def test_insert_manager_cert_file(self):
+        assert len(models.Manager.query.all()) == 0
+        with mock.patch(
+            'manager_rest.configure_manager.open',
+            mock.mock_open(read_data='cert-content-1'),
+        ):
+            configure({
+                'manager': {
+                    'hostname': 'mgr1',
+                    'private_ip': 'example.com',
+                    'public_ip': 'example.com',
+                },
+            })
+        assert len(models.Manager.query.all()) == 1
+        mgr = models.Manager.query.first()
+        assert mgr.hostname == 'mgr1'
+        assert mgr.ca_cert
+        assert mgr.ca_cert.value == 'cert-content-1'
+
+    def test_insert_manager_cert_missing(self):
+        assert len(models.Manager.query.all()) == 0
+        with mock.patch(
+            'manager_rest.configure_manager.open',
+            mock.mock_open(read_data=''),
+        ):
+            with self.assertRaisesRegex(RuntimeError, 'ca_cert'):
+                configure({
+                    'manager': {
+                        'hostname': 'mgr1',
+                        'private_ip': 'example.com',
+                        'public_ip': 'example.com',
+                    },
+                })
+
+    def test_update_manager(self):
+        assert len(models.Manager.query.all()) == 0
+        mgr = models.Manager(
+            hostname='mgr1',
+            private_ip='example.com',
+            public_ip='example.com',
+            version='7.0.0',
+            edition='premium',
+            distribution='fake',
+            distro_release='fake',
+            last_seen=datetime.utcnow(),
+            ca_cert=models.Certificate(name='mgr1-ca', value='cert-content-1'),
+        )
+        db.session.add(mgr)
+
+        configure({
+            'manager': {
+                'hostname': 'mgr1',
+                'private_ip': 'example2.com',
+            },
+        })
+        assert mgr.private_ip == 'example2.com'
+
+    def test_update_manager_cert_differs(self):
+        assert len(models.Manager.query.all()) == 0
+        mgr = models.Manager(
+            hostname='mgr1',
+            private_ip='example.com',
+            public_ip='example.com',
+            version='7.0.0',
+            edition='premium',
+            distribution='fake',
+            distro_release='fake',
+            last_seen=datetime.utcnow(),
+            ca_cert=models.Certificate(name='mgr1-ca', value='cert-content-1'),
+        )
+        db.session.add(mgr)
+
+        with self.assertRaisesRegex(RuntimeError, 'ca_cert.*differ'):
+            configure({
+                'manager': {
+                    'hostname': 'mgr1',
+                    'private_ip': 'example2.com',
+                    'ca_cert': 'cert-content-2',
+                },
+            })
+        assert mgr.private_ip == 'example2.com'

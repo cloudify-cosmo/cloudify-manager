@@ -1,0 +1,48 @@
+[
+    {
+        "username": "admin",
+        "tenant_roles": {
+            "direct": {
+                "default_tenant": "user"
+            },
+            "groups": {}
+        },
+        "role": "sys_admin",
+        "created_at": "2022-11-25T15:09:29.863Z",
+        "first_login_at": "2022-11-25T15:09:50.396Z",
+        "last_login_at": "2022-11-25T15:22:28.494Z",
+        "password_hash": "$pbkdf2-abc123"
+    },
+    {
+        "username": "other",
+        "tenant_roles": {
+            "direct": {},
+            "groups": {
+                "other": {
+                    "manager": [
+                        "other"
+                    ]
+                }
+            }
+        },
+        "role": "default",
+        "created_at": "2022-11-25T15:12:50.148Z",
+        "first_login_at": "2022-11-25T15:14:44.888Z",
+        "last_login_at": "2022-11-25T15:16:15.094Z",
+        "password_hash": "$pbkdf2-def456"
+    },
+    {
+        "username": "ontenant",
+        "tenant_roles": {
+            "direct": {
+                "shared": "viewer"
+            },
+            "groups": {}
+        },
+        "role": "default",
+        "created_at": "2022-11-25T15:12:50.819Z",
+        "first_login_at": null,
+        "last_login_at": null,
+        "password_hash": "$pbkdf2-ghi789"
+    }
+]

@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import time
 import uuid
 import pytest
@@ -20,6 +21,7 @@ import pytest
 from integration_tests import AgentTestCase
 from cloudify.models_states import AgentState
 from integration_tests.tests.utils import get_resource as resource
+from integration_tests.framework.flask_utils import reset_storage
 
 pytestmark = pytest.mark.group_snapshots
 
@@ -33,14 +35,27 @@ class TestSnapshots(AgentTestCase):
 
     def _deploy_with_agents(self, states):
         deployments = []
+        execution_ids = []
         for state in states:
-            deployment, _ = self.deploy_application(
-                resource("dsl/agent_tests/with_agent.yaml"))
+            deployment, execution = self.deploy_application(
+                resource("dsl/agent_tests/with_agent.yaml"),
+                wait_for_execution=False,
+            )
             deployments.append(deployment)
+            execution_ids.append(execution)
+
+        for execution_id in execution_ids:
+            exc = self.client.executions.get(execution_id)
+            self.wait_for_execution_to_end(exc)
+
+        for deployment, state in zip(deployments, states):
             agent = self.client.agents.list(deployment_id=deployment.id)
             self.client.agents.update(agent.items[0].id, state)
-        self.assertEqual(len(self.client.agents.list(state=states).items),
-                         len(states))
+
+        self.assertEqual(
+            len(self.client.agents.list(state=states).items),
+            len(states),
+        )
         return deployments
 
     def _create_snapshot(self):
@@ -50,8 +65,16 @@ class TestSnapshots(AgentTestCase):
         return snapshot_id
 
     def _undeploy(self, states, deployments):
+        executions = [
+            self.client.executions.start(deployment.id, 'uninstall')
+            for deployment in deployments
+        ]
+        for execution in executions:
+            self.wait_for_execution_to_end(execution)
+
         for deployment in deployments:
-            self.undeploy_application(deployment.id, is_delete_deployment=True)
+            self.delete_deployment(deployment.id, validate=True)
+
         self.assertEqual(len(self.client.agents.list(state=states).items), 0)
 
     def _restore_snapshot(self, states, deployments, snapshot_id):
@@ -103,23 +126,57 @@ class TestSnapshots(AgentTestCase):
     def test_snapshot_with_agents(self):
         states = [AgentState.STARTED, AgentState.CREATING]
         deployments = self._deploy_with_agents(states)
-        self.assertEqual(len(self.client.agents.list().items), 1)
+        self.assertEqual(len(self.client.agents.list().items), 2)
         snapshot_id = self._create_snapshot()
-        self._undeploy(states, deployments)
+
+        downloaded_snapshot = os.path.join(self.workdir, 'snapshot.zip')
+        self.client.snapshots.download(
+            snapshot_id,
+            output_file=downloaded_snapshot,
+        )
+
+        reset_storage(self.env.container_id)
+        self.client.snapshots.upload(downloaded_snapshot, snapshot_id)
         self._restore_snapshot(states, deployments, snapshot_id)
-        self.assertEqual(len(self.client.agents.list().items), 1)
+
+        # unlike the other tenant tests, in this one we FIRST reset + restore,
+        # and only then undeploy. This checks that agent connectivity is
+        # still available after that reset + restore
+        self.assertEqual(len(self.client.agents.list().items), 2)
+        self._undeploy(states, deployments)
+        self.assertEqual(len(self.client.agents.list().items), 0)
 
     def test_snapshot_with_failed_agents(self):
         states = [AgentState.STOPPED, AgentState.DELETED, AgentState.FAILED]
         deployments = self._deploy_with_agents(states)
+
         snapshot_id = self._create_snapshot()
+        downloaded_snapshot = os.path.join(self.workdir, 'snapshot.zip')
+        self.client.snapshots.download(
+            snapshot_id,
+            output_file=downloaded_snapshot,
+        )
+
         self._undeploy(states, deployments)
+
+        reset_storage(self.env.container_id)
+        self.client.snapshots.upload(downloaded_snapshot, snapshot_id)
         self._restore_snapshot(states, deployments, snapshot_id)
 
     def test_snapshot_with_agents_multitenant(self):
         self.client.tenants.create('mike')
         mike_client = self.create_rest_client(tenant='mike')
         self._deploy_with_agents_multitenant(mike_client)
+
         snapshot_id = self._create_snapshot()
+        downloaded_snapshot = os.path.join(self.workdir, 'snapshot.zip')
+        self.client.snapshots.download(
+            snapshot_id,
+            output_file=downloaded_snapshot,
+        )
+
         self._undeploy_multitenant(mike_client)
+
+        reset_storage(self.env.container_id)
+        self.client.snapshots.upload(downloaded_snapshot, snapshot_id)
         self._restore_snapshot_multitenant(snapshot_id)

@@ -162,16 +162,19 @@ class BaseTestCase(unittest.TestCase):
                 timeout_seconds=timeout_seconds)
         return execution
 
-    def deploy(self,
-               dsl_path=None,
-               blueprint_id=None,
-               deployment_id=None,
-               inputs=None,
-               wait=True,
-               client=None,
-               runtime_only_evaluation=False,
-               blueprint_visibility=None,
-               deployment_visibility=None):
+    def deploy(
+        self,
+        dsl_path=None,
+        blueprint_id=None,
+        deployment_id=None,
+        inputs=None,
+        wait=True,
+        client=None,
+        runtime_only_evaluation=False,
+        blueprint_visibility=None,
+        deployment_visibility=None,
+        deployment_labels=None,
+    ):
         if not (dsl_path or blueprint_id):
             raise RuntimeWarning('Please supply blueprint path '
                                  'or blueprint id for deploying')
@@ -199,7 +202,8 @@ class BaseTestCase(unittest.TestCase):
             'deployment_id': deployment_id,
             'inputs': inputs,
             'skip_plugins_validation': True,
-            'runtime_only_evaluation': runtime_only_evaluation
+            'runtime_only_evaluation': runtime_only_evaluation,
+            'labels': deployment_labels,
         }
         # If not provided, use the client's default
         if deployment_visibility:
@@ -320,7 +324,7 @@ class BaseTestCase(unittest.TestCase):
             time.sleep(0.5)
             execution = get(execution.id)
             if time.time() > deadline:
-                raise utils.TimeoutException(
+                raise TimeoutError(
                     'Execution timed out: \n{0}'
                     .format(json.dumps(execution, indent=2)))
         if require_success and execution.status == Execution.FAILED:
@@ -422,7 +426,7 @@ class BaseTestCase(unittest.TestCase):
         while not any(message in e['message'] for e in all_events):
             time.sleep(0.5)
             if time.time() > deadline:
-                raise utils.TimeoutException(
+                raise TimeoutError(
                     'Execution timed out when waiting for message {0}: \n{1}'
                     .format(message, json.dumps(execution, indent=2))
                 )
