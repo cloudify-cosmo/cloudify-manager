@@ -93,7 +93,6 @@ def setup_resources(api):
             'file-server-proxy/',
             'file-server-proxy/<path:path>',
         ],
-        'FileServerIndex': 'file-server-index',
         'LdapAuthentication': 'ldap',
         'Secrets': 'secrets',
         'SecretsExport': 'secrets/share/export',

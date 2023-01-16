@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import json
 import os
 import shutil
@@ -14,7 +15,79 @@ from cloudify_system_workflows.snapshots.snapshot_restore import (
 )
 
 
+PARTIAL_TENANTS = {'anothertenant'}
 TENANTS = {'default_tenant', 'shared', 'other'}
+PARTIAL_SNAP_EXPECTED_CALLS = {
+    'tenants': {
+        'create': {
+            'expected': {
+                None: [
+                    mock.call(rabbitmq_password='apassword',
+                              tenant_name='arbitrary'),
+                ],
+            },
+            'sort_key': 'tenant_name',
+        },
+    },
+    'executions': {
+        'create': {
+            'expected': {
+                'anothertenant': [
+                    mock.call(
+                        created_at='2022-11-25T15:13:17.930Z',
+                        ended_at='2022-11-25T15:13:19.979Z',
+                        error='',
+                        parameters={},
+                        workflow_id='upload_blueprint',
+                        started_at='2022-11-25T15:13:18.858Z',
+                        allow_custom_parameters=True,
+                        deployment_id='',
+                        created_by='admin',
+                        execution_id='anexecid',
+                        force_status='terminated',
+                        dry_run=False,
+                    ),
+                ],
+            },
+            'sort_key': 'execution_id',
+        },
+    },
+    'tasks_graphs': {
+        'create': {
+            'expected': {
+                'anothertenant': [
+                    mock.call(
+                        created_at='2022-11-25T15:14:39.191Z',
+                        name='update_check_drift',
+                        execution_id='anexecid',
+                        operations=[
+                            {
+                                'created_at': '2022-11-25T15:14:39.191Z',
+                                'id': '184e9c1a-b951-4954-a566-60dc5822453a',
+                                'name': 'NOP',
+                                'state': 'pending',
+                                'dependencies': [],
+                                'type': 'NOPLocalWorkflowTask',
+                                'parameters': {},
+                                'manager_name': None,
+                                'agent_name': None
+                            },
+                        ],
+                        graph_id='6d4e2e5e-87aa-471b-a1e0-4bc8a48a4ec3'
+                    ),
+                    mock.call(
+                        created_at='2022-11-25T15:14:19.203Z',
+                        name='install',
+                        execution_id='otherexec',
+                        operations=[],
+                        graph_id='595734d3-1535-4894-b366-ae36e52ca27c'
+                    )
+                ],
+            },
+            'sort_key': '',
+        },
+    },
+}
 EXPECTED_CALLS = {
     'tenants': {
         'create': {
@@ -166,7 +239,8 @@ EXPECTED_CALLS = {
                     mock.call(
                         visibility='tenant',
                         plugin_path=(
-                            '{tempdir}/tenants/default_tenant/plugins0/'
+                            '{tempdir}/tenants/default_tenant/'
+                            'plugins_archives/'
                             '3ea7f689-5eb3-46b6-a0ea-1c981e0ecb1c.zip'
                         ),
                         _plugin_id='3ea7f689-5eb3-46b6-a0ea-1c981e0ecb1c',
@@ -177,7 +251,8 @@ EXPECTED_CALLS = {
                     mock.call(
                         visibility='tenant',
                         plugin_path=(
-                            '{tempdir}/tenants/default_tenant/plugins0/'
+                            '{tempdir}/tenants/default_tenant/'
+                            'plugins_archives/'
                             'da6daad8-76dd-4e32-afc1-aac75c622bb3.zip'
                         ),
                         _plugin_id='da6daad8-76dd-4e32-afc1-aac75c622bb3',
@@ -190,7 +265,7 @@ EXPECTED_CALLS = {
                     mock.call(
                         visibility='global',
                         plugin_path=(
-                            '{tempdir}/tenants/shared/plugins0/'
+                            '{tempdir}/tenants/shared/plugins_archives/'
                             '2a90a853-2882-49ea-a0a8-d482ed8cf9d5.zip'
                         ),
                         _plugin_id='2a90a853-2882-49ea-a0a8-d482ed8cf9d5',
@@ -222,6 +297,29 @@ EXPECTED_CALLS = {
             'sort_key': 'filter_id',
         },
     },
+    'deployments_filters': {
+        'create': {
+            'expected': {
+                'default_tenant': [
+                    mock.call(
+                        created_at='2022-11-25T15:14:25.810Z',
+                        visibility='tenant',
+                        created_by='admin',
+                        filter_id='fakecloudfilter',
+                        filter_rules=[
+                            {
+                                'key': 'cake',
+                                'values': ['untrue'],
+                                'operator': 'any_of',
+                                'type': 'label'
+                            }
+                        ]
+                    )
+                ],
+            },
+            'sort_key': 'filter_id',
+        },
+    },
     'blueprints': {
         'publish_archive': {
             'expected': {
@@ -231,8 +329,8 @@ EXPECTED_CALLS = {
                         visibility='tenant',
                         created_by='admin',
                         archive_location=(
-                            '{tempdir}/tenants/default_tenant/blueprints0/'
-                            'fakecloud.zip'
+                            '{tempdir}/tenants/default_tenant/'
+                            'blueprints_archives/fakecloud.zip'
                         ),
                         skip_execution=True,
                         blueprint_id='fakecloud',
@@ -244,8 +342,8 @@ EXPECTED_CALLS = {
                         visibility='tenant',
                         created_by='admin',
                         archive_location=(
-                            '{tempdir}/tenants/default_tenant/blueprints0/'
-                            'fakecloudmore.zip'
+                            '{tempdir}/tenants/default_tenant/'
+                            'blueprints_archives/fakecloudmore.zip'
                         ),
                         skip_execution=True,
                         blueprint_id='fakecloudmore',
@@ -257,8 +355,8 @@ EXPECTED_CALLS = {
                         visibility='tenant',
                         created_by='admin',
                         archive_location=(
-                            '{tempdir}/tenants/default_tenant/blueprints0/'
-                            'consumer.zip'
+                            '{tempdir}/tenants/default_tenant/'
+                            'blueprints_archives/consumer.zip'
                         ),
                         skip_execution=True,
                         blueprint_id='consumer',
@@ -272,7 +370,7 @@ EXPECTED_CALLS = {
                         visibility='global',
                         created_by='admin',
                         archive_location=(
-                            '{tempdir}/tenants/shared/blueprints0/'
+                            '{tempdir}/tenants/shared/blueprints_archives/'
                             'shared_provider.zip'
                         ),
                         skip_execution=True,
@@ -593,7 +691,79 @@ EXPECTED_CALLS = {
     },
     'tasks_graphs': {
         'create': {
-            'expected': {},
+            'expected': {
+                'default_tenant': [
+                    mock.call(
+                        created_at='2022-11-25T15:14:39.191Z',
+                        name='update_check_drift',
+                        execution_id='38b2b31c-7bde-462e-9f67-d08540e72bdd',
+                        operations=[
+                            {
+                                'created_at': '2022-11-25T15:14:39.191Z',
+                                'id': '184e9c1a-b951-4954-a566-60dc5822453a',
+                                'name': 'NOP',
+                                'state': 'pending',
+                                'dependencies': [],
+                                'type': 'NOPLocalWorkflowTask',
+                                'parameters': {
+                                    'on_success': {
+                                        'path': 'whatever'
+                                    },
+                                    'on_failure': {
+                                        'path': 'someother'
+                                    },
+                                    'retried_task': None,
+                                    'current_retries': 0,
+                                    'send_task_events': True,
+                                    'retry_interval': 30,
+                                    'total_retries': -1,
+                                    'info': None,
+                                    'error': None,
+                                    'containing_subgraph': None,
+                                    'task_kwargs': {}
+                                },
+                                'manager_name': None,
+                                'agent_name': None
+                            },
+                        ],
+                        graph_id='6d4e2e5e-87aa-471b-a1e0-4bc8a48a4ec3'
+                    ),
+                    mock.call(
+                        created_at='2022-11-25T15:14:19.203Z',
+                        name='install',
+                        execution_id='80bfb8db-6811-45ff-b01e-14a4e45673d5',
+                        operations=[
+                            {
+                                'created_at': '2022-11-25T15:14:19.203Z',
+                                'id': 'ff7480dc-a8dd-43d7-8b8d-82594d50e892',
+                                'name': 'SendNodeEventTask',
+                                'state': 'succeeded',
+                                'dependencies': [
+                                    '9a87b711-03cf-468c-98a1-7610d0ddbd48',
+                                    '57d3eca2-73ab-4d34-afe1-47d3b929118f'
+                                ],
+                                'type': 'SendNodeEventTask',
+                                'parameters': {
+                                    'on_success': None,
+                                    'on_failure': None,
+                                    'retried_task': None,
+                                    'current_retries': 0,
+                                    'send_task_events': False,
+                                    'retry_interval': 30,
+                                    'total_retries': 0,
+                                    'info': 'Validating stuff',
+                                    'error': None,
+                                    'containing_subgraph': 'somesubgraph',
+                                    'task_kwargs': {},
+                                },
+                                'manager_name': 'i-033a355130693f2d0',
+                                'agent_name': None
+                            }
+                        ],
+                        graph_id='595734d3-1535-4894-b366-ae36e52ca27c'
+                    )
+                ],
+            },
             'sort_key': '',
         },
     },
@@ -846,6 +1016,17 @@ EXPECTED_CALLS = {
             'sort_key': 'update_id',
         },
     },
+    'secrets_providers': {
+        'create': {
+            'expected': {
+                'other': [
+                    mock.call(_type='something',
+                              name='whatever'),
+                ],
+            },
+            'sort_key': 'name',
+        },
+    },
 }
 
 
@@ -911,18 +1092,48 @@ def mock_manager_finished_restoring():
         yield mock_mgr_finished_restoring
 
 
+@dataclass
+class FakeZipFileEntry:
+    _is_dir: bool
+    filename: str
+
+    def is_dir(self):
+        return self._is_dir
+
+
 class FakeZipFile:
     def __init__(self, snapshot_path, _mode):
         self._snapshot_path = snapshot_path
+        self._form_filelist()
+
+    def _form_filelist(self):
+        self._filelist = []
+        for item in os.walk(self._snapshot_path):
+            base, dirs, files = item
+            base = base[len(self._snapshot_path) + 1:]
+
+            for path in dirs:
+                self._filelist.append(FakeZipFileEntry(
+                    _is_dir=True, filename=os.path.join(base, path),
+                ))
+            for path in files:
+                self._filelist.append(FakeZipFileEntry(
+                    _is_dir=False, filename=os.path.join(base, path),
+                ))
 
     def __enter__(self):
         return self
 
-    def extractall(self, dest):
-        shutil.copytree(
-            self._snapshot_path,
-            dest,
-            dirs_exist_ok=True)
+    def extract(self, path, dest):
+        full_src = os.path.join(self._snapshot_path, path)
+        full_dest = os.path.join(dest, path)
+        dest_dir = os.path.dirname(full_dest)
+        os.makedirs(dest_dir, exist_ok=True)
+        shutil.copy(full_src, full_dest)
+
+    @property
+    def filelist(self):
+        return self._filelist
 
     def __exit__(self, type, value, traceback):
         pass
@@ -956,12 +1167,37 @@ def mock_no_rmtree():
         yield
 
 
+@pytest.fixture
+def mock_unlink():
+    with mock.patch(
+        'cloudify_system_workflows.snapshots.snapshot_restore'
+        '.os.unlink',
+    ) as unlink:
+        yield unlink
+
+
 def test_restore_snapshot(mock_ctx, mock_get_client, mock_zipfile,
                           mock_manager_restoring, mock_mkdir,
-                          mock_no_rmtree,
+                          mock_no_rmtree, mock_unlink,
                           mock_manager_finished_restoring):
-    snap_id = 'testsnapshot'
+    _test_restore('testsnapshot', 'snapshot_contents', EXPECTED_CALLS,
+                  TENANTS, mock_mkdir, mock_manager_restoring,
+                  mock_manager_finished_restoring, mock_unlink)
 
+
+def test_restore_partial_snapshot(mock_ctx, mock_get_client, mock_zipfile,
+                                  mock_manager_restoring, mock_mkdir,
+                                  mock_no_rmtree, mock_unlink,
+                                  mock_manager_finished_restoring):
+    _test_restore('testpartialsnapshot', 'partial_snapshot_contents',
+                  PARTIAL_SNAP_EXPECTED_CALLS, PARTIAL_TENANTS, mock_mkdir,
+                  mock_manager_restoring, mock_manager_finished_restoring,
+                  mock_unlink)
+
+
+def _test_restore(snap_id, snap_contents_dir, calls, tenants,
+                  mock_mkdir, mock_manager_restoring,
+                  mock_manager_finished_restoring, mock_unlink):
     tempdir = mkdtemp('-test-snap-restore-data')
     mock_mkdir.return_value = tempdir
 
@@ -984,7 +1220,7 @@ def test_restore_snapshot(mock_ctx, mock_get_client, mock_zipfile,
 
         snap_res._get_snapshot_path = mock.Mock(
             return_value=os.path.join(
-                os.path.dirname(__file__), 'snapshot_contents',
+                os.path.dirname(__file__), snap_contents_dir,
             )
         )
 
@@ -993,22 +1229,41 @@ def test_restore_snapshot(mock_ctx, mock_get_client, mock_zipfile,
         snap_res.restore()
 
         mock_manager_restoring.assert_called_once_with()
-        _assert_mgmt_restores(snap_res._client)
-        _assert_tenant_restores(snap_res._tenant_clients, tempdir)
+        _assert_mgmt_restores(snap_res._client, calls)
+        _assert_tenant_restores(snap_res._tenant_clients, tempdir, calls,
+                                tenants)
         mock_manager_finished_restoring.assert_called_once_with()
+        _assert_cleanup(FakeZipFile(snap_res._get_snapshot_path(), 'r'),
+                        tempdir,
+                        mock_unlink)
     finally:
         shutil.rmtree(tempdir)
 
 
-def _assert_mgmt_restores(client):
-    _check_calls(client, None, None)
+def _assert_cleanup(zipfile, tempdir, unlink):
+    # The actual unlinks should happen after each file is extracted, but we
+    # can't trivially check that, so we'll make sure each file is unlinked and
+    # trust that the unlinking is logically timed in the snap res itself
+    expected_deletions = []
+    for filename in zipfile.filelist:
+        if filename.is_dir():
+            continue
+        else:
+            path = os.path.join(tempdir, filename.filename)
+            expected_deletions.append(path)
+    unlink.assert_has_calls([mock.call(path) for path in expected_deletions],
+                            any_order=True)
 
 
-def _assert_tenant_restores(clients, tempdir):
-    assert TENANTS == set(clients)
+def _assert_mgmt_restores(client, calls):
+    _check_calls(client, None, None, calls)
 
-    for tenant in TENANTS:
-        _check_calls(clients[tenant], tenant, tempdir)
+
+def _assert_tenant_restores(clients, tempdir, calls, tenants):
+    assert tenants == set(clients)
+
+    for tenant in tenants:
+        _check_calls(clients[tenant], tenant, tempdir, calls)
 
 
 def _sort_events(events_call_list):
@@ -1026,11 +1281,11 @@ def _sort_events(events_call_list):
                   key=lambda x: json.dumps(x.kwargs, sort_keys=True))
 
 
-def _check_calls(client, tenant, tempdir):
-    for group in EXPECTED_CALLS:
+def _check_calls(client, tenant, tempdir, calls):
+    for group in calls:
         group_client = getattr(client, group)
-        for call in EXPECTED_CALLS[group]:
-            expected_calls = EXPECTED_CALLS[group][call]['expected'].get(
+        for call in calls[group]:
+            expected_calls = calls[group][call]['expected'].get(
                 tenant, {})
             call_client = getattr(group_client, call)
             if not any([expected_calls, call_client.call_args_list]):
@@ -1040,7 +1295,7 @@ def _check_calls(client, tenant, tempdir):
                 expected = _sort_events(expected_calls)
                 results = _sort_events(call_client.call_args_list)
             else:
-                sort_key = EXPECTED_CALLS[group][call]['sort_key']
+                sort_key = calls[group][call]['sort_key']
                 expected = sorted(expected_calls,
                                   key=lambda x: getattr(x, sort_key))
                 results = sorted(call_client.call_args_list,

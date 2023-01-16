@@ -10,9 +10,16 @@ upstream cloudify-stage {
   server stage_frontend:8188;
 }
 
-
 upstream cloudify-stage-backend {
   server stage_backend:8088;
+}
+
+upstream cloudify-composer {
+  server composer_frontend:8188;
+}
+
+upstream cloudify-composer-backend {
+  server composer_backend:3000;
 }
 
 # REST and UI external server

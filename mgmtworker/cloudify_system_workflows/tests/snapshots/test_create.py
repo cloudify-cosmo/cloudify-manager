@@ -4,6 +4,7 @@ import shutil
 from copy import deepcopy
 from dataclasses import dataclass
 from math import ceil
+import tempfile
 from unittest import mock
 
 import pytest
@@ -46,7 +47,6 @@ MOCK_CLIENT_RESPONSES = {
         'plugins': {
             'list': [{'id': 'plugin_t1'}],
             'download': 'abc123',
-            'download_yaml': 'def456',
         },
         'secrets': {
             'export': [{'id': 'secrets_list_t1'}],
@@ -112,6 +112,9 @@ MOCK_CLIENT_RESPONSES = {
             'list': [{'id': 'some_operation_t2',
                       'tasks_graph_id': 'tasks_graphs_list_t1'}],
         },
+        'secrets_providers': {
+            'list': [{'name': 'happyprovider'}],
+        },
     },
     'tenant2': {
         'sites': {
@@ -120,7 +123,6 @@ MOCK_CLIENT_RESPONSES = {
         'plugins': {
             'list': [{'id': 'plugin_t2'}],
             'download': 'abc123',
-            'download_yaml': 'def456',
         },
         'secrets': {
             'export': [{'id': 'secrets_list_t2'}],
@@ -177,6 +179,9 @@ MOCK_CLIENT_RESPONSES = {
         'operations': {
             'list': [{'id': 'some_operation_t2',
                       'tasks_graph_id': 'tasks_graph_list_t2'}],
+        },
+        'secrets_providers': {
+            'list': [{'name': 'something'}],
         },
     },
 }
@@ -325,31 +330,68 @@ def mock_override_entities_per_grouping():
         yield
 
 
+@pytest.fixture
+def mock_zipfile():
+    with mock.patch(
+        'cloudify_system_workflows.snapshots.snapshot_create'
+        '.zipfile.ZipFile',
+    ) as zipfile:
+        data = {
+            'base': zipfile,
+            'zipfiles': [
+                mock.Mock()
+                # We need at least as many mocks as we have plugins in the
+                # test snapshot, + 1 for the main snapshot.
+                # Having more won't hurt.
+                for i in range(50)
+            ]
+        }
+        for f in data['zipfiles']:
+            f.__enter__ = mock.Mock()
+            f.__exit__ = mock.Mock()
+        zipfile.side_effect = data['zipfiles']
+        yield data
+
+
+@pytest.fixture
+def mock_unlink():
+    with mock.patch(
+        'cloudify_system_workflows.snapshots.snapshot_create'
+        '.os.unlink',
+    ) as unlink:
+        yield unlink
+
+
 def test_create_snapshot(mock_shutil_rmtree, mock_get_manager_version,
-                         mock_ctx, mock_get_client,
-                         mock_override_entities_per_grouping):
+                         mock_ctx, mock_get_client, mock_unlink,
+                         mock_override_entities_per_grouping,
+                         mock_zipfile):
     snap_id = 'testsnapshot'
+    tempdir = tempfile.mkdtemp(prefix='snap-cre-test')
     snap_cre = SnapshotCreate(
         snapshot_id=snap_id,
         config={
             'created_status': 'created',
             'failed_status': 'failed',
+            'file_server_root': tempdir,
         },
     )
     # Disable archive creation
     snap_cre._create_archive = mock.Mock()
     snap_cre.create()
-
-    tempdir = snap_cre._tempdir
+    snap_dir = snap_cre._tempdir
 
     try:
-        _check_snapshot_top_level(tempdir)
-        _check_snapshot_mgmt(tempdir, snap_cre._client)
-        _assert_tenants(tempdir, snap_cre._tenant_clients)
+        _check_snapshot_top_level(snap_dir, mock_unlink, mock_zipfile)
+        _check_snapshot_mgmt(snap_dir, snap_cre._client, mock_unlink,
+                             mock_zipfile)
+        _assert_tenants(snap_dir, snap_cre._tenant_clients, mock_unlink,
+                        mock_zipfile)
 
         _assert_snapshot_status_update(snap_id, True, snap_cre._client)
     finally:
         shutil.rmtree(tempdir)
+        shutil.rmtree(snap_dir)
 
 
 def _assert_snapshot_status_update(snap_id, success, client):
@@ -365,26 +407,51 @@ def _assert_snapshot_status_update(snap_id, success, client):
         assert call.kwargs['error'] is not None
 
 
-def _check_snapshot_top_level(tempdir):
+def _check_zip_and_delete(paths, unlink, zipfile, base_dir, zip_idx=0):
+    zip_writer = zipfile['zipfiles'][zip_idx].__enter__.return_value.write
+
+    expected_zip_calls = [
+        mock.call(path, path[len(base_dir) + 1:])
+        for path in paths
+    ]
+
+    zip_writer.assert_has_calls(expected_zip_calls, any_order=True)
+    unlink.assert_has_calls([
+        mock.call(path)
+        for path in paths
+    ], any_order=True)
+
+
+def _check_tenant_dir_in_zip(tenant_name, zipfile, base_dir):
+    zip_writer = zipfile['zipfiles'][0].__enter__.return_value.write
+    path = os.path.join(base_dir, 'tenants', tenant_name)
+    expected_zip_calls = [
+        mock.call(path, path[len(base_dir) + 1:]),
+    ]
+    zip_writer.assert_has_calls(expected_zip_calls, any_order=True)
+
+
+def _check_snapshot_top_level(tempdir, unlink, zipfile):
     top_level_data = set(os.listdir(tempdir))
     assert top_level_data == {'mgmt', 'tenants', constants.METADATA_FILENAME}
-    with open(os.path.join(tempdir, constants.METADATA_FILENAME)) as md_handle:
+    metadata_path = os.path.join(tempdir, constants.METADATA_FILENAME)
+    with open(metadata_path) as md_handle:
         metadata = json.load(md_handle)
     assert metadata == {constants.M_VERSION: FAKE_MANAGER_VERSION}
+    _check_zip_and_delete([metadata_path], unlink, zipfile, tempdir)
 
 
-def _check_snapshot_mgmt(tempdir, client):
+def _check_snapshot_mgmt(tempdir, client, unlink, zipfile):
     mgmt_base_dir = os.path.join(tempdir, 'mgmt')
     top_level_mgmt = set(os.listdir(mgmt_base_dir))
     entities = ['user_groups', 'tenants', 'users', 'permissions']
-    expected_files = {
-        i: f'{i}0.json' for i in entities
-    }
-    assert top_level_mgmt == set(expected_files.values())
+    assert top_level_mgmt == set(entities)
     for entity in entities:
-        file_name = expected_files[entity]
+        assert os.listdir(os.path.join(mgmt_base_dir, entity)) == ['0.json']
+        file_path = os.path.join(mgmt_base_dir, entity, '0.json')
+        _check_zip_and_delete([file_path], unlink, zipfile, tempdir)
         expected_content = MOCK_CLIENT_RESPONSES[None][entity]['list']
-        with open(os.path.join(mgmt_base_dir, file_name)) as entity_handle:
+        with open(file_path) as entity_handle:
             content = json.load(entity_handle)
         assert content == expected_content
         client_group = getattr(client, entity)
@@ -396,7 +463,7 @@ def _check_snapshot_mgmt(tempdir, client):
         client_group.list.assert_called_once_with(**expected_kwargs)
 
 
-def _assert_tenants(tempdir, clients):
+def _assert_tenants(tempdir, clients, unlink, zipfile):
     tenants = [tenant for tenant in MOCK_CLIENT_RESPONSES.keys()
                if tenant is not None]
 
@@ -406,6 +473,7 @@ def _assert_tenants(tempdir, clients):
 
     for tenant in tenants:
         tenant_dir = os.path.join(tenants_dir, tenant)
+        _check_tenant_dir_in_zip(tenant, zipfile, tempdir)
 
         for r_type, methods_data in MOCK_CLIENT_RESPONSES[tenant].items():
             if r_type == 'secrets':
@@ -413,40 +481,78 @@ def _assert_tenants(tempdir, clients):
             else:
                 method = 'list'
             data = methods_data[method]
+            if r_type == 'agents' or 'node' in r_type:
+                dep_ids = [
+                    dep['id']
+                    for dep in MOCK_CLIENT_RESPONSES[tenant][
+                       'deployments']['list']
+                ]
+                _check_deployment_entities(
+                    r_type, data, dep_ids, tenant_dir, unlink, zipfile,
+                )
+                continue
+            if r_type in ['events', 'tasks_graphs']:
+                exc_ids = [
+                    exc['id']
+                    for exc in MOCK_CLIENT_RESPONSES[tenant][
+                        'executions']['list']
+                ]
+                group_ids = [
+                    group['id']
+                    for group in MOCK_CLIENT_RESPONSES[tenant][
+                        'execution_groups']['list']
+                ]
+                _check_exec_entities(
+                    r_type, data, exc_ids, group_ids, tenant_dir,
+                    unlink, zipfile,
+                    operations=MOCK_CLIENT_RESPONSES[tenant][
+                        'operations']['list'],
+                )
+                continue
+            if r_type == 'operations':
+                # The stored data on these is checked within tasks_graphs
+                continue
+            sub_dir = os.path.join(tenant_dir, f'{r_type}_archives')
+            expected_files = []
+            if r_type == 'plugins':
+                plugin_files = [
+                    os.path.join(sub_dir, entity['id'] + '.zip')
+                    for entity in data
+                ]
+                # Make sure we add the plugin zip to the snapshot
+                _check_zip_and_delete(plugin_files, unlink, zipfile,
+                                      tempdir)
+            elif r_type == 'blueprints':
+                stored_blueprints = set(os.listdir(sub_dir))
+                expected_blueprints = {blueprint['id'] + '.zip'
+                                       for blueprint in data}
+                expected_files = [
+                    os.path.join(sub_dir, entity)
+                    for entity in expected_blueprints
+                ]
+                assert stored_blueprints == expected_blueprints
+            elif r_type == 'deployments':
+                dep_workdirs = methods_data['get']
+                stored_dep_workdirs = set(os.listdir(sub_dir))
+                expected_dep_workdirs = set()
+                for idx in range(len(dep_workdirs)):
+                    if dep_workdirs[idx]['workdir_zip'] == EMPTY_B64_ZIP:
+                        # We don't save empty workdirs.
+                        continue
+                    expected_dep_workdirs.add(data[idx]['id'] + '.b64zip')
+                expected_files = [
+                    os.path.join(sub_dir, entity)
+                    for entity in expected_dep_workdirs
+                ]
+                assert stored_dep_workdirs == expected_dep_workdirs
+
+            if expected_files:
+                _check_zip_and_delete(expected_files, unlink, zipfile,
+                                      tempdir)
+
             for group in range(0, ceil(len(data) / ENTITIES_PER_GROUP)):
                 data_start = group * ENTITIES_PER_GROUP
                 data_end = data_start + ENTITIES_PER_GROUP
-
-                if r_type == 'agents' or 'node' in r_type:
-                    dep_ids = [
-                        dep['id']
-                        for dep in MOCK_CLIENT_RESPONSES[tenant][
-                            'deployments']['list'][data_start:data_end]
-                    ]
-                    _check_deployment_entities(
-                        r_type, group, data, dep_ids, tenant_dir,
-                    )
-                    continue
-                if r_type in ['events', 'tasks_graphs']:
-                    exc_ids = [
-                        exc['id']
-                        for exc in MOCK_CLIENT_RESPONSES[tenant][
-                            'executions']['list'][data_start:data_end]
-                    ]
-                    group_ids = [
-                        group['id']
-                        for group in MOCK_CLIENT_RESPONSES[tenant][
-                            'execution_groups']['list'][data_start:data_end]
-                    ]
-                    _check_exec_entities(
-                        r_type, group, data, exc_ids, group_ids, tenant_dir,
-                        operations=MOCK_CLIENT_RESPONSES[tenant][
-                            'operations']['list'],
-                    )
-                    continue
-                if r_type == 'operations':
-                    # The stored data on these is checked within tasks_graphs
-                    continue
 
                 expected = []
                 if r_type.endswith('_filters'):
@@ -460,75 +566,78 @@ def _assert_tenants(tempdir, clients):
                 else:
                     expected = data[data_start:data_end]
 
-                _check_resource_type(r_type, group, expected, tenant_dir)
-
-                sub_dir = os.path.join(tenant_dir, f'{r_type}{group}')
-                if r_type == 'plugins':
-                    stored_plugins = set(os.listdir(sub_dir))
-                    expected_plugins = {plugin['id'] + '.zip'
-                                        for plugin in expected}
-                    assert stored_plugins == expected_plugins
-                elif r_type == 'blueprints':
-                    stored_blueprints = set(os.listdir(sub_dir))
-                    expected_blueprints = {blueprint['id'] + '.zip'
-                                           for blueprint in expected}
-                    assert stored_blueprints == expected_blueprints
-                elif r_type == 'deployments':
-                    dep_workdirs = methods_data['get']
-                    stored_dep_workdirs = set(os.listdir(sub_dir))
-                    expected_dep_workdirs = set()
-                    for idx in range(data_start, data_end):
-                        if (idx >= len(dep_workdirs)
-                            or dep_workdirs[idx][
-                                'workdir_zip'] == EMPTY_B64_ZIP):
-                            # We don't save empty workdirs.
-                            continue
-                        expected_dep_workdirs.add(data[idx]['id'] + '.b64zip')
-                    assert stored_dep_workdirs == expected_dep_workdirs
+                _check_resource_type(r_type, group, expected, tenant_dir,
+                                     unlink, zipfile)
 
         _check_tenant_calls(tenant, MOCK_CLIENT_RESPONSES[tenant],
                             clients[tenant], tenant_dir)
 
 
-def _check_resource_type(r_type, group, expected, tenant_dir):
-    resource_file = os.path.join(tenant_dir, f'{r_type}{group}.json')
+def _check_resource_type(r_type, group, expected, tenant_dir,
+                         unlink, zipfile):
+    resource_file = os.path.join(tenant_dir, r_type, f'{group}.json')
     with open(resource_file) as stored_handle:
         stored = json.load(stored_handle)
     assert stored == expected
+    tempdir = os.path.dirname(os.path.dirname(tenant_dir))
+    _check_zip_and_delete([resource_file], unlink, zipfile, tempdir)
 
 
-def _check_deployment_entities(r_type, group, data, dep_ids, tenant_dir):
-    entities_path = os.path.join(tenant_dir, f'{r_type}{group}')
+def _check_deployment_entities(r_type, data, dep_ids, tenant_dir, unlink,
+                               zipfile):
+    entities_path = os.path.join(tenant_dir, r_type)
     stored_dep_entities = set(os.listdir(entities_path))
-    assert stored_dep_entities == {dep_id + '.json' for dep_id in dep_ids}
+    expected_entities = {dep_id + '.json' for dep_id in dep_ids}
+    assert stored_dep_entities == expected_entities
     _check_stored_dependents(entities_path, dep_ids, data)
+    tempdir = os.path.dirname(os.path.dirname(tenant_dir))
+    _check_zip_and_delete([
+        os.path.join(entities_path, entity)
+        for entity in stored_dep_entities
+    ], unlink, zipfile, tempdir)
 
 
-def _check_exec_entities(r_type, group, data, exc_ids, group_ids, tenant_dir,
-                         operations=None):
+def _check_exec_entities(r_type, data, exc_ids, group_ids, tenant_dir,
+                         unlink, zipfile, operations=None):
     if r_type == 'events':
-        execs_path = os.path.join(tenant_dir, 'events', 'executions',
-                                  f'{r_type}{group}')
-        groups_path = os.path.join(tenant_dir, 'events', 'execution_groups',
-                                   f'{r_type}{group}')
+        execs_path = os.path.join(tenant_dir, 'executions_events')
+        groups_path = os.path.join(tenant_dir, 'execution_groups_events')
 
         stored_exec_events = set(os.listdir(execs_path))
         stored_group_events = set(os.listdir(groups_path))
 
-        assert stored_exec_events == {exc_id + '.json' for exc_id in exc_ids}
-        assert stored_group_events == {group_id + '.json'
-                                       for group_id in group_ids}
+        expected_exec_events = {exc_id + '.json' for exc_id in exc_ids}
+        expected_group_events = {group_id + '.json' for group_id in group_ids}
+
+        assert stored_exec_events == expected_exec_events
+        assert stored_group_events == expected_group_events
+
+        expected_files = [
+            os.path.join(execs_path, entity)
+            for entity in expected_exec_events
+        ] + [
+            os.path.join(groups_path, entity)
+            for entity in expected_group_events
+        ]
 
         _check_stored_dependents(execs_path, exc_ids, data)
         _check_stored_dependents(groups_path, group_ids, data)
     elif r_type == 'tasks_graphs':
-        graphs_path = os.path.join(tenant_dir, f'{r_type}{group}')
+        graphs_path = os.path.join(tenant_dir, r_type)
 
         stored_graphs = set(os.listdir(graphs_path))
+        expected_graphs = {exc_id + '.json' for exc_id in exc_ids}
 
-        assert stored_graphs == {exc_id + '.json' for exc_id in exc_ids}
+        assert stored_graphs == expected_graphs
+
+        expected_files = [
+            os.path.join(graphs_path, entity)
+            for entity in expected_graphs
+        ]
 
         _check_stored_dependents(graphs_path, exc_ids, data, operations)
+    tempdir = os.path.dirname(os.path.dirname(tenant_dir))
+    _check_zip_and_delete(expected_files, unlink, zipfile, tempdir)
 
 
 def _check_stored_dependents(base_path, parent_ids, data, operations=None):
@@ -555,19 +664,14 @@ def _check_tenant_calls(tenant, tenant_mock_data, client, tenant_dir):
     for entity_type, commands in tenant_mock_data.items():
         mock_entity_base = getattr(client, entity_type)
         for command in commands:
-            if 'download' in command:
-                if command == 'download':
-                    if entity_type == 'plugins':
-                        extension = 'wgn'
-                    else:
-                        extension = 'zip'
-                    dest = os.path.join(
-                        tenant_dir, f'{entity_type}0', f'{{}}.{extension}')
-                elif command == 'download_yaml':
-                    dest = os.path.join(tenant_dir,
-                                        f'{entity_type}0', '{}.yaml')
+            if command == 'download':
+                dest = os.path.join(
+                    tenant_dir, f'{entity_type}_archives', '{}.zip')
+                kwargs = {}
+                if entity_type == 'plugins':
+                    kwargs = {'full_archive': True}
                 expected_calls = {
-                    _Call((entity['id'], dest.format(entity['id'])), {},
+                    _Call((entity['id'], dest.format(entity['id'])), kwargs,
                           f'{entity_type}.{command}')
                     for entity in tenant_mock_data[entity_type]['list']
                 }

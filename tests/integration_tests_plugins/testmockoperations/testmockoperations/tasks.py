@@ -528,3 +528,50 @@ def configure_connection(ctx, **kwargs):
             ctx.target.instance.runtime_properties,
     })
     ctx.source.instance.runtime_properties['connection_state'] = state
+
+
+@operation
+def create_file_in_workdir(ctx, file_path: str, content: str):
+    ctx.logger.info(f"Creating '{file_path}' in deployment workdir")
+    deployment_workdir = ctx.local_deployment_workdir()
+    _write_file(os.path.join(deployment_workdir, file_path), content)
+
+
+@operation
+def update_file_in_workdir(ctx, file_path: str, content: str):
+    ctx.logger.info(f"Updating '{file_path}' in deployment workdir")
+    deployment_workdir = ctx.local_deployment_workdir()
+    _write_file(os.path.join(deployment_workdir, file_path), content)
+
+
+@operation
+def delete_file_in_workdir(ctx, file_path: str):
+    ctx.logger.info(f"Deleting '{file_path}' from deployment workdir")
+    deployment_workdir = ctx.local_deployment_workdir()
+    os.remove(os.path.join(deployment_workdir, file_path))
+
+
+@operation
+def assert_file_exists(ctx, file_path: str):
+    ctx.logger.info(f"Checking that '{file_path}' exists")
+    deployment_workdir = ctx.local_deployment_workdir()
+    absolute_path = os.path.join(deployment_workdir, file_path)
+    if not os.path.exists(absolute_path):
+        raise Exception(
+            f"File '{file_path}' ('{absolute_path}') does not exist")
+
+
+@operation
+def assert_file_does_not_exist(ctx, file_path: str):
+    ctx.logger.info(f"Checking that '{file_path}' does not exist")
+    deployment_workdir = ctx.local_deployment_workdir()
+    absolute_path = os.path.join(deployment_workdir, file_path)
+    if os.path.exists(absolute_path):
+        raise Exception(
+            f"File '{file_path}' ('{absolute_path}') exists")
+
+
+def _write_file(absolute_file_path: str, content: str):
+    os.makedirs(os.path.dirname(absolute_file_path), exist_ok=True)
+    with open(absolute_file_path, 'wt', encoding='utf-8') as file:
+        file.write(content)

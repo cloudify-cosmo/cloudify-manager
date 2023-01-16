@@ -11,6 +11,8 @@ services:
       - ssl:/etc/cloudify/ssl:ro
       - mgmtworker_workdir:/opt/mgmtworker/work
       - ./resources/rest-service/cloudify/types:/opt/manager/resources/cloudify/types
+    environment:
+      CFY_RESOURCES_ROOT: /opt/manager/resources
     networks:
       - cloudify
     restart: unless-stopped
@@ -108,7 +110,7 @@ services:
       ssh:
         - default
     environment:
-      ENTRYPOINT: localhost
+      ENTRYPOINT: nginx
     depends_on:
       - postgresql
       - certs_creator
@@ -137,6 +139,29 @@ services:
       - cloudify
     volumes:
       - ssl:/etc/cloudify/ssl:ro
+    depends_on:
+      - postgresql
+      - certs_creator
+    restart: on-failure
+
+  composer_frontend:
+    container_name: composer_frontend
+    image: composer_frontend
+    networks:
+      - cloudify
+
+  composer_backend:
+    container_name: composer_backend
+    image: composer_backend
+    environment:
+      RESTSERVICE_ADDRESS: nginx
+    networks:
+      - cloudify
+    volumes:
+      - ssl:/etc/cloudify/ssl:ro
+    depends_on:
+      - postgresql
+      - certs_creator
     restart: on-failure
 
 networks:

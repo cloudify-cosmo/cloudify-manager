@@ -153,13 +153,6 @@ class UnauthorizedError(ManagerException):
 
 class NoAuthProvided(UnauthorizedError):
     """Not authorized, because authentication was not provided."""
-
-    additional_headers: typing.ClassVar[dict[str, str]] = {
-        # if the user received this error in a browser, they'll be greeted
-        # with the basic auth prompt, rather than just an error page
-        'WWW-Authenticate': 'Basic',
-    }
-
     def __init__(self, *args, **kwargs):
         super().__init__('No authentication info provided', *args, **kwargs)
 
@@ -469,4 +462,9 @@ class UnsupportedFileServerType(ManagerException):
 
 class FileServerException(ManagerException):
     error_code = 'file_server_exception'
+    status_code = 500
+
+
+class MultipleFilesUploadException(ManagerException):
+    error_code = 'multiple_files_upload_exception'
     status_code = 500

@@ -1,0 +1,37 @@
+[
+    {
+        "created_at": "2022-11-25T15:14:39.191Z",
+        "id": "6d4e2e5e-87aa-471b-a1e0-4bc8a48a4ec3",
+        "name": "update_check_drift",
+        "execution_id": "38b2b31c-7bde-462e-9f67-d08540e72bdd",
+        "operations": [
+            {
+                "created_at": "2022-11-25T15:14:39.191Z",
+                "id": "184e9c1a-b951-4954-a566-60dc5822453a",
+                "name": "NOP",
+                "state": "pending",
+                "dependencies": [],
+                "type": "NOPLocalWorkflowTask",
+                "parameters": {
+                    "on_success": {
+                        "path": "whatever"
+                    },
+                    "on_failure": {
+                        "path": "someother"
+                    },
+                    "retried_task": null,
+                    "current_retries": 0,
+                    "send_task_events": true,
+                    "retry_interval": 30,
+                    "total_retries": -1,
+                    "info": null,
+                    "error": null,
+                    "containing_subgraph": null,
+                    "task_kwargs": {}
+                },
+                "manager_name": null,
+                "agent_name": null
+            }
+        ]
+    }
+]

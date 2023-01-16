@@ -407,7 +407,8 @@ class FunctionEvaluationStorage(object):
         shared_dep_id, element_id = capability_path[0], capability_path[1]
 
         deployment = self.sm.get(Deployment, shared_dep_id)
-        capability = deployment.capabilities.get(element_id)
+        capabilities = deployment.capabilities or {}
+        capability = capabilities.get(element_id)
 
         if not capability:
             raise FunctionsEvaluationError(

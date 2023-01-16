@@ -108,6 +108,13 @@ class ResourceSearches(SecuredResource):
                                         request_dict.get('filter_rules'),
                                         constraints)
 
+        sort_labels = None
+        if sort:
+            sort_labels = {k.split(":", 1)[1]: v
+                           for k, v in sort.items() if k.startswith('label:')}
+            sort = {k: v
+                    for k, v in sort.items() if not k.startswith('label:')}
+
         result = sm.list(
             resource_model,
             include=_include,
@@ -115,9 +122,10 @@ class ResourceSearches(SecuredResource):
             substr_filters=search,
             pagination=pagination,
             sort=sort,
+            sort_labels=sort_labels,
             all_tenants=all_tenants,
             get_all_results=get_all_results,
-            filter_rules=filter_rules
+            filter_rules=filter_rules,
         )
 
         return ListResponse(items=result.items, metadata=result.metadata)

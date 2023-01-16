@@ -207,9 +207,12 @@ class Plugin(SQLResourceBase):
         from manager_rest.persistent_storage import get_storage_handler
         plugin_dir = path.join(FILE_SERVER_PLUGINS_FOLDER, self.id)
         yaml_files = []
-        for file_name in get_storage_handler().list(plugin_dir):
-            if file_name.endswith('.yaml'):
-                yaml_files += [file_name]
+        try:
+            for file_info in get_storage_handler().list(plugin_dir):
+                if file_info.filepath.endswith('.yaml'):
+                    yaml_files += [file_info.filepath]
+        except manager_exceptions.NotFoundError:
+            return []
         return yaml_files
 
     def yaml_file_path(self, dsl_version=None):
@@ -639,7 +642,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
 
     def _list_workflows(self):
         if self.workflows is None:
-            return None
+            return []
 
         return [Workflow(name=wf_name,
                          created_at=None,

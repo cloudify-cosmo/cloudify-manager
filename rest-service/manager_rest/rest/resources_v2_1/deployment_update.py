@@ -59,15 +59,6 @@ class DeploymentUpdate(SecuredResource):
             sm = get_storage_manager()
             return sm.get(models.DeploymentUpdate, id)
 
-    @authorize('deployment_update_create')
-    @rest_decorators.marshal_with(models.DeploymentUpdate)
-    def put(self, id, phase):
-        """DEPRECATED.
-
-        This method is implemented for backward-compatibility only.
-        """
-        return self._initiate(id)
-
     @rest_decorators.marshal_with(models.DeploymentUpdate)
     def _initiate(self, deployment_id):
         sm = get_storage_manager()

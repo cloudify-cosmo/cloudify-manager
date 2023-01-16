@@ -79,3 +79,47 @@ class TestIntrinsicFunctions(BaseServerTestCase):
         assert set(storage.get_consumers('names')) == \
                {'My App', 'Another app?'}
         assert storage.get_consumers('count') == 2
+
+    def test_get_environment_capability(self):
+        models.Deployment(
+            id='env',
+            blueprint=self.bp,
+            creator=self.user,
+            tenant=self.tenant,
+            capabilities={'cap1': {'value': {'a': 'b'}}},
+        )
+        models.Deployment(
+            id='srv',
+            blueprint=self.bp,
+            creator=self.user,
+            tenant=self.tenant,
+            labels=[
+                models.DeploymentLabel(
+                    key='csys-obj-parent',
+                    value='env',
+                    creator=self.user,
+                ),
+            ],
+        )
+        env_storage = dsl_functions.FunctionEvaluationStorage('env', self.sm)
+        with self.assertRaisesRegex(
+            FunctionsEvaluationError,
+            'csys-obj-parent'
+        ):
+            env_storage.get_environment_capability(['cap1'])
+
+        srv_storage = dsl_functions.FunctionEvaluationStorage('srv', self.sm)
+        with self.assertRaisesRegex(
+            FunctionsEvaluationError,
+            'not declared'
+        ):
+            srv_storage.get_environment_capability(['cap2'])
+
+        srv_storage = dsl_functions.FunctionEvaluationStorage('srv', self.sm)
+        with self.assertRaisesRegex(
+            FunctionsEvaluationError,
+            'nonexistent'
+        ):
+            srv_storage.get_environment_capability(['cap1', 'nonexistent'])
+
+        assert 'b' == srv_storage.get_environment_capability(['cap1', 'a'])

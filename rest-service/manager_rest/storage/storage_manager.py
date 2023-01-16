@@ -199,7 +199,7 @@ class SQLStorageManager(object):
                 else:
                     query = query.order_by(column)
         if sort_labels:
-            labels_model = model_class.labels_model
+            labels_model = aliased(model_class.labels_model)
             for key, order in sort_labels.items():
                 ordering = (
                     db.select(

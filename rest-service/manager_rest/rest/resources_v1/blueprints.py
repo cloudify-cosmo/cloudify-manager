@@ -60,9 +60,9 @@ class BlueprintsIdArchive(SecuredResource):
             blueprint.id,
         )
         archive_type = None
-        for archive_file_name in get_storage_handler().list(path):
+        for file_info in get_storage_handler().list(path):
             for arc_type in SUPPORTED_ARCHIVE_TYPES:
-                if archive_file_name.endswith(f'{blueprint.id}.{arc_type}'):
+                if file_info.filepath.endswith(f'{blueprint.id}.{arc_type}'):
                     archive_type = arc_type
                     break
             if archive_type:

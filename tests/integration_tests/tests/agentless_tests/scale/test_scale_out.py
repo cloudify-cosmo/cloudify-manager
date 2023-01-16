@@ -298,6 +298,62 @@ class TestScaleOut(TestScaleBase):
         expectations['compute']['existing']['install'] = 1
         self.deployment_assertions(expectations)
 
+    def test_rollback_operations(self):
+        bp = """
+tosca_definitions_version: cloudify_dsl_1_5
+imports:
+  - cloudify/types/types.yaml
+  - plugin:testmockoperations
+
+node_templates:
+    n1:
+        type: cloudify.nodes.Root
+        instances:
+            deploy: 0
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                create:
+                    implementation: testmockoperations.testmockoperations.tasks.maybe_fail
+                    inputs:
+                        should_fail: true
+                stop: testmockoperations.testmockoperations.tasks.mock_lifecycle
+"""  # NOQA
+        self.upload_blueprint_resource(
+            self.make_yaml_file(bp),
+            blueprint_id='bp1',
+        )
+        dep1 = self.deploy(blueprint_id='bp1', deployment_id='d1')
+        self.execute_workflow('install', dep1.id)
+        with self.assertRaises(RuntimeError):
+            self.execute_workflow('scale', dep1.id, parameters={
+                'delta': 1,
+                'scalable_entity_name': 'n1',
+            })
+
+        # the node instance briefly existed, but was removed
+        node_instances = self.client.node_instances.list(deployment_id='d1')
+        assert len(node_instances) == 0
+
+        # the node instance doesn't exist, so we can't check what opertions
+        # were started by examining its runtime properties.
+        # Instead, look in execution events, for task_started events.
+        executions = self.client.executions.list(
+            deployment_id='d1',
+            workflow_id='scale',
+        )
+        assert len(executions) == 1
+
+        events = self.client.events.list(execution_id=executions[0].id)
+        started_operations = {
+            e['operation']
+            for e in events
+            if e['event_type'] == 'task_started' and e['operation'] is not None
+        }
+        # only create did run (and fail). Stop did not run - there's nothing
+        # to stop, because the instance was never even created, much less
+        # started.
+        assert started_operations == {'cloudify.interfaces.lifecycle.create'}
+
     @contextmanager
     def _set_retries(self, retries, retry_interval=0):
         original_config = {

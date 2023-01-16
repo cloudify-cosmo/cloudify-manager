@@ -242,13 +242,16 @@ def do_upload_blueprint(client, blueprint):
     # binaries to the client_args
     is_directory = False
     if _is_internal_path(blueprint_archive):
+        res = ctx.get_resource(blueprint_archive)
         try:
-            res = ctx.get_resource(blueprint_archive)
-            assert 'files' in json.loads(res)
-            is_directory = True
+            res_dict = json.loads(res)
+            if isinstance(res_dict, dict):
+                is_directory = True
+        except json.JSONDecodeError:
+            pass
+        if is_directory:
             blueprint_archive = ctx.download_directory(blueprint_archive)
-        except (ValueError, AssertionError):
-            # blueprint_archive path is not a directory -> proceed normally
+        else:
             blueprint_archive = ctx.download_resource(blueprint_archive)
 
     try:
@@ -257,13 +260,17 @@ def do_upload_blueprint(client, blueprint):
                 entity_id=blueprint_id,
                 path=os.path.join(blueprint_archive, blueprint_file_name),
                 labels=labels,
-                skip_size_limit=True)
+                skip_size_limit=True,
+                async_upload=True,
+            )
         else:
             client.blueprints._upload(
                 blueprint_id=blueprint_id,
                 archive_location=blueprint_archive,
                 application_file_name=blueprint_file_name,
-                labels=labels)
+                labels=labels,
+                async_upload=True,
+            )
         wait_for_blueprint_to_upload(blueprint_id, client)
     except CloudifyClientError as ex:
         if 'already exists' not in str(ex):

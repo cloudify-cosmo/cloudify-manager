@@ -1,8 +1,14 @@
 from datetime import datetime
+import os
+import shutil
+import tempfile
 
+from flask import request
 from flask_restful.reqparse import Argument
 from flask_restful.inputs import boolean
 
+from cloudify.zip_utils import make_zip64_archive
+from manager_rest import manager_exceptions
 from manager_rest import upload_manager
 from manager_rest.persistent_storage import get_storage_handler
 from manager_rest.resource_manager import get_resource_manager
@@ -13,7 +19,10 @@ from manager_rest.rest import (
 )
 from manager_rest.rest.responses_v2 import ListResponse
 from manager_rest.security import SecuredResource
-from manager_rest.security.authorization import authorize
+from manager_rest.security.authorization import (
+    authorize,
+    check_user_action_allowed,
+)
 from manager_rest.storage import (
     get_storage_manager,
     models,
@@ -96,6 +105,11 @@ class Plugins(SecuredResource):
             Argument('created_by'),
         ])
 
+        created_by = args.created_by
+        if created_by:
+            check_user_action_allowed('set_owner', None, True)
+            created_by = rest_utils.valid_user(created_by)
+
         resource_manager.assert_no_snapshot_creation_running_or_queued()
         plugins = []
         wagon_infos = upload_manager.upload_plugin(**kwargs)
@@ -128,6 +142,7 @@ class Plugins(SecuredResource):
                 blueprint_labels=wagon_info.get('blueprint_labels'),
                 labels=wagon_info.get('labels'),
                 resource_tags=wagon_info.get('resource_tags'),
+                creator=created_by,
             )
             sm.put(plugin)
             plugins.append(plugin)
@@ -161,10 +176,42 @@ class PluginsArchive(SecuredResource):
         """
         # Verify plugin exists.
         plugin = get_storage_manager().get(models.Plugin, plugin_id)
-        plugin_path = f'{FILE_SERVER_PLUGINS_FOLDER}/{plugin_id}'\
-                      f'/{plugin.archive_name}'
 
-        return get_storage_handler().proxy(plugin_path)
+        storage = get_storage_handler()
+        base_path = os.path.join(FILE_SERVER_PLUGINS_FOLDER, plugin_id)
+
+        if request.args.get('full_archive'):
+            archive_path = os.path.join(base_path, 'plugin_archive.zip')
+
+            try:
+                storage.find(archive_path)
+                archive_exists = True
+            except manager_exceptions.NotFoundError:
+                archive_exists = False
+
+            if not archive_exists:
+                tempdir = tempfile.mkdtemp()
+                try:
+                    temp_archive_dir = os.path.join(tempdir, 'archive')
+                    os.makedirs(temp_archive_dir)
+                    temp_zip_path = os.path.join(tempdir,
+                                                 'plugin_archive.zip')
+
+                    for fileinfo in storage.list(base_path):
+                        path = fileinfo.filepath
+                        dest = os.path.join(temp_archive_dir,
+                                            os.path.split(path)[1])
+                        with storage.get(path) as retrieved:
+                            shutil.copy(retrieved, dest)
+
+                    make_zip64_archive(temp_zip_path, temp_archive_dir)
+                    storage.move(temp_zip_path, archive_path)
+                finally:
+                    shutil.rmtree(tempdir)
+            return storage.proxy(archive_path)
+        else:
+            plugin_path = os.path.join(base_path, plugin.archive_name)
+            return storage.proxy(plugin_path)
 
 
 class PluginsId(SecuredResource):
