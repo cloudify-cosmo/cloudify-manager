@@ -148,7 +148,7 @@ class SecretsKey(SecuredResource):
                     'type': dict,
                     'optional': True,
                 },
-                'provider': {
+                'provider_name': {
                     'type': str,
                     'optional': True,
                 },
@@ -192,7 +192,7 @@ class SecretsKey(SecuredResource):
 
         provider = None
 
-        if provider_name := request_dict.get('provider'):
+        if provider_name := request_dict.get('provider_name'):
             storage_manager = get_storage_manager()
 
             provider = storage_manager.get(
@@ -280,9 +280,9 @@ class SecretsKey(SecuredResource):
     @staticmethod
     def _update_provider(secret):
         request_dict = rest_utils.get_json_and_verify_params({
-            'provider': {'type': str, 'optional': True}
+            'provider_name': {'type': str, 'optional': True}
         })
-        provider_name = request_dict.get('provider')
+        provider_name = request_dict.get('provider_name')
         if not provider_name:
             return
 
