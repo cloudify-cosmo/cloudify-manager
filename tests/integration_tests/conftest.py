@@ -124,7 +124,7 @@ def resource_mapping(request):
                 continue
             for venv in target_venvs:
                 dst = os.path.join(
-                    venv, 'lib', 'python3.10', 'site-packages',
+                    venv, 'lib', 'python3.11', 'site-packages',
                     os.path.basename(src))
                 resources += [(src, dst)]
 

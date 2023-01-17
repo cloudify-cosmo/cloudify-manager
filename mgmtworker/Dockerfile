@@ -1,4 +1,4 @@
-FROM python:3.10-slim
+FROM python:3.11-slim
 
 ENV REST_HOST=nginx
 ENV REST_PORT=53333

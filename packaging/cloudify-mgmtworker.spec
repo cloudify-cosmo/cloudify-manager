@@ -34,17 +34,19 @@ BuildRequires:  python3 >= 3.6
 
 
 Source0:        https://cloudify-cicd.s3.amazonaws.com/python-build-packages/cfy-python3.10-%{ARCHITECTURE}.tgz
+Source1:        https://cloudify-cicd.s3.amazonaws.com/python-build-packages/cfy-python3.11-%{ARCHITECTURE}.tgz
 
 %description
 Cloudify's Management worker
 
 %prep
 sudo tar xf %{S:0} -C /
+sudo tar xf %{S:1} -C /
 
 %build
 
 # Create the venv with the custom Python symlinked in
-/opt/python3.10/bin/python3.10 -m venv /opt/mgmtworker/env
+/opt/python3.11/bin/python3.11 -m venv /opt/mgmtworker/env
 
 %{PIP_INSTALL} --upgrade pip "setuptools<=63.2"
 %{PIP_INSTALL} -r "${RPM_SOURCE_DIR}/packaging/mgmtworker/requirements.txt"
@@ -59,12 +61,20 @@ python3.6 -m venv /opt/plugins-common-3.6
 /opt/plugins-common-3.6/bin/pip install --upgrade pip "setuptools<=63.2"
 /opt/plugins-common-3.6/bin/pip install -r "${RPM_SOURCE_DIR}/packaging/mgmtworker/requirements.txt"
 
+# create a python3.10 venv with common & requirements preinstalled, to be used
+# as a base virtualenv for python3.10 plugins
+/opt/python3.10/bin/python3.10 -m venv /opt/plugins-common-3.10
+/opt/plugins-common-3.10/bin/pip install --upgrade pip "setuptools<=63.2"
+/opt/plugins-common-3.10/bin/pip install -r "${RPM_SOURCE_DIR}/packaging/mgmtworker/requirements.txt"
+
 
 %install
 
 mkdir -p %{buildroot}/opt/mgmtworker
 mv /opt/mgmtworker/env %{buildroot}/opt/mgmtworker
 mv /opt/plugins-common-3.6 %{buildroot}/opt/plugins-common-3.6
+mv /opt/plugins-common-3.10 %{buildroot}/opt/plugins-common-3.10
+mv /opt/python3.10 %{buildroot}/opt/python3.10
 
 mkdir -p %{buildroot}/var/log/cloudify/mgmtworker
 mkdir -p %{buildroot}/opt/mgmtworker/config
@@ -94,4 +104,6 @@ groupadd -fr cfylogs
 %attr(750,cfyuser,cfyuser) /opt/mgmtworker/env/source_plugins
 /opt/mgmtworker
 /opt/plugins-common-3.6
+/opt/plugins-common-3.10
+/opt/python3.10
 %attr(750,cfyuser,cfylogs) /var/log/cloudify/mgmtworker

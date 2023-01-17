@@ -9,7 +9,7 @@ spec:
         cpu: 0.5
         memory: 256Mi
   - name: python
-    image: 263721492972.dkr.ecr.eu-west-1.amazonaws.com/cloudify-python3.10
+    image: 263721492972.dkr.ecr.eu-west-1.amazonaws.com/cloudify-python3.11
     resources:
       requests:
         cpu: 2
