@@ -74,6 +74,7 @@ mkdir -p %{buildroot}/opt/mgmtworker
 mv /opt/mgmtworker/env %{buildroot}/opt/mgmtworker
 mv /opt/plugins-common-3.6 %{buildroot}/opt/plugins-common-3.6
 mv /opt/plugins-common-3.10 %{buildroot}/opt/plugins-common-3.10
+mv /opt/python3.10 %{buildroot}/opt/python3.10
 
 mkdir -p %{buildroot}/var/log/cloudify/mgmtworker
 mkdir -p %{buildroot}/opt/mgmtworker/config
@@ -104,4 +105,5 @@ groupadd -fr cfylogs
 /opt/mgmtworker
 /opt/plugins-common-3.6
 /opt/plugins-common-3.10
+/opt/python3.10
 %attr(750,cfyuser,cfylogs) /var/log/cloudify/mgmtworker
