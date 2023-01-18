@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='cloudify-execution-scheduler',
-    version='6.4.2.dev1',
+    version='6.4.2',
     author='Cloudify',
     author_email='cosmo-admin@cloudify.co',
     packages=find_packages(),
@@ -12,6 +12,6 @@ setup(
         ]
     },
     install_requires=[
-        'cloudify-rest-service==6.4.2.dev1',
+        'cloudify-rest-service==6.4.2',
     ],
 )

@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 setup(
     name='cloudify-api',
-    version='6.4.2.dev1',
+    version='6.4.2',
     author='Cloudify',
     author_email='cosmo-admin@cloudify.co',
     packages=find_packages(
