@@ -36,6 +36,7 @@ RUN --mount=type=cache,target=/root/.cache \
     pip install \
       --upgrade pip \
       gunicorn \
+      alembic \
       -r requirements.txt
 
 RUN --mount=type=ssh \
