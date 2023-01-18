@@ -36,6 +36,10 @@ from cloudify_rest_client.exceptions import (
     CloudifyClientError,
 )
 
+from manager_rest import (
+    manager_exceptions,
+)
+
 from manager_rest.storage import (get_storage_manager,
                                   get_node as get_storage_node)
 from manager_rest.storage.models import (NodeInstance,
@@ -172,7 +176,7 @@ def get_secret_from_provider(secret):
             decrypt(
                 provider.connection_parameters,
             ),
-        )
+        ) or {}
         url = connection_parameters.get('url')
         token = connection_parameters.get('token')
         path = []
@@ -189,7 +193,7 @@ def get_secret_from_provider(secret):
                 decrypt(
                     secret.provider_options,
                 ),
-            )
+            ) or {}
             secret_path = provider_options.get('path')
 
         if secret_path:
@@ -200,6 +204,24 @@ def get_secret_from_provider(secret):
         path = '/'.join(
             path,
         )
+
+        if not url:
+            raise manager_exceptions.BadParametersError(
+                f'Secrets Provider does not have a defined URL: '
+                f'{provider.name}',
+            )
+
+        if not token:
+            raise manager_exceptions.BadParametersError(
+                f'Secrets Provider does not have a defined authorization '
+                f'token: {provider.name}',
+            )
+
+        if not path:
+            raise manager_exceptions.BadParametersError(
+                f'Secrets Provider does not have a defined secret path: '
+                f'{provider.name}',
+            )
 
         decrypted_value = _get_secret_from_vault(
             url,
