@@ -23,4 +23,8 @@ RUN --mount=type=cache,target=/root/.cache \
       -r mgmtworker/requirements.txt \
       mgmtworker/
 
+ADD https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master\
+/resources/rest-service/cloudify/types/types.yaml \
+/opt/manager/resources/cloudify/types/
+
 ENTRYPOINT /opt/mgmtworker/docker/entrypoint.sh
