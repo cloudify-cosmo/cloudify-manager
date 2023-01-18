@@ -62,6 +62,7 @@ mv %_manager_env %{buildroot}/opt/manager
 
 mkdir -p %{buildroot}/opt/manager/resources/
 cp -R "${RPM_SOURCE_DIR}/resources/rest-service/cloudify/" "%{buildroot}/opt/manager/resources/"
+cp -R "${RPM_SOURCE_DIR}/rest-service/migrations" "%{buildroot}/opt/manager/resources/cloudify/migrations"
 
 # Create the log dirs
 mkdir -p %{buildroot}/var/log/cloudify/rest
