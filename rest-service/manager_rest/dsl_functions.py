@@ -36,6 +36,10 @@ from cloudify_rest_client.exceptions import (
     CloudifyClientError,
 )
 
+from manager_rest import (
+    manager_exceptions,
+)
+
 from manager_rest.storage import (get_storage_manager,
                                   get_node as get_storage_node)
 from manager_rest.storage.models import (NodeInstance,
@@ -168,70 +172,11 @@ def get_secret_from_provider(secret):
 
         return decrypted_value
     elif provider.type == 'vault':
-        connection_parameters = json.loads(
-            decrypt(
-                provider.connection_parameters,
-            ),
-        )
-        url = connection_parameters.get('url')
-        token = connection_parameters.get('token')
-        path = []
-
-        if default_path := connection_parameters.get('path'):
-            path.append(
-                default_path,
-            )
-
-        secret_path = None
-
-        if secret.provider_options:
-            provider_options = json.loads(
-                decrypt(
-                    secret.provider_options,
-                ),
-            )
-            secret_path = provider_options.get('path')
-
-        if secret_path:
-            path.append(
-                secret_path,
-            )
-
-        path = '/'.join(
-            path,
-        )
-
-        decrypted_value = _get_secret_from_vault(
-            url,
-            token,
-            path,
-            secret.key,
-        )
+        decrypted_value = get_secret_from_vault(secret)
 
         return decrypted_value
     elif provider.type == 'cloudify':
-        connection_parameters = json.loads(
-            decrypt(
-                provider.connection_parameters,
-            ),
-        )
-        secret_name = None
-
-        if secret.provider_options:
-            provider_options = json.loads(
-                decrypt(
-                    secret.provider_options,
-                ),
-            )
-            secret_name = provider_options.get('name')
-
-        if not secret_name:
-            secret_name = secret.key
-
-        decrypted_value = _get_secret_from_cloudify(
-            secret_name,
-            **connection_parameters,
-        )
+        decrypted_value = get_secret_from_cloudify(secret)
 
         return decrypted_value
     else:
@@ -240,7 +185,69 @@ def get_secret_from_provider(secret):
         )
 
 
-def _get_secret_from_vault(url, token, path, key):
+def get_secret_from_vault(secret):
+    connection_parameters = json.loads(
+        decrypt(
+            secret.provider.connection_parameters,
+        ),
+    ) or {}
+    url = connection_parameters.get('url')
+    token = connection_parameters.get('token')
+    path = []
+
+    if default_path := connection_parameters.get('path'):
+        path.append(
+            default_path,
+        )
+
+    secret_path = None
+
+    if secret.provider_options:
+        provider_options = json.loads(
+            decrypt(
+                secret.provider_options,
+            ),
+        ) or {}
+        secret_path = provider_options.get('path')
+
+    if secret_path:
+        path.append(
+            secret_path,
+        )
+
+    path = '/'.join(
+        path,
+    )
+
+    if not url:
+        raise manager_exceptions.BadParametersError(
+            f'Secrets Provider does not have a defined URL: '
+            f'{secret.provider.name}',
+        )
+
+    if not token:
+        raise manager_exceptions.BadParametersError(
+            f'Secrets Provider does not have a defined authorization '
+            f'token: {secret.provider.name}',
+        )
+
+    if not path:
+        raise manager_exceptions.BadParametersError(
+            f'Secrets Provider does not have a defined secret path: '
+            f'{secret.provider.name}',
+        )
+
+    decrypted_value = _get_value_from_vault(
+        url,
+        token,
+        path,
+        secret.key,
+    )
+
+    return decrypted_value
+
+
+def _get_value_from_vault(url, token, path, key):
     path_details = _get_vault_path_details(
         url,
         token,
@@ -257,7 +264,34 @@ def _get_secret_from_vault(url, token, path, key):
     return secret_value
 
 
-def _get_secret_from_cloudify(
+def get_secret_from_cloudify(secret):
+    connection_parameters = json.loads(
+        decrypt(
+            secret.provider.connection_parameters,
+        ),
+    ) or {}
+    secret_name = None
+
+    if secret.provider_options:
+        provider_options = json.loads(
+            decrypt(
+                secret.provider_options,
+            ),
+        ) or {}
+        secret_name = provider_options.get('name')
+
+    if not secret_name:
+        secret_name = secret.key
+
+    decrypted_value = _get_value_from_cloudify(
+        secret_name,
+        **connection_parameters,
+    )
+
+    return decrypted_value
+
+
+def _get_value_from_cloudify(
         secret_name,
         **connection_parameters,
 ):
