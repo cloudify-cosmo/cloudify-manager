@@ -76,8 +76,7 @@ from .mocks import (
 
 
 MIGRATION_DIR = os.path.normpath(os.path.join(
-    os.path.dirname(__file__), '..', '..', '..', 'resources', 'rest-service',
-    'cloudify', 'migrations'
+    os.path.dirname(__file__), '..', '..', 'migrations'
 ))
 
 permitted_roles = ['sys_admin', 'manager', 'user', 'operations', 'viewer']
