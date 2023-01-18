@@ -82,7 +82,7 @@ services:
 
   postgresql:
     container_name: postgresql
-    build: service_containers/postgresql
+    image: postgres
     environment:
       POSTGRES_DB: cloudify_db
       POSTGRES_USER: cloudify
