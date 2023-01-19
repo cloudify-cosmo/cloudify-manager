@@ -300,7 +300,7 @@ class TestScaleOut(TestScaleBase):
 
     def test_rollback_operations(self):
         bp = """
-tosca_definitions_version: cloudify_dsl_1_5
+tosca_definitions_version: cloudify_dsl_1_4
 imports:
   - cloudify/types/types.yaml
   - plugin:testmockoperations
