@@ -3,8 +3,11 @@ from cloudify.models_states import DeploymentState, ExecutionState
 from manager_rest.test import base_test
 from manager_rest.storage import models, db
 
-from manager_rest.snapshot_utils import (populate_deployment_statuses,
-                                         migrate_pickle_to_json)
+from manager_rest.snapshot_utils import (
+    populate_deployment_statuses,
+    migrate_pickle_to_json,
+    set_blueprint_requirements,
+)
 
 
 class SnapshotUtilsTestBase(base_test.BaseServerTestCase):
@@ -508,3 +511,67 @@ class TestPickleToJSON(SnapshotUtilsTestBase):
         migrate_pickle_to_json(batch_size=1)
         assert silly_deployments_to_update == pu1.deployments_to_update \
                == pu2.deployments_to_update
+
+
+class TestBlueprintRequirements(SnapshotUtilsTestBase):
+    def test_no_requirements(self):
+        bp = models.Blueprint(
+            id='bp1',
+            plan={},
+            creator=self._user,
+            tenant=self._tenant,
+        )
+        db.session.add(bp)
+        db.session.flush()
+        assert bp.requirements is None
+        set_blueprint_requirements()
+        assert bp.requirements == {'parent_capabilities': [], 'secrets': []}
+
+    def test_requires_secrets(self):
+        bp = models.Blueprint(
+            id='bp1',
+            plan={
+                'nodes': [{
+                    'name': 'n1',
+                    'properties': {
+                        'a': {'default': {'get_secret': 'a'}}
+                    },
+                    'operations': {},
+                }],
+            },
+            creator=self._user,
+            tenant=self._tenant,
+        )
+        db.session.add(bp)
+        db.session.flush()
+        assert bp.requirements is None
+        set_blueprint_requirements()
+        assert bp.requirements == {'parent_capabilities': [], 'secrets': ['a']}
+
+    def test_requires_parent_capabilities(self):
+        bp = models.Blueprint(
+            id='bp1',
+            plan={
+                'nodes': [{
+                    'name': 'n1',
+                    'properties': {
+                        'a': {
+                            'default': {
+                                'get_environment_capability': ['a', 'b']
+                            },
+                        },
+                    },
+                    'operations': {},
+                }],
+            },
+            creator=self._user,
+            tenant=self._tenant,
+        )
+        db.session.add(bp)
+        db.session.flush()
+        assert bp.requirements is None
+        set_blueprint_requirements()
+        assert bp.requirements == {
+            'parent_capabilities': [['a', 'b']],
+            'secrets': [],
+        }
