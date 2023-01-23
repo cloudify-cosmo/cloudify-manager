@@ -93,7 +93,7 @@ sources = [
 # directory directly.
 sources_static = [
     (
-        'cloudify-manager/resources/rest-service/cloudify/migrations',
+        'cloudify-manager/rest-service/migrations',
         ['/opt/manager/resources/cloudify/migrations']
     ),
     (
