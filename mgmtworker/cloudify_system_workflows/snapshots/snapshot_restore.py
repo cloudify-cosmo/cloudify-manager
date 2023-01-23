@@ -664,6 +664,7 @@ class SnapshotRestore(object):
                         composer_revision
                     )
                 self._migrate_pickle_to_json()
+                self._compute_blueprint_requirements()
                 self._restore_hash_salt()
                 self._encrypt_secrets(postgres)
                 self._encrypt_rabbitmq_passwords(postgres)
@@ -1267,6 +1268,15 @@ class SnapshotRestore(object):
         scrip_path = os.path.join(
             dir_path,
             'migrate_pickle_to_json.py'
+        )
+        command = [MANAGER_PYTHON, scrip_path, self._tempdir]
+        utils.run(command)
+
+    def _compute_blueprint_requirements(self):
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        scrip_path = os.path.join(
+            dir_path,
+            'compute_blueprint_requirements.py'
         )
         command = [MANAGER_PYTHON, scrip_path, self._tempdir]
         utils.run(command)
