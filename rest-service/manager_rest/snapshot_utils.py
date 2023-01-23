@@ -222,7 +222,7 @@ def migrate_pickle_to_json(batch_size=PICKLE_TO_JSON_MIGRATION_BATCH_SIZE):
         migrate_model(db.session, model, attributes, batch_size)
 
 
-def set_blueprint_requirements(batch_size: int=1000):
+def set_blueprint_requirements(batch_size=1000):
     stmt = (
         select(models.Blueprint)
         .where(_json_column_null(models.Blueprint.requirements))
