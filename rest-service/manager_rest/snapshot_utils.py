@@ -10,6 +10,8 @@ import operator
 from typing import Dict, List
 
 from cloudify.models_states import DeploymentState
+from dsl_parser.functions import find_requirements
+from dsl_parser.models import Plan
 from sqlalchemy import select, exists, and_, or_
 from sqlalchemy.sql.expression import text as sql_text
 from sqlalchemy.orm import Session
@@ -161,21 +163,26 @@ pickle_migrations = {
 }
 
 
+def _json_column_null(json_column):
+    """Condition of checking whether the json column is null
+
+    We consider the json column empty in both the case of a SQL null,
+    and the JSON null.
+    The value will be a SQL null when the row is inserted directly via
+    SQL (eg. in snapshot-restore), and it will be a JSON null when
+    inserted using the ORM.
+    note: db.JSON.NULL doesn't work here, but I don't know why.
+    """
+    return json_column.is_(None) | (json_column == sql_text("'null'"))
+
+
 def _column_migrate_condition(model_cls, attr):
     """The SQL condition to check if the column needs to be migrated"""
     pickle_column = getattr(model_cls, f'{attr}_p')
     json_column = getattr(model_cls, attr)
     pickle_not_empty = pickle_column.isnot(None)
 
-    # We consider the json column empty in both the case of a SQL null,
-    # and the JSON null.
-    # The value will be a SQL null when the row is inserted directly via
-    # SQL (eg. in snapshot-restore), and it will be a JSON null when
-    # inserted using the ORM.
-    # note: db.JSON.NULL doesn't work here, but I don't know why.
-    json_empty = json_column.is_(None) | (json_column == sql_text("'null'"))
-
-    return pickle_not_empty & json_empty
+    return pickle_not_empty & _json_column_null(json_column)
 
 
 def migrate_model(session: Session, model_cls, attributes, batch_size: int):
@@ -213,3 +220,26 @@ def migrate_pickle_to_json(batch_size=PICKLE_TO_JSON_MIGRATION_BATCH_SIZE):
     """Migrate the fields which were pickled to their JSON counterparts"""
     for model, attributes in pickle_migrations.items():
         migrate_model(db.session, model, attributes, batch_size)
+
+
+def set_blueprint_requirements(batch_size=1000):
+    stmt = (
+        select(models.Blueprint)
+        .where(_json_column_null(models.Blueprint.requirements))
+        .limit(batch_size)
+        .with_for_update()
+    )
+    while True:
+        results = db.session.execute(stmt).scalars().all()
+        for bp in results:
+            try:
+                plan = Plan(bp.plan)
+                reqs = find_requirements(plan)
+            except Exception:
+                reqs = {}
+            bp.requirements = reqs
+            db.session.add(bp)
+        db.session.flush()
+
+        if len(results) < batch_size:
+            break
