@@ -7,15 +7,15 @@ from manager_rest.snapshot_utils import (populate_deployment_statuses,
                                          migrate_pickle_to_json)
 
 
-class TestSnapshotDeploymentStatus(base_test.BaseServerTestCase):
+class SnapshotUtilsTestBase(base_test.BaseServerTestCase):
     def setUp(self):
-        super(TestSnapshotDeploymentStatus, self).setUp()
+        super().setUp()
         self._tenant = models.Tenant()
         self._user = models.User()
 
     def tearDown(self):
         db.session.rollback()
-        super(TestSnapshotDeploymentStatus, self).tearDown()
+        super().tearDown()
 
     def _make_blueprint(self, **kw):
         bp = models.Blueprint(tenant=self._tenant, creator=self._user, **kw)
@@ -124,6 +124,8 @@ class TestSnapshotDeploymentStatus(base_test.BaseServerTestCase):
         db.session.flush()
         return plugins_update
 
+
+class TestSnapshotDeploymentStatus(SnapshotUtilsTestBase):
     def test_latest_execution_empty(self):
         dep = self._make_deployment()
         populate_deployment_statuses()
@@ -236,6 +238,8 @@ class TestSnapshotDeploymentStatus(base_test.BaseServerTestCase):
         db.session.refresh(dep)
         assert dep.deployment_status == DeploymentState.REQUIRE_ATTENTION
 
+
+class TestPickleToJSON(SnapshotUtilsTestBase):
     def test_pickle_to_json_blueprints(self):
         silly_plan = {'first': 'foo', 'then': ['bar', 'baz', 3.14, True, -1]}
         bp1 = self._make_blueprint(id='bp1', plan_p=silly_plan)
