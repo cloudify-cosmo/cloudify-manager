@@ -3,19 +3,22 @@ from cloudify.models_states import DeploymentState, ExecutionState
 from manager_rest.test import base_test
 from manager_rest.storage import models, db
 
-from manager_rest.snapshot_utils import (populate_deployment_statuses,
-                                         migrate_pickle_to_json)
+from manager_rest.snapshot_utils import (
+    populate_deployment_statuses,
+    migrate_pickle_to_json,
+    set_blueprint_requirements,
+)
 
 
-class TestSnapshotDeploymentStatus(base_test.BaseServerTestCase):
+class SnapshotUtilsTestBase(base_test.BaseServerTestCase):
     def setUp(self):
-        super(TestSnapshotDeploymentStatus, self).setUp()
+        super().setUp()
         self._tenant = models.Tenant()
         self._user = models.User()
 
     def tearDown(self):
         db.session.rollback()
-        super(TestSnapshotDeploymentStatus, self).tearDown()
+        super().tearDown()
 
     def _make_blueprint(self, **kw):
         bp = models.Blueprint(tenant=self._tenant, creator=self._user, **kw)
@@ -124,6 +127,8 @@ class TestSnapshotDeploymentStatus(base_test.BaseServerTestCase):
         db.session.flush()
         return plugins_update
 
+
+class TestSnapshotDeploymentStatus(SnapshotUtilsTestBase):
     def test_latest_execution_empty(self):
         dep = self._make_deployment()
         populate_deployment_statuses()
@@ -236,6 +241,8 @@ class TestSnapshotDeploymentStatus(base_test.BaseServerTestCase):
         db.session.refresh(dep)
         assert dep.deployment_status == DeploymentState.REQUIRE_ATTENTION
 
+
+class TestPickleToJSON(SnapshotUtilsTestBase):
     def test_pickle_to_json_blueprints(self):
         silly_plan = {'first': 'foo', 'then': ['bar', 'baz', 3.14, True, -1]}
         bp1 = self._make_blueprint(id='bp1', plan_p=silly_plan)
@@ -504,3 +511,67 @@ class TestSnapshotDeploymentStatus(base_test.BaseServerTestCase):
         migrate_pickle_to_json(batch_size=1)
         assert silly_deployments_to_update == pu1.deployments_to_update \
                == pu2.deployments_to_update
+
+
+class TestBlueprintRequirements(SnapshotUtilsTestBase):
+    def test_no_requirements(self):
+        bp = models.Blueprint(
+            id='bp1',
+            plan={},
+            creator=self._user,
+            tenant=self._tenant,
+        )
+        db.session.add(bp)
+        db.session.flush()
+        assert bp.requirements is None
+        set_blueprint_requirements()
+        assert bp.requirements == {'parent_capabilities': [], 'secrets': []}
+
+    def test_requires_secrets(self):
+        bp = models.Blueprint(
+            id='bp1',
+            plan={
+                'nodes': [{
+                    'name': 'n1',
+                    'properties': {
+                        'a': {'default': {'get_secret': 'a'}}
+                    },
+                    'operations': {},
+                }],
+            },
+            creator=self._user,
+            tenant=self._tenant,
+        )
+        db.session.add(bp)
+        db.session.flush()
+        assert bp.requirements is None
+        set_blueprint_requirements()
+        assert bp.requirements == {'parent_capabilities': [], 'secrets': ['a']}
+
+    def test_requires_parent_capabilities(self):
+        bp = models.Blueprint(
+            id='bp1',
+            plan={
+                'nodes': [{
+                    'name': 'n1',
+                    'properties': {
+                        'a': {
+                            'default': {
+                                'get_environment_capability': ['a', 'b']
+                            },
+                        },
+                    },
+                    'operations': {},
+                }],
+            },
+            creator=self._user,
+            tenant=self._tenant,
+        )
+        db.session.add(bp)
+        db.session.flush()
+        assert bp.requirements is None
+        set_blueprint_requirements()
+        assert bp.requirements == {
+            'parent_capabilities': [['a', 'b']],
+            'secrets': [],
+        }
