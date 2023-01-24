@@ -94,6 +94,7 @@ def cancel_execution(executions):
             'task_name': 'cancel-workflow',
             'kwargs': {
                 'rest_host': [manager.private_ip for manager in managers],
+                'rest_port': 53333,
                 'executions': executions,
                 'tenant': _get_tenant_dict(),
             }
@@ -116,6 +117,7 @@ def _get_plugin_message(plugin, task='install-plugin', target_names=None):
             'kwargs': {
                 'plugin': plugin.to_dict(),
                 'rest_host': [manager.private_ip for manager in managers],
+                'rest_port': 53333,
                 'rest_token': current_user.get_auth_token(
                     description=f'Plugins task {task} rest token.',
                 ),

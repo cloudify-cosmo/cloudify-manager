@@ -1458,6 +1458,7 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             'rest_host': [
                 mgr.private_ip for mgr in session.query(Manager).all()
             ],
+            'rest_port': 53333,
         }
         if self.deployment is not None:
             context['deployment_id'] = self.deployment.id
