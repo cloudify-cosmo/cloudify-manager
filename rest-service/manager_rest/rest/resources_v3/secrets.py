@@ -45,10 +45,18 @@ class SecretsKey(SecuredResource):
         Get secret by key
         """
         rest_utils.validate_inputs({'key': key})
+        skip_value = rest_utils.verify_and_convert_bool(
+            '_skip_value',
+            request.args.get('_skip_value', False)
+        )
         secret = get_storage_manager().get(models.Secret, key)
         secret_dict = secret.to_dict()
-        if secret_dict['is_hidden_value'] and not \
-                rest_utils.is_hidden_value_permitted(secret):
+
+        if (
+                secret_dict['is_hidden_value']
+                and
+                not rest_utils.is_hidden_value_permitted(secret)
+        ) or skip_value:
             # Hide the value of the secret
             secret_dict['value'] = ''
         else:
@@ -61,8 +69,9 @@ class SecretsKey(SecuredResource):
                     "please recreate the secret".format(key))
             except CloudifyClientError as e:
                 raise manager_exceptions.NotFoundError(e)
-        if secret.schema:
-            secret_dict['value'] = json.loads(secret_dict['value'])
+
+            if secret.schema:
+                secret_dict['value'] = json.loads(secret_dict['value'])
 
         if secret_dict['provider_options'] and \
                 rest_utils.is_hidden_value_permitted(secret):
