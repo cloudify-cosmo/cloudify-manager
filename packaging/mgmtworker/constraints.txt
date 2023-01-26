@@ -1,4 +1,0 @@
-# pinning urllib, because elasticsearch 1.6 wants <2.0, which installs 1.24,
-# which is not supported by requests 2.19. Can be removed once we upgrade to
-# a compatible version of requests
-urllib3==1.23
