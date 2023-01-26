@@ -59,7 +59,7 @@ sudo tar xf %{S:1} -C /
 # as a base virtualenv for python3.6 plugins
 python3.6 -m venv /opt/plugins-common-3.6
 /opt/plugins-common-3.6/bin/pip install --upgrade pip "setuptools<=63.2"
-/opt/plugins-common-3.6/bin/pip install -r "${RPM_SOURCE_DIR}/mgmtworker/requirements.txt"
+/opt/plugins-common-3.6/bin/pip install -r "${RPM_SOURCE_DIR}/mgmtworker/requirements-3.6.txt"
 
 # create a python3.10 venv with common & requirements preinstalled, to be used
 # as a base virtualenv for python3.10 plugins
