@@ -186,11 +186,15 @@ def get_secret_from_provider(secret):
 
 
 def get_secret_from_vault(secret):
-    connection_parameters = json.loads(
-        decrypt(
-            secret.provider.connection_parameters,
-        ),
-    ) or {}
+    try:
+        connection_parameters = json.loads(
+            decrypt(
+                secret.provider.connection_parameters,
+            ),
+        )
+    except (ValueError, TypeError):
+        connection_parameters = {}
+
     url = connection_parameters.get('url')
     token = connection_parameters.get('token')
     path = []
@@ -203,11 +207,15 @@ def get_secret_from_vault(secret):
     secret_path = None
 
     if secret.provider_options:
-        provider_options = json.loads(
-            decrypt(
-                secret.provider_options,
-            ),
-        ) or {}
+        try:
+            provider_options = json.loads(
+                decrypt(
+                    secret.provider_options,
+                ),
+            )
+        except (ValueError, TypeError):
+            provider_options = {}
+
         secret_path = provider_options.get('path')
 
     if secret_path:
@@ -335,7 +343,11 @@ def _get_vault_response(url, token, path):
 
 
 def _get_vault_path_details(url, token, path):
-    response = _get_vault_response(url, token, path)
+    try:
+        response = _get_vault_response(url, token, path)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as error:
+        raise manager_exceptions.FailedDependency(error)
 
     return response.json()
 
