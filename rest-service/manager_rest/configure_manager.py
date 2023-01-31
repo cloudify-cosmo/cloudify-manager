@@ -13,11 +13,16 @@ from flask_security.utils import hash_password
 from manager_rest import config, constants, permissions, version
 from manager_rest.storage import (
     db,
+    get_storage_manager,
     models,
     user_datastore,
 )
 from manager_rest.amqp_manager import AMQPManager
 from manager_rest.flask_utils import setup_flask_app
+
+
+REST_LOG_DIR = '/var/log/cloudify/rest'
+REST_HOME_DIR = '/opt/manager'
 
 
 def dict_merge(target, source):
@@ -588,6 +593,60 @@ def _wait_for_rabbitmq(address):
             time.sleep(1)
 
 
+def generate_db_config_entries(cfg):
+    prometheus_cfg = cfg.get('prometheus', {})
+    rest_cfg = {
+        'rest_service_log_path': REST_LOG_DIR + '/cloudify-rest-service.log',
+        'rest_service_log_level': cfg['restservice']['log']['level'],
+        'file_server_root': cfg['manager']['file_server_root'],
+        'file_server_url': cfg['manager']['file_server_url'],
+        'insecure_endpoints_disabled':
+            cfg['restservice']['insecure_endpoints_disabled'],
+        'maintenance_folder': REST_HOME_DIR + '/maintenance',
+        'min_available_memory_mb':
+            cfg['restservice']['min_available_memory_mb'],
+        'failed_logins_before_account_lock':
+            cfg['restservice']['failed_logins_before_account_lock'],
+        'account_lock_period': cfg['restservice']['account_lock_period'],
+        'public_ip': cfg['manager']['public_ip'],
+        'default_page_size': cfg['restservice']['default_page_size'],
+        'monitoring_timeout': prometheus_cfg.get('request_timeout', 4),
+        'log_fetch_username': prometheus_cfg.get('credentials', {}).get(
+            'username'),
+        'log_fetch_password': prometheus_cfg.get('credentials', {}).get(
+            'password'),
+    }
+    mgmtworker_cfg = {
+        'max_workers': cfg['mgmtworker']['max_workers'],
+        'min_workers': cfg['mgmtworker']['min_workers'],
+    }
+    agent_cfg = {
+        'min_workers': cfg['agent']['min_workers'],
+        'max_workers': cfg['agent']['max_workers'],
+        'broker_port': cfg['agent']['broker_port'],
+        'heartbeat': cfg['agent']['heartbeat'],
+        'log_level': cfg['agent']['log_level']
+    }
+    workflow_cfg = cfg['mgmtworker']['workflows']
+    return [  # (scope, {name: value})
+        ('mgmtworker', mgmtworker_cfg),
+        ('workflow', workflow_cfg),
+        ('agent', agent_cfg),
+        ('rest', rest_cfg)
+    ]
+
+
+def populate_config_in_db(cfg: dict):
+    config_for_db = generate_db_config_entries(cfg)
+    sm = get_storage_manager()
+    for scope, entries in config_for_db:
+        for name, value in entries.items():
+            inst = sm.get(models.Config, None,
+                          filters={'name': name, 'scope': scope})
+            inst.value = value
+            sm.update(inst)
+
+
 if __name__ == '__main__':
     logging.basicConfig()
 
@@ -623,8 +682,9 @@ if __name__ == '__main__':
 
     config.instance.load_configuration(from_db=False)
     with setup_flask_app().app_context():
-        config.instance.load_from_db(session=db.session)
         user_config = _load_user_config(args.config_file_path)
+        populate_config_in_db(user_config)
+        config.instance.load_from_db(session=db.session)
         configure(user_config)
         if args.create_admin_token:
             _create_admin_token(args.create_admin_token)
