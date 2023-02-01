@@ -11,7 +11,10 @@ RUN --mount=type=cache,target=/root/.cache \
     && \
     apt-get install -y \
       libpq-dev \
-      gcc
+      gcc \
+      git \
+      libkrb5-dev \
+      libffi-dev
 
 WORKDIR /opt
 
