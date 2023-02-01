@@ -1,4 +1,4 @@
-FROM python:3.10-slim
+FROM python:3.11-slim
 
 # For rest-service
 ENV SECRET_KEY=abcdefgh-secret-1234
@@ -30,6 +30,6 @@ RUN mkdir -p \
     /var/log/cloudify/execution-scheduler \
     /src
 
-COPY docker/cloudify.pth /usr/local/lib/python3.10/site-packages/cloudify.pth
+COPY docker/cloudify.pth /usr/local/lib/python3.11/site-packages/cloudify.pth
 
 ENTRYPOINT /opt/execution-scheduler/docker/entrypoint.sh

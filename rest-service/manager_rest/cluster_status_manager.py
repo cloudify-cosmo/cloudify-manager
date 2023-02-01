@@ -73,18 +73,14 @@ SERVICE_DESCRIPTIONS = {
 SERVICE_ASSIGNMENTS = {
     CloudifyNodeType.DB: [
         'etcd',
-        'nginx',
         'node_exporter',
         'patroni',
         'postgres_exporter',
         'postgresql-14',
-        'prometheus',
     ],
     CloudifyNodeType.BROKER: [
         'cloudify-rabbitmq',
-        'nginx',
         'node_exporter',
-        'prometheus',
     ],
     CloudifyNodeType.MANAGER: [
         'blackbox_exporter',

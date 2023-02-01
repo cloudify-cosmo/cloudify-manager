@@ -93,7 +93,7 @@ sources = [
 # directory directly.
 sources_static = [
     (
-        'cloudify-manager/resources/rest-service/cloudify/migrations',
+        'cloudify-manager/rest-service/migrations',
         ['/opt/manager/resources/cloudify/migrations']
     ),
     (
@@ -124,7 +124,7 @@ def resource_mapping(request):
                 continue
             for venv in target_venvs:
                 dst = os.path.join(
-                    venv, 'lib', 'python3.10', 'site-packages',
+                    venv, 'lib', 'python3.11', 'site-packages',
                     os.path.basename(src))
                 resources += [(src, dst)]
 

@@ -1,4 +1,4 @@
-FROM python:3.10-slim
+FROM python:3.11-slim
 
 ENV WORKER_COUNT=4
 ENV MAX_WORKER_COUNT=4
@@ -12,6 +12,8 @@ ENV POSTGRES_USER=cloudify
 ENV POSTGRES_PASSWORD=cloudify
 # FILE_SERVER_TYPE=minio or local
 ENV FILE_SERVER_TYPE=s3
+
+ARG PREMIUM=true
 
 RUN --mount=type=cache,target=/root/.cache \
     apt-get update \
@@ -36,14 +38,14 @@ RUN --mount=type=cache,target=/root/.cache \
     pip install \
       --upgrade pip \
       gunicorn \
+      alembic \
       -r requirements.txt
 
 RUN --mount=type=ssh \
-    pip install \
-    -r requirements_ssh.txt
+    if [ -n "${PREMIUM}" ]; then pip install -r requirements_ssh.txt; fi
 
 RUN mkdir /src
-COPY docker/cloudify.pth /usr/local/lib/python3.10/site-packages/cloudify.pth
+COPY docker/cloudify.pth /usr/local/lib/python3.11/site-packages/cloudify.pth
 
 RUN mkdir -p \
       /var/log/cloudify/rest \

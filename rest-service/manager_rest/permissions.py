@@ -227,6 +227,7 @@ PERMISSIONS = [
     'widget_blueprintUploadButton',
     'widget_blueprints',
     'widget_buttonLink',
+    'widget_cloudButton',
     'widget_cloudNum',
     'widget_composerLink',
     'widget_custom_admin',

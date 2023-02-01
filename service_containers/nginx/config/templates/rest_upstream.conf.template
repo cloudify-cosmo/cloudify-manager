@@ -1,25 +1,25 @@
 upstream cloudify-rest {
-  server rest_service:${REST_SERVICE_PORT};
+  server ${REST_SERVICE_HOST}:${REST_SERVICE_SERVICE_PORT};
 }
 
 upstream fileserver {
-  server fileserver:${FILESERVER_PORT};
+  server ${FILESERVER_HOST}:${FILESERVER_SERVICE_PORT};
 }
 
 upstream cloudify-stage {
-  server stage_frontend:8188;
+  server ${STAGE_FRONTEND_HOST}:${STAGE_FRONTEND_SERVICE_PORT};
 }
 
 upstream cloudify-stage-backend {
-  server stage_backend:8088;
+  server ${STAGE_BACKEND_HOST}:${STAGE_BACKEND_SERVICE_PORT};
 }
 
 upstream cloudify-composer {
-  server composer_frontend:8188;
+  server ${COMPOSER_FRONTEND_HOST}:${COMPOSER_FRONTEND_SERVICE_PORT};
 }
 
 upstream cloudify-composer-backend {
-  server composer_backend:3000;
+  server ${COMPOSER_BACKEND_HOST}:${COMPOSER_BACKEND_SERVICE_PORT};
 }
 
 # REST and UI external server

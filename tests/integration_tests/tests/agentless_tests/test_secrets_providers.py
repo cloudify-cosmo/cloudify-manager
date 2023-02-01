@@ -26,7 +26,7 @@ class SecretsProvidersTest(AgentlessTestCase):
         self.client.secrets.create(
             'port',
             '8080',
-            provider='local_provider',
+            provider_name='local_provider',
         )
         deployment, _ = self.deploy_application(dsl_path)
 
