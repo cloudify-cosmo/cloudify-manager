@@ -1,6 +1,7 @@
 import argparse
 import datetime
 import logging
+import os
 import socket
 import sys
 import time
@@ -9,6 +10,8 @@ import yaml
 from collections.abc import MutableMapping
 
 from flask_security.utils import hash_password
+
+from cloudify.utils import ipv6_url_compat
 
 from manager_rest import config, constants, permissions, version
 from manager_rest.storage import (
@@ -23,6 +26,8 @@ from manager_rest.flask_utils import setup_flask_app
 
 REST_LOG_DIR = '/var/log/cloudify/rest'
 REST_HOME_DIR = '/opt/manager'
+DEFAULT_FILE_SERVER_ROOT = os.path.join(REST_HOME_DIR, 'resources')
+DEFAULT_INTERNAL_REST_PORT = 53333
 
 
 def dict_merge(target, source):
@@ -594,12 +599,18 @@ def _wait_for_rabbitmq(address):
 
 
 def generate_db_config_entries(cfg):
+    manager_private_ip = cfg['manager'].get('private_ip', 'localhost')
+    default_file_server_url = f'https://{ipv6_url_compat(manager_private_ip)}'\
+                              f':{DEFAULT_INTERNAL_REST_PORT}/resources'
+
     prometheus_cfg = cfg.get('prometheus', {})
     rest_cfg = {
         'rest_service_log_path': REST_LOG_DIR + '/cloudify-rest-service.log',
         'rest_service_log_level': cfg['restservice']['log']['level'],
-        'file_server_root': cfg['manager']['file_server_root'],
-        'file_server_url': cfg['manager']['file_server_url'],
+        'file_server_root': cfg['manager'].get('file_server_root',
+                                               DEFAULT_FILE_SERVER_ROOT),
+        'file_server_url': cfg['manager'].get('file_server_url',
+                                              default_file_server_url),
         'insecure_endpoints_disabled':
             cfg['restservice']['insecure_endpoints_disabled'],
         'maintenance_folder': REST_HOME_DIR + '/maintenance',
