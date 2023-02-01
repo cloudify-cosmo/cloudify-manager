@@ -336,7 +336,7 @@ class PluginsYaml(SecuredResource):
         nickname="downloadPluginYaml",
         notes="download a plugin YAML according to the plugin ID. "
     )
-    @authorize('plugin_download')
+    @authorize('plugin_download', allow_all_tenants=True)
     def get(self, plugin_id, **kwargs):
         """
         Download plugin yaml
