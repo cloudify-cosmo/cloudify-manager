@@ -16,7 +16,6 @@ from cloudify.utils import ipv6_url_compat
 from manager_rest import config, constants, permissions, version
 from manager_rest.storage import (
     db,
-    get_storage_manager,
     models,
     user_datastore,
 )
@@ -649,13 +648,14 @@ def generate_db_config_entries(cfg):
 
 def populate_config_in_db(cfg: dict):
     config_for_db = generate_db_config_entries(cfg)
-    sm = get_storage_manager()
     for scope, entries in config_for_db:
         for name, value in entries.items():
-            inst = sm.get(models.Config, None,
-                          filters={'name': name, 'scope': scope})
+            inst = db.session.get(
+                models.Config,
+                {'name': name, 'scope': scope}
+            )
             inst.value = value
-            sm.update(inst)
+    db.session.commit()
 
 
 if __name__ == '__main__':
