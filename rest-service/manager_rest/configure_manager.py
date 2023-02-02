@@ -518,8 +518,69 @@ def _add_deployments_filter(sys_filter_dict, creator, tenant, now):
     db.session.add(models.DeploymentsFilter(**sys_filter_dict))
 
 
+def _generate_db_config_entries(cfg):
+    manager_private_ip = cfg['manager'].get('private_ip', 'localhost')
+    default_file_server_url = f'https://{ipv6_url_compat(manager_private_ip)}'\
+                              f':{DEFAULT_INTERNAL_REST_PORT}/resources'
+
+    prometheus_cfg = cfg.get('prometheus', {})
+    rest_cfg = {
+        'rest_service_log_path': REST_LOG_DIR + '/cloudify-rest-service.log',
+        'rest_service_log_level': cfg['restservice']['log']['level'],
+        'file_server_root': cfg['manager'].get('file_server_root',
+                                               DEFAULT_FILE_SERVER_ROOT),
+        'file_server_url': cfg['manager'].get('file_server_url',
+                                              default_file_server_url),
+        'insecure_endpoints_disabled':
+            cfg['restservice']['insecure_endpoints_disabled'],
+        'maintenance_folder': REST_HOME_DIR + '/maintenance',
+        'min_available_memory_mb':
+            cfg['restservice']['min_available_memory_mb'],
+        'failed_logins_before_account_lock':
+            cfg['restservice']['failed_logins_before_account_lock'],
+        'account_lock_period': cfg['restservice']['account_lock_period'],
+        'public_ip': cfg['manager']['public_ip'],
+        'default_page_size': cfg['restservice']['default_page_size'],
+        'monitoring_timeout': prometheus_cfg.get('request_timeout', 4),
+        'log_fetch_username': prometheus_cfg.get('credentials', {}).get(
+            'username'),
+        'log_fetch_password': prometheus_cfg.get('credentials', {}).get(
+            'password'),
+    }
+    mgmtworker_cfg = {
+        'max_workers': cfg['mgmtworker']['max_workers'],
+        'min_workers': cfg['mgmtworker']['min_workers'],
+    }
+    agent_cfg = {
+        'min_workers': cfg['agent']['min_workers'],
+        'max_workers': cfg['agent']['max_workers'],
+        'broker_port': cfg['agent']['broker_port'],
+        'heartbeat': cfg['agent']['heartbeat'],
+        'log_level': cfg['agent']['log_level']
+    }
+    workflow_cfg = cfg['mgmtworker']['workflows']
+    return [  # (scope, {name: value})
+        ('mgmtworker', mgmtworker_cfg),
+        ('workflow', workflow_cfg),
+        ('agent', agent_cfg),
+        ('rest', rest_cfg)
+    ]
+
+
+def _populate_config_in_db(cfg):
+    config_for_db = _generate_db_config_entries(cfg)
+    for scope, entries in config_for_db:
+        for name, value in entries.items():
+            inst = db.session.get(
+                models.Config,
+                {'name': name, 'scope': scope}
+            )
+            inst.value = value
+
+
 def configure(user_config):
     """Configure the manager based on the provided config"""
+    _populate_config_in_db(user_config)
     _register_rabbitmq_brokers(user_config)
 
     default_tenant = _get_default_tenant()
@@ -597,67 +658,6 @@ def _wait_for_rabbitmq(address):
             time.sleep(1)
 
 
-def generate_db_config_entries(cfg):
-    manager_private_ip = cfg['manager'].get('private_ip', 'localhost')
-    default_file_server_url = f'https://{ipv6_url_compat(manager_private_ip)}'\
-                              f':{DEFAULT_INTERNAL_REST_PORT}/resources'
-
-    prometheus_cfg = cfg.get('prometheus', {})
-    rest_cfg = {
-        'rest_service_log_path': REST_LOG_DIR + '/cloudify-rest-service.log',
-        'rest_service_log_level': cfg['restservice']['log']['level'],
-        'file_server_root': cfg['manager'].get('file_server_root',
-                                               DEFAULT_FILE_SERVER_ROOT),
-        'file_server_url': cfg['manager'].get('file_server_url',
-                                              default_file_server_url),
-        'insecure_endpoints_disabled':
-            cfg['restservice']['insecure_endpoints_disabled'],
-        'maintenance_folder': REST_HOME_DIR + '/maintenance',
-        'min_available_memory_mb':
-            cfg['restservice']['min_available_memory_mb'],
-        'failed_logins_before_account_lock':
-            cfg['restservice']['failed_logins_before_account_lock'],
-        'account_lock_period': cfg['restservice']['account_lock_period'],
-        'public_ip': cfg['manager']['public_ip'],
-        'default_page_size': cfg['restservice']['default_page_size'],
-        'monitoring_timeout': prometheus_cfg.get('request_timeout', 4),
-        'log_fetch_username': prometheus_cfg.get('credentials', {}).get(
-            'username'),
-        'log_fetch_password': prometheus_cfg.get('credentials', {}).get(
-            'password'),
-    }
-    mgmtworker_cfg = {
-        'max_workers': cfg['mgmtworker']['max_workers'],
-        'min_workers': cfg['mgmtworker']['min_workers'],
-    }
-    agent_cfg = {
-        'min_workers': cfg['agent']['min_workers'],
-        'max_workers': cfg['agent']['max_workers'],
-        'broker_port': cfg['agent']['broker_port'],
-        'heartbeat': cfg['agent']['heartbeat'],
-        'log_level': cfg['agent']['log_level']
-    }
-    workflow_cfg = cfg['mgmtworker']['workflows']
-    return [  # (scope, {name: value})
-        ('mgmtworker', mgmtworker_cfg),
-        ('workflow', workflow_cfg),
-        ('agent', agent_cfg),
-        ('rest', rest_cfg)
-    ]
-
-
-def populate_config_in_db(cfg: dict):
-    config_for_db = generate_db_config_entries(cfg)
-    for scope, entries in config_for_db:
-        for name, value in entries.items():
-            inst = db.session.get(
-                models.Config,
-                {'name': name, 'scope': scope}
-            )
-            inst.value = value
-    db.session.commit()
-
-
 if __name__ == '__main__':
     logging.basicConfig()
 
@@ -694,7 +694,6 @@ if __name__ == '__main__':
     config.instance.load_configuration(from_db=False)
     with setup_flask_app().app_context():
         user_config = _load_user_config(args.config_file_path)
-        populate_config_in_db(user_config)
         config.instance.load_from_db(session=db.session)
         configure(user_config)
         if args.create_admin_token:
