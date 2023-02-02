@@ -396,5 +396,5 @@ class TestConfigureManager(base_test.BaseServerTestCase):
         ]:
             inst = db.session.scalars(
                 select(models.Config).filter_by(scope=scope, name=name)
-            ).first()
+            ).one()
             assert inst.value == value

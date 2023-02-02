@@ -525,7 +525,8 @@ def _generate_db_config_entries(cfg):
 
     prometheus_cfg = cfg.get('prometheus', {})
     rest_cfg = {
-        'rest_service_log_path': REST_LOG_DIR + '/cloudify-rest-service.log',
+        'rest_service_log_path': os.path.join(REST_LOG_DIR,
+                                              '/cloudify-rest-service.log'),
         'rest_service_log_level': cfg['restservice']['log']['level'],
         'file_server_root': cfg['manager'].get('file_server_root',
                                                DEFAULT_FILE_SERVER_ROOT),
