@@ -1,4 +1,3 @@
-from copy import deepcopy
 from datetime import datetime
 from unittest import mock
 
@@ -12,41 +11,6 @@ from manager_rest.configure_manager import (
 )
 from manager_rest.storage import db, models
 from manager_rest.test import base_test
-
-
-BASIC_CONFIG = {
-    'agent': {
-        'broker_port': 5671,
-        'heartbeat': 30,
-        'log_level': 'INFO',
-        'max_workers': 2,
-        'min_workers': 1,
-    },
-    'manager': {
-        'public_ip': 'example.com',
-    },
-    'mgmtworker': {
-        'max_workers': 2,
-        'min_workers': 1,
-        'workflows': {},
-    },
-    'restservice': {
-        'account_lock_period': 1,
-        'default_page_size': 100,
-        'failed_logins_before_account_lock': 1,
-        'insecure_endpoints_disabled': False,
-        'log': {
-            'level': 'INFO',
-        },
-        'min_available_memory_mb': 1,
-    },
-}
-
-
-def user_config(cfg: dict):
-    updated_config = deepcopy(BASIC_CONFIG)
-    dict_merge(updated_config, cfg)
-    return updated_config
 
 
 def test_dict_merge():
@@ -82,39 +46,39 @@ class TestConfigureManager(base_test.BaseServerTestCase):
         db.session.delete(self.user)
         assert models.User.query.count() == 0
         # empty config, so the username & password will be defaulted
-        configure(BASIC_CONFIG)
+        configure({})
         assert models.User.query.count() == 1
 
     def test_create_admin_username(self):
         db.session.delete(self.user)
         assert models.User.query.count() == 0
-        configure(user_config({
+        configure({
             'manager': {
                 'security': {
                     'admin_username': 'admin2',
                 }
             }
-        }))
+        })
         assert models.User.query.count() == 1
         models.User.query.filter_by(username='admin2').one()  # doesn't throw
 
     def test_update_admin_password(self):
         assert models.User.query.count() == 1
         original_password = models.User.query.one().password
-        configure(user_config({
+        configure({
             'manager': {
                 'security': {
                     'admin_password': 'abcdefgh',
                 }
             }
-        }))
+        })
         assert original_password != models.User.query.one().password
 
     def test_create_default_tenant(self):
         db.session.delete(self.tenant)
         assert self.user.tenant_associations == []
 
-        configure(BASIC_CONFIG)
+        configure({})
         assert models.Tenant.query.count() == 1
         assert len(self.user.tenant_associations) == 1
 
@@ -125,7 +89,7 @@ class TestConfigureManager(base_test.BaseServerTestCase):
         config.instance.load_from_db()
         assert not config.instance.amqp_host
 
-        configure(user_config({
+        configure({
             'rabbitmq': {
                 'username': 'username1',
                 'password': 'password1',
@@ -142,7 +106,7 @@ class TestConfigureManager(base_test.BaseServerTestCase):
                     },
                 },
             },
-        }))
+        })
 
         test_hostname_1 = models.RabbitMQBroker.query.filter_by(
             name='test_hostname_1',
@@ -165,7 +129,7 @@ class TestConfigureManager(base_test.BaseServerTestCase):
         db.session.execute(models.Role.__table__.delete())
         assert len(models.Role.query.all()) == 0
 
-        configure(user_config({
+        configure({
             'roles': [
                 {
                     'name': 'role1'
@@ -176,7 +140,7 @@ class TestConfigureManager(base_test.BaseServerTestCase):
                     'description': 'descr1',
                 },
             ]
-        }))
+        })
 
         # in the created roles, we expect the ones from the config...
         expected_roles = {
@@ -203,7 +167,7 @@ class TestConfigureManager(base_test.BaseServerTestCase):
 
         # creating roles that are also default roles, still overrides their
         # description
-        configure(user_config({
+        configure({
             'roles': [
                 {
                     'name': 'sys_admin',
@@ -214,13 +178,13 @@ class TestConfigureManager(base_test.BaseServerTestCase):
                     'description': 'descr',
                 },
             ]
-        }))
+        })
         roles = models.Role.query.all()
         assert len(roles) == 2
         assert all(r.description == 'descr' for r in roles)
 
         # ...doing it again, updates them
-        configure(user_config({
+        configure({
             'roles': [
                 {
                     'name': 'sys_admin',
@@ -231,7 +195,7 @@ class TestConfigureManager(base_test.BaseServerTestCase):
                     'description': 'descr2',
                 },
             ]
-        }))
+        })
 
         assert len(roles) == 2
         assert all(r.description == 'descr2' for r in roles)
@@ -239,7 +203,7 @@ class TestConfigureManager(base_test.BaseServerTestCase):
     def test_create_permissions(self):
         db.session.execute(models.Permission.__table__.delete())
         assert len(models.Permission.query.all()) == 0
-        configure(BASIC_CONFIG)
+        configure({})
 
         created_permissions = models.Permission.query.all()
         assert len(created_permissions) == len(permissions.PERMISSIONS)
@@ -247,13 +211,13 @@ class TestConfigureManager(base_test.BaseServerTestCase):
     def test_create_permissions_set_user(self):
         db.session.execute(models.Permission.__table__.delete())
         assert len(models.Permission.query.all()) == 0
-        configure(user_config({
+        configure({
             'permissions': {
                 # you tried to deny sys_admin some of their permissions?
                 # fat chance, they'll get it anyway!
                 'user_get': ['user']
             },
-        }))
+        })
 
         created_permissions = models.Permission.query.all()
         # +1 because we created 1 additional permission: user_get for role=user
@@ -269,22 +233,22 @@ class TestConfigureManager(base_test.BaseServerTestCase):
 
     def test_create_permissions_nonexistent_role(self):
         with self.assertRaisesRegex(ValueError, 'something.*nonexistent'):
-            configure(user_config({
+            configure({
                 'permissions': {
                     'something': ['nonexistent role']
                 },
-            }))
+            })
 
     def test_insert_manager_cert_config(self):
         assert len(models.Manager.query.all()) == 0
-        configure(user_config({
+        configure({
             'manager': {
                 'hostname': 'mgr1',
                 'private_ip': 'example.com',
                 'public_ip': 'example.com',
                 'ca_cert': 'cert-content-1',
             },
-        }))
+        })
         assert len(models.Manager.query.all()) == 1
         mgr = models.Manager.query.first()
         assert mgr.hostname == 'mgr1'
@@ -297,13 +261,13 @@ class TestConfigureManager(base_test.BaseServerTestCase):
             'manager_rest.configure_manager.open',
             mock.mock_open(read_data='cert-content-1'),
         ):
-            configure(user_config({
+            configure({
                 'manager': {
                     'hostname': 'mgr1',
                     'private_ip': 'example.com',
                     'public_ip': 'example.com',
                 },
-            }))
+            })
         assert len(models.Manager.query.all()) == 1
         mgr = models.Manager.query.first()
         assert mgr.hostname == 'mgr1'
@@ -317,13 +281,13 @@ class TestConfigureManager(base_test.BaseServerTestCase):
             mock.mock_open(read_data=''),
         ):
             with self.assertRaisesRegex(RuntimeError, 'ca_cert'):
-                configure(user_config({
+                configure({
                     'manager': {
                         'hostname': 'mgr1',
                         'private_ip': 'example.com',
                         'public_ip': 'example.com',
                     },
-                }))
+                })
 
     def test_update_manager(self):
         assert len(models.Manager.query.all()) == 0
@@ -340,12 +304,12 @@ class TestConfigureManager(base_test.BaseServerTestCase):
         )
         db.session.add(mgr)
 
-        configure(user_config({
+        configure({
             'manager': {
                 'hostname': 'mgr1',
                 'private_ip': 'example2.com',
             },
-        }))
+        })
         assert mgr.private_ip == 'example2.com'
 
     def test_update_manager_cert_differs(self):
@@ -364,27 +328,21 @@ class TestConfigureManager(base_test.BaseServerTestCase):
         db.session.add(mgr)
 
         with self.assertRaisesRegex(RuntimeError, 'ca_cert.*differ'):
-            configure(user_config({
+            configure({
                 'manager': {
                     'hostname': 'mgr1',
                     'private_ip': 'example2.com',
                     'ca_cert': 'cert-content-2',
                 },
-            }))
+            })
         assert mgr.private_ip == 'example2.com'
 
-    def test_create_config_defaults(self):
-        configure(user_config({
-            'manager': {
-                'public_ip': 'example.org',
-            },
-            'mgmtworker': {
-                'max_workers': 9,
-            },
-            'agent': {
-                'heartbeat': 99
-            }
-        }))
+    def test_create_config_with_defaults(self):
+        configure({
+            'manager': {'public_ip': 'example.org'},
+            'mgmtworker': {'max_workers': 9},
+            'agent': {'heartbeat': 99},
+        })
         created_config = db.session.scalars(select(models.Config)).all()
         assert len(created_config) > 0
 

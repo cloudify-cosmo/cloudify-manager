@@ -519,48 +519,58 @@ def _add_deployments_filter(sys_filter_dict, creator, tenant, now):
 
 
 def _generate_db_config_entries(cfg):
-    manager_private_ip = cfg['manager'].get('private_ip', 'localhost')
+    def build_dict(**kwargs):
+        target = {}
+        for k, v in kwargs.items():
+            if v is not None:
+                target[k] = v
+        return target
+
+    agent_cfg = cfg.get('agent', {})
+    manager_cfg = cfg.get('manager', {})
+    mgmtworker_cfg = cfg.get('mgmtworker', {})
+    prometheus_cfg = cfg.get('prometheus', {})
+    restservice_cfg = cfg.get('restservice', {})
+
+    manager_private_ip = manager_cfg.get('private_ip', 'localhost')
     default_file_server_url = f'https://{ipv6_url_compat(manager_private_ip)}'\
                               f':{DEFAULT_INTERNAL_REST_PORT}/resources'
-
-    prometheus_cfg = cfg.get('prometheus', {})
-    rest_cfg = {
-        'rest_service_log_path': os.path.join(REST_LOG_DIR,
-                                              '/cloudify-rest-service.log'),
-        'rest_service_log_level': cfg['restservice']['log']['level'],
-        'file_server_root': cfg['manager'].get('file_server_root',
-                                               DEFAULT_FILE_SERVER_ROOT),
-        'file_server_url': cfg['manager'].get('file_server_url',
-                                              default_file_server_url),
-        'insecure_endpoints_disabled':
-            cfg['restservice']['insecure_endpoints_disabled'],
-        'maintenance_folder': REST_HOME_DIR + '/maintenance',
-        'min_available_memory_mb':
-            cfg['restservice']['min_available_memory_mb'],
-        'failed_logins_before_account_lock':
-            cfg['restservice']['failed_logins_before_account_lock'],
-        'account_lock_period': cfg['restservice']['account_lock_period'],
-        'public_ip': cfg['manager']['public_ip'],
-        'default_page_size': cfg['restservice']['default_page_size'],
-        'monitoring_timeout': prometheus_cfg.get('request_timeout', 4),
-        'log_fetch_username': prometheus_cfg.get('credentials', {}).get(
-            'username'),
-        'log_fetch_password': prometheus_cfg.get('credentials', {}).get(
-            'password'),
-    }
-    mgmtworker_cfg = {
-        'max_workers': cfg['mgmtworker']['max_workers'],
-        'min_workers': cfg['mgmtworker']['min_workers'],
-    }
-    agent_cfg = {
-        'min_workers': cfg['agent']['min_workers'],
-        'max_workers': cfg['agent']['max_workers'],
-        'broker_port': cfg['agent']['broker_port'],
-        'heartbeat': cfg['agent']['heartbeat'],
-        'log_level': cfg['agent']['log_level']
-    }
-    workflow_cfg = cfg['mgmtworker']['workflows']
-    return [  # (scope, {name: value})
+    rest_cfg = build_dict(
+        rest_service_log_path=os.path.join(
+            REST_LOG_DIR, 'cloudify-rest-service.log'),
+        rest_service_log_level=restservice_cfg.get('log', {}).get('level'),
+        file_server_root=manager_cfg.get(
+            'file_server_root', DEFAULT_FILE_SERVER_ROOT),
+        file_server_url=manager_cfg.get(
+            'file_server_url', default_file_server_url),
+        insecure_endpoints_disabled=restservice_cfg.get(
+            'insecure_endpoints_disabled'),
+        maintenance_folder=os.path.join(REST_HOME_DIR, 'maintenance'),
+        min_available_memory_mb=restservice_cfg.get('min_available_memory_mb'),
+        failed_logins_before_account_lock=restservice_cfg.get(
+            'failed_logins_before_account_lock'),
+        account_lock_period=restservice_cfg.get('account_lock_period'),
+        public_ip=manager_cfg.get('public_ip'),
+        default_page_size=restservice_cfg.get('default_page_size'),
+        monitoring_timeout=prometheus_cfg.get('request_timeout', 4),
+        log_fetch_username=prometheus_cfg.get(
+            'credentials', {}).get('username'),
+        log_fetch_password=prometheus_cfg.get(
+            'credentials', {}).get('password'),
+    )
+    mgmtworker_cfg = build_dict(
+        max_workers=mgmtworker_cfg.get('max_workers'),
+        min_workers=mgmtworker_cfg.get('min_workers'),
+    )
+    agent_cfg = build_dict(
+        min_workers=agent_cfg.get('min_workers'),
+        max_workers=agent_cfg.get('max_workers'),
+        broker_port=agent_cfg.get('broker_port'),
+        heartbeat=agent_cfg.get('heartbeat'),
+        log_level=agent_cfg.get('log_level')
+    )
+    workflow_cfg = mgmtworker_cfg.get('workflows')
+    return [
         ('mgmtworker', mgmtworker_cfg),
         ('workflow', workflow_cfg),
         ('agent', agent_cfg),
@@ -571,6 +581,8 @@ def _generate_db_config_entries(cfg):
 def _populate_config_in_db(cfg):
     config_for_db = _generate_db_config_entries(cfg)
     for scope, entries in config_for_db:
+        if not entries:
+            continue
         for name, value in entries.items():
             inst = db.session.get(
                 models.Config,
