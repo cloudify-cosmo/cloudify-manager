@@ -31,7 +31,7 @@ from dsl_parser.constants import (WORKFLOW_PLUGINS_TO_INSTALL,
 from dsl_parser.constraints import extract_constraints, validate_input_value
 from dsl_parser import exceptions as dsl_exceptions
 
-from manager_rest import manager_exceptions
+from manager_rest import config, manager_exceptions
 from manager_rest.rest.responses import Workflow, Label
 from manager_rest.utils import (get_rrule,
                                 classproperty)
@@ -1458,7 +1458,7 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             'rest_host': [
                 mgr.private_ip for mgr in session.query(Manager).all()
             ],
-            'rest_port': 53333,
+            'rest_port': config.instance.default_agent_port,
         }
         if self.deployment is not None:
             context['deployment_id'] = self.deployment.id
