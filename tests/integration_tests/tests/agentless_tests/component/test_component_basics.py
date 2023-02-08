@@ -352,7 +352,7 @@ node_templates:
         self.client.plugins.delete(mock_id)
 
     def test_distro_behaviour(self):
-        self.copy_file_to_manager(resource('dsl/plugins'), '/tmp')
+        self.env.copy_file_to_manager(resource('dsl/plugins'), '/tmp')
         basic_blueprint_path = resource('dsl/empty_blueprint.yaml')
         self.client.blueprints.upload(basic_blueprint_path,
                                       entity_id=self.basic_blueprint_id)

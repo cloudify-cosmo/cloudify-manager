@@ -67,7 +67,7 @@ class TestDeploymentWorkflows(AgentlessTestCase):
                                        skip_plugins_validation=True)
         do_retries(verify_deployment_env_created,
                    timeout_seconds=30,
-                   container_id=self.env.container_id,
+                   environment=self.env,
                    client=self.client,
                    deployment_id=deployment_id)
         execution = self.client.executions.start(deployment_id,

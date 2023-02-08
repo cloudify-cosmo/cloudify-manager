@@ -36,7 +36,7 @@ class TestHooks(AgentlessTestCase):
     PLUGIN_LOG_PATH = '/tmp/hook_task.txt'
 
     def tearDown(self):
-        self.execute_on_manager(['rm', '-f', self.PLUGIN_LOG_PATH])
+        self.env.execute_on_manager(['rm', '-f', self.PLUGIN_LOG_PATH])
 
     def test_missing_compatible_hook(self):
         new_config = """
@@ -155,9 +155,9 @@ test_hook:
         with tempfile.NamedTemporaryFile(mode='w') as f:
             f.write(new_config)
             f.flush()
-            self.copy_file_to_manager(source=f.name,
-                                      target=self.HOOKS_CONFIG_PATH,
-                                      owner='cfyuser:')
+            self.env.copy_file_to_manager(source=f.name,
+                                          target=self.HOOKS_CONFIG_PATH,
+                                          owner='cfyuser:')
 
         self._start_a_workflow()
         workflow_started_error = "ERROR - The hook consumer received " \
@@ -298,7 +298,7 @@ hooks:
         self.client.deployments.create(blueprint_id,
                                        deployment_id)
         utils.wait_for_deployment_creation_to_complete(
-            self.env.container_id,
+            self.env,
             deployment_id,
             self.client
         )
@@ -308,7 +308,7 @@ hooks:
     def _assert_messages_in_log(self, messages, log_path=LOG_PATH):
         tmp_log_path = str(self.workdir / 'test_log')
         try:
-            self.copy_file_from_manager(log_path, tmp_log_path)
+            self.env.copy_file_from_manager(log_path, tmp_log_path)
         except Exception:
             return
         with open(tmp_log_path) as f:
@@ -321,6 +321,6 @@ hooks:
         with tempfile.NamedTemporaryFile(mode='w') as f:
             yaml.dump(yaml.safe_load(new_config), f, default_flow_style=False)
             f.flush()
-            self.copy_file_to_manager(source=f.name,
-                                      target=self.HOOKS_CONFIG_PATH,
-                                      owner='cfyuser:')
+            self.env.copy_file_to_manager(source=f.name,
+                                          target=self.HOOKS_CONFIG_PATH,
+                                          owner='cfyuser:')

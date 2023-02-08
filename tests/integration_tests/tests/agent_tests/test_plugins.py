@@ -46,7 +46,9 @@ class PluginInstallationTest(AgentTestCase):
 
     def _agent_plugin_dir(self, agent_id, plugin):
         return os.path.join(
-            self.execute_on_manager(['bash', '-c', 'echo ~cfyuser']).strip(),
+            self.env.execute_on_manager([
+                'bash', '-c', 'echo ~cfyuser'
+            ]).strip(),
             agent_id,
             'plugins',
             plugin.tenant_name,
