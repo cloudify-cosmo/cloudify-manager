@@ -91,8 +91,10 @@ services:
     restart: unless-stopped
 
   fileserver:
-    container_name: fileserver
-    build: service_containers/fileserver
+    image: minio/minio
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: admin123
     volumes:
       - ./fileserver/minio/data:/data
     ports:
