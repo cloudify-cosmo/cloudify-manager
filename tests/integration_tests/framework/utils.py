@@ -33,24 +33,48 @@ class TestEnvironment:
     def copy_file_from_manager(self, source, target):
         raise NotImplementedError('should be implemented in child classes')
 
-    def copy_file_to_manager(self, source, target, owner=None):
+    def copy_file_from_mgmtworker(self, source, target):
+        raise NotImplementedError('should be implemented in child classes')
+
+    def copy_file_to_manager(self, source, target, owner=None, mode=None):
+        raise NotImplementedError('should be implemented in child classes')
+
+    def copy_file_to_mgmtworker(self, source, target, owner=None, mode=None):
         raise NotImplementedError('should be implemented in child classes')
 
     def discover_manager_address(self):
         raise NotImplementedError('should be implemented in child classes')
 
+    # FIXME combine both execute_on_… and execute_python_on_…
+
     def execute_on_manager(self, command, redirect_logs=False):
-        if not isinstance(command, list):
-            raise CommandAsListException
-        base_cmd = self._run_on_manager_base_cmd()
-        if redirect_logs:
-            return subprocess.run(base_cmd + command)
-        return subprocess.check_output(base_cmd + command).decode('utf-8')
+        return _execute_command(
+            self._run_on_manager_base_cmd(),
+            command,
+            redirect_logs,
+        )
+
+    def execute_on_mgmtworker(self, command, redirect_logs=False):
+        return _execute_command(
+            self._run_on_mgmtworker_base_cmd(),
+            command,
+            redirect_logs,
+        )
 
     def execute_python_on_manager(self, params):
         if not isinstance(params, list):
             raise CommandAsListException
         base_cmd = self._run_on_manager_base_cmd()
+        return subprocess.check_output(
+            base_cmd +
+            [self.python_executable_location()] +
+            params
+        ).decode('utf-8')
+
+    def execute_python_on_mgmtworker(self, params):
+        if not isinstance(params, list):
+            raise CommandAsListException
+        base_cmd = self._run_on_mgmtworker_base_cmd()
         return subprocess.check_output(
             base_cmd +
             [self.python_executable_location()] +
@@ -98,6 +122,9 @@ class TestEnvironment:
     def _run_on_manager_base_cmd(self):
         raise NotImplementedError('should be implemented in child classes')
 
+    def _run_on_mgmtworker_base_cmd(self):
+        raise NotImplementedError('should be implemented in child classes')
+
 
 class AllInOneEnvironment(TestEnvironment):
     container_id: str
@@ -119,13 +146,19 @@ class AllInOneEnvironment(TestEnvironment):
             ['docker', 'cp', f'{self.container_id}:{source}', target]
         )
 
-    def copy_file_to_manager(self, source, target, owner=None):
+    copy_file_from_mgmtworker = copy_file_from_manager
+
+    def copy_file_to_manager(self, source, target, owner=None, mode=None):
         ret_val = subprocess.check_call(
             ['docker', 'cp', source, f'{self.container_id}:{target}']
         )
         if owner:
             self.execute_on_manager(['chown', owner, target])
+        if mode:
+            self.execute_on_manager(['chmod', mode, target])
         return ret_val
+
+    copy_file_to_mgmtworker = copy_file_to_manager
 
     def discover_manager_address(self):
         self.address = subprocess.check_output(
@@ -152,6 +185,121 @@ class AllInOneEnvironment(TestEnvironment):
         return [
             'docker', 'exec', '-e', 'LC_ALL=en_US.UTF-8', self.container_id
         ]
+
+    _run_on_mgmtworker_base_cmd = _run_on_manager_base_cmd
+
+
+class DistributedEnvironment(TestEnvironment):
+    k8s_namespace: str
+    manager_pod: str
+    mgmtworker_pod: str
+
+    def __init__(self, k8s_namespace: str):
+        self.k8s_namespace = k8s_namespace
+        self.discover_pod_names()
+        self.discover_manager_address()
+
+    def ca_cert(self):
+        ca_cert_template =\
+            '{{ index .data "cloudify_internal_ca_cert.pem"|base64decode }}'
+        return subprocess.check_output([
+            'kubectl', 'get', 'secrets/cloudify-services-certs',
+            '--output=template', f'--template={ca_cert_template}'
+        ]).decode('utf-8')
+
+    def cleanup(self):
+        pass
+
+    # FIXME combine these pairs …_to/from/on_…
+    def copy_file_from_manager(self, source, target):
+        return subprocess.check_call([
+            'kubectl', 'cp', f'{self.manager_pod}:{source}',
+            '-c', 'rest-service', target
+        ])
+
+    def copy_file_from_mgmtworker(self, source, target):
+        return subprocess.check_call([
+            'kubectl', 'cp', f'{self.mgmtworker_pod}:{source}',
+            '-c', 'mgmtworker', target
+        ])
+
+    def copy_file_to_manager(self, source, target, owner=None, mode=None):
+        return_value = subprocess.check_call([
+            'kubectl', 'cp', source, f'{self.manager_pod}:{target}',
+            '-c', 'rest-service'
+        ])
+        if owner:
+            self.execute_on_manager(['chown', owner, target])
+        if mode:
+            self.execute_on_manager(['chmod', mode, target])
+        return return_value
+
+    def copy_file_to_mgmtworker(self, source, target, owner=None, mode=None):
+        return_value = subprocess.check_call([
+            'kubectl', 'cp', source, f'{self.mgmtworker_pod}:{target}',
+            '-c', 'mgmtworker'
+        ])
+        if owner:
+            self.execute_on_mgmtworker(['chown', owner, target])
+        if mode:
+            self.execute_on_mgmtworker(['chmod', mode, target])
+        return return_value
+
+    def discover_manager_address(self):
+        hostname_template = '{{' +\
+            '(index (index .items 0).status.loadBalancer.ingress 0)' +\
+            '.hostname' +\
+            '}}'
+        self.address = subprocess.check_output([
+            'kubectl', 'get', 'ingress',
+            '--namespace', self.k8s_namespace,
+            '--output', 'template', f'--template={hostname_template}',
+            ]).decode('utf-8')
+
+    def discover_pod_names(self):
+        pod_names = subprocess.check_output(
+            ['kubectl', 'get', 'pods',
+             '--namespace', self.k8s_namespace,
+             '--field-selector=status.phase=Running',
+             '--no-headers', '--output=template',
+             '--template={{range .items}}{{.metadata.name}}{{" "}}{{end}}']
+        ).decode('utf-8').strip()
+        for pod_name in pod_names.split(' '):
+            if pod_name.startswith('rest-service-'):
+                self.manager_pod = pod_name
+            elif pod_name.startswith('mgmtworker-'):
+                self.mgmtworker_pod = pod_name
+
+    def python_executable_location(self):
+        return '/usr/local/bin/python'
+
+    def rest_client(self, _):
+        client = test_utils.create_rest_client(
+            host=self.address,
+            rest_port=80,
+            rest_protocol='http',
+        )
+        return client
+
+    def _run_on_manager_base_cmd(self, container_name='rest-service'):
+        cmd = ['kubectl', 'exec', self.manager_pod]
+        if container_name:
+            cmd += ['-c', container_name]
+        return cmd + ['--']
+
+    def _run_on_mgmtworker_base_cmd(self, container_name='mgmtworker'):
+        cmd = ['kubectl', 'exec', self.mgmtworker_pod]
+        if container_name:
+            cmd += ['-c', container_name]
+        return cmd + ['--']
+
+
+def _execute_command(base_cmd, command, redirect_logs=False):
+    if not isinstance(command, list):
+        raise CommandAsListException
+    if redirect_logs:
+        return subprocess.run(base_cmd + command)
+    return subprocess.check_output(base_cmd + command).decode('utf-8')
 
 
 def create_auth_header(username=None, password=None, token=None, tenant=None):
