@@ -1,5 +1,6 @@
 import logging
 import os
+import subprocess
 
 import pytest
 import wagon
@@ -146,7 +147,10 @@ def start_events_follower(tests_env):
     follower = tests_env.run_python_on_manager(['-u', '/tmp/follow_events.py'])
     yield
     follower.kill()
-    tests_env.execute_on_manager(['pkill', '-f', 'follow_events.py'])
+    try:
+        tests_env.execute_on_manager(['pkill', '-f', 'follow_events.py'])
+    except subprocess.CalledProcessError:
+        pass
 
 
 @pytest.fixture(scope='session')
