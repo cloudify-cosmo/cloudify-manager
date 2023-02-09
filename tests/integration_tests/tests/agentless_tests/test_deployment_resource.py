@@ -50,7 +50,7 @@ class DeploymentResourceTest(AgentlessTestCase):
                                   'default_tenant',
                                   deployment_id,
                                   RESOURCE_PATH)
-        self.env.execute_on_manager(['mkdir', '-p', 'dep_resources_dir'])
+        self.env.execute_on_manager(['mkdir', '-p', dep_resources_dir])
         self.env.execute_on_manager(['chown', '-R', 'cfyuser.', base_dep_dir])
         with tempfile.NamedTemporaryFile(mode='w') as f:
             f.write(RESOURCE_CONTENT)
