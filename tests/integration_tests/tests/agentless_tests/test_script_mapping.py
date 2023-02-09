@@ -56,7 +56,7 @@ class TestScriptMapping(AgentlessTestCase):
         )
         workflow_folder = os.path.join(deployment_folder, 'scripts/workflows')
         try:
-            self.execute_on_manager('mkdir -p {0}'.format(workflow_folder))
+            self.env.execute_on_manager(['mkdir', '-p', workflow_folder])
             deployment_workflow_script_path = os.path.join(
                 workflow_folder, 'workflow.py')
             self.logger.info('Writing workflow.py to: {0}'.format(
@@ -67,11 +67,12 @@ class TestScriptMapping(AgentlessTestCase):
                 f.write("instance.execute_operation('test.op3')")
                 f.write(os.linesep)
                 f.flush()
-                self.copy_file_to_manager(
+                self.env.copy_file_to_manager(
                     source=f.name,
                     target=deployment_workflow_script_path)
-                self.execute_on_manager(
-                    'chmod 644 {0}'.format(deployment_workflow_script_path))
+                self.env.execute_on_manager([
+                    'chmod', '644', deployment_workflow_script_path
+                ])
 
             self.execute_workflow('workflow', deployment.id)
 
@@ -86,4 +87,6 @@ class TestScriptMapping(AgentlessTestCase):
                 self.get_runtime_property(deployment.id, 'op3_called')[0])
 
         finally:
-            self.execute_on_manager('rm -rf {0}'.format(deployment_folder))
+            self.env.execute_on_manager([
+                'rm', '-rf',  deployment_folder
+            ])

@@ -135,7 +135,7 @@ class TestSnapshots(AgentTestCase):
             output_file=downloaded_snapshot,
         )
 
-        reset_storage(self.env.container_id)
+        reset_storage(self.env)
         self.client.snapshots.upload(downloaded_snapshot, snapshot_id)
         self._restore_snapshot(states, deployments, snapshot_id)
 
@@ -159,7 +159,7 @@ class TestSnapshots(AgentTestCase):
 
         self._undeploy(states, deployments)
 
-        reset_storage(self.env.container_id)
+        reset_storage(self.env)
         self.client.snapshots.upload(downloaded_snapshot, snapshot_id)
         self._restore_snapshot(states, deployments, snapshot_id)
 
@@ -177,6 +177,6 @@ class TestSnapshots(AgentTestCase):
 
         self._undeploy_multitenant(mike_client)
 
-        reset_storage(self.env.container_id)
+        reset_storage(self.env)
         self.client.snapshots.upload(downloaded_snapshot, snapshot_id)
         self._restore_snapshot_multitenant(snapshot_id)

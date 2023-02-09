@@ -17,32 +17,30 @@ import logging
 
 from cloudify.utils import setup_logger
 
-from integration_tests.framework.docker import (execute,
-                                                copy_file_to_manager)
-from integration_tests.tests.constants import MANAGER_PYTHON
 from integration_tests.tests.utils import get_resource
 
 
 logger = setup_logger('Flask Utils', logging.INFO)
-security_config = None
 
-PREPARE_SCRIPT_PATH = '/tmp/prepare_reset_storage.py'
+PREPARE_SCRIPT = '/tmp/prepare_reset_storage.py'
 SCRIPT_PATH = '/tmp/reset_storage.py'
 CONFIG_PATH = '/tmp/reset_storage_config.json'
 
 
-def prepare_reset_storage_script(container_id):
+def prepare_reset_storage_script(environment):
     reset_script = get_resource('scripts/reset_storage.py')
     prepare = get_resource('scripts/prepare_reset_storage.py')
-    copy_file_to_manager(container_id, reset_script, SCRIPT_PATH)
-    copy_file_to_manager(container_id, prepare, PREPARE_SCRIPT_PATH)
-    execute(container_id,
-            [MANAGER_PYTHON, PREPARE_SCRIPT_PATH, '--config', CONFIG_PATH])
+    environment.copy_file_to_manager(reset_script, SCRIPT_PATH)
+    environment.copy_file_to_manager(prepare, PREPARE_SCRIPT)
+    environment.execute_python_on_manager(
+        [PREPARE_SCRIPT, '--config', CONFIG_PATH],
+    )
 
 
-def reset_storage(container_id):
+def reset_storage(environment):
     logger.info('Resetting PostgreSQL DB')
     # reset the storage by calling a script on the manager, to access
     # localhost-only APIs (rabbitmq management api)
-    execute(container_id,
-            [MANAGER_PYTHON, SCRIPT_PATH, '--config', CONFIG_PATH])
+    environment.execute_python_on_manager(
+        [SCRIPT_PATH, '--config', CONFIG_PATH]
+    )

@@ -134,7 +134,7 @@ class TestSnapshot(AgentlessTestCase):
     def test_v_4_6_0_restore_snapshot_and_restart_services(self):
         snapshot_path = self._get_snapshot('snap_4_6_0_hello_world.zip')
         self._upload_and_restore_snapshot(snapshot_path)
-        self.execute_on_manager('cfy_manager restart')
+        self.env.execute_on_manager(['cfy_manager', 'restart'])
         self.assertTrue(self._all_services_restarted_properly())
 
     def test_v_5_0_5_restore_snapshot(self):
@@ -267,7 +267,7 @@ class TestSnapshot(AgentlessTestCase):
             output_file=downloaded_snapshot,
         )
 
-        reset_storage(self.env.container_id)
+        reset_storage(self.env)
 
         self.client.snapshots.upload(downloaded_snapshot, snapshot_id)
         self.client.snapshots.restore(snapshot_id)
@@ -299,7 +299,7 @@ class TestSnapshot(AgentlessTestCase):
             output_file=downloaded_snapshot,
         )
 
-        reset_storage(self.env.container_id)
+        reset_storage(self.env)
 
         self.client.snapshots.upload(downloaded_snapshot, snapshot_id)
         self.client.maintenance_mode.activate()
@@ -476,13 +476,14 @@ class TestSnapshot(AgentlessTestCase):
 
     def _save_security_config(self):
         tmp_config_path = str(self.workdir / 'rest-security.conf')
-        self.copy_file_from_manager(self.REST_SEC_CONFIG_PATH, tmp_config_path)
+        self.env.copy_file_from_manager(self.REST_SEC_CONFIG_PATH,
+                                        tmp_config_path)
 
     def _restore_security_config(self):
         tmp_config_path = str(self.workdir / 'rest-security.conf')
-        self.copy_file_to_manager(tmp_config_path,
-                                  self.REST_SEC_CONFIG_PATH,
-                                  owner='cfyuser:')
+        self.env.copy_file_to_manager(source=tmp_config_path,
+                                      target=self.REST_SEC_CONFIG_PATH,
+                                      owner='cfyuser:')
         self.restart_service('cloudify-restservice')
 
     def test_restore_snapshot_scheduled_tasks(self):

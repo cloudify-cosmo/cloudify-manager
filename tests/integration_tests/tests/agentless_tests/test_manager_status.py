@@ -93,21 +93,13 @@ class TestManagerStatus(AgentlessTestCase):
         self._start_service(service, service_command)
 
     def _stop_service(self, service, service_command):
-        self.execute_on_manager(
-            '{0} stop {1}'.format(
-                service_command,
-                SERVICES[service]
-            )
-        )
+        self.env.execute_on_manager(service_command +
+                                    ['stop', SERVICES[service]])
         time.sleep(1)
 
     def _start_service(self, service, service_command):
-        self.execute_on_manager(
-            '{0} start {1}'.format(
-                service_command,
-                SERVICES[service]
-            )
-        )
+        self.env.execute_on_manager(service_command +
+                                    ['start', SERVICES[service]])
         self._verify_service_active(service)
 
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=10)

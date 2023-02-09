@@ -582,7 +582,7 @@ class ExecutionsTest(AgentlessTestCase):
         dep = self.deploy(dsl_path, wait=False, client=self.client)
         do_retries(verify_deployment_env_created,
                    timeout_seconds=30,
-                   container_id=self.env.container_id,
+                   environment=self.env,
                    deployment_id=dep.id,
                    client=self.client)
         execution = self.client.executions.start(deployment_id=dep.id,
@@ -677,7 +677,7 @@ class ExecutionsTest(AgentlessTestCase):
 
         do_retries(verify_deployment_env_created,
                    timeout_seconds=60,
-                   container_id=self.env.container_id,
+                   environment=self.env,
                    deployment_id=deployment_id,
                    client=self.client)
         execution_parameters = {
@@ -723,7 +723,7 @@ class ExecutionsTest(AgentlessTestCase):
         # Manually updating the status, because the client checks for
         # correct transitions
         run_postgresql_command(
-            self.env.container_id,
+            self.env,
             "UPDATE executions SET status='started' "
             "WHERE id='{0}'".format(execution_id)
         )
@@ -764,7 +764,7 @@ class ExecutionsTest(AgentlessTestCase):
                                        skip_plugins_validation=True)
         do_retries(verify_deployment_env_created,
                    timeout_seconds=30,
-                   container_id=self.env.container_id,
+                   environment=self.env,
                    deployment_id=deployment_id,
                    client=self.client)
         execution = self.client.executions.start(
@@ -848,7 +848,7 @@ class ExecutionsTest(AgentlessTestCase):
         dep_id = dep.id
         do_retries(verify_deployment_env_created,
                    timeout_seconds=30,
-                   container_id=self.env.container_id,
+                   environment=self.env,
                    deployment_id=dep_id,
                    client=self.client)
         scheduled_time = generate_scheduled_for_date()
@@ -912,12 +912,12 @@ class ExecutionsTest(AgentlessTestCase):
         dep2_id = dep2.id
         do_retries(verify_deployment_env_created,
                    timeout_seconds=30,
-                   container_id=self.env.container_id,
+                   environment=self.env,
                    deployment_id=dep1_id,
                    client=self.client)
         do_retries(verify_deployment_env_created,
                    timeout_seconds=30,
-                   container_id=self.env.container_id,
+                   environment=self.env,
                    deployment_id=dep2_id,
                    client=self.client)
         scheduled_time = generate_scheduled_for_date()
@@ -944,7 +944,7 @@ class ExecutionsTest(AgentlessTestCase):
         dep_id = dep.id
         do_retries(verify_deployment_env_created,
                    timeout_seconds=30,
-                   container_id=self.env.container_id,
+                   environment=self.env,
                    deployment_id=dep_id,
                    client=self.client)
         # Create snapshot and keep it's status 'started'
@@ -974,7 +974,7 @@ class ExecutionsTest(AgentlessTestCase):
         dep_id = dep.id
         do_retries(verify_deployment_env_created,
                    timeout_seconds=30,
-                   container_id=self.env.container_id,
+                   environment=self.env,
                    deployment_id=dep_id,
                    client=self.client)
 
@@ -1005,7 +1005,7 @@ class ExecutionsTest(AgentlessTestCase):
         dep_id = dep.id
         do_retries(verify_deployment_env_created,
                    timeout_seconds=30,
-                   container_id=self.env.container_id,
+                   environment=self.env,
                    deployment_id=dep_id,
                    client=self.client)
         execution1 = self.client.executions.start(deployment_id=dep_id,

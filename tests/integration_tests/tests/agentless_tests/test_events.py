@@ -17,7 +17,6 @@ import time
 import pytest
 
 from datetime import datetime, timedelta
-from integration_tests.framework import docker
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import run_postgresql_command
 from integration_tests.tests.utils import get_resource as resource
@@ -169,22 +168,23 @@ class _SetAlternateTimezone(object):
     def setUp(self):
         """Update postgres timezone and create a deployment."""
         self.original_tz = run_postgresql_command(
-            self.env.container_id, 'SHOW TIME ZONE').split('\n')[2].strip()
+            self.env, 'SHOW TIME ZONE').split('\n')[2].strip()
         run_postgresql_command(
-            self.env.container_id,
+            self.env,
             "ALTER DATABASE cloudify_db  SET TIME ZONE '{}'"
             .format(self.TIMEZONE)
         )
         # restart all users of the db so that they get a new session which
         # uses the just-set timezone
-        docker.execute(
-            self.env.container_id,
+        self.env.execute_on_manager(
             self.get_service_management_command() +
-            ' restart cloudify-amqp-postgres cloudify-restservice '
-            'cloudify-execution-scheduler'
+            ['restart',
+             'cloudify-amqp-postgres',
+             'cloudify-restservice',
+             'cloudify-execution-scheduler']
         )
         # Make sure that database timezone is correctly set
-        query_result = run_postgresql_command(self.env.container_id,
+        query_result = run_postgresql_command(self.env,
                                               'SHOW TIME ZONE')
         self.assertEqual(query_result.split('\n')[2].strip(), self.TIMEZONE)
 
@@ -198,15 +198,16 @@ class _SetAlternateTimezone(object):
     def tearDown(self):
         super().tearDown()
         run_postgresql_command(
-            self.env.container_id,
+            self.env,
             "ALTER DATABASE cloudify_db SET TIME ZONE '{}'"
             .format(self.original_tz)
         )
-        docker.execute(
-            self.env.container_id,
+        self.env.execute_on_manager(
             self.get_service_management_command() +
-            ' restart cloudify-amqp-postgres cloudify-restservice '
-            'cloudify-execution-scheduler'
+            ['restart',
+             'cloudify-amqp-postgres',
+             'cloudify-restservice',
+             'cloudify-execution-scheduler']
         )
 
 

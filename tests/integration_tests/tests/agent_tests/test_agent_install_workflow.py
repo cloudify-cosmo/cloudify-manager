@@ -29,14 +29,14 @@ class TestWorkflow(AgentTestWithPlugins):
         cmd = ['rabbitmqctl', 'list_queues', '-s']
         if vhost:
             cmd += ['-p', vhost]
-        output = self.execute_on_manager(cmd)
+        output = self.env.execute_on_manager(cmd)
         return {line.split()[0] for line in output.splitlines()}
 
     def _get_exchanges(self, vhost=None):
         cmd = ['rabbitmqctl', 'list_exchanges', '-s']
         if vhost:
             cmd += ['-p', vhost]
-        output = self.execute_on_manager(cmd)
+        output = self.env.execute_on_manager(cmd)
         return {line.split()[0] for line in output.splitlines()}
 
     def test_amqp_queues_list(self):
