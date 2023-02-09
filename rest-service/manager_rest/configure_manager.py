@@ -539,6 +539,7 @@ def _generate_db_config_entries(cfg):
         rest_service_log_path=os.path.join(
             REST_LOG_DIR, 'cloudify-rest-service.log'),
         rest_service_log_level=restservice_cfg.get('log', {}).get('level'),
+        file_server_type=manager_cfg.get('file_server_type'),
         file_server_root=manager_cfg.get(
             'file_server_root', DEFAULT_FILE_SERVER_ROOT),
         file_server_url=manager_cfg.get(
