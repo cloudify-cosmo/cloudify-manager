@@ -1,0 +1,4 @@
+import sys; sys.path.insert(1, "/src")
+# this file is added by Cloudify to allow mounting code in /src for development
+# purposes. Put your modules there, and they will be imported, overriding any
+# built-in packages.
