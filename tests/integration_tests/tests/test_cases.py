@@ -52,10 +52,6 @@ class BaseTestCase(unittest.TestCase):
             handlers=[handler],
         )
 
-    def read_manager_file(self, file_path, no_strip=False):
-        """Read a file from the cloudify manager filesystem."""
-        return self.env.read_manager_file(file_path, no_strip=no_strip)
-
     def delete_manager_file(self, file_path, quiet=True):
         """Remove file from a cloudify manager"""
         return self.env.execute_on_manager(['rm', '-rf', file_path])

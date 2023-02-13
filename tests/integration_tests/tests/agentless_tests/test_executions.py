@@ -587,7 +587,7 @@ class ExecutionsTest(AgentlessTestCase):
                    client=self.client)
         execution = self.client.executions.start(deployment_id=dep.id,
                                                  workflow_id='install')
-        pid = do_retries(self.read_manager_file,
+        pid = do_retries(self.env.read_manager_file,
                          timeout_seconds=60,
                          file_path='/tmp/pid.txt')
         path = '/proc/{}/status'.format(pid)
@@ -601,7 +601,7 @@ class ExecutionsTest(AgentlessTestCase):
         # the process.
         do_retries(self.assertRaises,
                    subprocess.CalledProcessError,
-                   self.read_manager_file,
+                   self.env.read_manager_file,
                    path)
 
     def test_legacy_cancel_execution(self):
