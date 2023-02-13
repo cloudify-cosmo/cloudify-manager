@@ -29,5 +29,11 @@ RUN --mount=type=cache,target=/root/.cache \
 ADD https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master\
 /resources/rest-service/cloudify/types/types.yaml \
 /opt/manager/resources/cloudify/types/
+ADD https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master\
+/resources/rest-service/cloudify/types/types_1_3.yaml \
+/opt/manager/resources/cloudify/types/
+ADD https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master\
+/resources/rest-service/cloudify/types/types_1_4.yaml \
+/opt/manager/resources/cloudify/types/
 
 ENTRYPOINT /opt/mgmtworker/docker/entrypoint.sh

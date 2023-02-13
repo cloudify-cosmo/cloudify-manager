@@ -10,7 +10,7 @@ ENV POSTGRES_DB=cloudify_db
 ENV POSTGRES_HOST=postgresql
 ENV POSTGRES_USER=cloudify
 ENV POSTGRES_PASSWORD=cloudify
-# FILE_SERVER_TYPE=minio or local
+# FILE_SERVER_TYPE=s3 or local
 ENV FILE_SERVER_TYPE=s3
 
 ARG PREMIUM=true
@@ -48,7 +48,7 @@ RUN mkdir /src
 COPY docker/cloudify.pth /usr/local/lib/python3.11/site-packages/cloudify.pth
 
 RUN mkdir -p \
-      /var/log/cloudify/rest \
+      /var/log/cloudify \
       /opt/manager \
       /run/cloudify-restservice
 

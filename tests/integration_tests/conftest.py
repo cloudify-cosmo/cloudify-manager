@@ -51,6 +51,10 @@ def pytest_addoption(parser):
         help='Run integration tests on this container',
     )
     parser.addoption(
+        '--k8s-namespace',
+        help='Run integration tests in this Kubernetes namespace',
+    )
+    parser.addoption(
         '--lightweight',
         default=False,
         action='store_true',
@@ -158,10 +162,19 @@ def tests_env(request, resource_mapping) -> utils.TestEnvironment:
     image_name = request.config.getoption("--image-name")
     keep_container = request.config.getoption("--keep-container")
     container_id = request.config.getoption("--container-id")
+    k8s_ns = request.config.getoption("--k8s-namespace")
     lightweight = request.config.getoption('--lightweight')
+    if container_id and k8s_ns:
+        raise Exception('Expecting either `--container-id` or '
+                        '`--k8s_namespace`, not both.')
+
     if container_id:
         keep_container = True
         environment = utils.AllInOneEnvironment(container_id)
+        prepare_reset_storage_script(environment)
+        reset_storage(environment)
+    elif k8s_ns:
+        environment = utils.DistributedEnvironment(k8s_ns)
         prepare_reset_storage_script(environment)
         reset_storage(environment)
     else:
@@ -278,18 +291,15 @@ def package_agent(tests_env, request):
     for package in agent_sources:
         source = os.path.join(mgmtworker_env, package)
         target = os.path.join('/tmp', agent_source_path)
-        tests_env.execute([
+        tests_env.execute_on_manager([
             'bash', '-c', f'cp -fr {source} {target}'
         ])
-    tests_env.execute([
-        'bash',
-        '-c',
+    tests_env.execute_on_manager([
+        'bash', '-c',
         'cd /tmp && tar czf manylinux-x86_64-agent.tar.gz cloudify'
     ])
-    tests_env.execute([
-        'mv', '-f',
-        '/tmp/manylinux-x86_64-agent.tar.gz',
-        agent_package
+    tests_env.execute_on_manager([
+        'mv', '-f', '/tmp/manylinux-x86_64-agent.tar.gz', agent_package
     ])
 
 

@@ -75,7 +75,7 @@ class DeploymentResourceTest(AgentlessTestCase):
         self.assertEqual(RESOURCE_CONTENT,
                          get_resource_content)
         self.assertEqual(RESOURCE_CONTENT,
-                         self.read_manager_file(download_resource_path))
+                         self.env.read_manager_file(download_resource_path))
 
         self.client.deployments.delete(
             deployment_id,
