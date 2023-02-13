@@ -48,7 +48,7 @@ RUN mkdir /src
 COPY docker/cloudify.pth /usr/local/lib/python3.11/site-packages/cloudify.pth
 
 RUN mkdir -p \
-      /var/log/cloudify \
+      /var/log/cloudify/rest \
       /opt/manager \
       /run/cloudify-restservice
 
