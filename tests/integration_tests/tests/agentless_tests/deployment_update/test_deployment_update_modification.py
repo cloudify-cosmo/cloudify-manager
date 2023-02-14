@@ -547,7 +547,7 @@ workflows:
         instances added by the scale.
         """
         bp = """
-tosca_definitions_version: cloudify_dsl_1_5
+tosca_definitions_version: cloudify_dsl_1_3
 imports:
   - cloudify/types/types.yaml
 inputs:
