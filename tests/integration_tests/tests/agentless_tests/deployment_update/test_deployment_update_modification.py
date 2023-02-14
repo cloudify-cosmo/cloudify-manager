@@ -541,3 +541,44 @@ workflows:
         assert cm.exception.error_code == 'unavailable_workflow_error'
         self._do_update(deployment.id, BLUEPRINT_ID)
         self.execute_workflow('wf1', deployment.id)  # doesn't throw
+
+    def test_update_scaled(self):
+        """Updating a deployment that was scaled before, doesn't remove
+        instances added by the scale.
+        """
+        bp = """
+tosca_definitions_version: cloudify_dsl_1_5
+imports:
+  - cloudify/types/types.yaml
+inputs:
+    inp1: {}
+
+node_templates:
+  n1:
+    type: cloudify.nodes.Root
+    capabilities:
+      scalable:
+        properties:
+          default_instances: 0
+          max_instances: 1
+"""
+        self.upload_blueprint_resource(
+            self.make_yaml_file(bp),
+            blueprint_id='bp1',
+        )
+        dep1 = self.deploy(
+            blueprint_id='bp1',
+            deployment_id='d1',
+            inputs={'inp1': 'val1'}
+        )
+        self.execute_workflow('install', dep1.id)
+        instances = self.client.node_instances.list(deployment_id=dep1.id)
+        assert len(instances) == 0
+        self.execute_workflow('scale', dep1.id, parameters={
+            'scalable_entity_name': 'n1',
+        })
+        instances = self.client.node_instances.list(deployment_id=dep1.id)
+        assert len(instances) == 1
+        self._do_update(dep1.id, inputs={'inp1': 'val2'})
+        instances = self.client.node_instances.list(deployment_id=dep1.id)
+        assert len(instances) == 1
