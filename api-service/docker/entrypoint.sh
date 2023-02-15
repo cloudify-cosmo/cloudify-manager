@@ -5,6 +5,7 @@
 python -m manager_rest.configure_manager --db-wait postgresql
 
 exec gunicorn \
+  --worker-class uvicorn.workers.UvicornWorker \
   --pid /run/cloudify-api/pid \
   --chdir / \
   --workers $WORKER_COUNT \
