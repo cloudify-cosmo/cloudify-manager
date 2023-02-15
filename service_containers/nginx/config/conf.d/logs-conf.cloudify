@@ -1,3 +1,0 @@
-  # log files
-  access_log          /var/log/cloudify/nginx/cloudify.access.log main;
-  error_log           /var/log/cloudify/nginx/cloudify.error.log;
