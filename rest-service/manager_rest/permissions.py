@@ -239,6 +239,7 @@ PERMISSIONS = [
     'widget_deploymentNum',
     'widget_deployments',
     'widget_deploymentsView',
+    'widget_environmentButton',
     'widget_events',
     'widget_eventsFilter',
     'widget_executionNum',
