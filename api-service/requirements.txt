@@ -146,6 +146,8 @@ multidict==6.0.4
     # via
     #   aiohttp
     #   yarl
+networkx==2.8.8
+    # via -r requirements.in
 packaging==23.0
     # via cloudify-rest-service
 passlib==1.7.4
