@@ -1321,6 +1321,9 @@ class Execution(CreatedAtMixin, SQLResourceBase):
         if not deployment or not deployment.workflows:
             return
 
+        if parameters is None:
+            parameters = {}
+
         # Keep this import line here because of circular dependencies
         from manager_rest.rest.search_utils \
             import GetValuesWithStorageManager
