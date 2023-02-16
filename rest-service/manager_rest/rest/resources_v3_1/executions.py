@@ -126,6 +126,13 @@ class ExecutionsCheck(SecuredResource):
                                             queue=True, execution=execution))
 
 
+def _validate_concurrency(concurrency):
+    if not isinstance(concurrency, int) or concurrency < 0:
+        raise BadParametersError(
+            f'concurrency must be a nonnegative number, but got: {concurrency}'
+        )
+
+
 class ExecutionGroups(SecuredResource):
     @authorize('execution_group_list', allow_all_tenants=True)
     @rest_decorators.marshal_with(models.ExecutionGroup)
@@ -174,6 +181,7 @@ class ExecutionGroups(SecuredResource):
         workflow_id = request_dict['workflow_id']
         force = request_dict.get('force') or False
         concurrency = request_dict.get('concurrency', 5)
+        _validate_concurrency(concurrency)
 
         created_at = None
         if request_dict.get('created_at'):
@@ -318,6 +326,7 @@ class ExecutionGroupsId(SecuredResource):
         request_dict = get_json_and_verify_params({
             'success_group_id': {'optional': True},
             'failure_group_id': {'optional': True},
+            'concurrency': {'optional': True},
         })
         sm = get_storage_manager()
 
@@ -333,6 +342,10 @@ class ExecutionGroupsId(SecuredResource):
                 group.failed_group = sm.get(
                     models.DeploymentGroup, failure_group_id)
                 self._add_deps_to_group(group, success=False)
+            concurrency = request_dict.get('concurrency')
+            if concurrency is not None:
+                _validate_concurrency(concurrency)
+                group.concurrency = concurrency
             sm.update(group)
         return group
 

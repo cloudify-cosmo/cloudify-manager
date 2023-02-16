@@ -1532,6 +1532,34 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
         target_group = self.sm.get(models.DeploymentGroup, 'group3')
         assert len(target_group.deployments) == 1
 
+    def test_set_concurrency(self):
+        exc_group = models.ExecutionGroup(
+            id='excgroup1',
+            workflow_id='install',
+            deployment_group=self.dep_group,
+            concurrency=10,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        self.client.execution_groups.set_concurrency(exc_group.id, 20)
+        assert exc_group.concurrency == 20
+
+    def test_set_invalid_concurrency(self):
+        exc_group = models.ExecutionGroup(
+            id='excgroup1',
+            workflow_id='install',
+            deployment_group=self.dep_group,
+            concurrency=10,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        for try_concurrency in [-1, 'abcd', {}]:
+            with self.assertRaises(CloudifyClientError) as cm:
+                self.client.execution_groups.set_concurrency(
+                    exc_group.id, try_concurrency)
+            assert cm.exception.status_code == 400
+        assert exc_group.concurrency == 10
+
 
 class TestGenerateID(unittest.TestCase):
     def setUp(self):
