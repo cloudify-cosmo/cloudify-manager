@@ -330,6 +330,7 @@ class ExecutionGroupsId(SecuredResource):
         })
         sm = get_storage_manager()
 
+        needs_dequeue = False
         with sm.transaction():
             group = sm.get(models.ExecutionGroup, group_id)
             success_group_id = request_dict.get('success_group_id')
@@ -344,9 +345,20 @@ class ExecutionGroupsId(SecuredResource):
                 self._add_deps_to_group(group, success=False)
             concurrency = request_dict.get('concurrency')
             if concurrency is not None:
+                old_concurrency = group.concurrency
                 _validate_concurrency(concurrency)
                 group.concurrency = concurrency
+                if old_concurrency == 0 and group.concurrency > 0:
+                    # the group was "paused", but now it's not.
+                    # We will need to start some executions to wake up
+                    # the group, in case there's no executions currently
+                    # running.
+                    needs_dequeue = True
             sm.update(group)
+
+        if needs_dequeue:
+            rm = get_resource_manager()
+            rm.start_queued_executions()
         return group
 
     def _add_deps_to_group(self, group, success=True):
