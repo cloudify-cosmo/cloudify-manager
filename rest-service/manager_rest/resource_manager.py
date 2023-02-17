@@ -378,7 +378,7 @@ class ResourceManager(object):
                 .filter(group_concurrency_filter)
                 .outerjoin(executions.execution_groups)
                 .options(db.joinedload(executions.deployment))
-                .with_for_update(of=executions)
+                .with_for_update(read=True, of=executions)
             )
             self._cached_queued_execs_query = (
                 queued_query
@@ -411,6 +411,7 @@ class ResourceManager(object):
             )
             .filter(models.Execution.status.in_(ExecutionState.ACTIVE_STATES))
             .order_by(models.Execution._storage_id)
+            .with_for_update(read=True, of=models.Execution)
             .all()
         )
         total_running = 0
