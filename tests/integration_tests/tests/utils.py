@@ -28,7 +28,7 @@ from datetime import datetime, timedelta
 from cloudify.utils import setup_logger
 from cloudify.models_states import BlueprintUploadState
 from cloudify_rest_client.executions import Execution
-from integration_tests.framework import utils, docker
+from integration_tests.framework import utils
 
 logger = setup_logger('testenv.utils')
 
@@ -98,25 +98,24 @@ def create_rest_client(**kwargs):
 
 
 def wait_for_deployment_creation_to_complete(
-        container_id, deployment_id, client, timeout_seconds=120):
+        environment, deployment_id, client, timeout_seconds=120):
     do_retries(func=verify_deployment_env_created,
                exception_class=Exception,
                timeout_seconds=timeout_seconds,
-               container_id=container_id,
+               environment=environment,
                deployment_id=deployment_id, client=client)
 
 
-def verify_deployment_env_created(container_id, deployment_id, client):
+def verify_deployment_env_created(environment, deployment_id, client):
     # A workaround for waiting for the deployment environment creation to
     # complete
-    client = client or create_rest_client(
-        host=docker.get_manager_ip(container_id))
+    client = client or create_rest_client(host=environment.address)
     execs = client.executions.list(deployment_id=deployment_id)
     if not execs \
             or execs[0].status != Execution.TERMINATED \
             or execs[0].workflow_id != 'create_deployment_environment':
         log_path = '/var/log/cloudify/mgmtworker/mgmtworker.log'
-        logs = docker.execute(container_id, ['tail', '-n', '100', log_path])
+        logs = environment.execute(['tail', '-n', '100', log_path])
         raise RuntimeError(
             "Expected a single execution for workflow "
             "'create_deployment_environment' with status 'terminated'; "
@@ -224,10 +223,9 @@ def tar_file(file_to_tar, destination_dir, tar_name=''):
     return tar_path
 
 
-def run_postgresql_command(container_id, cmd):
-    return docker.execute(
-        container_id,
-        'sudo -u postgres psql cloudify_db -c "{0}"'.format(cmd)
+def run_postgresql_command(environment, cmd):
+    return environment.execute_on_manager(
+        ['sudo', '-u', 'postgres', 'psql', 'cloudify_db', '-c', cmd]
     )
 
 
@@ -250,9 +248,9 @@ def create_tenants_and_add_users(client, num_of_tenants):
         client.tenants.add_user(username, tenant_name, role='manager')
 
 
-def assert_messages_in_log(container_id, workdir, messages, log_path):
+def assert_messages_in_log(environment, workdir, messages, log_path):
     tmp_log_path = str(workdir / 'test_log')
-    docker.copy_file_from_manager(container_id, log_path, tmp_log_path)
+    environment.copy_file_from_manager(log_path, tmp_log_path)
     with open(tmp_log_path) as f:
         data = f.readlines()
     for message in messages:

@@ -63,7 +63,7 @@ class ResourcesAvailableTest(AgentlessTestCase):
                                     path,
                                     expected_status_code):
         response = requests.get(
-            'https://{0}:53333/resources{1}'.format(self.get_manager_ip(),
+            'https://{0}:53333/resources{1}'.format(self.env.address,
                                                     path),
             headers=headers,
             verify=False

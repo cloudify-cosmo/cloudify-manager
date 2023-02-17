@@ -81,6 +81,6 @@ node_templates:
             for pid in pids.values():
                 # ps will return nonzero when the pid doesn't exist
                 with pytest.raises(subprocess.CalledProcessError):
-                    self.execute_on_manager(['ps', str(pid)])
+                    self.env.execute_on_manager(['ps', str(pid)])
 
         wait_for_cancel()

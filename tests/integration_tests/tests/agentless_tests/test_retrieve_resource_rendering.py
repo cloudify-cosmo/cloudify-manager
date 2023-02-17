@@ -56,5 +56,5 @@ class RetrieveResourceRenderingTest(AgentlessTestCase):
     def test_download_resource_template(self):
         expected, rendered_resource_path = \
             self._retrieve_resource_test('download')
-        out = self.read_manager_file(rendered_resource_path)
+        out = self.env.read_manager_file(rendered_resource_path)
         self.assertEqual(expected, out)

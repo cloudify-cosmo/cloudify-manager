@@ -48,11 +48,15 @@ def upgrade():
     add_secrets_provider_options()
     add_secrets_provider_relationship()
     add_s3_client_config()
+    add_file_server_type_config()
+    add_default_agents_rest_port_config()
     add_blueprint_requirements_column()
 
 
 def downgrade():
     drop_blueprint_requirements_column()
+    drop_default_agents_rest_port_config()
+    drop_file_server_type_config()
     drop_s3_client_config()
     downgrade_users_roles_constraints()
     remove_json_columns()
@@ -722,6 +726,30 @@ def drop_secrets_provider_relationship():
     )
 
 
+def add_default_agents_rest_port_config():
+    op.bulk_insert(
+        config_table,
+        [
+            {
+                'name': 'default_agent_port',
+                'value': 53333,
+                'scope': 'rest',
+                'schema': {"type": "number", "minimum": 1, "maximum": 65535},
+                'is_editable': True,
+            },
+        ]
+    )
+
+
+def drop_default_agents_rest_port_config():
+    op.execute(
+        config_table.delete().where(
+            (config_table.c.name == op.inline_literal('default_agent_port'))
+            & (config_table.c.scope == op.inline_literal('rest'))
+        )
+    )
+
+
 def add_s3_client_config():
     op.bulk_insert(
         config_table,
@@ -759,6 +787,30 @@ def drop_s3_client_config():
                 & (config_table.c.scope == op.inline_literal('rest'))
             )
         )
+
+
+def add_file_server_type_config():
+    op.bulk_insert(
+        config_table,
+        [
+            {
+                'name': 'file_server_type',
+                'value': 'local',
+                'scope': 'rest',
+                'schema': {'type': 'string'},
+                'is_editable': True,
+            },
+        ],
+    )
+
+
+def drop_file_server_type_config():
+    op.execute(
+        config_table.delete().where(
+            (config_table.c.name == op.inline_literal('file_server_type'))
+            & (config_table.c.scope == op.inline_literal('rest'))
+        )
+    )
 
 
 def add_blueprint_requirements_column():

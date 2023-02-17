@@ -152,6 +152,7 @@ class Config(object):
     insecure_endpoints_disabled = Setting('insecure_endpoints_disabled')
     default_page_size = Setting('default_page_size', default=1000)
     min_available_memory_mb = Setting('min_available_memory_mb', default=0)
+    default_agent_port = Setting('default_agent_port', default=53333)
 
     # security settings
     security_hash_salt = Setting('security_hash_salt', from_db=False)

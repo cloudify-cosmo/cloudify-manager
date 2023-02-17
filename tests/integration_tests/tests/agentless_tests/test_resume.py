@@ -77,9 +77,8 @@ class TestResumeMgmtworker(AgentlessTestCase):
     def _stop_mgmtworker(self):
         self.logger.info('Stopping mgmtworker')
         service_command = self.get_service_management_command()
-        self.execute_on_manager(
-            '{0} stop cloudify-mgmtworker'.format(service_command)
-        )
+        self.env.execute_on_manager(service_command +
+                                    ['stop', 'cloudify-mgmtworker'])
 
     def _unlock_operation(self, operation_name, node_ids=None, client=None):
         """Allow an operation to run.
@@ -120,9 +119,8 @@ class TestResumeMgmtworker(AgentlessTestCase):
     def _start_mgmtworker(self):
         self.logger.info('Starting mgmtworker')
         service_command = self.get_service_management_command()
-        self.execute_on_manager(
-            '{0} start cloudify-mgmtworker'.format(service_command)
-        )
+        self.env.execute_on_manager(service_command +
+                                    ['start', 'cloudify-mgmtworker'])
 
     def test_cancel_updates_operation(self):
         """When a workflow is cancelled, the operations that are actually

@@ -17,7 +17,6 @@ import os
 import pytest
 
 from integration_tests import AgentlessTestCase
-from integration_tests.tests.constants import MANAGER_PYTHON
 from integration_tests.tests.utils import get_resource as resource
 
 pytestmark = pytest.mark.group_general
@@ -73,11 +72,12 @@ class TestRuntimeFunctionEvaluation(AgentlessTestCase):
         not because of what deployment update does.
         """
         update_script = resource('scripts/update_deployment.py')
-        self.copy_file_to_manager(update_script, '/tmp/update_deployment.py')
+        self.env.copy_file_to_manager(source=update_script,
+                                      target='/tmp/update_deployment.py')
 
-        self.execute_on_manager(
-            '{0} /tmp/update_deployment.py --deployment-id {1}'
-            ''.format(MANAGER_PYTHON, deployment.id))
+        self.env.execute_python_on_manager([
+            '/tmp/update_deployment.py', '--deployment-id', deployment.id
+        ])
 
     def _update_deployment(self, deployment, skip=False, add_flag=False):
         """Update the deployment, changing the property value.

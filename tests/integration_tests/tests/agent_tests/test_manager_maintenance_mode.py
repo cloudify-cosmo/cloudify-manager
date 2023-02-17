@@ -42,7 +42,7 @@ class ManagerMaintenanceModeTest(AgentTestCase):
         self.client.deployments.create(blueprint_id=blueprint_id,
                                        deployment_id=deployment_id)
         wait_for_deployment_creation_to_complete(
-            self.env.container_id,
+            self.env,
             deployment_id,
             self.client
         )

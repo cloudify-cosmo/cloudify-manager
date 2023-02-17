@@ -211,7 +211,7 @@ class TenantsTest(AgentlessTestCase):
         password_encrypted = self._select(
             "SELECT rabbitmq_password FROM tenants WHERE name='tenant_1'"
         )[0][0]
-        security_conf = self.read_manager_file(
+        security_conf = self.env.read_manager_file(
             '/opt/manager/rest-security.conf')
         security_conf = json.loads(security_conf)
 

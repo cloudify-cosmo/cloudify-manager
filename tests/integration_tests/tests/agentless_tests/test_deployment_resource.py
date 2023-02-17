@@ -50,15 +50,14 @@ class DeploymentResourceTest(AgentlessTestCase):
                                   'default_tenant',
                                   deployment_id,
                                   RESOURCE_PATH)
-        self.execute_on_manager('mkdir -p {0}'.format(dep_resources_dir))
-        self.execute_on_manager(f'chown -R cfyuser. {base_dep_dir}')
+        self.env.execute_on_manager(['mkdir', '-p', dep_resources_dir])
+        self.env.execute_on_manager(['chown', '-R', 'cfyuser.', base_dep_dir])
         with tempfile.NamedTemporaryFile(mode='w') as f:
             f.write(RESOURCE_CONTENT)
             f.flush()
-            self.copy_file_to_manager(source=f.name,
-                                      target=full_resource_path)
-            self.execute_on_manager('chmod +rx {0}'.format(
-                full_resource_path))
+            self.env.copy_file_to_manager(source=f.name,
+                                          target=full_resource_path)
+            self.env.execute_on_manager(['chmod', '+rx', full_resource_path])
 
         deployment, _ = self.deploy_application(
             blueprint_path,
@@ -76,7 +75,7 @@ class DeploymentResourceTest(AgentlessTestCase):
         self.assertEqual(RESOURCE_CONTENT,
                          get_resource_content)
         self.assertEqual(RESOURCE_CONTENT,
-                         self.read_manager_file(download_resource_path))
+                         self.env.read_manager_file(download_resource_path))
 
         self.client.deployments.delete(
             deployment_id,
@@ -85,7 +84,7 @@ class DeploymentResourceTest(AgentlessTestCase):
         )
         wait_for_deployment_deletion_to_complete(deployment_id, self.client)
         with pytest.raises(CalledProcessError):
-            self.execute_on_manager('test -d {0}'.format(dep_resources_dir))
+            self.env.execute_on_manager(['test', '-d', dep_resources_dir])
 
     def test_deployment_resource_crud(self):
         blueprint_id = 'b{0}'.format(uuid.uuid4())
@@ -102,15 +101,14 @@ class DeploymentResourceTest(AgentlessTestCase):
                                   'default_tenant',
                                   deployment_id,
                                   RESOURCE_PATH)
-        self.execute_on_manager('mkdir -p {0}'.format(dep_resources_dir))
-        self.execute_on_manager(f'chown -R cfyuser. {base_dep_dir}')
+        self.env.execute_on_manager(['mkdir', '-p', dep_resources_dir])
+        self.env.execute_on_manager(['chown', '-R', 'cfyuser.', base_dep_dir])
         with tempfile.NamedTemporaryFile(mode='w') as f:
             f.write(RESOURCE_CONTENT)
             f.flush()
-            self.copy_file_to_manager(source=f.name,
-                                      target=full_resource_path)
-            self.execute_on_manager('chmod +rx {0}'.format(
-                full_resource_path))
+            self.env.copy_file_to_manager(source=f.name,
+                                          target=full_resource_path)
+            self.env.execute_on_manager(['chmod', '+rx', full_resource_path])
 
         deployment, _ = self.deploy_application(
             blueprint_path,
@@ -129,10 +127,10 @@ class DeploymentResourceTest(AgentlessTestCase):
                                   'resources/crud-test.txt')
 
         # check if test_resource_path is uploaded and contains UPDATED_CONTENT
-        self.execute_on_manager('test -f {0}'.format(test_resource_path))
+        self.env.execute_on_manager(['test', '-f', test_resource_path])
         _, tmp_file_name = tempfile.mkstemp()
-        self.copy_file_from_manager(source=test_resource_path,
-                                    target=tmp_file_name)
+        self.env.copy_file_from_manager(source=test_resource_path,
+                                        target=tmp_file_name)
 
         with open(tmp_file_name) as test_file:
             assert test_file.read().strip() == UPDATED_CONTENT
@@ -145,9 +143,9 @@ class DeploymentResourceTest(AgentlessTestCase):
 
         # check that test_resource_path does not exist on manager
         with pytest.raises(CalledProcessError):
-            self.execute_on_manager('test -f {0}'.format(test_resource_path))
+            self.env.execute_on_manager(['test', '-f', test_resource_path])
 
         self.client.deployments.delete(deployment_id)
         wait_for_deployment_deletion_to_complete(deployment_id, self.client)
         with pytest.raises(CalledProcessError):
-            self.execute_on_manager('test -d {0}'.format(dep_resources_dir))
+            self.env.execute_on_manager(['test', '-d', dep_resources_dir])
