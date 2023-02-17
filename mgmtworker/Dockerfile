@@ -1,4 +1,4 @@
-FROM python:3.10-slim
+FROM python:3.11-slim
 
 ENV REST_HOST=nginx
 ENV REST_PORT=53333
@@ -11,7 +11,10 @@ RUN --mount=type=cache,target=/root/.cache \
     && \
     apt-get install -y \
       libpq-dev \
-      gcc
+      gcc \
+      git \
+      libkrb5-dev \
+      libffi-dev
 
 WORKDIR /opt
 
@@ -22,5 +25,15 @@ RUN --mount=type=cache,target=/root/.cache \
       --upgrade pip \
       -r mgmtworker/requirements.txt \
       mgmtworker/
+
+ADD https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master\
+/resources/rest-service/cloudify/types/types.yaml \
+/opt/manager/resources/cloudify/types/
+ADD https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master\
+/resources/rest-service/cloudify/types/types_1_3.yaml \
+/opt/manager/resources/cloudify/types/
+ADD https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master\
+/resources/rest-service/cloudify/types/types_1_4.yaml \
+/opt/manager/resources/cloudify/types/
 
 ENTRYPOINT /opt/mgmtworker/docker/entrypoint.sh

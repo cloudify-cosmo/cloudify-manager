@@ -474,7 +474,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
             'default_tenant',
             deployment.id,
             'mock-plugin', '0.1',
-            'lib/python3.10/site-packages/',
+            'lib/python3.11/site-packages/',
             'mock_plugin/ops.py'
         )
 
@@ -485,7 +485,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
 
     def _assert_path_exists_on_manager(self, path, directory=False):
         flag = '-d' if directory else '-f'
-        self.execute_on_manager('test {0} {1}'.format(flag, path))
+        self.env.execute_on_manager(['test', flag, path])
 
     @pytest.mark.usefixtures('testmockoperations_plugin')
     @pytest.mark.usefixtures('get_attribute_plugin')

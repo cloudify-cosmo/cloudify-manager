@@ -21,7 +21,6 @@ import shutil
 from string import ascii_uppercase, ascii_lowercase, digits
 
 import argparse
-from flask_migrate import upgrade
 from flask_security.utils import hash_password
 
 from manager_rest import config
@@ -33,7 +32,6 @@ from manager_rest.constants import (
 )
 
 # This is a hacky way to get to the migrations folder
-migrations_dir = '/opt/manager/resources/cloudify/migrations'
 PROVIDER_NAME = 'integration_tests'
 DEFAULT_CA_CERT = "/etc/cloudify/ssl/cloudify_internal_ca_cert.pem"
 AUTH_TOKEN_LOCATION = '/opt/mgmtworker/work/admin_token'
@@ -96,10 +94,9 @@ def reset_storage(app, script_config):
                                'certificates', 'managers', 'db_nodes',
                                'licenses', 'usage_collector',
                                'permissions', 'provider_context',
-                               'users', 'tenants', 'users_tenants',
+                               'users', 'tenants', 'tokens', 'users_tenants',
                                'users_roles'])
     _delete_users()
-    upgrade(directory=migrations_dir)
     _reset_config(app, script_config)
     _reset_admin_user(script_config)
 
@@ -165,6 +162,5 @@ if __name__ == '__main__':
 
     app = setup_flask_app()
     reset_storage(app, script_config)
-    regenerate_auth_token()
     clean_dirs()
     close_session(app)

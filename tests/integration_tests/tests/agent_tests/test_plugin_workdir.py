@@ -47,7 +47,7 @@ class PluginWorkdirTest(AgentTestCase):
         host_file = os.path.join('/etc/cloudify', host_instance_id,
                                  'work/plugins/testmockoperations',
                                  filename)
-        out = self.read_manager_file(central_file)
+        out = self.env.read_manager_file(central_file)
         self.assertEqual(central_content, out)
-        out = self.read_manager_file(host_file)
+        out = self.env.read_manager_file(host_file)
         self.assertEqual(host_content, out)

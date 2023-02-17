@@ -69,7 +69,7 @@ class BlueprintUploadTest(AgentlessTestCase):
         archive_url = 'malformed/url_is.bad'
         response = requests.put(
             'https://{0}/api/v3.1/blueprints/{1}'.format(
-                ipv6_url_compat(self.get_manager_ip()), blueprint_id),
+                ipv6_url_compat(self.env.address), blueprint_id),
             headers=self.client._client.headers,
             params={'blueprint_archive_url': archive_url},
             verify=False
@@ -203,7 +203,7 @@ class BlueprintUploadTest(AgentlessTestCase):
         admin_headers = self.client._client.headers
         resp = requests.get(
             'https://{0}:53333/resources/blueprints/default_tenant/'
-            '{1}/{2}'.format(ipv6_url_compat(self.get_manager_ip()),
+            '{1}/{2}'.format(ipv6_url_compat(self.env.address),
                              blueprint_id,
                              blueprint_filename),
             headers=admin_headers,
@@ -214,7 +214,7 @@ class BlueprintUploadTest(AgentlessTestCase):
         resp = requests.get(
             'https://{0}:53333/resources/uploaded-blueprints/default_tenant/'
             '{1}/{1}.{2}'.format(
-                ipv6_url_compat(self.get_manager_ip()),
+                ipv6_url_compat(self.env.address),
                 blueprint_id,
                 blueprint_archive_ext),
             headers=admin_headers,
@@ -284,7 +284,7 @@ class BlueprintValidateTest(AgentlessTestCase):
         # blueprint folder deleted from uploaded blueprints
         resp = requests.get(
             'https://{0}:53333/resources/uploaded-blueprints/'
-            'default_tenant/{1}'.format(ipv6_url_compat(self.get_manager_ip()),
+            'default_tenant/{1}'.format(ipv6_url_compat(self.env.address),
                                         blueprint_id),
             headers=admin_headers,
             verify=False

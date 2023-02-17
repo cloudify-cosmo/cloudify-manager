@@ -13,6 +13,11 @@ manager:
 fi
 
 python -m manager_rest.configure_manager --db-wait postgresql
+
+pushd /opt/rest-service/migrations
+    alembic upgrade head
+popd
+
 python -m manager_rest.configure_manager --rabbitmq-wait rabbitmq
 exec python -m manager_rest.configure_manager \
     -c /tmp/config.yaml \

@@ -45,16 +45,14 @@ class TestResumeMgmtworker(AgentTestCase):
     def _stop_mgmtworker(self):
         self.logger.info('Stopping mgmtworker')
         service_command = self.get_service_management_command()
-        self.execute_on_manager(
-            '{0} stop cloudify-mgmtworker'.format(service_command)
-        )
+        self.env.execute_on_manager(service_command +
+                                    ['stop', 'cloudify-mgmtworker'])
 
     def _start_mgmtworker(self):
         self.logger.info('Starting mgmtworker')
         service_command = self.get_service_management_command()
-        self.execute_on_manager(
-            '{0} start cloudify-mgmtworker'.format(service_command)
-        )
+        self.env.execute_on_manager(service_command +
+                                    ['start', 'cloudify-mgmtworker'])
 
     def test_resume_agent_op(self):
         # start a workflow

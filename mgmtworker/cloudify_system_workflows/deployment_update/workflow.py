@@ -20,6 +20,42 @@ from .update_instances import update_or_reinstall_instances
 from .utils import clear_graph
 
 
+def _update_plan_nodes(plan):
+    """Update nodes stored in the plan, to reflect the current instance counts
+
+    The plan will always scaling properties as written in the blueprint,
+    but in reality, the nodes could have been scaled, and there might now
+    be more instances. Update the plan to reflect the currently existing
+    amount of instances.
+    """
+    for node in plan['nodes']:
+        existing_node = workflow_ctx.get_node(node['id'])
+        if not existing_node:
+            continue
+
+        try:
+            scale_properties = node['capabilities']['scalable']['properties']
+        except KeyError:
+            continue
+
+        current_num = existing_node.number_of_instances
+        current_planned = existing_node.planned_number_of_instances
+
+        try:
+            # if the node has an `instances: deploy: {num}`, that overrides
+            # any other setting
+            force_deploy = node['instances']['deploy']
+            if force_deploy is not None:
+                current_planned = force_deploy
+        except KeyError:
+            pass
+
+        if current_num is not None:
+            scale_properties['current_instances'] = current_num
+        if current_planned is not None:
+            scale_properties['planned_instances'] = current_planned
+
+
 def prepare_plan(*, update_id):
     """Prepare the new deployment plan for a deployment update"""
     dep_up = workflow_ctx.get_deployment_update(update_id)
@@ -42,6 +78,8 @@ def prepare_plan(*, update_id):
     else:
         values_getter = None
         existing_ni_ids = None
+
+    _update_plan_nodes(bp.plan)
 
     deployment_plan = tasks.prepare_deployment_plan(
         bp.plan,

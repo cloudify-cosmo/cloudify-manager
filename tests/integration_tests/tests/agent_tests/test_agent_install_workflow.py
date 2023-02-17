@@ -29,14 +29,14 @@ class TestWorkflow(AgentTestWithPlugins):
         cmd = ['rabbitmqctl', 'list_queues', '-s']
         if vhost:
             cmd += ['-p', vhost]
-        output = self.execute_on_manager(cmd)
+        output = self.env.execute_on_manager(cmd)
         return {line.split()[0] for line in output.splitlines()}
 
     def _get_exchanges(self, vhost=None):
         cmd = ['rabbitmqctl', 'list_exchanges', '-s']
         if vhost:
             cmd += ['-p', vhost]
-        output = self.execute_on_manager(cmd)
+        output = self.env.execute_on_manager(cmd)
         return {line.split()[0] for line in output.splitlines()}
 
     def test_amqp_queues_list(self):
@@ -181,3 +181,63 @@ class TestWorkflow(AgentTestWithPlugins):
         start_invocation = webserver_node.runtime_properties['start']
         expected_start_invocation = {'target': 'cloudify.management'}
         self.assertEqual(expected_start_invocation, start_invocation)
+
+    def test_script_executor(self):
+        """Check that script-plugin scripts use the correct executor.
+
+        When the executor is not provided, the 'auto' executor kind will
+        detect whether the node-instance is on an agent or not, and
+        run its operations on the relevant executor.
+
+        In this case, we have a node type that has two instances - one
+        contained_in a compute, and one that isn't. The one in a compute
+        does run on the agent, and the other one runs on the mgmtworker.
+        """
+        bp = """
+tosca_definitions_version: cloudify_dsl_1_5
+imports:
+    - cloudify/types/types.yaml
+    - plugin:dockercompute
+node_types:
+    t1:
+        derived_from: cloudify.nodes.Root
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                create: |
+                    ctx instance runtime-properties create "${AGENT_NAME:-mgmtworker}"
+                start: |
+                    import os
+                    from cloudify import ctx
+                    ctx.instance.runtime_properties['start'] = \
+                        os.environ.get('AGENT_NAME') or 'mgmtworker'
+node_templates:
+    agent_host:
+        type: cloudify.nodes.docker.Compute
+    n1:
+        type: t1
+        relationships:
+            - type: cloudify.relationships.contained_in
+              target: agent_host
+    n2:
+        type: t1
+"""  # NOQA
+        self.upload_blueprint_resource(
+            self.make_yaml_file(bp),
+            blueprint_id='bp1',
+        )
+        dep, _ = self.deploy_application(self.make_yaml_file(bp))
+        agents = self.client.agents.list()
+        n1_inst = self.client.node_instances.list(
+            deployment_id=dep.id, node_id='n1')
+        n2_inst = self.client.node_instances.list(
+            deployment_id=dep.id, node_id='n2')
+        self.undeploy_application(dep.id)
+
+        assert len(agents) == 1
+        assert len(n1_inst) == 1
+        assert len(n2_inst) == 1
+        agent_id = agents[0].id
+        assert n1_inst[0].runtime_properties == \
+            {'create': agent_id, 'start': agent_id}
+        assert n2_inst[0].runtime_properties == \
+            {'create': 'mgmtworker', 'start': 'mgmtworker'}

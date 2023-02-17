@@ -8,6 +8,7 @@ from cloudify.amqp_client import SendHandler
 from cloudify.models_states import PluginInstallationState
 from cloudify.constants import MGMTWORKER_QUEUE, EVENTS_EXCHANGE_NAME
 
+from manager_rest import config
 from manager_rest.storage import get_storage_manager, models
 from manager_rest.utils import current_tenant, get_amqp_client
 
@@ -94,6 +95,7 @@ def cancel_execution(executions):
             'task_name': 'cancel-workflow',
             'kwargs': {
                 'rest_host': [manager.private_ip for manager in managers],
+                'rest_port': config.instance.default_agent_port,
                 'executions': executions,
                 'tenant': _get_tenant_dict(),
             }
@@ -116,6 +118,7 @@ def _get_plugin_message(plugin, task='install-plugin', target_names=None):
             'kwargs': {
                 'plugin': plugin.to_dict(),
                 'rest_host': [manager.private_ip for manager in managers],
+                'rest_port': config.instance.default_agent_port,
                 'rest_token': current_user.get_auth_token(
                     description=f'Plugins task {task} rest token.',
                 ),

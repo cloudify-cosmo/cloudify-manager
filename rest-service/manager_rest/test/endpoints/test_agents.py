@@ -198,12 +198,15 @@ class AgentsTest(base_test.BaseServerTestCase):
         self.assertEqual(agent.name, 'agent_1')
         self.assertEqual(agent.state, AgentState.STARTED)
 
-    def test_update_without_state(self):
-        self._agent('agent_1')
-        response = self.patch('/agents/agent_1', {})
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json['message'],
-                         'Missing state in json request body')
+    def test_update_version(self):
+        agent = self._agent('agent_1')
+        self.client.agents.update(agent.name, version='1.2.3')
+        assert agent.version == '1.2.3'
+
+    def test_update_system(self):
+        agent = self._agent('agent_1')
+        self.client.agents.update(agent.name, system='amiga OS')
+        assert agent.system == 'amiga OS'
 
     def test_update_invalid_state(self):
         self._agent('agent_1')

@@ -31,7 +31,6 @@ class SecretsListResponse(BaseResponse):
         'created_by': fields.String,
         'is_hidden_value': fields.Boolean,
         'provider_name': fields.String,
-        'provider_options': fields.Raw,
     }
 
 

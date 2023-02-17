@@ -36,7 +36,7 @@ pytestmark = pytest.mark.group_general
 class ResourcesAvailableTest(AgentlessTestCase):
 
     def test_resources_available(self):
-        container_ip = self.get_manager_ip()
+        container_ip = self.env.address
         blueprint_id = 'b{0}'.format(uuid.uuid4())
         blueprint_name = 'empty_blueprint.yaml'
         blueprint_path = resource('dsl/{0}'.format(blueprint_name))
@@ -84,7 +84,7 @@ class ResourcesAvailableTest(AgentlessTestCase):
             expected_status_code,
             requests.get(
                 'https://{0}:53333/resources{1}'.format(
-                    ipv6_url_compat(self.get_manager_ip()), path),
+                    ipv6_url_compat(self.env.address), path),
                 headers=headers,
                 verify=False
             ).status_code

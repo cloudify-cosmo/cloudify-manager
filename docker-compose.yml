@@ -10,7 +10,6 @@ services:
     volumes:
       - ssl:/etc/cloudify/ssl:ro
       - mgmtworker_workdir:/opt/mgmtworker/work
-      - ./resources/rest-service/cloudify/types:/opt/manager/resources/cloudify/types
     environment:
       CFY_RESOURCES_ROOT: /opt/manager/resources
     networks:
@@ -82,7 +81,7 @@ services:
 
   postgresql:
     container_name: postgresql
-    build: service_containers/postgresql
+    image: postgres
     environment:
       POSTGRES_DB: cloudify_db
       POSTGRES_USER: cloudify
@@ -92,8 +91,10 @@ services:
     restart: unless-stopped
 
   fileserver:
-    container_name: fileserver
-    build: service_containers/fileserver
+    image: minio/minio
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: admin123
     volumes:
       - ./fileserver/minio/data:/data
     ports:
