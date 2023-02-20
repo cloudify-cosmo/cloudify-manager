@@ -531,10 +531,13 @@ def _generate_db_config_entries(cfg):
     mgmtworker_cfg = cfg.get('mgmtworker', {})
     prometheus_cfg = cfg.get('prometheus', {})
     restservice_cfg = cfg.get('restservice', {})
+    internal_rest_port = (
+        manager_cfg.get('internal_rest_port') or DEFAULT_INTERNAL_REST_PORT
+    )
 
     manager_private_ip = manager_cfg.get('private_ip', 'localhost')
     default_file_server_url = f'https://{ipv6_url_compat(manager_private_ip)}'\
-                              f':{DEFAULT_INTERNAL_REST_PORT}/resources'
+                              f':{internal_rest_port}/resources'
     rest_cfg = build_dict(
         rest_service_log_path=os.path.join(
             REST_LOG_DIR, 'cloudify-rest-service.log'),
@@ -558,6 +561,7 @@ def _generate_db_config_entries(cfg):
             'credentials', {}).get('username'),
         log_fetch_password=prometheus_cfg.get(
             'credentials', {}).get('password'),
+        default_agent_port=internal_rest_port,
     )
     mgmtworker_cfg = build_dict(
         max_workers=mgmtworker_cfg.get('max_workers'),
