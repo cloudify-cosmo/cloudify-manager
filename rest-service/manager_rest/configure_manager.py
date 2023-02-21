@@ -654,6 +654,7 @@ def _create_admin_token(target):
     db.session.commit()
     with open(target, 'w') as f:
         f.write(token.value)
+    return 0
 
 
 def _wait_for_db(address):
@@ -708,11 +709,12 @@ if __name__ == '__main__':
         sys.exit(_wait_for_db(args.db_wait))
     if args.rabbitmq_wait:
         sys.exit(_wait_for_rabbitmq(args.rabbitmq_wait))
+    if args.create_admin_token:
+        with setup_flask_app().app_context():
+            sys.exit(_create_admin_token(args.create_admin_token))
 
     config.instance.load_configuration(from_db=False)
     with setup_flask_app().app_context():
         user_config = _load_user_config(args.config_file_path)
         config.instance.load_from_db(session=db.session)
         configure(user_config)
-        if args.create_admin_token:
-            _create_admin_token(args.create_admin_token)
