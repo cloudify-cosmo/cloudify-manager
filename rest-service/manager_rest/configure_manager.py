@@ -26,7 +26,7 @@ from manager_rest.flask_utils import setup_flask_app
 REST_LOG_DIR = '/var/log/cloudify/rest'
 REST_HOME_DIR = '/opt/manager'
 DEFAULT_FILE_SERVER_ROOT = os.path.join(REST_HOME_DIR, 'resources')
-DEFAULT_INTERNAL_REST_PORT = 53333
+DEFAULT_INTERNAL_REST_PORT = 443
 
 
 def dict_merge(target, source):
