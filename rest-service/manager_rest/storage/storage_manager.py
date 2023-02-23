@@ -474,19 +474,26 @@ class SQLStorageManager(object):
         """Go over the optional parameters (include, filters, sort), and
         replace column names with actual SQLA column objects
         """
-        include = [get_column(model_class, c) for c in include]
-        include = [item for item in include if item is not None]
-        filters = {get_column(model_class, c): filters[c] for c in filters}
-        filters = {k: v for k, v in filters.items() if k is not None}
-        substr_filters = {get_column(model_class, c): substr_filters[c]
-                          for c in substr_filters}
-        substr_filters = {k: v for k, v in substr_filters.items()
-                          if k is not None}
-        sort = OrderedDict((get_column(model_class, c), sort[c]) for c in sort
-                           if get_column(model_class, c) is not None)
-        distinct = [get_column(model_class, c) for c in distinct]
-        distinct = [item for item in distinct if item if item is not None]
-
+        include = [
+            col for colname in include
+            if (col := getattr(model_class, colname, None))
+        ]
+        filters = [
+            (col, filters[colname]) for colname in filters
+            if (col := getattr(model_class, colname, None))
+        ]
+        substr_filters = [
+            (col, substr_filters[colname]) for colname in substr_filters
+            if (col := getattr(model_class, colname, None))
+        ]
+        sort = [
+            (col, sort[colname]) for colname in sort
+            if (col := getattr(model_class, colname, None))
+        ]
+        distinct = [
+            col for colname in distinct
+            if (col := getattr(model_class, colname, None))
+        ]
         return include, filters, substr_filters, sort, distinct
 
     @staticmethod
