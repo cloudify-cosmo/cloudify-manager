@@ -40,7 +40,7 @@ from manager_rest.utils import (is_administrator,
                                 all_tenants_authorization,
                                 validate_global_modification)
 
-from .utils import get_column, get_joins
+from .utils import get_joins
 from .filters import add_filter_rules_to_query
 
 from psycopg2 import DatabaseError as Psycopg2DBError
