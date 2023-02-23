@@ -174,7 +174,8 @@ def get_instance_ids_by_node_ids(client, node_ids):
     offset = 0
     ni_num = 0
     while True:
-        nis = client.node_instances.list(node_id=node_ids, _offset=offset)
+        nis = client.node_instances.list(
+            node_id=node_ids, _offset=offset, _include=['id', 'node_id'])
         for ni in nis:
             ni_ids[ni['node_id']].add(ni['id'])
         ni_num += len(nis)
