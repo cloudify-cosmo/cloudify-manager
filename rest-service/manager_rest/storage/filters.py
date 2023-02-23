@@ -1,4 +1,5 @@
 from sqlalchemy import and_, or_
+from sqlalchemy.ext.associationproxy import AssociationProxyInstance
 
 from manager_rest.storage.models_base import db
 from manager_rest.manager_exceptions import BadFilterRule
@@ -6,7 +7,7 @@ from manager_rest.constants import (AttrsOperator,
                                     FilterRuleType,
                                     LabelsOperator)
 
-from .utils import get_column, get_joins
+from .utils import get_joins
 
 
 def add_filter_rules_to_query(query, model_class, filter_rules,
@@ -46,7 +47,11 @@ def add_attrs_filter_to_query(query, model_class, filter_rule,
     filter_rule_values = filter_rule['values']
 
     joins = get_joins(model_class, [column_name])
-    column = get_column(model_class, column_name)
+
+    column = getattr(model_class, column_name, None)
+    while isinstance(column, AssociationProxyInstance):
+        column = column.remote_attr
+
     if column is None:
         # The attribute passed in via _include isn't a database object,
         # don't try to filter on it in the DB
