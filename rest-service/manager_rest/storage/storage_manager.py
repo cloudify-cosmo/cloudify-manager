@@ -203,7 +203,7 @@ class SQLStorageManager(object):
         if sort or distinct:
             if distinct:
                 query = query.order_by(*distinct)
-            for column, order in sort.items():
+            for column, order in sort:
                 while isinstance(column, AssociationProxyInstance):
                     # get the actual attribute to sort on
                     column = column.remote_attr
@@ -270,7 +270,7 @@ class SQLStorageManager(object):
         return query
 
     def _add_value_filter(self, query, filters):
-        for column, value in filters.items():
+        for column, value in filters:
             column, value = self._update_case_insensitive(column, value)
             if callable(value):
                 query = query.filter(value(column))
@@ -290,7 +290,7 @@ class SQLStorageManager(object):
 
     def _add_substr_filter(self, query, filters):
         substr_conditions = []
-        for column, value in filters.items():
+        for column, value in filters:
             column, value = self._update_case_insensitive(column, value, True)
             if isinstance(value, str):
                 substr_conditions.append(column.contains(value))
