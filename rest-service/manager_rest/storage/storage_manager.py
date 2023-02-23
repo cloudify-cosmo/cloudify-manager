@@ -204,12 +204,15 @@ class SQLStorageManager(object):
             if distinct:
                 query = query.order_by(*distinct)
             for column, order in sort.items():
+                while isinstance(column, AssociationProxyInstance):
+                    # get the actual attribute to sort on
+                    column = column.remote_attr
                 if order == 'desc':
                     column = column.desc()
-                if callable(order):
-                    query = query.order_by(order(column))
-                else:
-                    query = query.order_by(column)
+                elif callable(order):
+                    column = order(column)
+
+                query = query.order_by(column)
         if sort_labels:
             labels_model = aliased(model_class.labels_model)
             for key, order in sort_labels.items():
@@ -277,6 +280,9 @@ class SQLStorageManager(object):
                                          for operation in value)
                     query = query.filter(*operations_filter)
                 else:
+                    while isinstance(column, AssociationProxyInstance):
+                        # get the actual attribute to filter on
+                        column = column.remote_attr
                     query = query.filter(column.in_(value))
             else:
                 query = query.filter(column == value)
@@ -756,11 +762,11 @@ class SQLStorageManager(object):
 
     def summarize(self, target_field, sub_field, model_class,
                   pagination, get_all_results, all_tenants, filters):
-        f = get_column(model_class, target_field)
+        f = getattr(model_class, target_field, None)
         fields = [f]
         string_fields = [target_field]
         if sub_field:
-            fields.append(get_column(model_class, sub_field))
+            fields.append(getattr(model_class, sub_field, None))
             string_fields.append(sub_field)
         entities = fields + [db.func.count('*')]
         query = self._get_query(
