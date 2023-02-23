@@ -48,7 +48,7 @@ cloudify-rest-service @ https://github.com/cloudify-cosmo/cloudify-manager/archi
     # via
     #   -r requirements.in
     #   cloudify-execution-scheduler (setup.py)
-cryptography==39.0.0
+cryptography==39.0.1
     # via cloudify-rest-service
 distro==1.8.0
     # via
