@@ -28,6 +28,7 @@ from sqlalchemy.exc import (
     NoResultFound,
     MultipleResultsFound,
 )
+from sqlalchemy.ext.associationproxy import AssociationProxyInstance
 from flask import current_app, has_request_context
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -141,10 +142,21 @@ class SQLStorageManager(object):
             attrs = set()
             rels = set()
             for field in include:
+                if isinstance(field, AssociationProxyInstance):
+                    # specialcase if there is an assoc proxy in includes:
+                    # join the proxied-to relationship, but only load
+                    # the proxied attribute
+                    rels.add(
+                        db.joinedload(field.parent.target_collection)
+                        .load_only(field.remote_attr)
+                    )
+                    continue
+
                 if not hasattr(field, 'prop'):
                     continue
+
                 if isinstance(field.prop, RelationshipProperty):
-                    rels.add(field)
+                    rels.add(db.joinedload(field))
                 else:
                     attrs.add(field)
             if model_class.is_resource:
@@ -153,7 +165,7 @@ class SQLStorageManager(object):
                 query = query.options(db.load_only(*attrs))
             if rels:
                 for rel in rels:
-                    query = query.options(db.joinedload(rel))
+                    query = query.options(rel)
 
         if load_relationships and not include:
             query = query.options(
