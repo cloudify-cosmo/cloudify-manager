@@ -227,7 +227,7 @@ watchfiles==0.18.1
     # via uvicorn
 websockets==10.4
     # via uvicorn
-werkzeug==2.2.2
+werkzeug==2.2.3
     # via
     #   flask
     #   flask-login
