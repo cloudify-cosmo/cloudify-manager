@@ -146,12 +146,23 @@ class SQLStorageManager(object):
                     # specialcase if there is an assoc proxy in includes:
                     # join the proxied-to relationship, but only load
                     # the proxied attribute.
-                    # But only do it for scalar attributes; if the remote
-                    # field is a whole object, we can't do much about that.
-                    if field.scalar:
+
+                    # first, we'll need to figure out the whole join path
+                    # in case of chained assoc proxies (e.g. NI->node->dep)
+                    joinpath = []
+                    while isinstance(field, AssociationProxyInstance):
+                        # ..but only do it for scalar attributes; if the remote
+                        # field is a whole object, we can't do much about that.
+                        if not field.scalar:
+                            joinpath = None
+                            break
+                        joinpath.append(field.parent.target_collection)
+                        field = field.remote_attr
+
+                    if joinpath:
                         rels.add(
-                            db.joinedload(field.parent.target_collection)
-                            .load_only(field.remote_attr)
+                            db.joinedload(*joinpath)
+                            .load_only(field)
                         )
                     continue
 
@@ -771,12 +782,20 @@ class SQLStorageManager(object):
     def summarize(self, target_field, sub_field, model_class,
                   pagination, get_all_results, all_tenants, filters):
         f = getattr(model_class, target_field, None)
+        while isinstance(f, AssociationProxyInstance):
+            # get the actual attribute to summarize on
+            f = f.remote_attr
         fields = [f]
         string_fields = [target_field]
         if sub_field:
-            fields.append(getattr(model_class, sub_field, None))
+            subfield_col = getattr(model_class, sub_field, None)
+            while isinstance(subfield_col, AssociationProxyInstance):
+                # get the actual attribute to summarize on
+                subfield_col = subfield_col.remote_attr
+            fields.append(subfield_col)
             string_fields.append(sub_field)
         entities = fields + [db.func.count('*')]
+
         query = self._get_query(
             model_class,
             all_tenants=all_tenants,
