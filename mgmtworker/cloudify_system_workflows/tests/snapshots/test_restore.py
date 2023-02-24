@@ -761,7 +761,7 @@ EXPECTED_CALLS = {
                             }
                         ],
                         graph_id='595734d3-1535-4894-b366-ae36e52ca27c'
-                    )
+                    ),
                 ],
             },
             'sort_key': '',

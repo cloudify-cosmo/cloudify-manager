@@ -28,6 +28,7 @@ from sqlalchemy.exc import (
     NoResultFound,
     MultipleResultsFound,
 )
+from sqlalchemy.ext.associationproxy import AssociationProxyInstance
 from flask import current_app, has_request_context
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -39,7 +40,7 @@ from manager_rest.utils import (is_administrator,
                                 all_tenants_authorization,
                                 validate_global_modification)
 
-from .utils import get_column, get_joins
+from .utils import get_joins
 from .filters import add_filter_rules_to_query
 
 from psycopg2 import DatabaseError as Psycopg2DBError
@@ -141,10 +142,24 @@ class SQLStorageManager(object):
             attrs = set()
             rels = set()
             for field in include:
+                if isinstance(field, AssociationProxyInstance):
+                    # specialcase if there is an assoc proxy in includes:
+                    # join the proxied-to relationship, but only load
+                    # the proxied attribute.
+                    # But only do it for scalar attributes; if the remote
+                    # field is a whole object, we can't do much about that.
+                    if field.scalar:
+                        rels.add(
+                            db.joinedload(field.parent.target_collection)
+                            .load_only(field.remote_attr)
+                        )
+                    continue
+
                 if not hasattr(field, 'prop'):
                     continue
+
                 if isinstance(field.prop, RelationshipProperty):
-                    rels.add(field)
+                    rels.add(db.joinedload(field))
                 else:
                     attrs.add(field)
             if model_class.is_resource:
@@ -153,7 +168,7 @@ class SQLStorageManager(object):
                 query = query.options(db.load_only(*attrs))
             if rels:
                 for rel in rels:
-                    query = query.options(db.joinedload(rel))
+                    query = query.options(rel)
 
         if load_relationships and not include:
             query = query.options(
@@ -191,13 +206,16 @@ class SQLStorageManager(object):
         if sort or distinct:
             if distinct:
                 query = query.order_by(*distinct)
-            for column, order in sort.items():
+            for column, order in sort:
+                while isinstance(column, AssociationProxyInstance):
+                    # get the actual attribute to sort on
+                    column = column.remote_attr
                 if order == 'desc':
                     column = column.desc()
-                if callable(order):
-                    query = query.order_by(order(column))
-                else:
-                    query = query.order_by(column)
+                elif callable(order):
+                    column = order(column)
+
+                query = query.order_by(column)
         if sort_labels:
             labels_model = aliased(model_class.labels_model)
             for key, order in sort_labels.items():
@@ -255,7 +273,7 @@ class SQLStorageManager(object):
         return query
 
     def _add_value_filter(self, query, filters):
-        for column, value in filters.items():
+        for column, value in filters:
             column, value = self._update_case_insensitive(column, value)
             if callable(value):
                 query = query.filter(value(column))
@@ -265,6 +283,9 @@ class SQLStorageManager(object):
                                          for operation in value)
                     query = query.filter(*operations_filter)
                 else:
+                    while isinstance(column, AssociationProxyInstance):
+                        # get the actual attribute to filter on
+                        column = column.remote_attr
                     query = query.filter(column.in_(value))
             else:
                 query = query.filter(column == value)
@@ -272,7 +293,7 @@ class SQLStorageManager(object):
 
     def _add_substr_filter(self, query, filters):
         substr_conditions = []
-        for column, value in filters.items():
+        for column, value in filters:
             column, value = self._update_case_insensitive(column, value, True)
             if isinstance(value, str):
                 substr_conditions.append(column.contains(value))
@@ -462,19 +483,31 @@ class SQLStorageManager(object):
         """Go over the optional parameters (include, filters, sort), and
         replace column names with actual SQLA column objects
         """
-        include = [get_column(model_class, c) for c in include]
-        include = [item for item in include if item is not None]
-        filters = {get_column(model_class, c): filters[c] for c in filters}
-        filters = {k: v for k, v in filters.items() if k is not None}
-        substr_filters = {get_column(model_class, c): substr_filters[c]
-                          for c in substr_filters}
-        substr_filters = {k: v for k, v in substr_filters.items()
-                          if k is not None}
-        sort = OrderedDict((get_column(model_class, c), sort[c]) for c in sort
-                           if get_column(model_class, c) is not None)
-        distinct = [get_column(model_class, c) for c in distinct]
-        distinct = [item for item in distinct if item if item is not None]
+        def _get_column(col):
+            if isinstance(col, str):
+                col = getattr(model_class, col, None)
+            return col
 
+        include = [
+            col for colname in include
+            if (col := _get_column(colname))
+        ]
+        filters = [
+            (col, filters[colname]) for colname in filters
+            if (col := _get_column(colname))
+        ]
+        substr_filters = [
+            (col, substr_filters[colname]) for colname in substr_filters
+            if (col := _get_column(colname))
+        ]
+        sort = [
+            (col, sort[colname]) for colname in sort
+            if (col := _get_column(colname))
+        ]
+        distinct = [
+            col for colname in distinct
+            if (col := _get_column(colname))
+        ]
         return include, filters, substr_filters, sort, distinct
 
     @staticmethod
@@ -737,11 +770,11 @@ class SQLStorageManager(object):
 
     def summarize(self, target_field, sub_field, model_class,
                   pagination, get_all_results, all_tenants, filters):
-        f = get_column(model_class, target_field)
+        f = getattr(model_class, target_field, None)
         fields = [f]
         string_fields = [target_field]
         if sub_field:
-            fields.append(get_column(model_class, sub_field))
+            fields.append(getattr(model_class, sub_field, None))
             string_fields.append(sub_field)
         entities = fields + [db.func.count('*')]
         query = self._get_query(
@@ -795,6 +828,17 @@ class SQLStorageManager(object):
         :return: A (possibly empty) list of `model_class` results
         """
         query = model_class.query
+
+        # first, resolve the filters into a format used by ._add_value_filter
+        _include, filters, _substr_filters, _sort, _distinct = \
+            self._get_columns_from_field_names(
+                model_class,
+                include=[],
+                filters=filters or {},
+                substr_filters={},
+                sort={},
+                distinct=[],
+            )
         if filters:
             query = self._add_value_filter(query, filters)
         return query.all()
