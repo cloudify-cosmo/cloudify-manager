@@ -480,25 +480,30 @@ class SQLStorageManager(object):
         """Go over the optional parameters (include, filters, sort), and
         replace column names with actual SQLA column objects
         """
+        def _get_column(col):
+            if isinstance(col, str):
+                col = getattr(model_class, col, None)
+            return col
+
         include = [
             col for colname in include
-            if (col := getattr(model_class, colname, None))
+            if (col := _get_column(colname))
         ]
         filters = [
             (col, filters[colname]) for colname in filters
-            if (col := getattr(model_class, colname, None))
+            if (col := _get_column(colname))
         ]
         substr_filters = [
             (col, substr_filters[colname]) for colname in substr_filters
-            if (col := getattr(model_class, colname, None))
+            if (col := _get_column(colname))
         ]
         sort = [
             (col, sort[colname]) for colname in sort
-            if (col := getattr(model_class, colname, None))
+            if (col := _get_column(colname))
         ]
         distinct = [
             col for colname in distinct
-            if (col := getattr(model_class, colname, None))
+            if (col := _get_column(colname))
         ]
         return include, filters, substr_filters, sort, distinct
 
@@ -820,6 +825,17 @@ class SQLStorageManager(object):
         :return: A (possibly empty) list of `model_class` results
         """
         query = model_class.query
+
+        # first, resolve the filters into a format used by ._add_value_filter
+        _include, filters, _substr_filters, _sort, _distinct = \
+            self._get_columns_from_field_names(
+                model_class,
+                include=[],
+                filters=filters or {},
+                substr_filters={},
+                sort={},
+                distinct=[],
+            )
         if filters:
             query = self._add_value_filter(query, filters)
         return query.all()
