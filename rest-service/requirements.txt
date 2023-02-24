@@ -187,7 +187,7 @@ wagon==0.12.0
     # via
     #   cloudify-common
     #   cloudify-rest-service (setup.py)
-werkzeug==2.2.2
+werkzeug==2.2.3
     # via
     #   flask
     #   flask-login
