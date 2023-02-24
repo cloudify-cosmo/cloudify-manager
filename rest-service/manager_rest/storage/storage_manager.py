@@ -145,11 +145,14 @@ class SQLStorageManager(object):
                 if isinstance(field, AssociationProxyInstance):
                     # specialcase if there is an assoc proxy in includes:
                     # join the proxied-to relationship, but only load
-                    # the proxied attribute
-                    rels.add(
-                        db.joinedload(field.parent.target_collection)
-                        .load_only(field.remote_attr)
-                    )
+                    # the proxied attribute.
+                    # But only do it for scalar attributes; if the remote
+                    # field is a whole object, we can't do much about that.
+                    if field.scalar:
+                        rels.add(
+                            db.joinedload(field.parent.target_collection)
+                            .load_only(field.remote_attr)
+                        )
                     continue
 
                 if not hasattr(field, 'prop'):
