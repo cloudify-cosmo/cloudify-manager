@@ -732,7 +732,7 @@ def add_default_agents_rest_port_config():
         [
             {
                 'name': 'default_agent_port',
-                'value': 53333,
+                'value': 443,
                 'scope': 'rest',
                 'schema': {"type": "number", "minimum": 1, "maximum": 65535},
                 'is_editable': True,

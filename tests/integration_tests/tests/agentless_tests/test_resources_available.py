@@ -83,7 +83,7 @@ class ResourcesAvailableTest(AgentlessTestCase):
         self.assertEqual(
             expected_status_code,
             requests.get(
-                'https://{0}:53333/resources{1}'.format(
+                'https://{0}:443/resources{1}'.format(
                     ipv6_url_compat(self.env.address), path),
                 headers=headers,
                 verify=False

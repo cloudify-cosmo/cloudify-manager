@@ -348,7 +348,7 @@ class TestConfigureManager(base_test.BaseServerTestCase):
 
         for scope, name, value in [
             ('rest', 'public_ip', 'example.org'),
-            ('rest', 'file_server_url', 'https://localhost:53333/resources'),
+            ('rest', 'file_server_url', 'https://localhost:443/resources'),
             ('mgmtworker', 'max_workers', 9),
             ('agent', 'heartbeat', 99),
         ]:

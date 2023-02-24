@@ -3,6 +3,7 @@ import json
 import argparse
 
 from manager_rest import config
+from manager_rest.constants import BOOTSTRAP_ADMIN_ID, DEFAULT_TENANT_ID
 from manager_rest.storage import models
 from manager_rest.flask_utils import setup_flask_app
 
@@ -17,11 +18,11 @@ MANAGER_CONFIG = {
 
 
 def get_password_hash():
-    return models.User.query.one().password
+    return models.User.query.get(BOOTSTRAP_ADMIN_ID).password
 
 
 def get_tenant_password():
-    return models.Tenant.query.one().rabbitmq_password
+    return models.Tenant.query.get(DEFAULT_TENANT_ID).rabbitmq_password
 
 
 if __name__ == '__main__':
