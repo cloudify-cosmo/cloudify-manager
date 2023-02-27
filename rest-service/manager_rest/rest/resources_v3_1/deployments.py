@@ -1403,9 +1403,12 @@ class DeploymentGroupsId(SecuredResource):
                     )
                     delete_exc_group.executions.append(delete_exc)
                 messages = delete_exc_group.start_executions(sm, rm)
-            workflow_executor.execute_workflow(messages)
 
         sm.delete(group)
+
+        if args.delete_deployments:
+            workflow_executor.execute_workflow(messages)
+
         return None, 204
 
 
