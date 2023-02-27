@@ -282,6 +282,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         users = self.sm.list(models.User, filters={'role': 'sys_admin'})
         assert set(users) == {self.user, other_admin}
 
+
 class TestTransactions(base_test.BaseServerTestCase):
     def _make_secret(self, id, value):
         # these tests are using secrets, but they could just as well
