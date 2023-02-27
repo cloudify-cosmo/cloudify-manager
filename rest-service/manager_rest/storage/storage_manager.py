@@ -815,6 +815,18 @@ class SQLStorageManager(object):
     def count(self, model_class, filters=None, distinct_by=None,
               all_tenants=False):
         query = model_class.query
+
+        # first, resolve the filters into a format used by ._add_value_filter
+        _include, filters, _substr_filters, _sort, _distinct = \
+            self._get_columns_from_field_names(
+                model_class,
+                include=[],
+                filters=filters or {},
+                substr_filters={},
+                sort={},
+                distinct=[],
+            )
+
         if not all_tenants:
             self._add_tenant_filter(query, model_class, all_tenants=False)
         if filters:
