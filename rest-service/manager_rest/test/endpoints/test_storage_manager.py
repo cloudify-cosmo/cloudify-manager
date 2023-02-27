@@ -264,6 +264,23 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         retrieved = self.sm.list(models.Secret, filters={'_storage_id': []})
         assert len(retrieved) == 0
 
+    def test_users_filter_role(self):
+        abc_role = models.Role(name='abc', type='system_role')
+
+        other_admin = models.User(username='other_admin')
+        other_admin.roles = [
+            abc_role
+        ] + self.user.roles
+        db.session.add(other_admin)
+
+        other_user = models.User(username='abcd')
+        other_user.roles = [
+            abc_role,
+            models.Role(name='def', type='system_role'),
+        ]
+        db.session.add(other_user)
+        users = self.sm.list(models.User, filters={'role': 'sys_admin'})
+        assert set(users) == {self.user, other_admin}
 
 class TestTransactions(base_test.BaseServerTestCase):
     def _make_secret(self, id, value):

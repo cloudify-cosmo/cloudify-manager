@@ -441,9 +441,21 @@ class User(CreatedAtMixin, SQLModelBase, UserMixin):
 
         return user_dict
 
-    @property
-    def role(self):
-        return self.roles[0].name
+    @declared_attr
+    def first_role(cls):
+        # The "first", oldest, role that the user has. This is only useful
+        # for user.role, which then is a string role name.
+        # In principle, it's a bad idea to use this, because it would be better
+        # to always consider all of the user's roles, not just the first one.
+        return db.relationship(
+            Role,
+            uselist=False,
+            viewonly=True,
+            order_by=db.asc(Role.id),
+            secondary=cls.roles.secondary,
+        )
+
+    role = association_proxy('first_role', 'name')
 
     @property
     def group_system_roles(self):
