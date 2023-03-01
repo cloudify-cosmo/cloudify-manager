@@ -270,6 +270,13 @@ class DeploymentsId(resources_v1.DeploymentsId):
                     deployment_status=request_dict.get('deployment_status'),
                     installation_status=request_dict.get(
                         'installation_status'),
+                    sub_services_status=request_dict.get(
+                        'sub_services_status'),
+                    sub_environments_status=request_dict.get(
+                        'sub_environments_status'),
+                    sub_services_count=request_dict.get('sub_services_count'),
+                    sub_environments_count=request_dict.get(
+                        'sub_environments_count'),
                     display_name=request_dict.get('display_name'),
                     labels=request_dict.get('labels')
                 )
