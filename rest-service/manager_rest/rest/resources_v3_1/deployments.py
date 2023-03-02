@@ -18,7 +18,7 @@ from cloudify.models_states import (VisibilityState,
                                     ExecutionState,
                                     BlueprintUploadState,
                                     )
-from cloudify.deployment_dependencies import (create_deployment_dependency,
+from cloudify.deployment_dependencies import (build_deployment_dependency,
                                               DEPENDENCY_CREATOR,
                                               SOURCE_DEPLOYMENT,
                                               TARGET_DEPLOYMENT,
@@ -684,10 +684,10 @@ class InterDeploymentDependencies(SecuredResource):
                 external_source=external_source,
                 external_target=external_target
             )
-        dependency_params = create_deployment_dependency(
+        dependency_params = build_deployment_dependency(
             request_dict.get(DEPENDENCY_CREATOR),
-            source_deployment,
-            target_deployment,
+            source_deployment=source_deployment,
+            target_deployment=target_deployment,
             target_deployment_func=target_deployment_func,
             external_source=external_source,
             external_target=external_target)
@@ -726,10 +726,10 @@ class InterDeploymentDependencies(SecuredResource):
         """
         sm = get_storage_manager()
         params = self._get_delete_dependency_params(sm)
-        filters = create_deployment_dependency(
+        filters = build_deployment_dependency(
             params[DEPENDENCY_CREATOR],
-            params.get(SOURCE_DEPLOYMENT),
-            params.get(TARGET_DEPLOYMENT),
+            source_deployment=params.get(SOURCE_DEPLOYMENT),
+            target_deployment=params.get(TARGET_DEPLOYMENT),
             external_source=params.get(EXTERNAL_SOURCE))
         dependency = sm.get(
             models.InterDeploymentDependencies,
@@ -765,10 +765,10 @@ class InterDeploymentDependencies(SecuredResource):
                 external_target=external_target,
                 is_component_deletion=request_dict['is_component_deletion']
             )
-        dependency_params = create_deployment_dependency(
+        dependency_params = build_deployment_dependency(
             request_dict.get(DEPENDENCY_CREATOR),
-            source_deployment,
-            target_deployment,
+            source_deployment=source_deployment,
+            target_deployment=target_deployment,
             external_source=external_source,
             external_target=external_target)
         return dependency_params

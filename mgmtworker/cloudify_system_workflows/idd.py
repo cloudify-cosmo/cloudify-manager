@@ -1,6 +1,6 @@
 from typing import Dict, List, Optional, Sequence, Tuple
 
-from cloudify.deployment_dependencies import create_deployment_dependency
+from cloudify.deployment_dependencies import build_deployment_dependency
 from cloudify.workflows.workflow_context import CloudifyWorkflowContext
 from cloudify_rest_client.client import CloudifyClient
 from dsl_parser import constants as dsl_constants
@@ -120,7 +120,7 @@ def _prepare(deployment_plan: dsl_models.Plan,
             }
         if ext_client:
             local_dependencies += [
-                create_deployment_dependency(
+                build_deployment_dependency(
                     dependency_creator=func_id,
                     target_deployment=None,
                     external_target={
@@ -130,7 +130,7 @@ def _prepare(deployment_plan: dsl_models.Plan,
                         'client_config': client_config
                     })]
             external_dependencies += [
-                create_deployment_dependency(
+                build_deployment_dependency(
                     dependency_creator=func_id,
                     target_deployment=(target_deployment_id
                                        if target_deployment_id
@@ -146,7 +146,7 @@ def _prepare(deployment_plan: dsl_models.Plan,
             # Also because in this case the target_deployment_func will
             # be of type string, while REST endpoint expects a dict.
             local_dependencies += [
-                create_deployment_dependency(
+                build_deployment_dependency(
                     dependency_creator=func_id,
                     target_deployment=target_deployment_id,
                     target_deployment_func=(
