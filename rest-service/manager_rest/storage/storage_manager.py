@@ -522,7 +522,13 @@ class SQLStorageManager(object):
         return include, filters, substr_filters, sort, distinct
 
     @staticmethod
-    def _paginate(query, pagination, get_all_results=False, locking=False):
+    def _paginate(
+        model_class,
+        query,
+        pagination,
+        get_all_results=False,
+        locking=False,
+    ):
         """Paginate the query by size and offset
 
         :param query: Current SQLAlchemy query object
@@ -544,7 +550,7 @@ class SQLStorageManager(object):
 
         total = query.order_by(None).count()  # Fastest way to count
         if locking:
-            query = query.with_for_update()
+            query = query.with_for_update(of=model_class)
         if get_all_results:
             results = query.all()
         else:
@@ -649,7 +655,7 @@ class SQLStorageManager(object):
         query = self._get_query(model_class, include, filters,
                                 all_tenants=all_tenants)
         if locking:
-            query = query.with_for_update()
+            query = query.with_for_update(of=model_class)
 
         try:
             result = query.one()
@@ -764,6 +770,7 @@ class SQLStorageManager(object):
                                 load_relationships=load_relationships)
 
         results, total, size, offset = self._paginate(
+            model_class,
             query,
             pagination,
             get_all_results,
@@ -805,9 +812,12 @@ class SQLStorageManager(object):
             default_sorting=False,
         ).with_entities(*entities).group_by(*fields)
 
-        results, total, size, offset = self._paginate(query,
-                                                      pagination,
-                                                      get_all_results)
+        results, total, size, offset = self._paginate(
+            model_class,
+            query,
+            pagination,
+            get_all_results
+        )
         pagination = {'total': total, 'size': size, 'offset': offset}
 
         return ListResult(items=results, metadata={'pagination': pagination})

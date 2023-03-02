@@ -66,15 +66,19 @@ class Tenants(TenantsListResource):
             # should be safe to return it like this
             tenants = get_storage_manager().list(models.Tenant)
 
+        # if include is not passed in request, then the _include argument
+        # will contain all fields. However, we only want to return these
+        # fields, if the user _explicitly_ asked for them in request
+        request_include = request.args.get('_include')
         if (
-            _include is not None
-            and any(f'rabbitmq_{attr}' in _include
+            request_include is not None
+            and any(f'rabbitmq_{attr}' in request_include
                     for attr in ['password', 'username', 'vhost'])
         ):
             for tenant in tenants:
                 if is_user_action_allowed('tenant_rabbitmq_credentials',
                                           tenant.name):
-                    if 'rabbitmq_password' in _include:
+                    if 'rabbitmq_password' in request_include:
                         tenant.rabbitmq_password = decrypt(
                             tenant.rabbitmq_password)
                 else:
