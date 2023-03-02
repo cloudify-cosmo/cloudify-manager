@@ -473,6 +473,10 @@ EXPECTED_CALLS = {
                         resource_tags={},
                         blueprint_id='shared_provider',
                         created_by='admin',
+                        sub_services_status='good',
+                        sub_environments_status='good',
+                        sub_services_count=0,
+                        sub_environments_count=0,
                         labels=[],
                         # If the b64zip file does not exist, it should be
                         # auto-populated with the empty zip
@@ -499,6 +503,10 @@ EXPECTED_CALLS = {
                         resource_tags={},
                         blueprint_id='fakecloud',
                         created_by='admin',
+                        sub_services_status='in_progress',
+                        sub_environments_status='requires_attention',
+                        sub_services_count=1,
+                        sub_environments_count=2,
                         labels=[
                             {'key': 'general_usefulness',
                              'value': 'low',

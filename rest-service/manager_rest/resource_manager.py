@@ -1684,8 +1684,10 @@ class ResourceManager(object):
         allowed_overrides = {
             'created_by', 'workflows', 'policy_types', 'policy_triggers',
             'groups', 'scaling_groups', 'inputs', 'outputs', 'resource_tags',
-            'capabilities', 'description', 'deployment_status',
-            'installation_status', 'labels',
+            'capabilities', 'description', 'labels', 'deployment_status',
+            'installation_status', 'sub_services_status',
+            'sub_environments_status', 'sub_services_count',
+            'sub_environments_count',
         }
         bad_overrides = kwargs.keys() - allowed_overrides
         if bad_overrides:
