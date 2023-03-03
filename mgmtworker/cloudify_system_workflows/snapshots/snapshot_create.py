@@ -35,6 +35,11 @@ INCLUDES = {
                     'installation_status', 'sub_services_status',
                     'sub_environments_status', 'sub_services_count',
                     'sub_environments_count'],
+    'inter_deployment_dependencies': ['id', 'visibility', 'created_at',
+                                      'created_by', 'dependency_creator',
+                                      'target_deployment_func',
+                                      'source_deployment', 'target_deployment',
+                                      'external_source', 'external_target'],
     'nodes': ['id', 'host_id', 'plugins', 'plugins_to_install', 'properties',
               'max_number_of_instances', 'min_number_of_instances',
               'planned_number_of_instances', 'deploy_number_of_instances',
@@ -180,6 +185,7 @@ class SnapshotCreate(object):
         self._dump_objects('secrets', tenant_name)
         self._dump_objects('blueprints', tenant_name)
         self._dump_objects('deployments', tenant_name)
+        self._dump_objects('inter_deployment_dependencies', tenant_name)
         self._dump_objects('deployment_groups', tenant_name)
         self._dump_objects('executions', tenant_name)
         self._dump_objects('execution_groups', tenant_name)

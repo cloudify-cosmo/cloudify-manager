@@ -55,6 +55,7 @@ from .constants import (
     V_4_6_0,
     V_5_0_5,
     V_5_3_0,
+    V_7_0_0,
     SECURITY_FILE_LOCATION,
     SECURITY_FILENAME,
     REST_AUTHORIZATION_CONFIG_PATH,
@@ -188,9 +189,10 @@ class SnapshotRestore(object):
             'sites', 'secrets_providers', 'secrets', 'plugins',
             'blueprints_filters', 'deployments_filters', 'blueprints',
             # Everything after this point requires blueprints and plugins
-            'deployments', 'deployment_groups', 'executions',
-            'execution_groups', 'events', 'execution_schedules',
-            'deployment_updates', 'plugins_update',
+            'deployments', 'deployment_groups',
+            'inter_deployment_dependencies', 'executions', 'execution_groups',
+            'events', 'execution_schedules', 'deployment_updates',
+            'plugins_update',
         ]:
             for tenant in self._new_tenants:
                 self._new_restore_parse_and_restore(resource, zipfile,
@@ -514,6 +516,12 @@ class SnapshotRestore(object):
                 entity['group_id'] = entity.pop('id')
                 entity['blueprint_id'] = entity.pop('default_blueprint_id')
                 restore_func = entity_client.put
+            elif entity_type == 'inter_deployment_dependencies':
+                entity['source_deployment'] =\
+                    entity.pop('source_deployment_id')
+                entity['target_deployment'] =\
+                    entity.pop('target_deployment_id')
+                restore_func = entity_client.create
             elif entity_type == 'executions':
                 entity['execution_id'] = entity.pop('id')
                 entity['force_status'] = entity.pop('status')
@@ -856,10 +864,10 @@ class SnapshotRestore(object):
 
     def _restore_inter_deployment_dependencies(self):
         # managers older than 4.6.0 didn't have the support get_capability.
-        # manager newer than 5.0.5 have the inter deployment dependencies as
-        # part of the database dump
+        # manager newer than 5.0.5 and older than 7.0.0 have the inter
+        # deployment dependencies as part of the database dump
         if (self._snapshot_version < V_4_6_0 or
-                self._snapshot_version > V_5_0_5):
+                V_5_0_5 < self._snapshot_version < V_7_0_0):
             return
 
         ctx.logger.info('Restoring inter deployment dependencies')
