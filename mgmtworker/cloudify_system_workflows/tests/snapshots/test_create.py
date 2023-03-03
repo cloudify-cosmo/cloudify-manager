@@ -63,6 +63,11 @@ MOCK_CLIENT_RESPONSES = {
                     {'workdir_zip': EMPTY_B64_ZIP},
                     {'workdir_zip': 'DEF3'}],
         },
+        'inter_deployment_dependencies': {
+            'list': [{'id': 'idd_t1.1'},
+                     {'id': 'idd_t1.2'},
+                     {'id': 'idd_t1.3'}],
+        },
         'deployment_groups': {
             'list': [{'id': 'deployments_groups_list_t1'}],
         },
@@ -134,6 +139,9 @@ MOCK_CLIENT_RESPONSES = {
         'deployments': {
             'list': [{'id': 'deployment_t2'}],
             'get': [{'workdir_zip': 'XYZF'}],
+        },
+        'inter_deployment_dependencies': {
+            'list': [{'id': 'idd_t2'}],
         },
         'deployment_groups': {
             'list': [{'id': 'deployments_groups_list_t2'}],
