@@ -516,12 +516,6 @@ class SnapshotRestore(object):
                 entity['group_id'] = entity.pop('id')
                 entity['blueprint_id'] = entity.pop('default_blueprint_id')
                 restore_func = entity_client.put
-            elif entity_type == 'inter_deployment_dependencies':
-                entity['source_deployment'] =\
-                    entity.pop('source_deployment_id')
-                entity['target_deployment'] =\
-                    entity.pop('target_deployment_id')
-                restore_func = entity_client.create
             elif entity_type == 'executions':
                 entity['execution_id'] = entity.pop('id')
                 entity['force_status'] = entity.pop('status')

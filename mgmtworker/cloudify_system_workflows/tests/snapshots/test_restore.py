@@ -546,8 +546,8 @@ EXPECTED_CALLS = {
                             'function':
                                 {'get_attribute': ['rel_target', 'dep_id']},
                         },
-                        source_deployment='d3',
-                        target_deployment='d1',
+                        source_deployment_id='d3',
+                        target_deployment_id='d1',
                         external_source=None,
                         external_target=None,
                     ),
@@ -563,8 +563,8 @@ EXPECTED_CALLS = {
                             'function':
                                 {'get_attribute': ['rel_target', 'dep_id']},
                         },
-                        source_deployment='d3',
-                        target_deployment='d2',
+                        source_deployment_id='d3',
+                        target_deployment_id='d2',
                         external_source=None,
                         external_target=None,
                     ),
