@@ -4,5 +4,5 @@ pytest-cov
 pytest-xdist
 
 # agent is only here for the mgmtworker, which is only (temporarily) used in tests
-https://github.com/cloudify-cosmo/cloudify-agent/archive/master.zip
+https://github.com/cloudify-cosmo/cloudify-agent/archive/7.0.0-build.zip
 -e ../mgmtworker
