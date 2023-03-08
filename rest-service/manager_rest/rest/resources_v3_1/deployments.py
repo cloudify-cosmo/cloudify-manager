@@ -560,9 +560,9 @@ class InterDeploymentDependencies(SecuredResource):
         else:
             params['created_at'] = utils.get_formatted_timestamp()
 
-        if params.get('created_by'):
+        if creator := params.pop('created_by', None):
             check_user_action_allowed('set_owner', None, True)
-            params['created_by'] = rest_utils.valid_user(params['created_by'])
+            params['creator'] = rest_utils.valid_user(creator)
 
         if (TARGET_DEPLOYMENT in params and
                 EXTERNAL_SOURCE not in params and
