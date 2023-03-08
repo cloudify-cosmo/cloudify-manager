@@ -1,5 +1,5 @@
-git+https://github.com/cloudify-cosmo/cloudify-common@master#egg=cloudify-common[dispatcher,snmp]
-git+https://github.com/cloudify-cosmo/cloudify-agent@master#egg=cloudify-agent[celery,kerberos,fabric]
+https://github.com/cloudify-cosmo/cloudify-common/archive/7.0.0-build.zip#egg=cloudify-common[dispatcher,snmp]
+https://github.com/cloudify-cosmo/cloudify-agent/archive/7.0.0-build.zip#egg=cloudify-agent[celery,kerberos,fabric]
 
 # fabric doesn't pin paramiko to 2.x, so we will. Paramiko 3.0.0 requires
 # pynacl 1.5, but currently we pin to 1.4 (in cloudify-agent). This can be
