@@ -535,10 +535,10 @@ EXPECTED_CALLS = {
             'expected': {
                 'default_tenant': [
                     mock.call(
-                        id='602b6102-e4bd-42ed-a86c-10b526d3b4c2',
-                        visibility='tenant',
-                        created_at='2023-03-02T08:38:56.080Z',
-                        created_by='admin',
+                        _id='602b6102-e4bd-42ed-a86c-10b526d3b4c2',
+                        _visibility='tenant',
+                        _created_at='2023-03-02T08:38:56.080Z',
+                        _created_by='admin',
                         dependency_creator=IDD_DEPENDENCY_CREATOR,
                         target_deployment_func={
                             'context':
@@ -546,16 +546,16 @@ EXPECTED_CALLS = {
                             'function':
                                 {'get_attribute': ['rel_target', 'dep_id']},
                         },
-                        source_deployment_id='d3',
-                        target_deployment_id='d1',
+                        source_deployment='d3',
+                        target_deployment='d1',
                         external_source=None,
                         external_target=None,
                     ),
                     mock.call(
-                        id='84c87185-71d9-447b-b1b5-4421c416bdfb',
-                        visibility='tenant',
-                        created_at='2023-03-02T08:38:56.080Z',
-                        created_by='admin',
+                        _id='84c87185-71d9-447b-b1b5-4421c416bdfb',
+                        _visibility='tenant',
+                        _created_at='2023-03-02T08:38:56.080Z',
+                        _created_by='admin',
                         dependency_creator=IDD_DEPENDENCY_CREATOR,
                         target_deployment_func={
                             'context':
@@ -563,8 +563,8 @@ EXPECTED_CALLS = {
                             'function':
                                 {'get_attribute': ['rel_target', 'dep_id']},
                         },
-                        source_deployment_id='d3',
-                        target_deployment_id='d2',
+                        source_deployment='d3',
+                        target_deployment='d2',
                         external_source=None,
                         external_target=None,
                     ),
