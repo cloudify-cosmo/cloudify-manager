@@ -8,12 +8,16 @@ import datetime
 import dateutil.parser
 import pytz
 
+
 from cloudify.workflows import ctx
 from cloudify import constants, manager
 from . import constants as snapshot_constants
 from .constants import SECURITY_FILE_LOCATION, SECURITY_FILENAME
+from .ui_clients import ComposerClient
 from cloudify.utils import ManagerVersion, get_local_rest_certificate
 from cloudify.utils import get_tenant_name
+
+COMPOSER_BASE_URL = 'http://localhost:3000/composer/backend'
 
 
 class DictToAttributes(dict):
@@ -371,5 +375,11 @@ def parse_datetime_string(datetime_str):
 
 
 def is_later_than_now(datetime_str):
+    """Check if a given timestamp is in the future."""
     datetime_ts = parse_datetime_string(datetime_str)
     return datetime.datetime.utcnow() < datetime_ts
+
+
+def get_composer_client(base_url=COMPOSER_BASE_URL):
+    """Initialize composer client with a given base_url."""
+    return ComposerClient(base_url)
