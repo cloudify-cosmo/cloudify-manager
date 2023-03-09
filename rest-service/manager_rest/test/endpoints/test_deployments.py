@@ -1726,6 +1726,38 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         assert dep1.visibility == VisibilityState.GLOBAL
         assert dep2.visibility == VisibilityState.GLOBAL
 
+    def test_latest_execution_details(self):
+        bp = models.Blueprint(
+            id='bp1',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        dep = models.Deployment(
+            id='dep1',
+            blueprint=bp,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        exc = models.Execution(
+            id='exc1',
+            workflow_id='install',
+            status=ExecutionState.TERMINATED,
+            total_operations=5,
+            finished_operations=3,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        dep.latest_execution = exc
+
+        retrieved = self.client.deployments.get(dep.id)
+        assert retrieved.latest_execution_id == exc.id
+        assert retrieved.latest_execution_workflow_id == exc.workflow_id
+        assert retrieved.latest_execution_status == exc.status_display
+        assert retrieved.latest_execution_total_operations == \
+            exc.total_operations
+        assert retrieved.latest_execution_finished_operations == \
+            exc.finished_operations
+
 
 class DeploymentsDeleteTest(base_test.BaseServerTestCase):
     def setUp(self):
