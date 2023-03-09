@@ -530,6 +530,8 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         'latest_execution', 'finished_operations')
     latest_execution_total_operations = association_proxy(
         'latest_execution', 'total_operations')
+    latest_execution_workflow_id = association_proxy(
+        'latest_execution', 'workflow_id')
 
     drifted_instances =\
         db.Column(db.Integer, server_default='0', nullable=False, default=0)
@@ -597,6 +599,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                 flask_fields.Integer()
             fields['latest_execution_finished_operations'] = \
                 flask_fields.Integer()
+            fields['latest_execution_workflow_id'] = flask_fields.String()
             fields['has_sub_deployments'] = flask_fields.Boolean()
             fields['create_execution'] = flask_fields.String()
             fields['latest_execution'] = flask_fields.String()
