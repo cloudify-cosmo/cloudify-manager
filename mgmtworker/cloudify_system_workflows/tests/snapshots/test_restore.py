@@ -1119,18 +1119,26 @@ def mock_get_client():
 
 @pytest.fixture
 def mock_get_composer_client():
-    class MockComposerClient():
-        def get_snapshots(self, dump_type):
-            pass
+    class MockComposerBaseSnapshotClient:
+        def __init__(self, entity_name):
+            self._entity_name = entity_name
 
-        def put_snapshot(self, dump_type, file_path, expected_status=201):
-            pass
+        def restore_snapshot(self,
+                             snapshot_file_name,
+                             expected_status_code=201):
+            assert snapshot_file_name is not None
 
-        def put_blueprints_snapshot(self,
-                                    metadata_file_path,
-                                    snapshot_file_path,
-                                    expected_status=201):
-            pass
+        def restore_snapshot_and_metadata(self,
+                                          snapshot_file_name,
+                                          metadata_file_name,
+                                          expected_status_code=201):
+            assert snapshot_file_name is not None
+            assert metadata_file_name is not None
+
+    class MockComposerClient:
+        blueprints = MockComposerBaseSnapshotClient('blueprints')
+        configuration = MockComposerBaseSnapshotClient('configuration')
+        favorites = MockComposerBaseSnapshotClient('favorites')
 
     with mock.patch(
         'cloudify_system_workflows.snapshots.utils'

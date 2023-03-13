@@ -31,9 +31,10 @@ class ComposerBaseSnapshotClient:
         return url
 
     @staticmethod
-    def _request_headers(**kwargs):
+    def _request_headers(extra_headers=None):
         headers = {'authentication_token': get_admin_api_token()}
-        headers.update(kwargs)
+        if extra_headers:
+            headers.update(headers)
         return headers
 
     def get_snapshot(self, expected_status_code=200):
@@ -49,6 +50,22 @@ class ComposerBaseSnapshotClient:
                 resp.reason,
             )
         return resp.content
+
+    def restore_snapshot(self, snapshot_file_name, expected_status_code=201):
+        request_headers = self._request_headers({
+            'content-type': 'application/json; charset=utf-8',
+        })
+        with open(snapshot_file_name, 'rb') as data:
+            with requests.session() as session:
+                resp = session.post(self._url(),
+                                    headers=request_headers,
+                                    data=data)
+        if resp.status_code != expected_status_code:
+            raise UIClientError(
+                f'restoring composer snapshot of {self._entity_name}',
+                resp.status_code,
+                resp.reason,
+            )
 
 
 class ComposerBlueprintsSnapshotClient(ComposerBaseSnapshotClient):
@@ -67,6 +84,35 @@ class ComposerBlueprintsSnapshotClient(ComposerBaseSnapshotClient):
             )
         return resp.content
 
+    def restore_snapshot_and_metadata(self,
+                                      snapshot_file_name,
+                                      metadata_file_name,
+                                      expected_status_code=201):
+        mp_encoder = MultipartEncoder(
+            fields={
+                'metadata': (
+                    'blueprints.json',
+                    open(metadata_file_name, 'rb'),
+                    'application/json',
+                ),
+                'snapshot': (
+                    'blueprints.zip',
+                    open(snapshot_file_name, 'rb'),
+                    'application/zip',
+                ),
+            }
+        )
+        with requests.session() as session:
+            resp = session.post(self._url(),
+                                headers=self._request_headers(),
+                                data=mp_encoder)
+        if resp.status_code != expected_status_code:
+            raise UIClientError(
+                'restoring composer snapshot of blueprints',
+                resp.status_code,
+                resp.reason,
+            )
+
 
 class ComposerClient:
     """A client for Cloudify Composer"""
@@ -80,52 +126,3 @@ class ComposerClient:
             f'{self._base_url}/snapshots/configuration')
         self.favorites = ComposerBaseSnapshotClient(
             f'{self._base_url}/snapshots/favorites')
-
-    def put_snapshot(self, dump_type, file_path, expected_status=201):
-        """Post (restore) snapshot of dump_type entities."""
-        request_headers = {
-            'authentication-token': get_admin_api_token(),
-            'content-type': 'application/json; charset=utf-8',
-        }
-        with open(file_path, 'rb') as data:
-            with requests.session() as session:
-                r = session.post(f'{self._base_url}/snapshots/{dump_type}',
-                                 headers=request_headers,
-                                 data=data)
-        if r.status_code != expected_status:
-            raise UIClientError(
-                f'recreation of composer snapshot of {dump_type}',
-                r.status_code,
-                r.reason,
-            )
-
-    def put_blueprints_snapshot(self,
-                                metadata_file_path,
-                                snapshot_file_path,
-                                expected_status=201):
-        """Post (restore) blueprint snapshot."""
-        request_headers = {'authentication-token': get_admin_api_token()}
-        mp_encoder = MultipartEncoder(
-            fields={
-                'metadata': (
-                    'blueprints.json',
-                    open(metadata_file_path, 'rb'),
-                    'application/json',
-                ),
-                'snapshot': (
-                    'blueprints.zip',
-                    open(snapshot_file_path, 'rb'),
-                    'application/zip',
-                ),
-            }
-        )
-        with requests.session() as session:
-            r = session.post(f'{self._base_url}/snapshots/blueprints',
-                             headers=request_headers,
-                             data=mp_encoder)
-        if r.status_code != expected_status:
-            raise UIClientError(
-                'recreation of composer snapshot of blueprints',
-                r.status_code,
-                r.reason,
-            )
