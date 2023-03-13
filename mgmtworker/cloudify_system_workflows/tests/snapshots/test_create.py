@@ -1,3 +1,4 @@
+import base64
 import json
 import os
 import shutil
@@ -193,6 +194,12 @@ MOCK_CLIENT_RESPONSES = {
         },
     },
 }
+MOCK_COMPOSER_RESPONSES = {
+    'blueprints.zip': base64.b64decode(EMPTY_B64_ZIP),
+    'blueprints.json': b'{}',
+    'configuration.json': b'{}',
+    'favorites.json': b'[]',
+}
 
 
 @dataclass
@@ -370,10 +377,41 @@ def mock_unlink():
         yield unlink
 
 
+@pytest.fixture
+def mock_get_composer_client():
+    class MockComposerBaseSnapshotClient:
+        def __init__(self, entity_name):
+            self._entity_name = entity_name
+
+        def get_snapshot(self):
+            match self._entity_name:
+                case 'blueprints':
+                    return base64.b64decode(EMPTY_B64_ZIP)
+                case 'favorites':
+                    return b'[]'
+                case _:
+                    return b'{}'
+
+        def get_metadata(self):
+            return b'{}'
+
+    class MockComposerClient:
+        blueprints = MockComposerBaseSnapshotClient('blueprints')
+        configuration = MockComposerBaseSnapshotClient('configuration')
+        favorites = MockComposerBaseSnapshotClient('favorites')
+
+    with mock.patch(
+        'cloudify_system_workflows.snapshots.utils'
+        '.get_composer_client',
+        side_effect=MockComposerClient,
+    ) as client:
+        yield client
+
+
 def test_create_snapshot(mock_shutil_rmtree, mock_get_manager_version,
                          mock_ctx, mock_get_client, mock_unlink,
                          mock_override_entities_per_grouping,
-                         mock_zipfile):
+                         mock_zipfile, mock_get_composer_client):
     snap_id = 'testsnapshot'
     tempdir = tempfile.mkdtemp(prefix='snap-cre-test')
     snap_cre = SnapshotCreate(
@@ -395,6 +433,7 @@ def test_create_snapshot(mock_shutil_rmtree, mock_get_manager_version,
                              mock_zipfile)
         _assert_tenants(snap_dir, snap_cre._tenant_clients, mock_unlink,
                         mock_zipfile)
+        _check_snapshot_composer(snap_dir)
 
         _assert_snapshot_status_update(snap_id, True, snap_cre._client)
     finally:
@@ -441,7 +480,8 @@ def _check_tenant_dir_in_zip(tenant_name, zipfile, base_dir):
 
 def _check_snapshot_top_level(tempdir, unlink, zipfile):
     top_level_data = set(os.listdir(tempdir))
-    assert top_level_data == {'mgmt', 'tenants', constants.METADATA_FILENAME}
+    assert top_level_data == {'mgmt', 'tenants', 'composer',
+                              constants.METADATA_FILENAME}
     metadata_path = os.path.join(tempdir, constants.METADATA_FILENAME)
     with open(metadata_path) as md_handle:
         metadata = json.load(md_handle)
@@ -579,6 +619,19 @@ def _assert_tenants(tempdir, clients, unlink, zipfile):
 
         _check_tenant_calls(tenant, MOCK_CLIENT_RESPONSES[tenant],
                             clients[tenant], tenant_dir)
+
+
+def _check_snapshot_composer(tempdir):
+    base_dir_name = os.path.join(tempdir, 'composer')
+    top_level_composer = set(os.listdir(base_dir_name))
+    entities = ['blueprints.zip', 'blueprints.json', 'configuration.json',
+                'favorites.json']
+    assert top_level_composer == set(entities)
+    for entity in entities:
+        expected_content = MOCK_COMPOSER_RESPONSES[entity]
+        with open(os.path.join(base_dir_name, entity), 'rb') as entity_file:
+            entity_content = entity_file.read()
+        assert entity_content == expected_content
 
 
 def _check_resource_type(r_type, group, expected, tenant_dir,

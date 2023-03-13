@@ -1118,6 +1118,37 @@ def mock_get_client():
 
 
 @pytest.fixture
+def mock_get_composer_client():
+    class MockComposerBaseSnapshotClient:
+        def __init__(self, entity_name):
+            self._entity_name = entity_name
+
+        def restore_snapshot(self,
+                             snapshot_file_name,
+                             expected_status_code=201):
+            assert snapshot_file_name is not None
+
+        def restore_snapshot_and_metadata(self,
+                                          snapshot_file_name,
+                                          metadata_file_name,
+                                          expected_status_code=201):
+            assert snapshot_file_name is not None
+            assert metadata_file_name is not None
+
+    class MockComposerClient:
+        blueprints = MockComposerBaseSnapshotClient('blueprints')
+        configuration = MockComposerBaseSnapshotClient('configuration')
+        favorites = MockComposerBaseSnapshotClient('favorites')
+
+    with mock.patch(
+        'cloudify_system_workflows.snapshots.utils'
+        '.get_composer_client',
+        side_effect=MockComposerClient,
+    ) as client:
+        yield client
+
+
+@pytest.fixture
 def mock_ctx():
     with mock.patch(
         'cloudify_system_workflows.snapshots.snapshot_restore'
@@ -1233,6 +1264,7 @@ def mock_unlink():
 def test_restore_snapshot(mock_ctx, mock_get_client, mock_zipfile,
                           mock_manager_restoring, mock_mkdir,
                           mock_no_rmtree, mock_unlink,
+                          mock_get_composer_client,
                           mock_manager_finished_restoring):
     _test_restore('testsnapshot', 'snapshot_contents', EXPECTED_CALLS,
                   TENANTS, mock_mkdir, mock_manager_restoring,
@@ -1242,6 +1274,7 @@ def test_restore_snapshot(mock_ctx, mock_get_client, mock_zipfile,
 def test_restore_partial_snapshot(mock_ctx, mock_get_client, mock_zipfile,
                                   mock_manager_restoring, mock_mkdir,
                                   mock_no_rmtree, mock_unlink,
+                                  mock_get_composer_client,
                                   mock_manager_finished_restoring):
     _test_restore('testpartialsnapshot', 'partial_snapshot_contents',
                   PARTIAL_SNAP_EXPECTED_CALLS, PARTIAL_TENANTS, mock_mkdir,

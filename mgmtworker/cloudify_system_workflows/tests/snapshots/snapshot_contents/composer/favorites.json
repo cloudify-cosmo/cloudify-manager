@@ -1,0 +1,11 @@
+[
+    {
+        "username": "admin",
+        "favorites": [
+            "cloudify.nodes.Root",
+            "cloudify.nodes.CloudifyManager"
+        ],
+        "createdAt": "2023-03-13T11:05:17.693Z",
+        "updatedAt": "2023-03-13T11:05:24.075Z"
+    }
+]
