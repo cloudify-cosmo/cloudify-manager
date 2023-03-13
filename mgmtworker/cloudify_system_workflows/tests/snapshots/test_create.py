@@ -379,14 +379,26 @@ def mock_unlink():
 
 @pytest.fixture
 def mock_get_composer_client():
-    class MockComposerClient():
-        def get_snapshots(self, dump_type, suffix=None):
-            if dump_type == 'blueprints' and suffix is None:
-                return base64.b64decode(EMPTY_B64_ZIP)
-            elif dump_type == 'favorites':
-                return b'[]'
-            else:
-                return b'{}'
+    class MockComposerBaseSnapshotClient:
+        def __init__(self, entity_name):
+            self._entity_name = entity_name
+
+        def get_snapshot(self):
+            match self._entity_name:
+                case 'blueprints':
+                    return base64.b64decode(EMPTY_B64_ZIP)
+                case 'favorites':
+                    return b'[]'
+                case _:
+                    return b'{}'
+
+        def get_metadata(self):
+            return b'{}'
+
+    class MockComposerClient:
+        blueprints = MockComposerBaseSnapshotClient('blueprints')
+        configuration = MockComposerBaseSnapshotClient('configuration')
+        favorites = MockComposerBaseSnapshotClient('favorites')
 
     with mock.patch(
         'cloudify_system_workflows.snapshots.utils'

@@ -16,30 +16,70 @@ class UIClientError(Exception):
                f'(HTTP {self.status_code})'
 
 
+class ComposerBaseSnapshotClient:
+    """A base client for Cloudify Composer snapshots."""
+    _base_url: str
+
+    def __init__(self, base_url: str):
+        self._base_url = base_url
+        _, _, self._entity_name = base_url.rpartition('/')
+
+    def _url(self, suffix: str = ''):
+        url = self._base_url
+        if suffix:
+            url = f"{url.rstrip('/')}/{suffix}"
+        return url
+
+    @staticmethod
+    def _request_headers(**kwargs):
+        headers = {'authentication_token': get_admin_api_token()}
+        headers.update(kwargs)
+        return headers
+
+    def get_snapshot(self, expected_status_code=200):
+        """Retrieve a snapshot of Composer entities."""
+        with requests.session() as session:
+            resp = session.get(self._url(),
+                               headers=self._request_headers(),
+                               stream=True)
+        if resp.status_code != expected_status_code:
+            raise UIClientError(
+                f'getting composer snapshot of {self._entity_name}',
+                resp.status_code,
+                resp.reason,
+            )
+        return resp.content
+
+
+class ComposerBlueprintsSnapshotClient(ComposerBaseSnapshotClient):
+    """A client for Cloudify Composer blueprints' snapshots and metadata."""
+    def get_metadata(self, expected_status_code=200):
+        """Retrieve Composer blueprints' metadata."""
+        with requests.session() as session:
+            resp = session.get(self._url('metadata'),
+                               headers=self._request_headers(),
+                               stream=True)
+        if resp.status_code != expected_status_code:
+            raise UIClientError(
+                f'getting composer metadata of {self._entity_name}',
+                resp.status_code,
+                resp.reason,
+            )
+        return resp.content
+
+
 class ComposerClient:
-    """An HTTP client for Cloudify Composer"""
+    """A client for Cloudify Composer"""
     _base_url: str
 
     def __init__(self, base_url):
         self._base_url = base_url
-
-    def get_snapshots(self, dump_type, suffix=None):
-        """Retrieve snapshot of dump_type entities."""
-        if suffix:
-            dump_type += f'/{suffix}'
-        request_url = f'{self._base_url}/snapshots/{dump_type}'
-        request_headers = {'authentication-token': get_admin_api_token()}
-        with requests.session() as session:
-            r = session.get(request_url,
-                            headers=request_headers,
-                            stream=True)
-            if r.status_code != 200:
-                raise UIClientError(
-                    f'getting composer snapshot of {dump_type}',
-                    r.status_code,
-                    r.reason,
-                )
-            return r.content
+        self.blueprints = ComposerBlueprintsSnapshotClient(
+            f'{self._base_url}/snapshots/blueprints')
+        self.configuration = ComposerBaseSnapshotClient(
+            f'{self._base_url}/snapshots/configuration')
+        self.favorites = ComposerBaseSnapshotClient(
+            f'{self._base_url}/snapshots/favorites')
 
     def put_snapshot(self, dump_type, file_path, expected_status=201):
         """Post (restore) snapshot of dump_type entities."""

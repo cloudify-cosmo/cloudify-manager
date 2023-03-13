@@ -128,14 +128,13 @@ class SnapshotCreate(object):
 
         self._tempdir = None
         self._client = None
-        self._composer_client = None
+        self._composer_client = utils.get_composer_client()
         self._tenant_clients = {}
         self._zip_handle = None
         self._archive_dest = self._get_snapshot_archive_name()
 
     def create(self):
         self._client = get_rest_client()
-        self._composer_client = utils.get_composer_client()
         self._tenants = self._get_tenants()
         self._prepare_tempdir()
         try:
@@ -186,19 +185,19 @@ class SnapshotCreate(object):
         dump_dir_name = os.path.join(self._tempdir, 'composer')
         os.makedirs(dump_dir_name, exist_ok=True)
         for dump_type in INCLUDES['composer']:
+            dump_client = getattr(self._composer_client, dump_type)
             if dump_type == 'blueprints':
                 self._dump_data(
-                    self._composer_client.get_snapshots(dump_type),
+                    dump_client.get_snapshot(),
                     os.path.join(dump_dir_name, 'blueprints.zip')
                 )
                 self._dump_data(
-                    self._composer_client.get_snapshots(dump_type,
-                                                        'metadata'),
+                    dump_client.get_metadata(),
                     os.path.join(dump_dir_name, 'blueprints.json')
                 )
             else:
                 self._dump_data(
-                    self._composer_client.get_snapshots(dump_type),
+                    dump_client.get_snapshot(),
                     os.path.join(dump_dir_name, f'{dump_type}.json')
                 )
 

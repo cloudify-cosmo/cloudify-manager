@@ -380,6 +380,6 @@ def is_later_than_now(datetime_str):
     return datetime.datetime.utcnow() < datetime_ts
 
 
-def get_composer_client(base_url=COMPOSER_BASE_URL):
+def get_composer_client(base_url: str = COMPOSER_BASE_URL) -> ComposerClient:
     """Initialize composer client with a given base_url."""
     return ComposerClient(base_url)
