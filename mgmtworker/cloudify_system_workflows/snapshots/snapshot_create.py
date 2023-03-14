@@ -94,6 +94,7 @@ INCLUDES = {
     'secrets_providers': ['created_at', 'name', 'visibility', 'type',
                           'connection_parameters', 'created_by',
                           'created_at'],
+    'composer': ['blueprints', 'configuration', 'favorites'],
 }
 GET_DATA = [
     'users', 'user_groups',
@@ -127,6 +128,7 @@ class SnapshotCreate(object):
 
         self._tempdir = None
         self._client = None
+        self._composer_client = utils.get_composer_client()
         self._tenant_clients = {}
         self._zip_handle = None
         self._archive_dest = self._get_snapshot_archive_name()
@@ -149,6 +151,7 @@ class SnapshotCreate(object):
                 self._dump_metadata(manager_version)
 
                 self._dump_management()
+                self._dump_composer()
                 for tenant in self._tenants:
                     self._dump_tenant(tenant)
 
@@ -177,6 +180,35 @@ class SnapshotCreate(object):
         self._dump_objects('tenants')
         self._dump_objects('users')
         self._dump_objects('permissions')
+
+    def _dump_composer(self):
+        dump_dir_name = os.path.join(self._tempdir, 'composer')
+        os.makedirs(dump_dir_name, exist_ok=True)
+        for dump_type in INCLUDES['composer']:
+            dump_client = getattr(self._composer_client, dump_type)
+            if dump_type == 'blueprints':
+                self._dump_data(
+                    dump_client.get_snapshot(),
+                    os.path.join(dump_dir_name, 'blueprints.zip')
+                )
+                self._dump_data(
+                    dump_client.get_metadata(),
+                    os.path.join(dump_dir_name, 'blueprints.json')
+                )
+            else:
+                self._dump_data(
+                    dump_client.get_snapshot(),
+                    os.path.join(dump_dir_name, f'{dump_type}.json')
+                )
+
+    def _dump_data(self, data, file_name):
+        """Dump data into the file."""
+        with open(file_name, 'wb') as fh:
+            fh.write(data)
+        self._zip_handle.write(
+            file_name,
+            os.path.relpath(file_name, self._tempdir),
+        )
 
     def _dump_tenant(self, tenant_name):
         """Dump objects from a tenant."""

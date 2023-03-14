@@ -64,8 +64,10 @@ from .constants import (
     COMPOSER_USER,
     COMPOSER_APP
 )
+from .ui_clients import UIClientError
 from .utils import is_later_than_now, parse_datetime_string, get_tenants_list
 
+COMPOSER_ENTITIES = ['blueprints', 'configuration', 'favorites']
 EMPTY_B64_ZIP = 'UEsFBgAAAAAAAAAAAAAAAAAAAAAAAA=='
 
 
@@ -171,6 +173,7 @@ class SnapshotRestore(object):
         self._metadata = None
         self._snapshot_version = None
         self._client = get_rest_client()
+        self._composer_client = utils.get_composer_client()
         self._manager_version = utils.get_manager_version(self._client)
         self._encryption_key = None
         self._semaphore = threading.Semaphore(
@@ -184,6 +187,8 @@ class SnapshotRestore(object):
         self._new_restore_parse_and_restore('permissions', zipfile)
         self._new_restore_parse_and_restore('user_groups', zipfile)
         self._new_restore_parse_and_restore('users', zipfile)
+
+        self._new_restore_composer(zipfile)
 
         for resource in [
             'sites', 'secrets_providers', 'secrets', 'plugins',
@@ -578,11 +583,72 @@ class SnapshotRestore(object):
             elif entity_type == 'plugins':
                 os.unlink(entity['plugin_path'])
 
+    def _new_restore_composer(self, zipfile):
+        for entity in self._snapshot_files['composer']:
+            restore_client = getattr(self._composer_client, entity)
+            if entity == 'blueprints':
+                file_names_set = set(self._snapshot_files['composer'][entity])
+
+                metadata_file_names = [
+                    file_name for file_name in file_names_set
+                    if file_name.endswith('.json')
+                ]
+                if len(metadata_file_names) == 1:
+                    metadata_file_name = metadata_file_names[0]
+                else:
+                    raise NonRecoverableError(
+                        "Cannot find blueprints' metadata in composer "
+                        f"snapshot.  Blueprint files: {file_names_set}")
+
+                snapshot_file_names = file_names_set - {metadata_file_name}
+                if len(snapshot_file_names) == 1:
+                    snapshot_file_name = snapshot_file_names.pop()
+                else:
+                    raise NonRecoverableError(
+                        "Cannot find blueprints' snapshot in composer "
+                        f"snapshot.  Blueprint files: {file_names_set}")
+
+                zipfile.extract(metadata_file_name, self._tempdir)
+                zipfile.extract(snapshot_file_name, self._tempdir)
+                snapshot_file_path = os.path.join(
+                    self._tempdir, snapshot_file_name)
+                metadata_file_path = os.path.join(
+                    self._tempdir, metadata_file_name)
+                try:
+                    restore_client.restore_snapshot_and_metadata(
+                        snapshot_file_path, metadata_file_path)
+                except UIClientError as exc:
+                    # Composer will return 400 in case there are duplicates.
+                    # Let us not worry about that until we figure out how to
+                    # deal with that situation.
+                    if exc.status_code == 400:
+                        ctx.logger.error(exc)
+                    else:
+                        raise
+                os.unlink(snapshot_file_path)
+                os.unlink(metadata_file_path)
+            else:
+                for file_name in self._snapshot_files['composer'][entity]:
+                    zipfile.extract(file_name, self._tempdir)
+                    file_path = os.path.join(self._tempdir, file_name)
+                    try:
+                        restore_client.restore_snapshot(file_path)
+                    except UIClientError as exc:
+                        # Composer will return 400 in case there are
+                        # duplicates. Let us not worry about that until we
+                        #  figure out how to deal with that situation.
+                        if exc.status_code == 400:
+                            ctx.logger.error(exc)
+                        else:
+                            raise
+                    os.unlink(file_path)
+
     def scan_snapshot(self, zipfile):
         tree = {
             'metadata': None,
             'mgmt': {},
             'tenants': {},
+            'composer': {},
         }
         for entry in zipfile.filelist:
             if entry.is_dir():
@@ -607,6 +673,12 @@ class SnapshotRestore(object):
                     # This is probably an old snapshot
                     ctx.logger.debug('Unexpected file in snapshot: %s',
                                      filename)
+            elif filename.count('/') >= 1:
+                parts = filename.split('/')
+                if parts[0] == 'composer':
+                    entity_type, _, _ = parts[1].rpartition('.')
+                    tree['composer'].setdefault(entity_type, []).append(
+                        filename)
             else:
                 # This is probably an old snapshot
                 ctx.logger.debug('Unexpected file in snapshot: %s', filename)
