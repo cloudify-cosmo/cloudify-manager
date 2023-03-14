@@ -858,32 +858,6 @@ class SQLStorageManager(object):
                                 all_tenants=all_tenants)
         return True if query.first() else False
 
-    def full_access_list(self, model_class, filters=None):
-        """Return a list of `model_class` results, without considering the
-           user or the tenant
-
-        :param model_class: SQL DB table class
-        :param filters: An optional dictionary where keys are column names to
-                        filter by, and values are values applicable for those
-                        columns (or lists of such values)
-        :return: A (possibly empty) list of `model_class` results
-        """
-        query = model_class.query
-
-        # first, resolve the filters into a format used by ._add_value_filter
-        _include, filters, _substr_filters, _sort, _distinct = \
-            self._get_columns_from_field_names(
-                model_class,
-                include=[],
-                filters=filters or {},
-                substr_filters={},
-                sort={},
-                distinct=[],
-            )
-        if filters:
-            query = self._add_value_filter(query, filters)
-        return query.all()
-
     def put(self, instance):
         """Create a `model_class` instance from a serializable `model` object
 
