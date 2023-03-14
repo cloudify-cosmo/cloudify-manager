@@ -8,25 +8,26 @@ import argparse
 
 from manager_rest import config
 from manager_rest.flask_utils import setup_flask_app
-from manager_rest.storage import models, get_storage_manager
+from manager_rest.storage import db, models
 
 logger = logging.getLogger(__name__)
 
 
 def update_managers_version(version):
     logger.debug('Updating Cloudify managers version in DB...')
-    sm = get_storage_manager()
-    managers = sm.full_access_list(models.Manager)
 
     hostname = socket.gethostname()
     if hasattr(config.instance, 'manager_hostname'):
         hostname = config.instance.manager_hostname
 
+    managers = (
+        models.Manager.query
+        .filter_by(hostname=hostname)
+        .all()
+    )
     for manager in managers:
-        if manager.hostname == hostname:
-            manager.version = version
-            sm.update(manager)
-            break
+        manager.version = version
+    db.session.commit()
 
 
 if __name__ == '__main__':

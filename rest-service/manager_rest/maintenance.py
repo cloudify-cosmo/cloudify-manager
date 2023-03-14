@@ -22,7 +22,7 @@ from io import StringIO
 from cloudify.models_states import ExecutionState
 
 from manager_rest import utils
-from manager_rest.storage import get_storage_manager, models
+from manager_rest.storage import models
 from manager_rest.storage.models_base import db
 from manager_rest.constants import (FORBIDDEN_METHODS,
                                     MAINTENANCE_MODE_ACTIVATED,
@@ -113,17 +113,19 @@ def _return_maintenance_error(status):
 
 
 def get_running_executions():
-    executions = get_storage_manager().full_access_list(models.Execution)
+    executions = (
+        models.Execution.query
+        .filter(models.Execution.status.notin_(ExecutionState.END_STATES))
+        .all()
+    )
     running_executions = []
     for execution in executions:
-        if execution.status not in ExecutionState.END_STATES:
-            running_executions.append({
-                'id': execution.id,
-                'status': execution.status,
-                'deployment_id': execution.deployment_id,
-                'workflow_id': execution.workflow_id
-            })
-
+        running_executions.append({
+            'id': execution.id,
+            'status': execution.status,
+            'deployment_id': execution.deployment_id,
+            'workflow_id': execution.workflow_id
+        })
     return running_executions
 
 
