@@ -32,7 +32,7 @@ class ComposerBaseSnapshotClient:
 
     @staticmethod
     def _request_headers(extra_headers=None):
-        headers = {'authentication_token': get_admin_api_token()}
+        headers = {'authentication-token': get_admin_api_token()}
         if extra_headers:
             headers.update(headers)
         return headers
