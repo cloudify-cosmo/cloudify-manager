@@ -179,6 +179,8 @@ class Config(object):
     max_concurrent_workflows = Setting('max_concurrent_workflows', default=20)
     warnings = Setting('warnings', default=[])
 
+    prometheus_url = Setting('prometheus_url')
+
     _logger = None
 
     def load_configuration(self, from_db=True):

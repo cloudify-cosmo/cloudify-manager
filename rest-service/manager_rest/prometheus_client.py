@@ -1,11 +1,13 @@
 import typing
-
 import requests
-LOCAL_QUERY_URL = 'http://127.0.0.1:9090/monitoring/api/v1/query'
+
+from manager_rest import config
 
 
 def query(query_string: str, logger, timeout=None) -> typing.List[dict]:
-    query_url = LOCAL_QUERY_URL
+    query_url = '{}/monitoring/api/v1/query'.format(
+        config.instance.prometheus_url,
+    )
     url_with_query_string = \
         query_url + '?query=' + requests.compat.quote(query_string)
     params = {'query': query_string}
