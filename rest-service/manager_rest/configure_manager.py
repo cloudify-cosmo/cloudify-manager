@@ -562,6 +562,7 @@ def _generate_db_config_entries(cfg):
         log_fetch_password=prometheus_cfg.get(
             'credentials', {}).get('password'),
         default_agent_port=internal_rest_port,
+        prometheus_url=manager_cfg.get('prometheus_url'),
     )
     mgmtworker_cfg = build_dict(
         max_workers=mgmtworker_cfg.get('max_workers'),
