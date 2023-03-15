@@ -1,11 +1,11 @@
 import requests
 import requests.sessions
-from requests_toolbelt import MultipartEncoder
 
 from cloudify.utils import get_admin_api_token
 
 
 class UIClientError(Exception):
+    """An exception raised by (any of) UI clients."""
     def __init__(self, operation, status_code, reason):
         self.operation = operation
         self.status_code = status_code
@@ -34,24 +34,22 @@ class ComposerBaseSnapshotClient:
     def _request_headers(extra_headers=None):
         headers = {'authentication-token': get_admin_api_token()}
         if extra_headers:
-            headers.update(headers)
+            headers.update(extra_headers)
         return headers
 
-    def get_snapshot(self, expected_status_code=200):
+    def get_snapshot(self, expected_status_code=requests.codes.ok):
         """Retrieve a snapshot of Composer entities."""
         with requests.session() as session:
             resp = session.get(self._url(),
                                headers=self._request_headers(),
                                stream=True)
-        if resp.status_code != expected_status_code:
-            raise UIClientError(
-                f'getting composer snapshot of {self._entity_name}',
-                resp.status_code,
-                resp.reason,
-            )
+        handle_response(f'getting composer snapshot of {self._entity_name}',
+                        expected_status_code, resp)
         return resp.content
 
-    def restore_snapshot(self, snapshot_file_name, expected_status_code=201):
+    def restore_snapshot(self, snapshot_file_name,
+                         expected_status_code=requests.codes.created):
+        """Restore a snapshot of Composer entities."""
         request_headers = self._request_headers({
             'content-type': 'application/json; charset=utf-8',
         })
@@ -60,58 +58,47 @@ class ComposerBaseSnapshotClient:
                 resp = session.post(self._url(),
                                     headers=request_headers,
                                     data=data)
-        if resp.status_code != expected_status_code:
-            raise UIClientError(
-                f'restoring composer snapshot of {self._entity_name}',
-                resp.status_code,
-                resp.reason,
-            )
+        handle_response(f'restoring composer snapshot of {self._entity_name}',
+                        expected_status_code, resp)
 
 
 class ComposerBlueprintsSnapshotClient(ComposerBaseSnapshotClient):
     """A client for Cloudify Composer blueprints' snapshots and metadata."""
-    def get_metadata(self, expected_status_code=200):
+    def get_metadata(self, expected_status_code=requests.codes.ok):
         """Retrieve Composer blueprints' metadata."""
         with requests.session() as session:
             resp = session.get(self._url('metadata'),
                                headers=self._request_headers(),
                                stream=True)
-        if resp.status_code != expected_status_code:
-            raise UIClientError(
-                f'getting composer metadata of {self._entity_name}',
-                resp.status_code,
-                resp.reason,
-            )
+        handle_response(f'getting composer metadata of {self._entity_name}',
+                        expected_status_code, resp)
         return resp.content
 
-    def restore_snapshot_and_metadata(self,
-                                      snapshot_file_name,
-                                      metadata_file_name,
-                                      expected_status_code=201):
-        mp_encoder = MultipartEncoder(
-            fields={
-                'metadata': (
-                    'blueprints.json',
-                    open(metadata_file_name, 'rb'),
-                    'application/json',
-                ),
-                'snapshot': (
-                    'blueprints.zip',
-                    open(snapshot_file_name, 'rb'),
-                    'application/zip',
-                ),
-            }
-        )
+    def restore_snapshot_and_metadata(
+            self, snapshot_file_name, metadata_file_name,
+            expected_status_code=requests.codes.created):
+        """Restore blueprint's snapshot and metadata"""
+        request_files = {
+            'metadata': (None, open(metadata_file_name, 'rb')),
+            'snapshot': (None, open(snapshot_file_name, 'rb')),
+        }
         with requests.session() as session:
             resp = session.post(self._url(),
                                 headers=self._request_headers(),
-                                data=mp_encoder)
-        if resp.status_code != expected_status_code:
-            raise UIClientError(
-                'restoring composer snapshot of blueprints',
-                resp.status_code,
-                resp.reason,
-            )
+                                files=request_files)
+        handle_response('restoring composer snapshot of blueprints',
+                        expected_status_code, resp)
+
+
+def handle_response(operation: str, expected_status_code: int,
+                    response: requests.Response):
+    """Validate response status_code against expected status_code"""
+    if response.status_code != expected_status_code:
+        try:
+            description = response.json().get('description')
+        except requests.exceptions.JSONDecodeError:
+            description = response.reason
+        raise UIClientError(operation, response.status_code, description)
 
 
 class ComposerClient:
