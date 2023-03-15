@@ -196,7 +196,7 @@ MOCK_CLIENT_RESPONSES = {
 }
 MOCK_COMPOSER_RESPONSES = {
     'blueprints.zip': base64.b64decode(EMPTY_B64_ZIP),
-    'blueprints.json': b'{}',
+    'blueprints.json': b'[]',
     'configuration.json': b'{}',
     'favorites.json': b'[]',
 }
@@ -393,7 +393,7 @@ def mock_get_composer_client():
                     return b'{}'
 
         def get_metadata(self):
-            return b'{}'
+            return b'[]'
 
     class MockComposerClient:
         blueprints = MockComposerBaseSnapshotClient('blueprints')
