@@ -23,7 +23,7 @@ from cloudify.utils import ManagerVersion, get_local_rest_certificate
 
 from cloudify_rest_client.executions import Execution
 
-from . import networks, utils
+from . import networks, utils, INCLUDES
 from cloudify_system_workflows.deployment_environment import \
     _create_deployment_workdir
 from cloudify_system_workflows.snapshots import npm
@@ -173,6 +173,7 @@ class SnapshotRestore(object):
         self._snapshot_version = None
         self._client = get_rest_client()
         self._composer_client = utils.get_composer_client()
+        self._stage_client = utils.get_stage_client()
         self._manager_version = utils.get_manager_version(self._client)
         self._encryption_key = None
         self._semaphore = threading.Semaphore(
@@ -188,6 +189,7 @@ class SnapshotRestore(object):
         self._new_restore_parse_and_restore('users', zipfile)
 
         self._new_restore_composer(zipfile)
+        self._new_restore_stage(zipfile)
 
         for resource in [
             'sites', 'secrets_providers', 'secrets', 'plugins',
@@ -582,6 +584,22 @@ class SnapshotRestore(object):
             elif entity_type == 'plugins':
                 os.unlink(entity['plugin_path'])
 
+    def _new_restore_ui_entity(self, zipfile, client, files_list, tenant=None):
+        for file_name in files_list:
+            zipfile.extract(file_name, self._tempdir)
+            file_path = os.path.join(self._tempdir, file_name)
+            try:
+                client.restore_snapshot(file_path, tenant=tenant)
+            except UIClientError as exc:
+                # Composer will return 400 in case there are
+                # duplicates. Let us not worry about that until we
+                #  figure out how to deal with that situation.
+                if exc.status_code == 400:
+                    ctx.logger.error(exc)
+                else:
+                    raise
+            os.unlink(file_path)
+
     def _new_restore_composer(self, zipfile):
         for entity in self._snapshot_files['composer']:
             restore_client = getattr(self._composer_client, entity)
@@ -627,20 +645,29 @@ class SnapshotRestore(object):
                 os.unlink(snapshot_file_path)
                 os.unlink(metadata_file_path)
             else:
-                for file_name in self._snapshot_files['composer'][entity]:
-                    zipfile.extract(file_name, self._tempdir)
-                    file_path = os.path.join(self._tempdir, file_name)
-                    try:
-                        restore_client.restore_snapshot(file_path)
-                    except UIClientError as exc:
-                        # Composer will return 400 in case there are
-                        # duplicates. Let us not worry about that until we
-                        #  figure out how to deal with that situation.
-                        if exc.status_code == 400:
-                            ctx.logger.error(exc)
-                        else:
-                            raise
-                    os.unlink(file_path)
+                self._new_restore_ui_entity(
+                        zipfile,
+                        restore_client,
+                        self._snapshot_files['composer'][entity]
+                )
+
+    def _new_restore_stage(self, zipfile):
+        for element in self._snapshot_files['stage']:
+            if element in INCLUDES['stage']:
+                self._new_restore_ui_entity(
+                        zipfile,
+                        getattr(self._stage_client, element.replace('-', '_')),
+                        self._snapshot_files['stage'][element],
+                )
+            else:
+                for entity in self._snapshot_files['stage'][element]:
+                    self._new_restore_ui_entity(
+                            zipfile,
+                            getattr(self._stage_client,
+                                    entity.replace('-', '_')),
+                            self._snapshot_files['stage'][element][entity],
+                            tenant=element,
+                    )
 
     def scan_snapshot(self, zipfile):
         tree = {
@@ -648,6 +675,7 @@ class SnapshotRestore(object):
             'mgmt': {},
             'tenants': {},
             'composer': {},
+            'stage': {},
         }
         for entry in zipfile.filelist:
             if entry.is_dir():
@@ -668,6 +696,11 @@ class SnapshotRestore(object):
                     entity_type = parts[2]
                     tree['tenants'].setdefault(tenant, {}).setdefault(
                         entity_type, []).append(filename)
+                elif parts[0] == 'stage':
+                    tenant = parts[1]
+                    entity_type, _, _ = parts[2].rpartition('.')
+                    tree['stage'].setdefault(tenant, {}).setdefault(
+                            entity_type, []).append(filename)
                 else:
                     # This is probably an old snapshot
                     ctx.logger.debug('Unexpected file in snapshot: %s',
@@ -678,6 +711,10 @@ class SnapshotRestore(object):
                     entity_type, _, _ = parts[1].rpartition('.')
                     tree['composer'].setdefault(entity_type, []).append(
                         filename)
+                if parts[0] == 'stage':
+                    entity_type, _, _ = parts[1].rpartition('.')
+                    tree['stage'].setdefault(entity_type, []).append(
+                            filename)
             else:
                 # This is probably an old snapshot
                 ctx.logger.debug('Unexpected file in snapshot: %s', filename)
