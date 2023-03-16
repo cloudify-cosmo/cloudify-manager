@@ -67,7 +67,6 @@ from .constants import (
 from .ui_clients import UIClientError
 from .utils import is_later_than_now, parse_datetime_string, get_tenants_list
 
-COMPOSER_ENTITIES = ['blueprints', 'configuration', 'favorites']
 EMPTY_B64_ZIP = 'UEsFBgAAAAAAAAAAAAAAAAAAAAAAAA=='
 
 

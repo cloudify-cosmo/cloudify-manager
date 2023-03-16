@@ -12,12 +12,12 @@ import pytest
 
 from cloudify_rest_client.responses import ListResponse
 
+from cloudify_system_workflows.snapshots import INCLUDES
 from cloudify_system_workflows.snapshots.snapshot_create import (
     constants,
     EMPTY_B64_ZIP,
     EXTRA_DUMP_KWARGS,
     GET_DATA,
-    INCLUDES,
     SnapshotCreate,
 )
 
