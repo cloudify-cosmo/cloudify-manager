@@ -95,6 +95,8 @@ INCLUDES = {
                           'connection_parameters', 'created_by',
                           'created_at'],
     'composer': ['blueprints', 'configuration', 'favorites'],
+    'stage': ['blueprint-layouts', 'configuration', 'page-groups', 'pages',
+              'templates', 'ua', 'widgets'],
 }
 GET_DATA = [
     'users', 'user_groups',
@@ -129,6 +131,7 @@ class SnapshotCreate(object):
         self._tempdir = None
         self._client = None
         self._composer_client = utils.get_composer_client()
+        self._stage_client = utils.get_stage_client()
         self._tenant_clients = {}
         self._zip_handle = None
         self._archive_dest = self._get_snapshot_archive_name()
@@ -152,6 +155,7 @@ class SnapshotCreate(object):
 
                 self._dump_management()
                 self._dump_composer()
+                self._dump_stage()
                 for tenant in self._tenants:
                     self._dump_tenant(tenant)
 
@@ -199,6 +203,29 @@ class SnapshotCreate(object):
                 self._dump_data(
                     dump_client.get_snapshot(),
                     os.path.join(dump_dir_name, f'{dump_type}.json')
+                )
+
+    def _dump_stage(self):
+        dump_dir_name = os.path.join(self._tempdir, 'stage')
+        os.makedirs(dump_dir_name, exist_ok=True)
+        for dump_type in INCLUDES['stage']:
+            dump_client = getattr(self._stage_client,
+                                  dump_type.replace('-', '_'))
+            file_ext = 'zip' if dump_type == 'widgets' else 'json'
+
+            if dump_type == 'ua':
+                for tenant in self._tenants:
+                    os.makedirs(os.path.join(dump_dir_name, tenant),
+                                exist_ok=True)
+                    self._dump_data(
+                            dump_client.get_snapshot(tenant=tenant),
+                            os.path.join(dump_dir_name, tenant,
+                                         f'{dump_type}.{file_ext}'),
+                    )
+            else:
+                self._dump_data(
+                        dump_client.get_snapshot(),
+                        os.path.join(dump_dir_name, f'{dump_type}.{file_ext}'),
                 )
 
     def _dump_data(self, data, file_name):
