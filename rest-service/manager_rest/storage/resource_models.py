@@ -582,8 +582,6 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             fields['workflows'] = flask_fields.List(
                 flask_fields.Nested(Workflow.resource_fields)
             )
-            fields['schedules'] = flask_fields.List(
-                flask_fields.Nested(ExecutionSchedule.resource_fields))
             fields['deployment_groups'] = \
                 flask_fields.List(flask_fields.String)
             fields['latest_execution_id'] = flask_fields.String()
