@@ -757,8 +757,7 @@ class InterDeploymentDependenciesTest(BaseServerTestCase):
         )
 
     def test_list_filter_by_deployment(self):
-        dependency = self.client.inter_deployment_dependencies.create(
-            **self.dependency)
+        self.client.inter_deployment_dependencies.create(**self.dependency)
 
         # filtering by source
         assert len(self.client.inter_deployment_dependencies.list(

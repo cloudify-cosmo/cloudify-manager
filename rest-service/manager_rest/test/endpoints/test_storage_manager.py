@@ -16,8 +16,6 @@
 from datetime import datetime
 from unittest import mock
 
-from sqlalchemy.orm.exc import DetachedInstanceError
-
 from cloudify.models_states import VisibilityState
 
 from manager_rest import manager_exceptions, utils
