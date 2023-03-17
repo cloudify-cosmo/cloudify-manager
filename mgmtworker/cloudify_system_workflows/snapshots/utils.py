@@ -13,11 +13,12 @@ from cloudify.workflows import ctx
 from cloudify import constants, manager
 from . import constants as snapshot_constants
 from .constants import SECURITY_FILE_LOCATION, SECURITY_FILENAME
-from .ui_clients import ComposerClient
+from .ui_clients import ComposerClient, StageClient
 from cloudify.utils import ManagerVersion, get_local_rest_certificate
 from cloudify.utils import get_tenant_name
 
 COMPOSER_BASE_URL = 'http://localhost:3000/composer/backend'
+STAGE_BASE_URL = 'http://localhost:8088/console'
 
 
 class DictToAttributes(dict):
@@ -383,3 +384,8 @@ def is_later_than_now(datetime_str):
 def get_composer_client(base_url: str = COMPOSER_BASE_URL) -> ComposerClient:
     """Initialize composer client with a given base_url."""
     return ComposerClient(base_url)
+
+
+def get_stage_client(base_url: str = STAGE_BASE_URL) -> StageClient:
+    """Initialize composer client with a given base_url."""
+    return StageClient(base_url)
