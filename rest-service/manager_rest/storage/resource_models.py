@@ -526,6 +526,8 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                                        unique=True)
 
     deployment_group_id = association_proxy('deployment_groups', 'id')
+    latest_execution_id = association_proxy(
+        'latest_execution', 'id')
     latest_execution_finished_operations = association_proxy(
         'latest_execution', 'finished_operations')
     latest_execution_total_operations = association_proxy(
@@ -584,6 +586,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                 flask_fields.Nested(ExecutionSchedule.resource_fields))
             fields['deployment_groups'] = \
                 flask_fields.List(flask_fields.String)
+            fields['latest_execution_id'] = flask_fields.String()
             fields['latest_execution_status'] = flask_fields.String()
             fields['latest_execution_total_operations'] = \
                 flask_fields.Integer()
@@ -629,8 +632,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             dep_dict['create_execution'] = \
                 self.create_execution.id if self.create_execution else None
         if 'latest_execution' in include:
-            dep_dict['latest_execution'] = \
-                self.latest_execution.id if self.latest_execution else None
+            dep_dict['latest_execution'] = self.latest_execution_id
         return dep_dict
 
     def _list_workflows(self):
