@@ -142,7 +142,7 @@ class SitesName(SecuredResource):
             return
 
         validate_inputs({'new_name': new_name})
-        if storage_manager.exists(models.Site, new_name):
+        if storage_manager.get(models.Site, new_name, fail_silently=True):
             raise manager_exceptions.ConflictError(
                 'Invalid new name `{0}`, it already exists on {1} or '
                 'with global visibility'.format(new_name, utils.current_tenant)
