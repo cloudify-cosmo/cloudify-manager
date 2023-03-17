@@ -1123,15 +1123,11 @@ def mock_get_composer_client():
         def __init__(self, entity_name):
             self._entity_name = entity_name
 
-        def restore_snapshot(self,
-                             snapshot_file_name,
-                             expected_status_code=201):
+        def restore_snapshot(self, snapshot_file_name, **_):
             assert snapshot_file_name is not None
 
-        def restore_snapshot_and_metadata(self,
-                                          snapshot_file_name,
-                                          metadata_file_name,
-                                          expected_status_code=201):
+        def restore_snapshot_and_metadata(self, snapshot_file_name,
+                                          metadata_file_name, **_):
             assert snapshot_file_name is not None
             assert metadata_file_name is not None
 
@@ -1144,6 +1140,36 @@ def mock_get_composer_client():
         'cloudify_system_workflows.snapshots.utils'
         '.get_composer_client',
         side_effect=MockComposerClient,
+    ) as client:
+        yield client
+
+
+@pytest.fixture
+def mock_get_stage_client():
+    class MockStageBaseSnapshotClient:
+        def __init__(self, entity_name):
+            self._entity_name = entity_name
+
+        def restore_snapshot(self, snapshot_file_name, tenant=None, **_):
+            assert snapshot_file_name is not None
+            if self._entity_name == 'ua':
+                assert tenant is not None
+            else:
+                assert tenant is None
+
+    class MockStageClient:
+        blueprint_layouts = MockStageBaseSnapshotClient('blueprint-layouts')
+        configuration = MockStageBaseSnapshotClient('configuration')
+        page_groups = MockStageBaseSnapshotClient('page-groups')
+        pages = MockStageBaseSnapshotClient('pages')
+        templates = MockStageBaseSnapshotClient('templates')
+        ua = MockStageBaseSnapshotClient('ua')
+        widgets = MockStageBaseSnapshotClient('widgets')
+
+    with mock.patch(
+        'cloudify_system_workflows.snapshots.utils'
+        '.get_stage_client',
+        side_effect=MockStageClient,
     ) as client:
         yield client
 
@@ -1265,6 +1291,7 @@ def test_restore_snapshot(mock_ctx, mock_get_client, mock_zipfile,
                           mock_manager_restoring, mock_mkdir,
                           mock_no_rmtree, mock_unlink,
                           mock_get_composer_client,
+                          mock_get_stage_client,
                           mock_manager_finished_restoring):
     _test_restore('testsnapshot', 'snapshot_contents', EXPECTED_CALLS,
                   TENANTS, mock_mkdir, mock_manager_restoring,
@@ -1275,6 +1302,7 @@ def test_restore_partial_snapshot(mock_ctx, mock_get_client, mock_zipfile,
                                   mock_manager_restoring, mock_mkdir,
                                   mock_no_rmtree, mock_unlink,
                                   mock_get_composer_client,
+                                  mock_get_stage_client,
                                   mock_manager_finished_restoring):
     _test_restore('testpartialsnapshot', 'partial_snapshot_contents',
                   PARTIAL_SNAP_EXPECTED_CALLS, PARTIAL_TENANTS, mock_mkdir,
