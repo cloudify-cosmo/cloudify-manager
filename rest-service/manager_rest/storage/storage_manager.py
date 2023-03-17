@@ -232,7 +232,7 @@ class SQLStorageManager(object):
 
         for field_name in include:
             field = getattr(model_class, field_name, None)
-            if not field:
+            if field is None:
                 continue
 
             if isinstance(field, AssociationProxyInstance):
@@ -268,7 +268,7 @@ class SQLStorageManager(object):
     ) -> Iterable[sql.ClauseElement]:
         for field_name, value in filters.items():
             field = resolved_fields.get(field_name)
-            if not field:
+            if field is None:
                 continue
             field, value = self._update_case_insensitive(field, value)
             if callable(value):
@@ -409,7 +409,7 @@ class SQLStorageManager(object):
     ) -> Iterable[sql.ClauseElement]:
         for field_name, order in sort.items():
             sort_by = resolved_fields.get(field_name)
-            if not sort_by:
+            if sort_by is None:
                 continue
             if order == 'desc':
                 sort_by = sort_by.desc()
