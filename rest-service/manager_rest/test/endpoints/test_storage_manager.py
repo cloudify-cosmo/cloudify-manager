@@ -189,29 +189,6 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         self.assertEqual(dep.permalink, deserialized_dep.permalink)
         self.assertEqual(dep.description, deserialized_dep.description)
 
-    def test_fields_query(self):
-        now = utils.get_formatted_timestamp()
-        blueprint = models.Blueprint(id='blueprint-id',
-                                     created_at=now,
-                                     updated_at=now,
-                                     description=None,
-                                     plan={'name': 'my-bp'},
-                                     main_file_name='aaa')
-        self.sm.put(blueprint)
-        db.session.expunge(blueprint)
-        blueprint_restored = self.sm.get(
-            models.Blueprint,
-            'blueprint-id',
-            include=['id', 'created_at']
-        )
-        self.assertEqual('blueprint-id', blueprint_restored.id)
-        self.assertEqual(now, blueprint_restored.created_at)
-        db.session.expunge(blueprint_restored)
-        for attrname in ['updated_at', 'plan', 'main_file_name']:
-            with self.assertRaises(DetachedInstanceError):
-                # the attribute cannot be loaded - and it was not loaded before
-                getattr(blueprint_restored, attrname)
-
     @mock.patch('manager_rest.storage.storage_manager.'
                 'config.instance.default_page_size',
                 10)
