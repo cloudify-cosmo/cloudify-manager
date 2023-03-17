@@ -526,6 +526,8 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                                        unique=True)
 
     deployment_group_id = association_proxy('deployment_groups', 'id')
+    latest_execution_id = association_proxy(
+        'latest_execution', 'id')
     latest_execution_finished_operations = association_proxy(
         'latest_execution', 'finished_operations')
     latest_execution_total_operations = association_proxy(
@@ -537,16 +539,6 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         db.Column(db.Integer, server_default='0', nullable=False, default=0)
     unavailable_instances =\
         db.Column(db.Integer, server_default='0', nullable=False, default=0)
-
-    @classproperty
-    def autoload_relationships(cls):
-        return [
-            cls.create_execution,
-            cls.latest_execution,
-            cls.deployment_groups,
-            cls.labels,
-            cls.schedules,
-        ]
 
     @classproperty
     def labels_model(cls):
@@ -590,10 +582,9 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             fields['workflows'] = flask_fields.List(
                 flask_fields.Nested(Workflow.resource_fields)
             )
-            fields['schedules'] = flask_fields.List(
-                flask_fields.Nested(ExecutionSchedule.resource_fields))
             fields['deployment_groups'] = \
                 flask_fields.List(flask_fields.String)
+            fields['latest_execution_id'] = flask_fields.String()
             fields['latest_execution_status'] = flask_fields.String()
             fields['latest_execution_total_operations'] = \
                 flask_fields.Integer()
@@ -639,8 +630,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             dep_dict['create_execution'] = \
                 self.create_execution.id if self.create_execution else None
         if 'latest_execution' in include:
-            dep_dict['latest_execution'] = \
-                self.latest_execution.id if self.latest_execution else None
+            dep_dict['latest_execution'] = self.latest_execution_id
         return dep_dict
 
     def _list_workflows(self):
@@ -1198,12 +1188,6 @@ class Execution(CreatedAtMixin, SQLResourceBase):
                                         server_default='false')
     execution_group_id = association_proxy('execution_groups', 'id')
     deployment_display_name = association_proxy('deployment', 'display_name')
-
-    @classproperty
-    def autoload_relationships(cls):
-        return [
-            cls.deployment,
-        ]
 
     def __repr__(self):
         return (

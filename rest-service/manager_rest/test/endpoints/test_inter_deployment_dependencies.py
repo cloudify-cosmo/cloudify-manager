@@ -756,6 +756,35 @@ class InterDeploymentDependenciesTest(BaseServerTestCase):
             'infra'
         )
 
+    def test_list_filter_by_deployment(self):
+        self.client.inter_deployment_dependencies.create(**self.dependency)
+
+        # filtering by source
+        assert len(self.client.inter_deployment_dependencies.list(
+            source_deployment_id=self.source_deployment,
+        )) == 1
+        assert len(self.client.inter_deployment_dependencies.list(
+            source_deployment_id=self.target_deployment,
+        )) == 0
+
+        # filtering by target
+        assert len(self.client.inter_deployment_dependencies.list(
+            target_deployment_id=self.target_deployment,
+        )) == 1
+        assert len(self.client.inter_deployment_dependencies.list(
+            target_deployment_id=self.source_deployment,
+        )) == 0
+
+        # filtering by both
+        assert len(self.client.inter_deployment_dependencies.list(
+            source_deployment_id=self.source_deployment,
+            target_deployment_id=self.target_deployment,
+        )) == 1
+        assert len(self.client.inter_deployment_dependencies.list(
+            source_deployment_id=self.source_deployment,
+            target_deployment_id=self.source_deployment,
+        )) == 0
+
     def test_alerts_force_uninstall_deployment_no_error(self):
         self._prepare_dependent_deployments()
         self.client.executions.start('infra', 'uninstall', force=True)

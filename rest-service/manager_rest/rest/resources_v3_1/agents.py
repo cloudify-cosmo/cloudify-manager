@@ -37,6 +37,8 @@ class Agents(SecuredResource):
             '_get_all_results',
             request.args.get('_get_all_results', False)
         )
+        if 'node_instance_ids' in filters:
+            filters['node_instance_id'] = filters.pop('node_instance_ids')
         return get_storage_manager().list(
             models.Agent,
             include=_include,
