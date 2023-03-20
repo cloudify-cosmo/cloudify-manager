@@ -220,8 +220,8 @@ def _check_blueprint_requirements(ctx, deployment, blueprint):
         if missing_capabilities:
             cap_message = _format_required_capabilities(missing_capabilities)
             raise ValueError(
-                f'Environment {parent.id} does not have the required '
-                f'capabilities: {cap_message}'
+                f'Environment {parent.display_name} ({parent.id}) does not '
+                f'have the required capabilities: {cap_message}'
             )
 
 
