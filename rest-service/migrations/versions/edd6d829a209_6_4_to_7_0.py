@@ -36,6 +36,46 @@ users_table = sa.table(
     sa.Column('created_at', UTCDateTime),
 )
 
+tables_to_audit = {
+    'agents': ('_storage_id', ['_tenant_id', 'id']),
+    'blueprints': ('_storage_id', ['_tenant_id', 'id']),
+    'blueprints_filters': ('_storage_id', ['_tenant_id', 'id']),
+    'blueprints_labels': ('id', ['id']),
+    'certificates': ('id', ['id']),
+    'deployment_groups': ('_storage_id', ['_tenant_id', 'id']),
+    'deployment_groups_labels': ('id', ['id']),
+    'deployment_labels_dependencies': ('_storage_id', ['_tenant_id', 'id']),
+    'deployment_modifications': ('_storage_id', ['_tenant_id', 'id']),
+    'deployment_update_steps': ('_storage_id', ['_tenant_id', 'id']),
+    'deployment_updates': ('_storage_id', ['_tenant_id', 'id']),
+    'deployments': ('_storage_id', ['_tenant_id', 'id']),
+    'deployments_filters': ('_storage_id', ['_tenant_id', 'id']),
+    'deployments_labels': ('id', ['id']),
+    'execution_groups': ('_storage_id', ['_tenant_id', 'id']),
+    'execution_schedules': ('_storage_id', ['_tenant_id', 'id']),
+    'executions': ('_storage_id', ['_tenant_id', 'id']),
+    'groups': ('id', ['id']),
+    'inter_deployment_dependencies': ('_storage_id', ['_tenant_id', 'id']),
+    'licenses': ('id', ['id']),
+    'maintenance_mode': ('id', ['id']),
+    'managers': ('id', ['id']),
+    'node_instances': ('_storage_id', ['_tenant_id', 'id']),
+    'nodes': ('_storage_id', ['_tenant_id', 'id']),
+    'operations': ('_storage_id', ['_tenant_id', 'id']),
+    'permissions': ('id', ['id']),
+    'plugins': ('_storage_id', ['_tenant_id', 'id']),
+    'plugins_states': ('_storage_id', ['_storage_id']),
+    'plugins_updates': ('_storage_id', ['_tenant_id', 'id']),
+    'roles': ('id', ['id']),
+    'secrets': ('_storage_id', ['_tenant_id', 'id']),
+    'sites': ('_storage_id', ['_tenant_id', 'name']),
+    'snapshots': ('_storage_id', ['_tenant_id', 'id']),
+    'tasks_graphs': ('_storage_id', ['_tenant_id', 'id']),
+    'tenants': ('id', ['_tenant_id', 'name']),
+    'usage_collector': ('id', ['manager_id', 'id']),
+    'users': ('id', ['username']),
+}
+
 
 def upgrade():
     add_p_to_pickle_columns()
@@ -53,9 +93,15 @@ def upgrade():
     add_blueprint_requirements_column()
     add_prometheus_url_config()
     drop_ldap_ca_config()
+    add_audit_log_ref_identifier()
+    create_functions_write_audit_log()
+    update_audit_triggers()
 
 
 def downgrade():
+    revert_audit_triggers()
+    drop_functions_write_audit_log()
+    drop_audit_log_ref_identifier()
     add_ldap_ca_config()
     drop_prometheus_url_config()
     drop_blueprint_requirements_column()
@@ -871,3 +917,79 @@ def drop_prometheus_url_config():
             & (config_table.c.scope == op.inline_literal('rest'))
         )
     )
+
+
+def add_audit_log_ref_identifier():
+    op.add_column('audit_log',
+                  sa.Column('ref_identifier', sa.dialects.postgresql.JSONB))
+
+
+def drop_audit_log_ref_identifier():
+    op.drop_column('audit_log', 'ref_identifier')
+
+
+def create_functions_write_audit_log():
+    op.execute("""
+    CREATE OR REPLACE FUNCTION write_audit_log() RETURNS TRIGGER AS $$
+        DECLARE
+            _id_columns text[] := tg_argv[1]::text[];
+            _user text := public.audit_username();
+            _execution_id text := public.audit_execution_id();
+            _operation audit_operation;
+            _record jsonb;
+            _ref_identifier jsonb;
+        BEGIN
+            IF (TG_OP = 'INSERT') THEN
+                _operation := 'create';
+                _record := to_json(NEW);
+            ELSEIF (TG_OP = 'UPDATE') THEN
+                _operation := 'update';
+                _record := to_json(NEW);
+            ELSEIF (TG_OP = 'DELETE') THEN
+                _operation := 'delete';
+                _record := to_json(OLD);
+            END IF;
+            _ref_identifier := (
+                SELECT jsonb_object(
+                    array_agg(kv.key::TEXT),
+                    array_agg(trim(both '"' from kv.value::TEXT))
+                )
+                FROM jsonb_each(_record) kv WHERE kv.key = ANY(_id_columns)
+            );
+
+            INSERT INTO public.audit_log (ref_table, ref_id, ref_identifier,
+                                          operation, creator_name,
+                                          execution_id, created_at)
+                VALUES (quote_ident(tg_table_name),
+                        (_record->>tg_argv[0])::int,
+                        _ref_identifier, _operation, _user, _execution_id,
+                        now());
+            RETURN NULL;
+        END;
+    $$ LANGUAGE plpgsql;""")
+
+
+def drop_functions_write_audit_log():
+    op.execute("""DROP FUNCTION write_audit_log;""")
+
+
+def update_audit_triggers():
+    for table_name, (id_field, identifier_fields) in tables_to_audit.items():
+        op.execute(f"""
+        DROP TRIGGER IF EXISTS audit_{table_name} ON {table_name};
+        CREATE TRIGGER audit_{table_name}
+        AFTER INSERT OR UPDATE OR DELETE ON {table_name} FOR EACH ROW
+        EXECUTE PROCEDURE
+        write_audit_log('{id_field}', '{{ {",".join(identifier_fields)} }}');
+        """)
+
+
+def revert_audit_triggers():
+    for table_name, (ref_id_field, _) in tables_to_audit.items():
+        op.execute(f"""
+        DROP TRIGGER IF EXISTS audit_{table_name} ON {table_name};
+        CREATE TRIGGER audit_{table_name}
+        AFTER INSERT OR UPDATE OR DELETE ON {table_name} FOR EACH ROW
+        EXECUTE PROCEDURE
+        write_audit_log_{ref_id_field.strip('_')}('{table_name}');
+        """)
