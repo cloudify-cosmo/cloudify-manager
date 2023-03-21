@@ -1,6 +1,7 @@
 #!/usr/bin/env -S bash -eux
 
 /opt/rest-service/docker/prepare_secrets.sh
+/opt/rest-service/node_exporter &
 
 python -m manager_rest.configure_manager --db-wait postgresql
 python -m manager_rest.configure_manager --rabbitmq-wait rabbitmq
