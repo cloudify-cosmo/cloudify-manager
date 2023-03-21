@@ -13,15 +13,19 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from typing import Type
+from typing import Iterable, Type, Callable, Any
 
+import itertools
 import psutil
 from functools import wraps
-from collections import OrderedDict
 from contextlib import contextmanager
 from flask_security import current_user
-from sqlalchemy import or_ as sql_or, inspect, func
-from sqlalchemy.orm import RelationshipProperty, aliased
+from sqlalchemy import or_ as sql_or, inspect, func, sql
+from sqlalchemy.orm import (
+    RelationshipProperty,
+    aliased,
+    InstrumentedAttribute,
+)
 from sqlalchemy.exc import (
     SQLAlchemyError,
     IntegrityError,
@@ -40,7 +44,6 @@ from manager_rest.utils import (is_administrator,
                                 all_tenants_authorization,
                                 validate_global_modification)
 
-from .utils import get_joins
 from .filters import add_filter_rules_to_query
 
 from psycopg2 import DatabaseError as Psycopg2DBError
@@ -64,6 +67,7 @@ class _Transaction(object):
     even if the block throws an exception (which would cause a rollback
     instead otherwise).
     """
+
     def __init__(self):
         self.force_commit = False
 
@@ -128,151 +132,157 @@ class SQLStorageManager(object):
             self._in_transaction = False
             self._safe_commit()
 
-    def _get_base_query(self, model_class, include, joins, distinct=None,
-                        load_relationships=False):
-        """Create the initial query from the model class and included columns
+    def _get_query(
+        self,
+        model_class,
+        include=None,
+        filters=None,
+        substr_filters=None,
+        sort=None,
+        sort_labels=None,
+        all_tenants=False,
+        distinct=None,
+        filter_rules=None,
+        default_sorting=True,
+        group_by=None,
+        with_entities=None,
+    ):
+        # first, default all the arguments. They're all optional.
+        filters = filters or {}
+        sort = sort or {}
+        distinct = distinct or []
+        include = include or []
+        with_entities = with_entities or []
+        group_by = group_by or []
+        substr_filters = substr_filters or {}
 
-        :param model_class: SQL DB table class
-        :param include: A (possibly empty) list of columns to include in
-        the query
-        :return: An SQLAlchemy AppenderQuery object
+        query, resolved_fields, rels = self._resolve_included_fields(
+            model_class,
+            set(include).union(sort, distinct, filters, substr_filters),
+        )
+
+        # apply the filters. Currently, tenant filter and filter rules
+        # are methods that modify the query, rather than returning filter
+        # expressions. We might want to change that later.
+        for filter_expr in itertools.chain(
+            self._resolve_value_filters(filters, resolved_fields),
+            self._resolve_substr_filters(substr_filters, resolved_fields),
+            self._resolve_permissions_filter(model_class),
+        ):
+            query = query.filter(filter_expr)
+
+        query = self._add_tenant_filter(query, model_class, all_tenants)
+        query = self._add_filter_rules(
+            query, model_class, filter_rules, joins=rels)
+
+        # apply .with_entities, .group_by, and .distinct
+        entities = [
+            e for w in with_entities if (e := resolved_fields.get(w))
+        ]
+        if entities:
+            query = query.with_entities(*entities, db.func.count('*'))
+
+        group_columns = [
+            field for g in group_by if (field := resolved_fields.get(g))
+        ]
+        if group_columns:
+            query = query.group_by(*group_columns)
+
+        distinct_cols = [
+            field for d in distinct if (field := resolved_fields.get(d))
+        ]
+        if distinct_cols:
+            query = query.distinct(*distinct_cols)
+
+        # finally, apply sorting. SQL requires that distinct columns MUST
+        # be the first ordering.
+        for order_by in itertools.chain(
+            distinct_cols,
+            self._resolve_sort(resolved_fields, sort),
+            self._resolve_sort_labels(model_class, sort_labels),
+            self._resolve_default_sort(model_class, default_sorting),
+        ):
+            query = query.order_by(order_by)
+
+        return query
+
+    def _resolve_included_fields(
+        self,
+        model_class: db.Model,
+        include: Iterable[str],
+    ) -> tuple[
+        db.Query,
+        dict[str, InstrumentedAttribute],
+        set[sql.ClauseElement],
+    ]:
+        """Examine model_class and resolve included fields.
+
+        This fetches the actual fields to be put in the query, based
+        on includes, while resolving association-proxies to be the
+        target fields, and joining the related tables.
+
+        Returns a 3-tuple of:
+          - a query object with all the included relations already joined
+          - a dict of resolved fields, ready to be used in filters and sorts
+          - a set of the joined relations
         """
         query = model_class.query
-        if include:
-            attrs = set()
-            rels = set()
-            for field in include:
-                if isinstance(field, AssociationProxyInstance):
-                    # specialcase if there is an assoc proxy in includes:
-                    # join the proxied-to relationship, but only load
-                    # the proxied attribute.
+        resolved_fields = {}
+        rels = set()
 
-                    # first, we'll need to figure out the whole join path
-                    # in case of chained assoc proxies (e.g. NI->node->dep)
-                    joinpath = []
-                    while isinstance(field, AssociationProxyInstance):
-                        # ..but only do it for scalar attributes; if the remote
-                        # field is a whole object, we can't do much about that.
-                        if not field.scalar:
-                            joinpath = None
-                            break
-                        joinpath.append(field.parent.target_collection)
-                        field = field.remote_attr
+        for field_name in include:
+            field = getattr(model_class, field_name, None)
+            if field is None:
+                continue
 
-                    if joinpath:
-                        rels.add(
-                            db.joinedload(*joinpath)
-                            .load_only(field)
-                        )
-                    continue
+            if isinstance(field, AssociationProxyInstance):
+                # specialcase if there is an assoc proxy in includes:
+                # join the proxied-to relationship, but only load
+                # the proxied attribute.
 
-                if not hasattr(field, 'prop'):
-                    continue
+                # first, we'll need to figure out the whole join path
+                # in case of chained assoc proxies (e.g. NI->node->dep)
+                while isinstance(field, AssociationProxyInstance):
+                    col_name = field.target_collection
+                    col = getattr(field.owning_class, col_name)
+                    target = db.aliased(field.target_class)
 
-                if isinstance(field.prop, RelationshipProperty):
-                    rels.add(db.joinedload(field))
+                    query = query.outerjoin(target, col)
+                    field = getattr(target, field.value_attr)
+
+            elif not hasattr(field, 'prop'):
+                continue
+            elif isinstance(field.prop, RelationshipProperty):
+                rels.add(field)
+            resolved_fields[field_name] = field
+
+        for rel in rels:
+            query = query.options(db.joinedload(rel))
+
+        return query, resolved_fields, rels
+
+    def _resolve_value_filters(
+        self,
+        filters: dict[str, Any],
+        resolved_fields: dict[str, InstrumentedAttribute],
+    ) -> Iterable[sql.ClauseElement]:
+        for field_name, value in filters.items():
+            field = resolved_fields.get(field_name)
+            if field is None:
+                continue
+            field, value = self._update_case_insensitive(field, value)
+            if callable(value):
+                exp = value(field)
+            elif isinstance(value, (list, tuple)):
+                if value and all(callable(item) for item in value):
+                    operations_filter = (
+                        operation(field) for operation in value)
+                    exp = db.and_(*operations_filter)
                 else:
-                    attrs.add(field)
-            if model_class.is_resource:
-                attrs.add(model_class._tenant_id)
-            if attrs:
-                query = query.options(db.load_only(*attrs))
-            if rels:
-                for rel in rels:
-                    query = query.options(rel)
-
-        if load_relationships and not include:
-            query = query.options(
-                db.joinedload(attr)
-                for attr in model_class.autoload_relationships
-            )
-
-        if distinct:
-            query = query.distinct(*distinct)
-
-        seen_models = set()
-        for join in joins:
-            model = join.prop.mapper.entity
-            if model not in seen_models:
-                seen_models.add(model)
-                query = query.outerjoin(join)
+                    exp = field.in_(value)
             else:
-                query = query.outerjoin(aliased(model), join.prop.key)
-        return query
-
-    @staticmethod
-    def _sort_query(query, model_class, sort=None,
-                    distinct=None, default_sorting=True, sort_labels=None):
-        """Add sorting clauses to the query
-
-        :param query: Base SQL query
-        :param sort: An optional dictionary where keys are column names to
-            sort by, and values are the order (asc/desc), or callables that
-            return sort conditions
-        :param sort_labels: An optional dictionary where keys are label names
-            to sort by, and values are the order (asc/desc), or callables that
-            return sort conditions
-        :return: An SQLAlchemy AppenderQuery object
-        """
-        if sort or distinct:
-            if distinct:
-                query = query.order_by(*distinct)
-            for column, order in sort:
-                while isinstance(column, AssociationProxyInstance):
-                    # get the actual attribute to sort on
-                    column = column.remote_attr
-                if order == 'desc':
-                    column = column.desc()
-                elif callable(order):
-                    column = order(column)
-
-                query = query.order_by(column)
-        if sort_labels:
-            labels_model = aliased(model_class.labels_model)
-            for key, order in sort_labels.items():
-                ordering = (
-                    db.select(
-                        db.func.array_agg(db.text('value order by value asc'))
-                    )
-                    .where(labels_model._labeled_model_fk ==
-                           model_class._storage_id)
-                    .where(labels_model.key == key)
-                )
-                if order == 'desc':
-                    query = query.order_by(db.desc(ordering))
-                else:
-                    query = query.order_by(db.asc(ordering))
-        if default_sorting:
-            default_sort_column = model_class.default_sort_column()
-            if default_sort_column:
-                query = query.order_by(default_sort_column)
-        return query
-
-    def _filter_query(self,
-                      query,
-                      model_class,
-                      filters,
-                      substr_filters,
-                      all_tenants,
-                      filter_rules,
-                      joins):
-        """Add filter clauses to the query
-
-        :param query: Base SQL query
-        :param filters: An optional dictionary where keys are column names to
-        filter by, and values are values applicable for those columns (or lists
-        of such values). Each value can also be a callable which returns
-        a SQLAlchemy filter
-        :param substr_filters: An optional dictionary similar to filters,
-                       when the results are filtered by substrings
-        :return: An SQLAlchemy AppenderQuery object
-        """
-        query = self._add_tenant_filter(query, model_class, all_tenants)
-        query = self._add_permissions_filter(query, model_class)
-        query = self._add_value_filter(query, filters)
-        query = self._add_substr_filter(query, substr_filters)
-        query = self._add_filter_rules(query, model_class, filter_rules, joins)
-        return query
+                exp = field == value
+            yield exp
 
     @staticmethod
     def _add_filter_rules(query, model_class, filter_rules, joins):
@@ -283,28 +293,16 @@ class SQLStorageManager(object):
             )
         return query
 
-    def _add_value_filter(self, query, filters):
-        for column, value in filters:
-            column, value = self._update_case_insensitive(column, value)
-            if callable(value):
-                query = query.filter(value(column))
-            elif isinstance(value, (list, tuple)):
-                if value and all(callable(item) for item in value):
-                    operations_filter = (operation(column)
-                                         for operation in value)
-                    query = query.filter(*operations_filter)
-                else:
-                    while isinstance(column, AssociationProxyInstance):
-                        # get the actual attribute to filter on
-                        column = column.remote_attr
-                    query = query.filter(column.in_(value))
-            else:
-                query = query.filter(column == value)
-        return query
-
-    def _add_substr_filter(self, query, filters):
+    def _resolve_substr_filters(
+        self,
+        filters: dict[str, Any],
+        resolved_fields: dict[str, InstrumentedAttribute],
+    ) -> Iterable[sql.ClauseElement]:
         substr_conditions = []
-        for column, value in filters:
+        for colname, value in filters.items():
+            column = resolved_fields.get(colname)
+            if column is None:
+                continue
             column, value = self._update_case_insensitive(column, value, True)
             if isinstance(value, str):
                 substr_conditions.append(column.contains(value))
@@ -313,9 +311,7 @@ class SQLStorageManager(object):
                     'Substring filtering is only supported for strings'
                 )
         if substr_conditions:
-            query = query.filter(sql_or(*substr_conditions))
-
-        return query
+            yield sql_or(*substr_conditions)
 
     @staticmethod
     def _update_case_insensitive(column, value, force=False):
@@ -378,148 +374,82 @@ class SQLStorageManager(object):
             tenants = [current_tenant] if current_tenant else []
         return query.tenant(*tenants)
 
-    def _add_permissions_filter(self, query, model_class):
+    def _resolve_permissions_filter(
+        self,
+        model_class: db.Model,
+    ) -> Iterable[sql.ClauseElement]:
         """Filter by the users present in either the `viewers` or `owners`
         lists
         """
         # not used from a request handler - no relevant user
         if not has_request_context():
-            return query
+            return
 
         # Queries of elements that aren't resources (tenants, users, etc.),
         # shouldn't be filtered
         if not model_class.is_resource:
-            return query
+            return
 
         # For users that are allowed to see all resources, regardless of tenant
         is_admin = is_administrator(self.current_tenant, self.current_user)
         if is_admin:
-            return query
+            return
 
         # Only get resources that are public - not private (note that ~ stands
         # for NOT, in SQLA), *or* those where the current user is the creator
-        user_filter = sql_or(
+        yield sql_or(
             model_class.visibility != VisibilityState.PRIVATE,
             model_class.creator == self.current_user
         )
-        return query.filter(user_filter)
 
-    def _get_joins_and_converted_columns(self,
-                                         model_class,
-                                         include,
-                                         filters,
-                                         substr_filters,
-                                         sort,
-                                         distinct):
-        """Get a list of tables on which we need to join and the converted
-        `include`, `filters` and `sort` arguments (converted to actual SQLA
-        column/label objects instead of column names)
-        """
-        include = include or []
-        filters = filters or dict()
-        substr_filters = substr_filters or dict()
-        sort = sort or OrderedDict()
-        distinct = distinct or []
+    def _resolve_sort(
+        self,
+        resolved_fields: dict[str, InstrumentedAttribute],
+        sort: dict[str, Callable | str],
+    ) -> Iterable[sql.ClauseElement]:
+        for field_name, order in sort.items():
+            sort_by = resolved_fields.get(field_name)
+            if sort_by is None:
+                continue
+            if order == 'desc':
+                sort_by = sort_by.desc()
+            elif callable(order):
+                sort_by = order(sort_by)
+            yield sort_by
 
-        all_columns = set(include) | set(filters.keys()) | set(sort.keys())
-        joins = get_joins(model_class, all_columns)
+    def _resolve_sort_labels(
+        self,
+        model_class: db.Model,
+        sort_labels: dict[str, str],
+    ) -> Iterable[sql.ClauseElement]:
+        if not sort_labels:
+            return
+        labels_model = aliased(model_class.labels_model)
+        for key, order in sort_labels.items():
+            ordering = (
+                db.select(
+                    db.func.array_agg(db.text('value order by value asc'))
+                )
+                .where(labels_model._labeled_model_fk ==
+                       model_class._storage_id)
+                .where(labels_model.key == key)
+                .scalar_subquery()
+            )
+            if order == 'desc':
+                sort_by = db.desc(ordering)
+            else:
+                sort_by = db.asc(ordering)
+            yield sort_by
 
-        include, filters, substr_filters, sort, distinct = \
-            self._get_columns_from_field_names(model_class,
-                                               include,
-                                               filters,
-                                               substr_filters,
-                                               sort,
-                                               distinct)
-        return include, filters, substr_filters, sort, joins, distinct
-
-    def _get_query(self,
-                   model_class,
-                   include=None,
-                   filters=None,
-                   substr_filters=None,
-                   sort=None,
-                   sort_labels=None,
-                   all_tenants=None,
-                   distinct=None,
-                   filter_rules=None,
-                   default_sorting=True,
-                   load_relationships=False):
-        """Get an SQL query object based on the params passed
-
-        :param model_class: SQL DB table class
-        :param include: An optional list of columns to include in the query
-        :param filters: An optional dictionary where keys are column names to
-           filter by, and values are values applicable for those columns (or
-           lists of such values)
-        :param substr_filters: An optional dictionary similar to filters,
-           when the results are filtered by substrings
-        :param sort: An optional dictionary where keys are column names to
-           sort by, and values are the order (asc/desc)
-        :param sort_labels: An optional dictionary where keys are label
-           names to sort by, and values are the order (asc/desc)
-        :param load_relationships: automatically join all relationships
-           declared in model.autoload_relationships
-        :return: A sorted and filtered query with only the relevant
-           columns
-        """
-        include, filters, substr_filters, sort, joins, distinct = \
-            self._get_joins_and_converted_columns(model_class,
-                                                  include,
-                                                  filters,
-                                                  substr_filters,
-                                                  sort,
-                                                  distinct)
-
-        query = self._get_base_query(
-            model_class, include, joins, distinct, load_relationships)
-        query = self._filter_query(query,
-                                   model_class,
-                                   filters,
-                                   substr_filters,
-                                   all_tenants,
-                                   filter_rules,
-                                   joins)
-        query = self._sort_query(query, model_class, sort, distinct,
-                                 default_sorting, sort_labels)
-        return query
-
-    def _get_columns_from_field_names(self,
-                                      model_class,
-                                      include,
-                                      filters,
-                                      substr_filters,
-                                      sort,
-                                      distinct):
-        """Go over the optional parameters (include, filters, sort), and
-        replace column names with actual SQLA column objects
-        """
-        def _get_column(col):
-            if isinstance(col, str):
-                col = getattr(model_class, col, None)
-            return col
-
-        include = [
-            col for colname in include
-            if (col := _get_column(colname))
-        ]
-        filters = [
-            (col, filters[colname]) for colname in filters
-            if (col := _get_column(colname))
-        ]
-        substr_filters = [
-            (col, substr_filters[colname]) for colname in substr_filters
-            if (col := _get_column(colname))
-        ]
-        sort = [
-            (col, sort[colname]) for colname in sort
-            if (col := _get_column(colname))
-        ]
-        distinct = [
-            col for colname in distinct
-            if (col := _get_column(colname))
-        ]
-        return include, filters, substr_filters, sort, distinct
+    def _resolve_default_sort(
+        self,
+        model_class: db.Model,
+        do_default_sort: bool,
+    ) -> Iterable[sql.ClauseElement]:
+        if do_default_sort:
+            col = model_class.default_sort_column()
+            if col:
+                yield col
 
     @staticmethod
     def _paginate(
@@ -548,7 +478,7 @@ class SQLStorageManager(object):
             size = config.instance.default_page_size
             offset = 0
 
-        total = query.order_by(None).count()  # Fastest way to count
+        total = query.order_by(None).count()
         if locking:
             query = query.with_for_update(of=model_class)
         if get_all_results:
@@ -652,7 +582,7 @@ class SQLStorageManager(object):
             )
         if not filters:
             filters = {'id': element_id}
-        query = self._get_query(model_class, include, filters,
+        query = self._get_query(model_class, include, filters.copy(),
                                 all_tenants=all_tenants)
         if locking:
             query = query.with_for_update(of=model_class)
@@ -711,20 +641,21 @@ class SQLStorageManager(object):
                 'needed: {0}mb, available: {1}mb'
                 ''.format(min_available_memory_mb, available_mb))
 
-    def list(self,
-             model_class,
-             include=None,
-             filters=None,
-             pagination=None,
-             sort=None,
-             sort_labels=None,
-             all_tenants=None,
-             substr_filters=None,
-             get_all_results=False,
-             distinct=None,
-             locking=False,
-             filter_rules=None,
-             load_relationships=False):
+    def list(
+        self,
+        model_class,
+        include=None,
+        filters=None,
+        pagination=None,
+        sort=None,
+        sort_labels=None,
+        all_tenants=None,
+        substr_filters=None,
+        get_all_results=False,
+        distinct=None,
+        locking=False,
+        filter_rules=None,
+    ):
         """Return a list of `model_class` results
 
         :param model_class: SQL DB table class
@@ -756,19 +687,18 @@ class SQLStorageManager(object):
                                                       filters)
         else:
             msg = 'List `{0}`'.format(model_class.__name__)
-
         current_app.logger.debug(msg)
-        query = self._get_query(model_class,
-                                include,
-                                filters,
-                                substr_filters,
-                                sort,
-                                sort_labels,
-                                all_tenants,
-                                distinct,
-                                filter_rules,
-                                load_relationships=load_relationships)
-
+        query = self._get_query(
+            model_class,
+            include,
+            filters,
+            substr_filters,
+            sort,
+            sort_labels,
+            all_tenants,
+            distinct,
+            filter_rules,
+        )
         results, total, size, offset = self._paginate(
             model_class,
             query,
@@ -778,10 +708,13 @@ class SQLStorageManager(object):
         )
         pagination = {'total': total, 'size': size, 'offset': offset}
         if filter_rules:
-            filtered = self.count(model_class, all_tenants=all_tenants) - total
+            filtered = self._add_tenant_filter(
+                model_class.query,
+                model_class,
+                all_tenants=all_tenants,
+            ).count() - total
         else:
             filtered = None
-
         current_app.logger.debug('Returning: %s', results)
         return ListResult(items=results, metadata={'pagination': pagination,
                                                    'filtered': filtered})
@@ -801,7 +734,6 @@ class SQLStorageManager(object):
                 subfield_col = subfield_col.remote_attr
             fields.append(subfield_col)
             string_fields.append(sub_field)
-        entities = fields + [db.func.count('*')]
 
         query = self._get_query(
             model_class,
@@ -810,7 +742,9 @@ class SQLStorageManager(object):
             sort={target_field: f.desc()},
             include=string_fields,
             default_sorting=False,
-        ).with_entities(*entities).group_by(*fields)
+            group_by=string_fields,
+            with_entities=string_fields,
+        )
 
         results, total, size, offset = self._paginate(
             model_class,
@@ -821,68 +755,6 @@ class SQLStorageManager(object):
         pagination = {'total': total, 'size': size, 'offset': offset}
 
         return ListResult(items=results, metadata={'pagination': pagination})
-
-    def count(self, model_class, filters=None, distinct_by=None,
-              all_tenants=False):
-        query = model_class.query
-
-        # first, resolve the filters into a format used by ._add_value_filter
-        _include, filters, _substr_filters, _sort, _distinct = \
-            self._get_columns_from_field_names(
-                model_class,
-                include=[],
-                filters=filters or {},
-                substr_filters={},
-                sort={},
-                distinct=[],
-            )
-
-        if not all_tenants:
-            self._add_tenant_filter(query, model_class, all_tenants=False)
-        if filters:
-            query = self._add_value_filter(query, filters)
-        if distinct_by:
-            query = query.filter(distinct_by != "").distinct(distinct_by)
-            count = query.order_by(None).count()
-        else:
-            count = query.order_by(None).count()   # Fastest way to count
-        return count
-
-    def exists(self, model_class, element_id=None, filters=None,
-               all_tenants=None):
-        """Check if a record exists
-        """
-        filters = filters or {'id': element_id}
-        query = self._get_query(model_class,
-                                filters=filters,
-                                all_tenants=all_tenants)
-        return True if query.first() else False
-
-    def full_access_list(self, model_class, filters=None):
-        """Return a list of `model_class` results, without considering the
-           user or the tenant
-
-        :param model_class: SQL DB table class
-        :param filters: An optional dictionary where keys are column names to
-                        filter by, and values are values applicable for those
-                        columns (or lists of such values)
-        :return: A (possibly empty) list of `model_class` results
-        """
-        query = model_class.query
-
-        # first, resolve the filters into a format used by ._add_value_filter
-        _include, filters, _substr_filters, _sort, _distinct = \
-            self._get_columns_from_field_names(
-                model_class,
-                include=[],
-                filters=filters or {},
-                substr_filters={},
-                sort={},
-                distinct=[],
-            )
-        if filters:
-            query = self._add_value_filter(query, filters)
-        return query.all()
 
     def put(self, instance):
         """Create a `model_class` instance from a serializable `model` object
@@ -976,6 +848,7 @@ class ListResult(object):
     """
     a ListResult contains results about the requested items.
     """
+
     def __init__(self, items, metadata):
         self.items = items
         self.metadata = metadata

@@ -51,9 +51,13 @@ def upgrade():
     add_file_server_type_config()
     add_default_agents_rest_port_config()
     add_blueprint_requirements_column()
+    add_prometheus_url_config()
+    drop_ldap_ca_config()
 
 
 def downgrade():
+    add_ldap_ca_config()
+    drop_prometheus_url_config()
     drop_blueprint_requirements_column()
     drop_default_agents_rest_port_config()
     drop_file_server_type_config()
@@ -789,6 +793,27 @@ def drop_s3_client_config():
         )
 
 
+def drop_ldap_ca_config():
+    op.execute(
+        config_table.delete().where(
+            (config_table.c.name == op.inline_literal('ldap_ca_path'))
+            & (config_table.c.scope == op.inline_literal('rest'))
+        )
+    )
+
+
+def add_ldap_ca_config():
+    op.bulk_insert(config_table, [
+            dict(
+                name='ldap_ca_path',
+                value=op.inline_literal('null'),
+                scope='rest',
+                schema={'type': 'string'},
+                is_editable=True
+            )
+        ])
+
+
 def add_file_server_type_config():
     op.bulk_insert(
         config_table,
@@ -822,3 +847,27 @@ def add_blueprint_requirements_column():
 
 def drop_blueprint_requirements_column():
     op.drop_column('blueprints', 'requirements')
+
+
+def add_prometheus_url_config():
+    op.bulk_insert(
+        config_table,
+        [
+            {
+                'name': 'prometheus_url',
+                'value': 'http://127.0.0.1:9090',
+                'scope': 'rest',
+                'schema': {'type': 'string'},
+                'is_editable': True,
+            },
+        ],
+    )
+
+
+def drop_prometheus_url_config():
+    op.execute(
+        config_table.delete().where(
+            (config_table.c.name == op.inline_literal('prometheus_url'))
+            & (config_table.c.scope == op.inline_literal('rest'))
+        )
+    )
