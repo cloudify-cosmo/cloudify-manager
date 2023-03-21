@@ -447,8 +447,7 @@ def remove_p_from_pickle_columns():
                     new_column_name='supported_py_versions')
     op.alter_column('plugins',
                     column_name='wheels_p',
-                    new_column_name='wheels',
-                    nullable=False)
+                    new_column_name='wheels')
 
     op.alter_column('plugins_updates',
                     column_name='deployments_to_update_p',
