@@ -53,7 +53,7 @@ services:
 
   nginx:
     container_name: nginx
-    build: service_containers/nginx
+    image: nginx:latest
     depends_on:
       - rest_service
       - certs_creator
