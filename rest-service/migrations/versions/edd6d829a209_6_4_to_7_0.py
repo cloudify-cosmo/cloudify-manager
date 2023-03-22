@@ -36,6 +36,15 @@ users_table = sa.table(
     sa.Column('created_at', UTCDateTime),
 )
 
+# The information about tables, which should be "audited", meaning INSERT,
+# UPDATE and DELETE operations on these tables will be logged in the audit_log
+# table.  The logging is executed using PostgreSQL trigger function
+# write_audit_log, also defined in this file, see the function
+# create_functions_write_audit_log().
+# The keys in this dictionary define table names, and the values are
+# two-element tuples: the first one is a string, which defines which column of
+# the table are used to populate audit_log.ref_id column; the second element is
+# a list of columns, which are stored in audit_log.ref_identifier (as JSONB).
 tables_to_audit = {
     'agents': ('_storage_id', ['_tenant_id', 'id']),
     'blueprints': ('_storage_id', ['_tenant_id', 'id']),
@@ -931,24 +940,30 @@ def create_functions_write_audit_log():
     op.execute("""
     CREATE OR REPLACE FUNCTION write_audit_log() RETURNS TRIGGER AS $$
         DECLARE
+            -- List of columns to store, the second argument of the function
             _id_columns text[] := tg_argv[1]::text[];
+            -- User performing the modification, from external context
             _user text := public.audit_username();
+            -- Execution_id performing the modification, from external context
             _execution_id text := public.audit_execution_id();
             _operation audit_operation;
             _record jsonb;
             _ref_identifier jsonb;
         BEGIN
+            -- Prepare audit_operation type and a record to be partially stored
             IF (TG_OP = 'INSERT') THEN
                 _operation := 'create';
-                _record := to_json(NEW);
+                _record := to_jsonb(NEW);
             ELSEIF (TG_OP = 'UPDATE') THEN
                 _operation := 'update';
-                _record := to_json(NEW);
+                _record := to_jsonb(NEW);
             ELSEIF (TG_OP = 'DELETE') THEN
                 _operation := 'delete';
-                _record := to_json(OLD);
+                _record := to_jsonb(OLD);
             END IF;
 
+            -- Create a JSONB object containing only selected (_id_columns)
+            -- columns from the modified record
             _ref_identifier := (
                 SELECT jsonb_object(
                     array_agg(key),
@@ -957,6 +972,9 @@ def create_functions_write_audit_log():
                 FROM unnest(_id_columns) id_cols(key)
             );
 
+            -- Write a new entry in the audit_log table; ref_id column is
+            -- populated with the content of the ref_table column described
+            -- by the first parameter to this function.
             INSERT INTO public.audit_log (ref_table, ref_id, ref_identifier,
                                           operation, creator_name,
                                           execution_id, created_at)
