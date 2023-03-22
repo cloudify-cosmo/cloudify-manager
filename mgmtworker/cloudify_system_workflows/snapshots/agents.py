@@ -32,8 +32,11 @@ class Agents(object):
     _AGENTS_FILE = 'agents.json'
 
     def __init__(self):
-        with open(get_broker_ssl_cert_path(), 'r') as f:
-            self._broker_ssl_cert = f.read()
+        try:
+            with open(get_broker_ssl_cert_path(), 'r') as f:
+                self._broker_ssl_cert = f.read()
+        except (KeyError, IOError):
+            self._broker_ssl_cert = None
         self._manager_version = None
 
     def restore(self, tempdir, version):
@@ -77,15 +80,17 @@ class Agents(object):
         Fill in the broker config info from the cloudify_agent dict, using
         the info from the bootstrap context as the fallback defaults
         """
+        return {
+            'version': str(self._manager_version),
+            'broker_config': self.get_broker_conf(node_instance),
+        }
+
+    def get_broker_conf(self, node_instance):
         agent = node_instance.runtime_properties.get('cloudify_agent', {})
-        broker_conf = {
+        return {
             'broker_ip': agent.get('broker_ip', broker_config.broker_hostname),
             'broker_ssl_cert': self._broker_ssl_cert,
             'broker_ssl_enabled': True
-        }
-        return {
-            'version': str(self._manager_version),
-            'broker_config': broker_conf
         }
 
     def _insert_agents_data(self, agents, tenant_name=None):
