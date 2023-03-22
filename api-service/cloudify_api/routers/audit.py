@@ -4,7 +4,7 @@ from typing import Sequence
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, parse_obj_as
+from pydantic import BaseModel, Field, parse_obj_as
 from sqlalchemy import delete
 from sqlalchemy.future import select
 from sqlalchemy.sql.selectable import Select
@@ -15,12 +15,26 @@ from cloudify_api.listener import NOTIFICATION_CHANNEL
 from cloudify_api.results import DeletedResult, Paginated
 
 
+class RefIdentifier(BaseModel):
+    tenant_id: int | None = Field(default=None, alias='_tenant_id')
+    id: str | None
+    storage_id: int | None = Field(default=None, alias='_storage_id')
+    name: str | None
+    manager_id: str | None
+    username: str | None
+
+    def dict(self, *args, **kwargs):
+        if kwargs and kwargs.get("exclude_none") is not None:
+            kwargs["exclude_none"] = True
+            return super().dict(*args, **kwargs)
+
+
 class AuditLog(BaseModel):
     _storage_id: int
     id: int
     ref_table: str
     ref_id: int
-    ref_identifier: dict | None
+    ref_identifier: RefIdentifier | None
     operation: str
     creator_name: str | None
     execution_id: str | None
@@ -50,7 +64,7 @@ class AuditLog(BaseModel):
 class InsertLog(BaseModel):
     ref_table: str
     ref_id: int
-    ref_identifier: dict | None
+    ref_identifier: RefIdentifier | None
     operation: str
     creator_name: str | None
     execution_id: str | None
@@ -162,7 +176,7 @@ async def audit_log_streamer(request: Request,
             db_records = await session.execute(query)
         for db_record in db_records.scalars().all():
             record = AuditLog.from_orm(db_record)
-            yield make_streaming_response(record.json())
+            yield make_streaming_response(record.json(exclude_none=True))
             streamed_ids.add(record.id)
     while True:
         try:
@@ -174,7 +188,7 @@ async def audit_log_streamer(request: Request,
         record: AuditLog = parse_obj_as(AuditLog, data)
         if not record.matches(creator_name, execution_id, since):
             continue
-        yield make_streaming_response(record.json())
+        yield make_streaming_response(record.json(exclude_none=True))
         if not queue.empty():
             streamed_ids.add(record.id)
         else:
