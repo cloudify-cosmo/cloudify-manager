@@ -20,6 +20,7 @@ class AuditLog(BaseModel):
     id: int
     ref_table: str
     ref_id: int
+    ref_identifier: Optional[dict]
     operation: str
     creator_name: Optional[str]
     execution_id: Optional[str]
@@ -49,6 +50,7 @@ class AuditLog(BaseModel):
 class InsertLog(BaseModel):
     ref_table: str
     ref_id: int
+    ref_identifier: Optional[dict]
     operation: str
     creator_name: Optional[str]
     execution_id: Optional[str]
