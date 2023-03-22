@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any
 
 from pydantic import BaseModel
 from sqlalchemy import desc, func, select
@@ -20,7 +20,7 @@ class Metadata(BaseModel):
 
 
 class PaginatedBase(BaseModel):
-    items: List[Any]
+    items: list[Any]
     metadata: Metadata
 
 

@@ -1,6 +1,6 @@
 import asyncio
 from datetime import datetime
-from typing import List, Optional, Sequence
+from typing import Sequence
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
@@ -20,10 +20,10 @@ class AuditLog(BaseModel):
     id: int
     ref_table: str
     ref_id: int
-    ref_identifier: Optional[dict]
+    ref_identifier: dict | None
     operation: str
-    creator_name: Optional[str]
-    execution_id: Optional[str]
+    creator_name: str | None
+    execution_id: str | None
     created_at: datetime
 
     class Config:
@@ -34,9 +34,9 @@ class AuditLog(BaseModel):
         }
 
     def matches(self,
-                creator_name: Optional[str] = None,
-                execution_id: Optional[str] = None,
-                since: Optional[datetime] = None) -> bool:
+                creator_name: str | None = None,
+                execution_id: str | None = None,
+                since: datetime | None = None) -> bool:
         """Check if audit log entry matches given constraints"""
         if since and self.created_at < since:
             return False
@@ -50,15 +50,15 @@ class AuditLog(BaseModel):
 class InsertLog(BaseModel):
     ref_table: str
     ref_id: int
-    ref_identifier: Optional[dict]
+    ref_identifier: dict | None
     operation: str
-    creator_name: Optional[str]
-    execution_id: Optional[str]
+    creator_name: str | None
+    execution_id: str | None
     created_at: datetime
 
 
 class PaginatedAuditLog(Paginated):
-    items: List[AuditLog]
+    items: list[AuditLog]
 
     class Config:
         json_encoders = {
@@ -70,15 +70,15 @@ class PaginatedAuditLog(Paginated):
 class TruncateParams(BaseModel):
     """Parameters passed to DELETE /audit endpoint."""
     before: datetime
-    creator_name: Optional[str]
-    execution_id: Optional[str]
+    creator_name: str | None
+    execution_id: str | None
 
 
 router = APIRouter(prefix="/audit", tags=["Audit Log"])
 
 
 @router.post("", status_code=204)
-async def inject_audit_logs(logs: List[InsertLog],
+async def inject_audit_logs(logs: list[InsertLog],
                             session=Depends(make_db_session),
                             app=Depends(get_app)):
     app.logger.debug("insert_audit_logs with %s records",
@@ -92,9 +92,9 @@ async def inject_audit_logs(logs: List[InsertLog],
 
 
 @router.get("", response_model=PaginatedAuditLog)
-async def list_audit_log(creator_name: Optional[str] = None,
-                         execution_id: Optional[str] = None,
-                         since: Optional[datetime] = None,
+async def list_audit_log(creator_name: str | None = None,
+                         execution_id: str | None = None,
+                         since: datetime | None = None,
                          session=Depends(make_db_session),
                          app=Depends(get_app),
                          p=Depends(common_parameters)) -> PaginatedAuditLog:
@@ -107,9 +107,9 @@ async def list_audit_log(creator_name: Optional[str] = None,
 
 @router.get("/stream")
 async def stream_audit_log(request: Request,
-                           creator_name: Optional[str] = None,
-                           execution_id: Optional[str] = None,
-                           since: Optional[datetime] = None
+                           creator_name: str | None = None,
+                           execution_id: str | None = None,
+                           since: datetime | None = None
                            ) -> StreamingResponse:
     request.app.logger.debug("Handling stream_audit_log request")
     queue = asyncio.Queue()
@@ -134,9 +134,9 @@ async def truncate_audit_log(p=Depends(TruncateParams),
     return await DeletedResult.executed(session, stmt)
 
 
-def select_audit_log_query(creator_name: Optional[str] = None,
-                           execution_id: Optional[str] = None,
-                           since: Optional[datetime] = None) -> Select:
+def select_audit_log_query(creator_name: str | None = None,
+                           execution_id: str | None = None,
+                           since: datetime | None = None) -> Select:
     stmt = select(models.AuditLog).order_by('created_at')
     if creator_name is not None:
         stmt = stmt.where(models.AuditLog.creator_name == creator_name)
@@ -149,9 +149,9 @@ def select_audit_log_query(creator_name: Optional[str] = None,
 
 async def audit_log_streamer(request: Request,
                              queue: asyncio.Queue,
-                             creator_name: Optional[str] = None,
-                             execution_id: Optional[str] = None,
-                             since: Optional[datetime] = None
+                             creator_name: str | None = None,
+                             execution_id: str | None = None,
+                             since: datetime | None = None
                              ) -> Sequence[bytes]:
     streamed_ids = set()
     if since is not None:
