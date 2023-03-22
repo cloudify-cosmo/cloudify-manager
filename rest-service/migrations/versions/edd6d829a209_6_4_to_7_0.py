@@ -948,12 +948,13 @@ def create_functions_write_audit_log():
                 _operation := 'delete';
                 _record := to_json(OLD);
             END IF;
+
             _ref_identifier := (
                 SELECT jsonb_object(
-                    array_agg(kv.key::TEXT),
-                    array_agg(trim(both '"' from kv.value::TEXT))
+                    array_agg(key),
+                    array_agg(_record ->> key)
                 )
-                FROM jsonb_each(_record) kv WHERE kv.key = ANY(_id_columns)
+                FROM unnest(_id_columns) id_cols(key)
             );
 
             INSERT INTO public.audit_log (ref_table, ref_id, ref_identifier,
