@@ -12,6 +12,7 @@ from flask_restful import fields as flask_fields
 
 from sqlalchemy import case
 from sqlalchemy import func, select, table, column, exists
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import validates, aliased
@@ -2704,6 +2705,7 @@ class AuditLog(CreatedAtMixin, SQLModelBase):
     _storage_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     ref_table = db.Column(db.Text, nullable=False, index=True)
     ref_id = db.Column(db.Integer, nullable=False)
+    ref_identifier = db.Column(JSONB)
     operation = db.Column(db.Enum(*AUDIT_OPERATIONS, name='audit_operation'),
                           nullable=False)
     creator_name = db.Column(db.Text, nullable=True, index=True)
