@@ -9,6 +9,7 @@ from cloudify.manager import get_rest_client
 from cloudify.constants import FILE_SERVER_SNAPSHOTS_FOLDER
 
 from . import constants, utils, INCLUDES
+from .agents import Agents
 
 
 EMPTY_B64_ZIP = 'UEsFBgAAAAAAAAAAAAAAAAAAAAAAAA=='
@@ -50,6 +51,7 @@ class SnapshotCreate(object):
         self._tenant_clients = {}
         self._zip_handle = None
         self._archive_dest = self._get_snapshot_archive_name()
+        self._agents_handler = Agents()
 
     def create(self):
         self._client = get_rest_client()
@@ -350,6 +352,20 @@ class SnapshotCreate(object):
                 part for part in parts
                 if not part['id'] == ctx.execution_id
             ]
+        elif part == 'node_instances':
+            # for "agent" node instances, store broker config in runtime-props
+            # as well, so that during agent upgrade, we can connect to the old
+            # rabbitmq. This is later analyzed by snapshot_restore,
+            # _inject_broker_config, and by several calls in
+            # cloudify-agent/operations.py (related to creating the AMQP
+            # client there)
+            for ni in parts:
+                runtime_properties = ni.get('runtime_properties') or {}
+                if 'cloudify_agent' not in runtime_properties:
+                    continue
+                broker_conf = self._agents_handler.get_broker_conf(ni)
+                runtime_properties['cloudify_agent'].update(broker_conf)
+
         parts_dest = os.path.join(dest_dir, filter_id + '.json')
         with open(parts_dest, 'w') as dump_handle:
             json.dump(parts, dump_handle)
