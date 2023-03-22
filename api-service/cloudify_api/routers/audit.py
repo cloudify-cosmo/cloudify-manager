@@ -32,6 +32,19 @@ class AuditLog(BaseModel):
                 lambda v: v.isoformat(timespec='milliseconds').split('+')[0],
         }
 
+    def matches(self,
+                creator_name: Optional[str] = None,
+                execution_id: Optional[str] = None,
+                since: Optional[datetime] = None) -> bool:
+        """Check if audit log entry matches given constraints"""
+        if since and self.created_at < since:
+            return False
+        if creator_name and self.creator_name != creator_name:
+            return False
+        if execution_id and self.execution_id != execution_id:
+            return False
+        return True
+
 
 class InsertLog(BaseModel):
     ref_table: str
@@ -86,21 +99,8 @@ async def list_audit_log(creator_name: Optional[str] = None,
     app.logger.debug("list_audit_log, creator_name=%s, "
                      "execution_id=%s, since=%s",
                      creator_name, execution_id, since)
-    query = _list_audit_log(creator_name, execution_id, since)
+    query = select_audit_log_query(creator_name, execution_id, since)
     return await PaginatedAuditLog.paginated(session, query, p)
-
-
-def _list_audit_log(creator_name: Optional[str] = None,
-                    execution_id: Optional[str] = None,
-                    since: Optional[datetime] = None) -> Select:
-    stmt = select(models.AuditLog).order_by('created_at')
-    if creator_name is not None:
-        stmt = stmt.where(models.AuditLog.creator_name == creator_name)
-    if execution_id is not None:
-        stmt = stmt.where(models.AuditLog.execution_id == execution_id)
-    if since is not None:
-        stmt = stmt.where(models.AuditLog.created_at >= since)
-    return stmt
 
 
 @router.get("/stream")
@@ -114,52 +114,8 @@ async def stream_audit_log(request: Request,
     request.app.listener.attach_queue(NOTIFICATION_CHANNEL, queue)
     headers = {"Content-Type": "text/event-stream"}
     return StreamingResponse(
-        _audit_log_streamer(request, queue, creator_name, execution_id, since),
+        audit_log_streamer(request, queue, creator_name, execution_id, since),
         headers=headers)
-
-
-async def _audit_log_streamer(request: Request,
-                              queue: asyncio.Queue,
-                              creator_name: Optional[str] = None,
-                              execution_id: Optional[str] = None,
-                              since: Optional[datetime] = None
-                              ) -> Sequence[bytes]:
-    streamed_ids = set()
-    if since is not None:
-        query = _list_audit_log(creator_name=creator_name,
-                                execution_id=execution_id,
-                                since=since)
-        async with request.app.db_session_maker() as session:
-            db_records = await session.execute(query)
-        for db_record in db_records.scalars().all():
-            record = AuditLog.from_orm(db_record)
-            yield _make_streaming_response(record.json())
-            streamed_ids.add(record.id)
-    while True:
-        try:
-            data = await queue.get()
-        except asyncio.CancelledError:
-            request.app.listener.remove_queue(NOTIFICATION_CHANNEL, queue)
-            break
-        data.update({'id': data['_storage_id']})
-        record = parse_obj_as(AuditLog, data)
-        if (since and record.created_at < since) \
-                or (creator_name and record.creator_name != creator_name) \
-                or (execution_id and record.execution_id != execution_id) \
-                or (streamed_ids and record.id in streamed_ids):
-            continue
-        response = _make_streaming_response(record.json())
-        yield response
-        if not queue.empty():
-            streamed_ids.add(record.id)
-        else:
-            # At this point we can be sure, that the new streamed records do
-            # not duplicate records retrieved in the previous loop:
-            streamed_ids.clear()
-
-
-def _make_streaming_response(data: str) -> bytes:
-    return f"{data}\n\n".encode('utf-8', errors='ignore')
 
 
 @router.delete("", response_model=DeletedResult)
@@ -174,3 +130,56 @@ async def truncate_audit_log(p=Depends(TruncateParams),
     if p.execution_id:
         stmt = stmt.where(models.AuditLog.execution_id == p.execution_id)
     return await DeletedResult.executed(session, stmt)
+
+
+def select_audit_log_query(creator_name: Optional[str] = None,
+                           execution_id: Optional[str] = None,
+                           since: Optional[datetime] = None) -> Select:
+    stmt = select(models.AuditLog).order_by('created_at')
+    if creator_name is not None:
+        stmt = stmt.where(models.AuditLog.creator_name == creator_name)
+    if execution_id is not None:
+        stmt = stmt.where(models.AuditLog.execution_id == execution_id)
+    if since is not None:
+        stmt = stmt.where(models.AuditLog.created_at >= since)
+    return stmt
+
+
+async def audit_log_streamer(request: Request,
+                             queue: asyncio.Queue,
+                             creator_name: Optional[str] = None,
+                             execution_id: Optional[str] = None,
+                             since: Optional[datetime] = None
+                             ) -> Sequence[bytes]:
+    streamed_ids = set()
+    if since is not None:
+        query = select_audit_log_query(creator_name=creator_name,
+                                       execution_id=execution_id,
+                                       since=since)
+        async with request.app.db_session_maker() as session:
+            db_records = await session.execute(query)
+        for db_record in db_records.scalars().all():
+            record = AuditLog.from_orm(db_record)
+            yield make_streaming_response(record.json())
+            streamed_ids.add(record.id)
+    while True:
+        try:
+            data = await queue.get()
+        except asyncio.CancelledError:
+            request.app.listener.remove_queue(NOTIFICATION_CHANNEL, queue)
+            break
+        data.update({'id': data['_storage_id']})
+        record: AuditLog = parse_obj_as(AuditLog, data)
+        if not record.matches(creator_name, execution_id, since):
+            continue
+        yield make_streaming_response(record.json())
+        if not queue.empty():
+            streamed_ids.add(record.id)
+        else:
+            # At this point we can be sure, that the new streamed records do
+            # not duplicate records retrieved in the previous loop
+            streamed_ids.clear()
+
+
+def make_streaming_response(data: str) -> bytes:
+    return f"{data}\n\n".encode('utf-8', errors='ignore')
