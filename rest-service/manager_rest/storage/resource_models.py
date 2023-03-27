@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Optional, Type, List
 
 from flask_restful import fields as flask_fields
 
-from sqlalchemy import case
+from sqlalchemy import case, cast, Integer
 from sqlalchemy import func, select, table, column, exists
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.declarative import declared_attr
@@ -49,7 +49,7 @@ from .models_base import (
     JSONString,
     UTCDateTime,
 )
-from .management_models import User, Manager
+from .management_models import User, Manager, Tenant
 from .resource_models_base import SQLResourceBase, SQLModelBase
 from .relationships import (
     foreign_key,
@@ -2714,4 +2714,19 @@ class AuditLog(CreatedAtMixin, SQLModelBase):
     @property
     def id(self):
         return self._storage_id
+
+    @declared_attr
+    def tenant(cls):
+        """The tenant for this audit log.  Must be loaded eagerly to be handled
+        in the same async loop as an AuditLog's operation."""
+        return db.relationship(
+                'Tenant',
+                primaryjoin=lambda:
+                Tenant.id == db.foreign(
+                    cast(AuditLog.ref_identifier, JSONB)["_tenant_id"]
+                    .astext.cast(Integer)
+                ),
+                viewonly=True,
+                lazy='joined',
+        )
 # endregion

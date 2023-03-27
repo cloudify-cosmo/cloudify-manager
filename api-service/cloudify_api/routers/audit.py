@@ -4,7 +4,7 @@ from typing import Sequence
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field, parse_obj_as
+from pydantic import BaseModel, Field, parse_obj_as, root_validator
 from sqlalchemy import delete
 from sqlalchemy.future import select
 from sqlalchemy.sql.selectable import Select
@@ -15,6 +15,14 @@ from cloudify_api.listener import NOTIFICATION_CHANNEL
 from cloudify_api.results import DeletedResult, Paginated
 
 
+class Tenant(BaseModel):
+    id: int
+    name: str | None
+
+    class Config:
+        orm_mode = True
+
+
 class RefIdentifier(BaseModel):
     tenant_id: int | None = Field(default=None, alias='_tenant_id')
     id: str | None
@@ -22,16 +30,20 @@ class RefIdentifier(BaseModel):
     name: str | None
     manager_id: str | None
     username: str | None
+    tenant_name: str | None
+
+    class Config:
+        allow_population_by_field_name = True
+        extra = 'forbid'
 
     def dict(self, *args, **kwargs):
         if kwargs and kwargs.get("exclude_none") is not None:
             kwargs["exclude_none"] = True
-            return super().dict(*args, **kwargs)
+        return super().dict(*args, **kwargs)
 
 
 class AuditLog(BaseModel):
-    _storage_id: int
-    id: int
+    id: int | None = Field(default=None, alias='_storage_id')
     ref_table: str
     ref_id: int
     ref_identifier: RefIdentifier | None
@@ -39,13 +51,23 @@ class AuditLog(BaseModel):
     creator_name: str | None
     execution_id: str | None
     created_at: datetime
+    tenant: Tenant | None
 
     class Config:
+        allow_population_by_field_name = True
+        extra = 'forbid'
         orm_mode = True
         json_encoders = {
             datetime:
                 lambda v: v.isoformat(timespec='milliseconds').split('+')[0],
         }
+
+    @root_validator
+    def validator(cls, values):
+        if values.get('tenant') and values.get('ref_identifier'):
+            tenant: Tenant = values['tenant']
+            values['ref_identifier'].tenant_name = tenant.name
+        return values
 
     def matches(self,
                 creator_name: str | None = None,
@@ -59,6 +81,13 @@ class AuditLog(BaseModel):
         if execution_id and self.execution_id != execution_id:
             return False
         return True
+
+    async def update_ref_identifier_tenant_name(self, async_getter):
+        if self.ref_identifier and self.ref_identifier.tenant_id is not None:
+            tenant_id = self.ref_identifier.tenant_id
+            tenant_name = await async_getter(tenant_id)
+            if tenant_name is not None:
+                self.ref_identifier.tenant_name = tenant_name
 
 
 class InsertLog(BaseModel):
@@ -79,6 +108,11 @@ class PaginatedAuditLog(Paginated):
             datetime:
                 lambda v: v.isoformat(timespec='milliseconds').split('+')[0],
         }
+
+    def dict(self, *args, **kwargs):
+        if kwargs and kwargs.get("by_alias") is not None:
+            kwargs["by_alias"] = False
+        return super().dict(*args, **kwargs)
 
 
 class TruncateParams(BaseModel):
@@ -184,10 +218,12 @@ async def audit_log_streamer(request: Request,
         except asyncio.CancelledError:
             request.app.listener.remove_queue(NOTIFICATION_CHANNEL, queue)
             break
-        data.update({'id': data['_storage_id']})
         record: AuditLog = parse_obj_as(AuditLog, data)
         if not record.matches(creator_name, execution_id, since):
             continue
+        await record.update_ref_identifier_tenant_name(
+                request.app.get_tenant_name)
+
         yield make_streaming_response(record.json(exclude_none=True))
         if not queue.empty():
             streamed_ids.add(record.id)
