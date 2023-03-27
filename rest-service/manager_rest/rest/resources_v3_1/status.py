@@ -1,6 +1,3 @@
-import socket
-import http.client
-import xmlrpc.client
 from typing import Dict
 
 from flask import request
@@ -43,21 +40,6 @@ OPTIONAL_SERVICES = {
     'cloudify-syncthing': 'File Sync Service',
     'prometheus': 'Monitoring Service',
 }
-
-
-class UnixSocketHTTPConnection(http.client.HTTPConnection):
-    def connect(self):
-        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        self.sock.connect(self.host)
-
-
-class UnixSocketTransport(xmlrpc.client.Transport, object):
-    def __init__(self, path):
-        super(UnixSocketTransport, self).__init__()
-        self._path = path
-
-    def make_connection(self, host):
-        return UnixSocketHTTPConnection(self._path)
 
 
 class OK(Resource):
