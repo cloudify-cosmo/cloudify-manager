@@ -17,6 +17,7 @@ from manager_rest.security.authorization import authorize
 from manager_rest.rest.rest_decorators import marshal_with
 from manager_rest.rest.rest_utils import verify_and_convert_bool
 from manager_rest.syncthing_status_manager import get_syncthing_status
+from manager_rest.prometheus_client import query as prometheus_query
 
 try:
     from cloudify_premium.ha import utils as ha_utils
@@ -137,8 +138,17 @@ def _check_supervisord_services(services):
         BASE_SERVICES,
         OPTIONAL_SERVICES
     )
+    prometheus_services = prometheus_query(
+        'manager_service',
+        current_app.logger,
+    )
     for name, display_name in supervisord_services.items():
-        status = _lookup_supervisor_service_status(name)
+        status = NodeServiceStatus.INACTIVE
+
+        for metric in prometheus_services:
+            if metric['metric']['name'] == name and metric['value'][1] == "1":
+                status = NodeServiceStatus.ACTIVE
+
         if status:
             services[display_name] = {
                 'status': status,
