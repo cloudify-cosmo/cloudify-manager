@@ -104,7 +104,7 @@ class Status(SecuredResource):
 
 def _get_status_and_services():
     services: Dict[str, Dict] = {}
-    service_statuses = _check_supervisord_services(services)
+    service_statuses = _check_service_statuses(services)
     rabbitmq_status = _check_rabbitmq(services)
 
     # Successfully making any query requires us to check the DB is up
@@ -132,9 +132,9 @@ def _get_status_and_services():
     return status, services
 
 
-def _check_supervisord_services(services):
+def _check_service_statuses(services):
     statuses = []
-    supervisord_services = get_system_manager_services(
+    system_manager_services = get_system_manager_services(
         BASE_SERVICES,
         OPTIONAL_SERVICES
     )
@@ -142,7 +142,7 @@ def _check_supervisord_services(services):
         'manager_service',
         current_app.logger,
     )
-    for name, display_name in supervisord_services.items():
+    for name, display_name in system_manager_services.items():
         status = NodeServiceStatus.INACTIVE
 
         for metric in prometheus_services:
@@ -157,40 +157,6 @@ def _check_supervisord_services(services):
             }
             statuses.append(status)
     return statuses
-
-
-def _lookup_supervisor_service_status(service_name):
-    service_status = None
-    is_optional = True if service_name in OPTIONAL_SERVICES else False
-    server = xmlrpc.client.Server(
-        'http://',
-        transport=UnixSocketTransport("/var/run/supervisord.sock"))
-    try:
-        status_response = server.supervisor.getProcessInfo(service_name)
-    except xmlrpc.client.Fault as e:
-        # If the error is raised that means one of the two options:
-        # 1. The service is optional and not installed (faultCode=10)
-        # ignore the error
-        # 2. The service is either optional/required and return
-        # faultCode other than 10 that need to raise error
-        if e.faultCode == 10:
-            if not is_optional:
-                service_status = NodeServiceStatus.INACTIVE
-        else:
-            raise
-    except FileNotFoundError:
-        service_status = NodeServiceStatus.INACTIVE
-    else:
-        if not isinstance(status_response, dict):
-            raise RuntimeError(
-                f'unexpected status_response: {status_response!r}')
-        service_status = status_response['statename']
-        if service_status == 'RUNNING':
-            service_status = NodeServiceStatus.ACTIVE
-        else:
-            service_status = NodeServiceStatus.INACTIVE
-
-    return service_status
 
 
 def _check_rabbitmq(services):
