@@ -189,12 +189,16 @@ class WorkflowsSearches(ResourceSearches):
     def post(self, all_tenants=None, search=None, filter_id=None, **kwargs):
         """List workflows using filter rules"""
         _include = ['id', 'workflows']
+        common_only = rest_utils.verify_and_convert_bool(
+            '_common_only',
+            request.args.get('_common_only', False)
+        )
         filters = rest_utils.deployment_group_id_filter()
         result = super().post(models.Deployment, models.DeploymentsFilter,
                               _include, filters, None, None, all_tenants,
                               search, filter_id, **kwargs)
 
-        return workflows_list_response(result)
+        return workflows_list_response(result, common_only=common_only)
 
 
 class NodesSearches(ResourceSearches):
