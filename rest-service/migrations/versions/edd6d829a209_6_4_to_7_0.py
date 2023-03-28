@@ -909,7 +909,7 @@ def add_prometheus_url_config():
         [
             {
                 'name': 'prometheus_url',
-                'value': 'http://127.0.0.1:9090',
+                'value': 'http://127.0.0.1:9090/monitoring',
                 'scope': 'rest',
                 'schema': {'type': 'string'},
                 'is_editable': True,
