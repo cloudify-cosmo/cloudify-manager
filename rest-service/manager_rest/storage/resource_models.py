@@ -2721,8 +2721,7 @@ class AuditLog(CreatedAtMixin, SQLModelBase):
         in the same async loop as an AuditLog's operation."""
         return db.relationship(
                 Tenant,
-                primaryjoin=lambda:
-                Tenant.id == db.foreign(
+                primaryjoin=Tenant.id == db.foreign(
                     cast(AuditLog.ref_identifier, JSONB)["_tenant_id"]
                     .astext.cast(Integer)
                 ),
