@@ -2720,7 +2720,7 @@ class AuditLog(CreatedAtMixin, SQLModelBase):
         """The tenant for this audit log.  Must be loaded eagerly to be handled
         in the same async loop as an AuditLog's operation."""
         return db.relationship(
-                'Tenant',
+                Tenant,
                 primaryjoin=lambda:
                 Tenant.id == db.foreign(
                     cast(AuditLog.ref_identifier, JSONB)["_tenant_id"]
