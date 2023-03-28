@@ -10,8 +10,9 @@ from typing import TYPE_CHECKING, Optional, Type, List
 
 from flask_restful import fields as flask_fields
 
-from sqlalchemy import case
+from sqlalchemy import case, Integer
 from sqlalchemy import func, select, table, column, exists
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import validates, aliased
@@ -48,7 +49,7 @@ from .models_base import (
     JSONString,
     UTCDateTime,
 )
-from .management_models import User, Manager
+from .management_models import User, Manager, Tenant
 from .resource_models_base import SQLResourceBase, SQLModelBase
 from .relationships import (
     foreign_key,
@@ -2704,6 +2705,7 @@ class AuditLog(CreatedAtMixin, SQLModelBase):
     _storage_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     ref_table = db.Column(db.Text, nullable=False, index=True)
     ref_id = db.Column(db.Integer, nullable=False)
+    ref_identifier = db.Column(JSONB)
     operation = db.Column(db.Enum(*AUDIT_OPERATIONS, name='audit_operation'),
                           nullable=False)
     creator_name = db.Column(db.Text, nullable=True, index=True)
@@ -2712,4 +2714,19 @@ class AuditLog(CreatedAtMixin, SQLModelBase):
     @property
     def id(self):
         return self._storage_id
+
+    @declared_attr
+    def tenant(cls):
+        """The tenant for this audit log if one exists"""
+        return db.relationship(
+                Tenant,
+                primaryjoin=Tenant.id == db.foreign(
+                    cls.ref_identifier.cast(JSONB)["_tenant_id"]
+                    .astext.cast(Integer)
+                ),
+                viewonly=True,
+                lazy='joined',
+                # Must be loaded eagerly, see
+                # https://github.com/sqlalchemy/sqlalchemy/issues/5832
+        )
 # endregion
