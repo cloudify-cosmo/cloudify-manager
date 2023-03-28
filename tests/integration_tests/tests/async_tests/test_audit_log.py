@@ -33,8 +33,16 @@ async def test_audit_log_stream_rest_client(
     except (asyncio.TimeoutError, aiohttp.ClientConnectionError):
         pass
 
-    assert len(_filter_logs(
-        audit_logs, ref_table='blueprints', operation='create')) == 1
+    bp_create_logs = _filter_logs(
+            audit_logs,
+            ref_table='blueprints',
+            operation='create',
+    )
+    assert len(bp_create_logs) == 1
+    bp_create_ref_identifier = bp_create_logs[0]['ref_identifier']
+    assert bp_create_ref_identifier['id'] == 'bp'
+    assert bp_create_ref_identifier['tenant_id'] == 0
+    assert bp_create_ref_identifier['tenant_name'] == 'default_tenant'
     assert len(_filter_logs(
         audit_logs, ref_table='blueprints', operation='delete')) == 1
     assert len(_filter_logs(
