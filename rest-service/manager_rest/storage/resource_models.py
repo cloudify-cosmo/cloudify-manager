@@ -2722,7 +2722,7 @@ class AuditLog(CreatedAtMixin, SQLModelBase):
         return db.relationship(
                 Tenant,
                 primaryjoin=Tenant.id == db.foreign(
-                    cast(AuditLog.ref_identifier, JSONB)["_tenant_id"]
+                    cls.ref_identifier.cast(JSONB)["_tenant_id"]
                     .astext.cast(Integer)
                 ),
                 viewonly=True,
