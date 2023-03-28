@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Optional, Type, List
 
 from flask_restful import fields as flask_fields
 
-from sqlalchemy import case, cast, Integer
+from sqlalchemy import case, Integer
 from sqlalchemy import func, select, table, column, exists
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.declarative import declared_attr
@@ -2717,8 +2717,7 @@ class AuditLog(CreatedAtMixin, SQLModelBase):
 
     @declared_attr
     def tenant(cls):
-        """The tenant for this audit log.  Must be loaded eagerly to be handled
-        in the same async loop as an AuditLog's operation."""
+        """The tenant for this audit log if one exists"""
         return db.relationship(
                 Tenant,
                 primaryjoin=Tenant.id == db.foreign(
@@ -2727,5 +2726,7 @@ class AuditLog(CreatedAtMixin, SQLModelBase):
                 ),
                 viewonly=True,
                 lazy='joined',
+                # Must be loaded eagerly, see
+                # https://github.com/sqlalchemy/sqlalchemy/issues/5832
         )
 # endregion

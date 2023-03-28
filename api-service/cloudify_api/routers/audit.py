@@ -68,6 +68,10 @@ class AuditLog(BaseModel):
             values['ref_identifier'].tenant_name = tenant.name
         return values
 
+    def dict(self, *args, **kwargs):
+        kwargs['exclude'] = {'tenant': True}
+        return super().dict(*args, **kwargs)
+
     def matches(self,
                 creator_name: str | None = None,
                 execution_id: str | None = None,
@@ -109,8 +113,8 @@ class PaginatedAuditLog(Paginated):
         }
 
     def dict(self, *args, **kwargs):
-        if kwargs and kwargs.get("by_alias") is not None:
-            kwargs["by_alias"] = False
+        kwargs['exclude_none'] = True
+        kwargs['by_alias'] = False
         return super().dict(*args, **kwargs)
 
 
