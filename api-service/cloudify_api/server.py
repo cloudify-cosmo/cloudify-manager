@@ -10,7 +10,7 @@ from manager_rest import config
 from cloudify_api.config import Settings
 from cloudify_api.listener import Listener
 from cloudify_api.log import setup_logger
-from cloudify_api import db, models
+from cloudify_api import db
 
 # THIS IS A HACK
 # asyncpg's connect doesn't play nice with sqlalchemy's url parsing.
@@ -116,7 +116,7 @@ class CloudifyAPI(FastAPI):
         if tenant_id in self._tenants:
             return self._tenants[tenant_id]
 
-        query = select(models.Tenant).where(models.Tenant.id == tenant_id)
+        query = select(db.Tenant).where(db.Tenant.id == tenant_id)
         async with self.db_session_maker() as session:
             db_records = await session.execute(query)
         try:
