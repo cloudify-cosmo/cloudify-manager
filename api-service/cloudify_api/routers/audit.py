@@ -37,8 +37,7 @@ class RefIdentifier(BaseModel):
         extra = 'forbid'
 
     def dict(self, *args, **kwargs):
-        if kwargs and kwargs.get("exclude_none") is not None:
-            kwargs["exclude_none"] = True
+        kwargs.setdefault('exclude_none', True)
         return super().dict(*args, **kwargs)
 
 
