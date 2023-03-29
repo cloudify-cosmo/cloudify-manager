@@ -17,6 +17,7 @@ import filecmp
 import os
 import pytest
 import shutil
+import subprocess
 import tarfile
 import uuid
 
@@ -71,4 +72,4 @@ class DownloadBlueprintTest(AgentlessTestCase):
 
     @staticmethod
     def _create_file(file_size, file_location):
-        os.system('fallocate -l {0} {1}'.format(file_size, file_location))
+        subprocess.run(['fallocate', '-l', file_size, file_location])
