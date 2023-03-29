@@ -24,7 +24,7 @@ from manager_rest.flask_utils import (
 from manager_rest.rest.search_utils import GetValuesWithStorageManager
 
 from cloudify.constants import SHARED_RESOURCE, COMPONENT
-from cloudify.deployment_dependencies import dependency_creator_generator
+from cloudify.deployment_dependencies import format_dependency_creator
 
 LOGFILE = '/var/log/cloudify/mgmtworker/logs/restore_idd.log'
 
@@ -159,8 +159,8 @@ def create_service_composition_dependencies(deployment_plan, deployment, sm):
                     target_deployment = sm.get(models.Deployment,
                                                target_deployment_id,
                                                all_tenants=True)
-                dependency_creator = dependency_creator_generator(prefix,
-                                                                  suffix)
+                dependency_creator = format_dependency_creator(prefix,
+                                                               suffix)
                 put_deployment_dependency(deployment,
                                           target_deployment,
                                           dependency_creator,

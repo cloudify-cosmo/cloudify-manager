@@ -202,7 +202,7 @@ class BlueprintUploadTest(AgentlessTestCase):
         # blueprint available in manager resources
         admin_headers = self.client._client.headers
         resp = requests.get(
-            'https://{0}:53333/resources/blueprints/default_tenant/'
+            'https://{0}:443/resources/blueprints/default_tenant/'
             '{1}/{2}'.format(ipv6_url_compat(self.env.address),
                              blueprint_id,
                              blueprint_filename),
@@ -212,7 +212,7 @@ class BlueprintUploadTest(AgentlessTestCase):
         self.assertEqual(resp.status_code, requests.status_codes.codes.ok)
         # blueprint archive available in uploaded blueprints
         resp = requests.get(
-            'https://{0}:53333/resources/uploaded-blueprints/default_tenant/'
+            'https://{0}:443/resources/uploaded-blueprints/default_tenant/'
             '{1}/{1}.{2}'.format(
                 ipv6_url_compat(self.env.address),
                 blueprint_id,
@@ -283,7 +283,7 @@ class BlueprintValidateTest(AgentlessTestCase):
         admin_headers = self.client._client.headers
         # blueprint folder deleted from uploaded blueprints
         resp = requests.get(
-            'https://{0}:53333/resources/uploaded-blueprints/'
+            'https://{0}:443/resources/uploaded-blueprints/'
             'default_tenant/{1}'.format(ipv6_url_compat(self.env.address),
                                         blueprint_id),
             headers=admin_headers,

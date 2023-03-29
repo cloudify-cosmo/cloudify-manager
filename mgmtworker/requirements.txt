@@ -49,7 +49,7 @@ cloudify-common @ git+https://github.com/cloudify-cosmo/cloudify-common@master
     #   -r requirements.in
     #   cloudify-agent
     #   cloudify-mgmtworker (setup.py)
-cryptography==39.0.0
+cryptography==39.0.1
     # via
     #   cloudify-mgmtworker (setup.py)
     #   paramiko

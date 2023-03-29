@@ -255,6 +255,22 @@ class SearchesTestCase(base_test.BaseServerTestCase):
             constraints={'labels': [{'type': 'text'}]},
             filter_rules=[FilterRule('one', ['yes'], 'any_of', 'label')])
 
+    def test_deployments_search_by_id(self):
+        bp = models.Blueprint(id='b1', creator=self.user, tenant=self.tenant)
+        for id in ['d1', 'd2', 'd3', 'd4']:
+            models.Deployment(
+                id=id,
+                blueprint=bp,
+                creator=self.user,
+                tenant=self.tenant,
+            )
+        self.create_filter(self.client.deployments_filters, 'filter_by_id',
+                           [FilterRule('id', ['d1', 'd4'],
+                                       'any_of', 'attribute')])
+        deployments = self.client.deployments.list(filter_id='filter_by_id')
+        assert len(deployments) == 2
+        assert set(d.id for d in deployments) == {'d1', 'd4'}
+
     def test_deployments_search_installation_status(self):
         bp = models.Blueprint(
             id='bp1',

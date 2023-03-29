@@ -36,6 +36,55 @@ users_table = sa.table(
     sa.Column('created_at', UTCDateTime),
 )
 
+# The information about tables, which should be "audited", meaning INSERT,
+# UPDATE and DELETE operations on these tables will be logged in the audit_log
+# table.  The logging is executed using PostgreSQL trigger function
+# write_audit_log, also defined in this file, see the function
+# create_functions_write_audit_log().
+# The keys in this dictionary define table names, and the values are
+# two-element tuples: the first one is a string, which defines which column of
+# the table are used to populate audit_log.ref_id column; the second element is
+# a list of columns, which are stored in audit_log.ref_identifier (as JSONB).
+tables_to_audit = {
+    'agents': ('_storage_id', ['_tenant_id', 'id']),
+    'blueprints': ('_storage_id', ['_tenant_id', 'id']),
+    'blueprints_filters': ('_storage_id', ['_tenant_id', 'id']),
+    'blueprints_labels': ('id', ['id']),
+    'certificates': ('id', ['id']),
+    'deployment_groups': ('_storage_id', ['_tenant_id', 'id']),
+    'deployment_groups_labels': ('id', ['id']),
+    'deployment_labels_dependencies': ('_storage_id', ['_tenant_id', 'id']),
+    'deployment_modifications': ('_storage_id', ['_tenant_id', 'id']),
+    'deployment_update_steps': ('_storage_id', ['_tenant_id', 'id']),
+    'deployment_updates': ('_storage_id', ['_tenant_id', 'id']),
+    'deployments': ('_storage_id', ['_tenant_id', 'id']),
+    'deployments_filters': ('_storage_id', ['_tenant_id', 'id']),
+    'deployments_labels': ('id', ['id']),
+    'execution_groups': ('_storage_id', ['_tenant_id', 'id']),
+    'execution_schedules': ('_storage_id', ['_tenant_id', 'id']),
+    'executions': ('_storage_id', ['_tenant_id', 'id']),
+    'groups': ('id', ['id']),
+    'inter_deployment_dependencies': ('_storage_id', ['_tenant_id', 'id']),
+    'licenses': ('id', ['id']),
+    'maintenance_mode': ('id', ['id']),
+    'managers': ('id', ['id']),
+    'node_instances': ('_storage_id', ['_tenant_id', 'id']),
+    'nodes': ('_storage_id', ['_tenant_id', 'id']),
+    'operations': ('_storage_id', ['_tenant_id', 'id']),
+    'permissions': ('id', ['id']),
+    'plugins': ('_storage_id', ['_tenant_id', 'id']),
+    'plugins_states': ('_storage_id', ['_storage_id']),
+    'plugins_updates': ('_storage_id', ['_tenant_id', 'id']),
+    'roles': ('id', ['id']),
+    'secrets': ('_storage_id', ['_tenant_id', 'id']),
+    'sites': ('_storage_id', ['_tenant_id', 'name']),
+    'snapshots': ('_storage_id', ['_tenant_id', 'id']),
+    'tasks_graphs': ('_storage_id', ['_tenant_id', 'id']),
+    'tenants': ('id', ['_tenant_id', 'name']),
+    'usage_collector': ('id', ['manager_id', 'id']),
+    'users': ('id', ['username']),
+}
+
 
 def upgrade():
     add_p_to_pickle_columns()
@@ -51,9 +100,19 @@ def upgrade():
     add_file_server_type_config()
     add_default_agents_rest_port_config()
     add_blueprint_requirements_column()
+    add_prometheus_url_config()
+    drop_ldap_ca_config()
+    add_audit_log_ref_identifier()
+    create_functions_write_audit_log()
+    update_audit_triggers()
 
 
 def downgrade():
+    revert_audit_triggers()
+    drop_functions_write_audit_log()
+    drop_audit_log_ref_identifier()
+    add_ldap_ca_config()
+    drop_prometheus_url_config()
     drop_blueprint_requirements_column()
     drop_default_agents_rest_port_config()
     drop_file_server_type_config()
@@ -397,8 +456,7 @@ def remove_p_from_pickle_columns():
                     new_column_name='supported_py_versions')
     op.alter_column('plugins',
                     column_name='wheels_p',
-                    new_column_name='wheels',
-                    nullable=False)
+                    new_column_name='wheels')
 
     op.alter_column('plugins_updates',
                     column_name='deployments_to_update_p',
@@ -732,7 +790,7 @@ def add_default_agents_rest_port_config():
         [
             {
                 'name': 'default_agent_port',
-                'value': 53333,
+                'value': 443,
                 'scope': 'rest',
                 'schema': {"type": "number", "minimum": 1, "maximum": 65535},
                 'is_editable': True,
@@ -789,6 +847,27 @@ def drop_s3_client_config():
         )
 
 
+def drop_ldap_ca_config():
+    op.execute(
+        config_table.delete().where(
+            (config_table.c.name == op.inline_literal('ldap_ca_path'))
+            & (config_table.c.scope == op.inline_literal('rest'))
+        )
+    )
+
+
+def add_ldap_ca_config():
+    op.bulk_insert(config_table, [
+            dict(
+                name='ldap_ca_path',
+                value=op.inline_literal('null'),
+                scope='rest',
+                schema={'type': 'string'},
+                is_editable=True
+            )
+        ])
+
+
 def add_file_server_type_config():
     op.bulk_insert(
         config_table,
@@ -822,3 +901,113 @@ def add_blueprint_requirements_column():
 
 def drop_blueprint_requirements_column():
     op.drop_column('blueprints', 'requirements')
+
+
+def add_prometheus_url_config():
+    op.bulk_insert(
+        config_table,
+        [
+            {
+                'name': 'prometheus_url',
+                'value': 'http://127.0.0.1:9090/monitoring',
+                'scope': 'rest',
+                'schema': {'type': 'string'},
+                'is_editable': True,
+            },
+        ],
+    )
+
+
+def drop_prometheus_url_config():
+    op.execute(
+        config_table.delete().where(
+            (config_table.c.name == op.inline_literal('prometheus_url'))
+            & (config_table.c.scope == op.inline_literal('rest'))
+        )
+    )
+
+
+def add_audit_log_ref_identifier():
+    op.add_column('audit_log',
+                  sa.Column('ref_identifier', sa.dialects.postgresql.JSONB))
+
+
+def drop_audit_log_ref_identifier():
+    op.drop_column('audit_log', 'ref_identifier')
+
+
+def create_functions_write_audit_log():
+    op.execute("""
+    CREATE OR REPLACE FUNCTION write_audit_log() RETURNS TRIGGER AS $$
+        DECLARE
+            -- List of columns to store, the second argument of the function
+            _id_columns text[] := tg_argv[1]::text[];
+            -- User performing the modification, from external context
+            _user text := public.audit_username();
+            -- Execution_id performing the modification, from external context
+            _execution_id text := public.audit_execution_id();
+            _operation audit_operation;
+            _record jsonb;
+            _ref_identifier jsonb;
+        BEGIN
+            -- Prepare audit_operation type and a record to be partially stored
+            IF (TG_OP = 'INSERT') THEN
+                _operation := 'create';
+                _record := to_jsonb(NEW);
+            ELSEIF (TG_OP = 'UPDATE') THEN
+                _operation := 'update';
+                _record := to_jsonb(NEW);
+            ELSEIF (TG_OP = 'DELETE') THEN
+                _operation := 'delete';
+                _record := to_jsonb(OLD);
+            END IF;
+
+            -- Create a JSONB object containing only selected (_id_columns)
+            -- columns from the modified record
+            _ref_identifier := (
+                SELECT jsonb_object(
+                    array_agg(key),
+                    array_agg(_record ->> key)
+                )
+                FROM unnest(_id_columns) id_cols(key)
+            );
+
+            -- Write a new entry in the audit_log table; ref_id column is
+            -- populated with the content of the ref_table column described
+            -- by the first parameter to this function.
+            INSERT INTO public.audit_log (ref_table, ref_id, ref_identifier,
+                                          operation, creator_name,
+                                          execution_id, created_at)
+                VALUES (quote_ident(tg_table_name),
+                        (_record->>tg_argv[0])::int,
+                        _ref_identifier, _operation, _user, _execution_id,
+                        now());
+            RETURN NULL;
+        END;
+    $$ LANGUAGE plpgsql;""")
+
+
+def drop_functions_write_audit_log():
+    op.execute("""DROP FUNCTION write_audit_log;""")
+
+
+def update_audit_triggers():
+    for table_name, (id_field, identifier_fields) in tables_to_audit.items():
+        op.execute(f"""
+        DROP TRIGGER IF EXISTS audit_{table_name} ON {table_name};
+        CREATE TRIGGER audit_{table_name}
+        AFTER INSERT OR UPDATE OR DELETE ON {table_name} FOR EACH ROW
+        EXECUTE PROCEDURE
+        write_audit_log('{id_field}', '{{ {",".join(identifier_fields)} }}');
+        """)
+
+
+def revert_audit_triggers():
+    for table_name, (ref_id_field, _) in tables_to_audit.items():
+        op.execute(f"""
+        DROP TRIGGER IF EXISTS audit_{table_name} ON {table_name};
+        CREATE TRIGGER audit_{table_name}
+        AFTER INSERT OR UPDATE OR DELETE ON {table_name} FOR EACH ROW
+        EXECUTE PROCEDURE
+        write_audit_log_{ref_id_field.strip('_')}('{table_name}');
+        """)

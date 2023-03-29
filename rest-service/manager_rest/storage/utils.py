@@ -3,29 +3,6 @@ from collections import OrderedDict
 from manager_rest.storage.models_base import is_orm_attribute
 
 
-def get_column(model_class, column_name):
-    """Return the column on which an action (filtering, sorting, etc.)
-    would need to be performed. Can be either an attribute of the class,
-    or an association proxy linked to a relationship the class has
-    """
-    column = getattr(model_class, column_name, None)
-    if column is None:
-        # This is some sort of derived thing like tenant_roles in User
-        return None
-    if is_orm_attribute(column):
-        return column
-    else:
-        if not hasattr(column, 'remote_attr'):
-            # This is a property or similar, not a real column
-            return None
-        # We need to get to the underlying attribute, so we move on to the
-        # next remote_attr until we reach one
-        while not is_orm_attribute(column.remote_attr):
-            column = column.remote_attr
-        # Put a label on the remote attribute with the name of the column
-        return column.remote_attr.label(column_name)
-
-
 def get_joins(model_class, columns):
     """Get a list of all the attributes on which we need to join
 

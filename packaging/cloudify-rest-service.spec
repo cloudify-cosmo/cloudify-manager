@@ -85,7 +85,7 @@ visudo -cf %{buildroot}/etc/sudoers.d/cloudify-restservice
 
 # Install local copies of types for URL resolver
 specs="%{buildroot}/opt/manager/resources/spec/cloudify"
-types_yaml="${specs}/7.0.0.dev1/types.yaml"
+types_yaml="${specs}/7.1.0.dev1/types.yaml"
 mkdir -p $(dirname "$types_yaml")
 cp "${RPM_SOURCE_DIR}/resources/rest-service/cloudify/types/types.yaml" "$types_yaml"
 cache_root="${RPM_SOURCE_DIR}/resources/rest-service/cloudify/types/cache"
@@ -136,10 +136,6 @@ if [ -f "%{_localstatedir}/lib/rpm-state/cloudify-upgraded" ]; then
     export MANAGER_REST_CONFIG_PATH=/opt/manager/cloudify-rest.conf
 
     /opt/manager/env/bin/python -m manager_rest.update_rest_db_config --commit
-    pushd /opt/manager/resources/cloudify/migrations
-        /opt/manager/env/bin/alembic upgrade head
-        CURRENT_DB=$(/opt/manager/env/bin/alembic current)
-    popd
     /opt/manager/env/bin/python -m manager_rest.update_managers_version %{CLOUDIFY_VERSION}
     chown cfyuser: /opt/manager/resources
 
@@ -164,7 +160,6 @@ Update notes:
  * Clustered DB no longer requires HAProxy. The config files at /opt/manager/cloudify-rest.conf,
    /opt/cloudify-stage/conf/app.json and /opt/cloudify-composer/backend/conf/prod.json
    have been updated. You can view them to confirm they contain the correct DB endpoint(s).
- * The database schema has been updated. Current database schema revision: ${CURRENT_DB}
 
 #############################################################
 "
