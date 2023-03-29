@@ -50,9 +50,10 @@ class Workflows(SecuredResource):
 
 
 def workflows_list_response(
-        deployments: Iterable[models.Deployment]
+        deployments: Iterable[models.Deployment],
+        common_only: bool = False,
 ) -> ListResponse:
-    workflows = _extract_workflows(deployments)
+    workflows = _extract_workflows(deployments, common_only=common_only)
     pagination = {
         'total': len(workflows),
         'size': len(workflows),
@@ -63,11 +64,18 @@ def workflows_list_response(
 
 
 def _extract_workflows(
-        deployments: Iterable[models.Deployment]
+        deployments: Iterable[models.Deployment],
+        common_only: bool = False,
 ) -> List[Workflow]:
-    workflows = set()
+    if not deployments:
+        return []
+    first_dep, *deployments = deployments
+    workflows = set(first_dep._list_workflows())
     for dep in deployments:
-        workflows |= set(dep._list_workflows())
+        if common_only:
+            workflows &= set(dep._list_workflows())
+        else:
+            workflows |= set(dep._list_workflows())
     return list(workflows)
 
 
