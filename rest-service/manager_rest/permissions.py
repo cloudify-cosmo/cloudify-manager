@@ -251,7 +251,6 @@ PERMISSIONS = [
     'widget_inputs',
     'widget_labels',
     'widget_maintenanceModeButton',
-    'widget_managers',
     'widget_nodes',
     'widget_nodesComputeNum',
     'widget_nodesStats',

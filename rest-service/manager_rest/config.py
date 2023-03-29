@@ -152,7 +152,7 @@ class Config(object):
     insecure_endpoints_disabled = Setting('insecure_endpoints_disabled')
     default_page_size = Setting('default_page_size', default=1000)
     min_available_memory_mb = Setting('min_available_memory_mb', default=0)
-    default_agent_port = Setting('default_agent_port', default=53333)
+    default_agent_port = Setting('default_agent_port', default=443)
 
     # security settings
     security_hash_salt = Setting('security_hash_salt', from_db=False)
@@ -178,6 +178,8 @@ class Config(object):
     snapshot_restore_threads = Setting('snapshot_restore_threads', default=15)
     max_concurrent_workflows = Setting('max_concurrent_workflows', default=20)
     warnings = Setting('warnings', default=[])
+
+    prometheus_url = Setting('prometheus_url')
 
     _logger = None
 

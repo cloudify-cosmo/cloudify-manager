@@ -14,7 +14,7 @@
 
 from unittest import mock
 
-from cloudify.deployment_dependencies import dependency_creator_generator
+from cloudify.deployment_dependencies import format_dependency_creator
 from cloudify.constants import SHARED_RESOURCE
 from cloudify.exceptions import NonRecoverableError
 
@@ -87,7 +87,7 @@ class TestSharedResource(TestSharedResourceBase):
 
         self.cfy_mock_client.inter_deployment_dependencies.delete \
             .assert_called_with(
-                dependency_creator=dependency_creator_generator(
+                dependency_creator=format_dependency_creator(
                     SHARED_RESOURCE, self._ctx.instance.id),
                 source_deployment=self._ctx.deployment.id,
                 target_deployment='test_deployment'

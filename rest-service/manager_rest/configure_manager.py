@@ -26,7 +26,7 @@ from manager_rest.flask_utils import setup_flask_app
 REST_LOG_DIR = '/var/log/cloudify/rest'
 REST_HOME_DIR = '/opt/manager'
 DEFAULT_FILE_SERVER_ROOT = os.path.join(REST_HOME_DIR, 'resources')
-DEFAULT_INTERNAL_REST_PORT = 53333
+DEFAULT_INTERNAL_REST_PORT = 443
 
 
 def dict_merge(target, source):
@@ -531,10 +531,13 @@ def _generate_db_config_entries(cfg):
     mgmtworker_cfg = cfg.get('mgmtworker', {})
     prometheus_cfg = cfg.get('prometheus', {})
     restservice_cfg = cfg.get('restservice', {})
+    internal_rest_port = (
+        manager_cfg.get('internal_rest_port') or DEFAULT_INTERNAL_REST_PORT
+    )
 
     manager_private_ip = manager_cfg.get('private_ip', 'localhost')
     default_file_server_url = f'https://{ipv6_url_compat(manager_private_ip)}'\
-                              f':{DEFAULT_INTERNAL_REST_PORT}/resources'
+                              f':{internal_rest_port}/resources'
     rest_cfg = build_dict(
         rest_service_log_path=os.path.join(
             REST_LOG_DIR, 'cloudify-rest-service.log'),
@@ -558,6 +561,8 @@ def _generate_db_config_entries(cfg):
             'credentials', {}).get('username'),
         log_fetch_password=prometheus_cfg.get(
             'credentials', {}).get('password'),
+        default_agent_port=internal_rest_port,
+        prometheus_url=manager_cfg.get('prometheus_url'),
     )
     mgmtworker_cfg = build_dict(
         max_workers=mgmtworker_cfg.get('max_workers'),
@@ -650,6 +655,7 @@ def _create_admin_token(target):
     db.session.commit()
     with open(target, 'w') as f:
         f.write(token.value)
+    return 0
 
 
 def _wait_for_db(address):
@@ -704,11 +710,12 @@ if __name__ == '__main__':
         sys.exit(_wait_for_db(args.db_wait))
     if args.rabbitmq_wait:
         sys.exit(_wait_for_rabbitmq(args.rabbitmq_wait))
+    if args.create_admin_token:
+        with setup_flask_app().app_context():
+            sys.exit(_create_admin_token(args.create_admin_token))
 
     config.instance.load_configuration(from_db=False)
     with setup_flask_app().app_context():
         user_config = _load_user_config(args.config_file_path)
         config.instance.load_from_db(session=db.session)
         configure(user_config)
-        if args.create_admin_token:
-            _create_admin_token(args.create_admin_token)

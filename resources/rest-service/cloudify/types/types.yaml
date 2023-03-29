@@ -2,7 +2,7 @@
 # The types defined here make use of features only available in the
 # 'cloudify_dsl_1_4' tosca definitions version
 ##################################################################################
-tosca_definitions_version: cloudify_dsl_1_5
+tosca_definitions_version: cloudify_dsl_1_4
 
 ##################################################################################
 # Cloudify basic types metadata

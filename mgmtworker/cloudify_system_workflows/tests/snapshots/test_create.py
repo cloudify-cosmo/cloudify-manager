@@ -1,3 +1,4 @@
+import base64
 import json
 import os
 import shutil
@@ -11,12 +12,12 @@ import pytest
 
 from cloudify_rest_client.responses import ListResponse
 
+from cloudify_system_workflows.snapshots import INCLUDES
 from cloudify_system_workflows.snapshots.snapshot_create import (
     constants,
     EMPTY_B64_ZIP,
     EXTRA_DUMP_KWARGS,
     GET_DATA,
-    INCLUDES,
     SnapshotCreate,
 )
 
@@ -62,6 +63,11 @@ MOCK_CLIENT_RESPONSES = {
             'get': [{'workdir_zip': 'DEF1'},
                     {'workdir_zip': EMPTY_B64_ZIP},
                     {'workdir_zip': 'DEF3'}],
+        },
+        'inter_deployment_dependencies': {
+            'list': [{'id': 'idd_t1.1'},
+                     {'id': 'idd_t1.2'},
+                     {'id': 'idd_t1.3'}],
         },
         'deployment_groups': {
             'list': [{'id': 'deployments_groups_list_t1'}],
@@ -135,6 +141,9 @@ MOCK_CLIENT_RESPONSES = {
             'list': [{'id': 'deployment_t2'}],
             'get': [{'workdir_zip': 'XYZF'}],
         },
+        'inter_deployment_dependencies': {
+            'list': [{'id': 'idd_t2'}],
+        },
         'deployment_groups': {
             'list': [{'id': 'deployments_groups_list_t2'}],
         },
@@ -184,6 +193,22 @@ MOCK_CLIENT_RESPONSES = {
             'list': [{'name': 'something'}],
         },
     },
+}
+MOCK_COMPOSER_RESPONSES = {
+    'blueprints.zip': base64.b64decode(EMPTY_B64_ZIP),
+    'blueprints.json': b'[]',
+    'configuration.json': b'{}',
+    'favorites.json': b'[]',
+}
+MOCK_STAGE_RESPONSES = {
+    'blueprint-layouts.json': b'[]',
+    'configuration.json': b'{}',
+    'page-groups.json': b'[]',
+    'pages.json': b'[]',
+    'templates.json': b'[]',
+    'tenant1/ua.json': b'[]',
+    'tenant2/ua.json': b'[]',
+    'widgets.zip': base64.b64decode(EMPTY_B64_ZIP),
 }
 
 
@@ -362,10 +387,74 @@ def mock_unlink():
         yield unlink
 
 
+@pytest.fixture
+def mock_get_composer_client():
+    class MockComposerBaseSnapshotClient:
+        def __init__(self, entity_name):
+            self._entity_name = entity_name
+
+        def get_snapshot(self, **_):
+            match self._entity_name:
+                case 'blueprints':
+                    return base64.b64decode(EMPTY_B64_ZIP)
+                case 'favorites':
+                    return b'[]'
+                case _:
+                    return b'{}'
+
+        def get_metadata(self):
+            return b'[]'
+
+    class MockComposerClient:
+        blueprints = MockComposerBaseSnapshotClient('blueprints')
+        configuration = MockComposerBaseSnapshotClient('configuration')
+        favorites = MockComposerBaseSnapshotClient('favorites')
+
+    with mock.patch(
+        'cloudify_system_workflows.snapshots.utils'
+        '.get_composer_client',
+        side_effect=MockComposerClient,
+    ) as client:
+        yield client
+
+
+@pytest.fixture
+def mock_get_stage_client():
+    class MockStageBaseSnapshotClient:
+        def __init__(self, entity_name):
+            self._entity_name = entity_name
+
+        def get_snapshot(self, **_):
+            match self._entity_name:
+                case 'widgets':
+                    return base64.b64decode(EMPTY_B64_ZIP)
+                case 'configuration':
+                    return b'{}'
+                case _:
+                    return b'[]'
+
+    class MockStageClient:
+        blueprint_layouts = MockStageBaseSnapshotClient('blueprint-layouts')
+        configuration = MockStageBaseSnapshotClient('configuration')
+        page_groups = MockStageBaseSnapshotClient('page-groups')
+        pages = MockStageBaseSnapshotClient('pages')
+        templates = MockStageBaseSnapshotClient('templates')
+        ua = MockStageBaseSnapshotClient('ua')
+        widgets = MockStageBaseSnapshotClient('widgets')
+
+    with mock.patch(
+        'cloudify_system_workflows.snapshots.utils'
+        '.get_stage_client',
+        side_effect=MockStageClient,
+    ) as client:
+        yield client
+
+
 def test_create_snapshot(mock_shutil_rmtree, mock_get_manager_version,
                          mock_ctx, mock_get_client, mock_unlink,
                          mock_override_entities_per_grouping,
-                         mock_zipfile):
+                         mock_zipfile, mock_get_composer_client,
+                         mock_get_stage_client):
     snap_id = 'testsnapshot'
     tempdir = tempfile.mkdtemp(prefix='snap-cre-test')
     snap_cre = SnapshotCreate(
@@ -387,6 +476,8 @@ def test_create_snapshot(mock_shutil_rmtree, mock_get_manager_version,
                              mock_zipfile)
         _assert_tenants(snap_dir, snap_cre._tenant_clients, mock_unlink,
                         mock_zipfile)
+        _check_snapshot_composer(snap_dir)
+        _check_snapshot_stage(snap_dir)
 
         _assert_snapshot_status_update(snap_id, True, snap_cre._client)
     finally:
@@ -433,7 +524,8 @@ def _check_tenant_dir_in_zip(tenant_name, zipfile, base_dir):
 
 def _check_snapshot_top_level(tempdir, unlink, zipfile):
     top_level_data = set(os.listdir(tempdir))
-    assert top_level_data == {'mgmt', 'tenants', constants.METADATA_FILENAME}
+    assert top_level_data == {'mgmt', 'tenants', 'composer', 'stage',
+                              constants.METADATA_FILENAME}
     metadata_path = os.path.join(tempdir, constants.METADATA_FILENAME)
     with open(metadata_path) as md_handle:
         metadata = json.load(md_handle)
@@ -571,6 +663,36 @@ def _assert_tenants(tempdir, clients, unlink, zipfile):
 
         _check_tenant_calls(tenant, MOCK_CLIENT_RESPONSES[tenant],
                             clients[tenant], tenant_dir)
+
+
+def _check_snapshot_composer(tempdir):
+    base_dir_name = os.path.join(tempdir, 'composer')
+    top_level_composer = set(os.listdir(base_dir_name))
+    entities = ['blueprints.zip', 'blueprints.json', 'configuration.json',
+                'favorites.json']
+    assert top_level_composer == set(entities)
+    for entity in entities:
+        expected_content = MOCK_COMPOSER_RESPONSES[entity]
+        with open(os.path.join(base_dir_name, entity), 'rb') as entity_file:
+            entity_content = entity_file.read()
+        assert entity_content == expected_content
+
+
+def _check_snapshot_stage(tempdir):
+    base_dir_name = os.path.join(tempdir, 'stage')
+    # top_level_stage = set(os.listdir(base_dir_name))
+    top_level_stage = {os.path.relpath(os.path.join(root, file), base_dir_name)
+                       for root, _, files in os.walk(base_dir_name)
+                       for file in files}
+    entities = ['blueprint-layouts.json', 'configuration.json',
+                'page-groups.json', 'pages.json', 'templates.json',
+                'widgets.zip', 'tenant1/ua.json', 'tenant2/ua.json']
+    assert top_level_stage == set(entities)
+    for entity in entities:
+        expected_content = MOCK_STAGE_RESPONSES[entity]
+        with open(os.path.join(base_dir_name, entity), 'rb') as entity_file:
+            entity_content = entity_file.read()
+        assert entity_content == expected_content
 
 
 def _check_resource_type(r_type, group, expected, tenant_dir,
