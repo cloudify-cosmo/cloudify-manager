@@ -27,6 +27,7 @@ from cloudify_rest_client.exceptions import (
     BlueprintInUseError,
     CloudifyClientError,
 )
+from dsl_parser import constants as dsl_constants
 
 from manager_rest import archiving
 from manager_rest.test import base_test
@@ -307,51 +308,49 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         Test deletion protection of a blueprint which is used in another
         blueprint.
         """
-        second_blueprint_id = 'imported_blueprint'
-        self.put_blueprint('mock_blueprint',
-                           'blueprint.yaml', second_blueprint_id)
+        bp1 = models.Blueprint(
+            id='bp1',
+            creator=self.user,
+            tenant=self.tenant,
+        )
 
-        first_blueprint_id = 'first_imported_blueprint'
-        self.put_blueprint('mock_blueprint',
-                           'blueprint_with_blueprint_import.yaml',
-                           first_blueprint_id)
+        bp2 = models.Blueprint(
+            id='bp2',
+            plan={
+                dsl_constants.IMPORTED_BLUEPRINTS: [bp1.id],
+            },
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        with self.assertRaises(BlueprintInUseError):
+            self.client.blueprints.delete(bp1.id)
 
-        app_blueprint_id = 'app'
-        self.put_blueprint('mock_blueprint',
-                           'blueprint_with_2_layer_blueprint_import.yaml',
-                           app_blueprint_id)
-
-        self.assertRaises(BlueprintInUseError,
-                          self.client.blueprints.delete,
-                          first_blueprint_id)
-
-        self.assertRaises(BlueprintInUseError,
-                          self.client.blueprints.delete,
-                          second_blueprint_id)
-
-        self.client.blueprints.delete(app_blueprint_id)
-        self.client.blueprints.delete(first_blueprint_id)
-        self.client.blueprints.delete(second_blueprint_id)
+        self.client.blueprints.delete(bp2.id)
+        self.client.blueprints.delete(bp1.id)
 
     def test_force_delete_used_blueprints_via_import(self):
         """
         Test force deletion protection of a blueprint which is used in another
         blueprint.
         """
-        first_blueprint_id = 'imported_blueprint'
-        self.put_blueprint('mock_blueprint',
-                           'blueprint.yaml', first_blueprint_id)
+        bp1 = models.Blueprint(
+            id='bp1',
+            creator=self.user,
+            tenant=self.tenant,
+        )
 
-        app_blueprint_id = 'first_imported_blueprint'
-        self.put_blueprint('mock_blueprint',
-                           'blueprint_with_blueprint_import.yaml',
-                           app_blueprint_id)
+        models.Blueprint(
+            id='bp2',
+            plan={
+                dsl_constants.IMPORTED_BLUEPRINTS: [bp1.id],
+            },
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        with self.assertRaises(BlueprintInUseError):
+            self.client.blueprints.delete(bp1.id)
 
-        self.assertRaises(BlueprintInUseError,
-                          self.client.blueprints.delete,
-                          first_blueprint_id)
-
-        self.client.blueprints.delete(first_blueprint_id, True)
+        self.client.blueprints.delete(bp1.id, force=True)
 
     def test_not_listing_hidden_blueprints(self):
         b0_id = 'b0'
