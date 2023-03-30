@@ -17,13 +17,12 @@ RUN --mount=type=cache,target=/root/.cache \
 
 WORKDIR /opt
 
-COPY . execution-scheduler
+COPY requirements.txt requirements.txt
 
 RUN --mount=type=cache,target=/root/.cache \
     pip install \
       --upgrade pip \
-      -r execution-scheduler/requirements.txt \
-      execution-scheduler/
+      -r requirements.txt
 
 RUN mkdir -p \
     /opt/manager \
@@ -31,5 +30,10 @@ RUN mkdir -p \
     /src
 
 COPY docker/cloudify.pth /usr/local/lib/python3.11/site-packages/cloudify.pth
+
+COPY . execution-scheduler
+
+RUN --mount=type=cache,target=/root/.cache \
+    pip install execution-scheduler/
 
 ENTRYPOINT /opt/execution-scheduler/docker/entrypoint.sh
