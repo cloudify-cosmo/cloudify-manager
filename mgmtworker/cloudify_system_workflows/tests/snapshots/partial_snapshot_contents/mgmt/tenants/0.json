@@ -1,6 +1,9 @@
-[
+{
+  "type": "tenants",
+  "items": [
     {
-        "name": "arbitrary",
-        "rabbitmq_password": "apassword"
+      "name": "arbitrary",
+      "rabbitmq_password": "apassword"
     }
-]
+  ]
+}

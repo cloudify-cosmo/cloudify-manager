@@ -1,36 +1,39 @@
-[
+{
+  "type": "tasks_graphs",
+  "items": [
     {
-        "created_at": "2022-11-25T15:14:19.203Z",
-        "id": "595734d3-1535-4894-b366-ae36e52ca27c",
-        "name": "install",
-        "execution_id": "80bfb8db-6811-45ff-b01e-14a4e45673d5",
-        "operations": [
-            {
-                "created_at": "2022-11-25T15:14:19.203Z",
-                "id": "ff7480dc-a8dd-43d7-8b8d-82594d50e892",
-                "name": "SendNodeEventTask",
-                "state": "succeeded",
-                "dependencies": [
-                    "9a87b711-03cf-468c-98a1-7610d0ddbd48",
-                    "57d3eca2-73ab-4d34-afe1-47d3b929118f"
-                ],
-                "type": "SendNodeEventTask",
-                "parameters": {
-                    "on_success": null,
-                    "on_failure": null,
-                    "retried_task": null,
-                    "current_retries": 0,
-                    "send_task_events": false,
-                    "retry_interval": 30,
-                    "total_retries": 0,
-                    "info": "Validating stuff",
-                    "error": null,
-                    "containing_subgraph": "somesubgraph",
-                    "task_kwargs": {}
-                },
-                "manager_name": "i-033a355130693f2d0",
-                "agent_name": null
-            }
-        ]
+      "created_at": "2022-11-25T15:14:19.203Z",
+      "id": "595734d3-1535-4894-b366-ae36e52ca27c",
+      "name": "install",
+      "execution_id": "80bfb8db-6811-45ff-b01e-14a4e45673d5",
+      "operations": [
+        {
+          "created_at": "2022-11-25T15:14:19.203Z",
+          "id": "ff7480dc-a8dd-43d7-8b8d-82594d50e892",
+          "name": "SendNodeEventTask",
+          "state": "succeeded",
+          "dependencies": [
+            "9a87b711-03cf-468c-98a1-7610d0ddbd48",
+            "57d3eca2-73ab-4d34-afe1-47d3b929118f"
+          ],
+          "type": "SendNodeEventTask",
+          "parameters": {
+            "on_success": null,
+            "on_failure": null,
+            "retried_task": null,
+            "current_retries": 0,
+            "send_task_events": false,
+            "retry_interval": 30,
+            "total_retries": 0,
+            "info": "Validating stuff",
+            "error": null,
+            "containing_subgraph": "somesubgraph",
+            "task_kwargs": {}
+          },
+          "manager_name": "i-033a355130693f2d0",
+          "agent_name": null
+        }
+      ]
     }
-]
+  ]
+}

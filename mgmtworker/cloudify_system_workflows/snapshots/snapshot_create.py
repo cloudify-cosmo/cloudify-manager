@@ -26,7 +26,7 @@ EXTRA_DUMP_KWARGS = {
 }
 
 
-class SnapshotCreate(object):
+class SnapshotCreate:
     def __init__(self,
                  snapshot_id,
                  config,
@@ -113,13 +113,15 @@ class SnapshotCreate(object):
                     os.path.join(dump_dir_name, 'blueprints.zip')
                 )
                 self._dump_data(
-                    dump_client.get_metadata(),
-                    os.path.join(dump_dir_name, 'blueprints.json')
+                        dump_client.get_metadata(),
+                        os.path.join(dump_dir_name, 'blueprints.json'),
+                        dump_type
                 )
             else:
                 self._dump_data(
-                    dump_client.get_snapshot(),
-                    os.path.join(dump_dir_name, f'{dump_type}.json')
+                        dump_client.get_snapshot(),
+                        os.path.join(dump_dir_name, f'{dump_type}.json'),
+                        dump_type
                 )
 
     def _dump_stage(self):
@@ -138,17 +140,29 @@ class SnapshotCreate(object):
                             dump_client.get_snapshot(tenant=tenant),
                             os.path.join(dump_dir_name, tenant,
                                          f'{dump_type}.{file_ext}'),
+                            dump_type,
                     )
+            elif file_ext == 'json':
+                self._dump_data(
+                        dump_client.get_snapshot(),
+                        os.path.join(dump_dir_name, f'{dump_type}.{file_ext}'),
+                        dump_type,
+                )
             else:
                 self._dump_data(
                         dump_client.get_snapshot(),
                         os.path.join(dump_dir_name, f'{dump_type}.{file_ext}'),
                 )
 
-    def _dump_data(self, data, file_name):
+    def _dump_data(self, data, file_name, dump_type=None):
         """Dump data into the file."""
-        with open(file_name, 'wb') as fh:
-            fh.write(data)
+        if dump_type:
+            data = json.dumps({
+                'type': dump_type,
+                'items': json.loads(data),
+            }).encode('utf-8')
+        with open(file_name, 'wb') as file_handle:
+            file_handle.write(data)
         self._zip_handle.write(
             file_name,
             os.path.relpath(file_name, self._tempdir),
@@ -237,7 +251,8 @@ class SnapshotCreate(object):
             finish = (i+1) * ENTITIES_PER_GROUPING
             this_file = os.path.join(destination_base, str(i) + suffix)
             with open(this_file, 'w') as dump_handle:
-                json.dump(data[start:finish], dump_handle)
+                json.dump({'type': dump_type, 'items': data[start:finish]},
+                          dump_handle)
             self._zip_handle.write(this_file,
                                    os.path.relpath(this_file, self._tempdir))
             os.unlink(this_file)
@@ -368,7 +383,7 @@ class SnapshotCreate(object):
 
         parts_dest = os.path.join(dest_dir, filter_id + '.json')
         with open(parts_dest, 'w') as dump_handle:
-            json.dump(parts, dump_handle)
+            json.dump({'type': part, 'items': parts}, dump_handle)
         self._zip_handle.write(parts_dest,
                                os.path.relpath(parts_dest, self._tempdir))
         os.unlink(parts_dest)

@@ -243,7 +243,8 @@ class SnapshotRestore(object):
                 data = json.load(data_handle)
             os.unlink(extract_path)
 
-            self._new_restore_entities(entity_type, data, zipfile, tenant)
+            self._new_restore_entities(data['type'], data['items'],
+                                       zipfile, tenant)
 
     def _new_restore_events(self, tenant, zipfile):
         client = self._tenant_clients.setdefault(
@@ -274,7 +275,7 @@ class SnapshotRestore(object):
                 events = {}
                 logs = {}
                 logger_names = set()
-                for item in data:
+                for item in data['items']:
                     manager = item.pop('manager_name')
                     agent = item.pop('agent_name')
                     logger_name = (manager, agent)
@@ -372,7 +373,7 @@ class SnapshotRestore(object):
                          sub_entity_type, entity_id)
         zipfile.extract(target_file, self._tempdir)
         with open(extract_path) as sub_entity_handle:
-            kwargs[sub_entity_type] = json.load(sub_entity_handle)
+            kwargs[sub_entity_type] = json.load(sub_entity_handle)['items']
         os.unlink(extract_path)
 
         if sub_entity_type == 'agents':
