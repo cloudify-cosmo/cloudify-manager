@@ -136,7 +136,7 @@ def _check_service_statuses(services):
             continue
 
         # prometheus responds with a metric value of "1" for online services
-        is_up = metric[1] == "1"
+        is_up = metric and metric[1] == "1"
         status = \
             NodeServiceStatus.ACTIVE if is_up else NodeServiceStatus.INACTIVE
         services[display_name] = {
