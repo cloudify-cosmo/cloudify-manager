@@ -586,6 +586,8 @@ class SnapshotRestore(object):
                 os.unlink(entity['plugin_path'])
 
     def _new_restore_ui_entity(self, zipfile, client, files_list, tenant=None):
+        ctx.logger.info('Restoring %s%s', client.entity_name(),
+                        f' for {tenant}' if tenant else '')
         for file_name in files_list:
             zipfile.extract(file_name, self._tempdir)
             file_path = os.path.join(self._tempdir, file_name)
@@ -602,10 +604,15 @@ class SnapshotRestore(object):
             os.unlink(file_path)
 
     def _new_restore_composer(self, zipfile):
-        for entity in self._snapshot_files['composer']:
+        dump_files = self._snapshot_files.get('composer')
+        if not dump_files:
+            ctx.logger.debug('No composer entities found')
+            return
+
+        for entity in dump_files:
             restore_client = getattr(self._composer_client, entity)
             if entity == 'blueprints':
-                file_names_set = set(self._snapshot_files['composer'][entity])
+                file_names_set = set(dump_files[entity])
 
                 metadata_file_names = [
                     file_name for file_name in file_names_set
@@ -632,6 +639,7 @@ class SnapshotRestore(object):
                     self._tempdir, snapshot_file_name)
                 metadata_file_path = os.path.join(
                     self._tempdir, metadata_file_name)
+                ctx.logger.info('Restoring composer blueprints')
                 try:
                     restore_client.restore_snapshot_and_metadata(
                         snapshot_file_path, metadata_file_path)
@@ -649,24 +657,29 @@ class SnapshotRestore(object):
                 self._new_restore_ui_entity(
                         zipfile,
                         restore_client,
-                        self._snapshot_files['composer'][entity]
+                        dump_files[entity]
                 )
 
     def _new_restore_stage(self, zipfile):
-        for element in self._snapshot_files['stage']:
+        dump_files = self._snapshot_files.get('stage')
+        if not dump_files:
+            ctx.logger.debug('No stage entities found')
+            return
+
+        for element in dump_files:
             if element in INCLUDES['stage']:
                 self._new_restore_ui_entity(
                         zipfile,
                         getattr(self._stage_client, element.replace('-', '_')),
-                        self._snapshot_files['stage'][element],
+                        dump_files[element],
                 )
             else:
-                for entity in self._snapshot_files['stage'][element]:
+                for entity in dump_files[element]:
                     self._new_restore_ui_entity(
                             zipfile,
                             getattr(self._stage_client,
                                     entity.replace('-', '_')),
-                            self._snapshot_files['stage'][element][entity],
+                            dump_files[element][entity],
                             tenant=element,
                     )
 
