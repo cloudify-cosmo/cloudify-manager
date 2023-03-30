@@ -1,9 +1,12 @@
-[
+{
+  "type": "sites",
+  "items": [
     {
-        "created_at": "2022-11-25T15:14:45.848Z",
-        "visibility": "tenant",
-        "name": "othersite",
-        "created_by": "other",
-        "location": null
+      "created_at": "2022-11-25T15:14:45.848Z",
+      "visibility": "tenant",
+      "name": "othersite",
+      "created_by": "other",
+      "location": null
     }
-]
+  ]
+}
