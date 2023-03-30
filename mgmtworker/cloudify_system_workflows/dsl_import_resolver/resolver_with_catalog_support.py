@@ -349,11 +349,9 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
                 .format(blueprint_id)
             )
 
-        bp_resp = self.client.resources.api.get(
+        bp_resp = self.client.resources.get_file(
             f'/resources/blueprints/{blueprint.tenant_name}/{blueprint.id}'
             f'/{blueprint.main_file_name}',
-            url_prefix=False,
-            stream=True,
         )
         return b''.join(bp_resp.bytes_stream()).decode()
 
