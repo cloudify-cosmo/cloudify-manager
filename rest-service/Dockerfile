@@ -25,7 +25,8 @@ RUN --mount=type=cache,target=/root/.cache \
       libsasl2-dev \
       libldap2-dev \
       libkrb5-dev \
-      git
+      git \
+      procps
 
 RUN mkdir -p -m 0600 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
 
