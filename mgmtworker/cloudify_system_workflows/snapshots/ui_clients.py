@@ -57,6 +57,9 @@ class UIBaseSnapshotClient:
             })
         return headers
 
+    def entity_name(self):
+        return f'{self._ui_service_name} {self._entity_name}'
+
     def get_snapshot(self, tenant=None,
                      expected_status_code=requests.codes.ok):
         """Retrieve a snapshot of UI entities."""
