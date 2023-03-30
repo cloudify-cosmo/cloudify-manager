@@ -84,7 +84,7 @@ sources = [
     ('cloudify-manager/api-service/cloudify_api', ['/opt/manager/env']),
     ('cloudify-manager/amqp-postgres/amqp_postgres', ['/opt/manager/env']),
     ('cloudify-manager/mgmtworker/cloudify_system_workflows', ['/opt/mgmtworker/env']),  # NOQA
-    ('cloudify-manager/cloudify_types/cloudify_types', ['/opt/mgmtworker/env']),  # NOQA
+    ('cloudify-manager/mgmtworker/cloudify_types', ['/opt/mgmtworker/env']),
     ('cloudify-manager-install/cfy_manager', ['/opt/cloudify/cfy_manager']),
     ('cloudify-manager-install/config.yaml', ['/opt/cloudify/cfy_manager']),
     ('cloudify-manager/execution-scheduler/execution_scheduler', ['/opt/manager/env']),  # NOQA
