@@ -124,20 +124,27 @@ def _check_service_statuses(services):
         'manager_service',
         current_app.logger,
     )
+    metrics = {
+        m['metric']['name']: m['value'] for m in prometheus_services
+    }
     for name, display_name in system_manager_services.items():
         status = NodeServiceStatus.INACTIVE
 
-        for metric in prometheus_services:
-            if metric['metric']['name'] == name and metric['value'][1] == "1":
-                status = NodeServiceStatus.ACTIVE
+        is_optional = name in OPTIONAL_SERVICES
+        metric = metrics.get(name)
+        if not metric and is_optional:
+            continue
 
-        if status:
-            services[display_name] = {
-                'status': status,
-                'is_remote': False,
-                'extra_info': {}
-            }
-            statuses.append(status)
+        # prometheus responds with a metric value of "1" for online services
+        is_up = metric[1] == "1"
+        status = \
+            NodeServiceStatus.ACTIVE if is_up else NodeServiceStatus.INACTIVE
+        services[display_name] = {
+            'status': status,
+            'is_remote': False,
+            'extra_info': {}
+        }
+        statuses.append(status)
     return statuses
 
 
