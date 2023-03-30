@@ -95,13 +95,6 @@ pipeline {
                     -sv \
                     .
                 '''
-                echo 'Running pytest <<cloudify_types>>'
-                sh '''
-                  . .venv/bin/activate
-                  pytest \
-                    -sv \
-                    cloudify_types
-                '''
                 echo 'Running pytest <<api-service>>'
                 sh script: '''
                   . .venv/bin/activate

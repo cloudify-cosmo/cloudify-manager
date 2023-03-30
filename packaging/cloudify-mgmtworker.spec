@@ -51,7 +51,6 @@ sudo tar xf %{S:1} -C /
 %{PIP_INSTALL} --upgrade pip "setuptools<=63.2"
 %{PIP_INSTALL} -r "${RPM_SOURCE_DIR}/mgmtworker/requirements.txt"
 %{PIP_INSTALL} --upgrade "${RPM_SOURCE_DIR}/mgmtworker"
-%{PIP_INSTALL} --upgrade "${RPM_SOURCE_DIR}/cloudify_types"
 
 %{PIP_INSTALL} --upgrade kerberos==1.3.1
 

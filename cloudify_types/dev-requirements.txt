@@ -1,1 +1,0 @@
-git+https://github.com/cloudify-cosmo/cloudify-common@7.0.0-build#egg=cloudify-common==master
