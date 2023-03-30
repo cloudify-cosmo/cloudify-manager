@@ -1,5 +1,3 @@
-from typing import Optional
-
 from fastapi import Request
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,13 +15,13 @@ async def make_db_session(request: Request) -> AsyncSession:
 
 
 class CommonParameters(BaseModel):
-    order_by: Optional[str] = None
+    order_by: str | None = None
     desc: bool = False
-    offset: Optional[int] = 0
-    size: Optional[int] = 100
+    offset: int | None = 0
+    size: int | None = 100
 
 
-def common_parameters(order_by: Optional[str] = None,
+def common_parameters(order_by: str | None = None,
                       desc: bool = False,
                       offset: int = 0,
                       size: int = 100) -> CommonParameters:

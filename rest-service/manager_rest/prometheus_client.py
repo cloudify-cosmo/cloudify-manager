@@ -5,7 +5,7 @@ from manager_rest import config
 
 
 def query(query_string: str, logger, timeout=None) -> typing.List[dict]:
-    query_url = '{}/monitoring/api/v1/query'.format(
+    query_url = '{}/api/v1/query'.format(
         config.instance.prometheus_url,
     )
     url_with_query_string = \

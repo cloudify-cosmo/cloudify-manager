@@ -1,17 +1,20 @@
 {
+  "type": "configuration",
+  "items": {
     "userConfig.json": {
-        "theme": {
-            "logoUrl": "https://example.nonexistent.domain/200-by-200.png",
-            "mainColor": "",
-            "headerTextColor": "white",
-            "showVersionDetails": false
-        },
-        "pluginsConfig": {
-            "source": "manager",
-            "file": "",
-            "catalogs": [
-                "https://marketplace.cloudify.co/plugins/catalog"
-            ]
-        }
+      "theme": {
+        "logoUrl": "https://example.nonexistent.domain/200-by-200.png",
+        "mainColor": "",
+        "headerTextColor": "white",
+        "showVersionDetails": false
+      },
+      "pluginsConfig": {
+        "source": "manager",
+        "file": "",
+        "catalogs": [
+          "https://marketplace.cloudify.co/plugins/catalog"
+        ]
+      }
     }
+  }
 }

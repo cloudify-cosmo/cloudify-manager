@@ -1,6 +1,3 @@
-import socket
-import http.client
-import xmlrpc.client
 from typing import Dict
 
 from flask import request
@@ -17,6 +14,7 @@ from manager_rest.security.authorization import authorize
 from manager_rest.rest.rest_decorators import marshal_with
 from manager_rest.rest.rest_utils import verify_and_convert_bool
 from manager_rest.syncthing_status_manager import get_syncthing_status
+from manager_rest.prometheus_client import query as prometheus_query
 
 try:
     from cloudify_premium.ha import utils as ha_utils
@@ -42,21 +40,6 @@ OPTIONAL_SERVICES = {
     'cloudify-syncthing': 'File Sync Service',
     'prometheus': 'Monitoring Service',
 }
-
-
-class UnixSocketHTTPConnection(http.client.HTTPConnection):
-    def connect(self):
-        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        self.sock.connect(self.host)
-
-
-class UnixSocketTransport(xmlrpc.client.Transport, object):
-    def __init__(self, path):
-        super(UnixSocketTransport, self).__init__()
-        self._path = path
-
-    def make_connection(self, host):
-        return UnixSocketHTTPConnection(self._path)
 
 
 class OK(Resource):
@@ -103,7 +86,7 @@ class Status(SecuredResource):
 
 def _get_status_and_services():
     services: Dict[str, Dict] = {}
-    service_statuses = _check_supervisord_services(services)
+    service_statuses = _check_service_statuses(services)
     rabbitmq_status = _check_rabbitmq(services)
 
     # Successfully making any query requires us to check the DB is up
@@ -131,14 +114,23 @@ def _get_status_and_services():
     return status, services
 
 
-def _check_supervisord_services(services):
+def _check_service_statuses(services):
     statuses = []
-    supervisord_services = get_system_manager_services(
+    system_manager_services = get_system_manager_services(
         BASE_SERVICES,
         OPTIONAL_SERVICES
     )
-    for name, display_name in supervisord_services.items():
-        status = _lookup_supervisor_service_status(name)
+    prometheus_services = prometheus_query(
+        'manager_service',
+        current_app.logger,
+    )
+    for name, display_name in system_manager_services.items():
+        status = NodeServiceStatus.INACTIVE
+
+        for metric in prometheus_services:
+            if metric['metric']['name'] == name and metric['value'][1] == "1":
+                status = NodeServiceStatus.ACTIVE
+
         if status:
             services[display_name] = {
                 'status': status,
@@ -147,40 +139,6 @@ def _check_supervisord_services(services):
             }
             statuses.append(status)
     return statuses
-
-
-def _lookup_supervisor_service_status(service_name):
-    service_status = None
-    is_optional = True if service_name in OPTIONAL_SERVICES else False
-    server = xmlrpc.client.Server(
-        'http://',
-        transport=UnixSocketTransport("/var/run/supervisord.sock"))
-    try:
-        status_response = server.supervisor.getProcessInfo(service_name)
-    except xmlrpc.client.Fault as e:
-        # If the error is raised that means one of the two options:
-        # 1. The service is optional and not installed (faultCode=10)
-        # ignore the error
-        # 2. The service is either optional/required and return
-        # faultCode other than 10 that need to raise error
-        if e.faultCode == 10:
-            if not is_optional:
-                service_status = NodeServiceStatus.INACTIVE
-        else:
-            raise
-    except FileNotFoundError:
-        service_status = NodeServiceStatus.INACTIVE
-    else:
-        if not isinstance(status_response, dict):
-            raise RuntimeError(
-                f'unexpected status_response: {status_response!r}')
-        service_status = status_response['statename']
-        if service_status == 'RUNNING':
-            service_status = NodeServiceStatus.ACTIVE
-        else:
-            service_status = NodeServiceStatus.INACTIVE
-
-    return service_status
 
 
 def _check_rabbitmq(services):

@@ -1,10 +1,13 @@
-[
+{
+  "type": "nodes",
+  "items": [
     {
-        "id": "somenode",
-        "created_by": "someone"
+      "id": "somenode",
+      "created_by": "someone"
     },
     {
-        "id": "othernode",
-        "created_by": "other"
+      "id": "othernode",
+      "created_by": "other"
     }
-]
+  ]
+}
