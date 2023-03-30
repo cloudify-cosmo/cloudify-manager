@@ -351,6 +351,10 @@ node_templates:
         self.assertEqual(len(self.client.plugins.list()), 1)
         self.client.plugins.delete(mock_id)
 
+    @pytest.mark.skipif(
+        "config.getoption('--k8s-namespace')",
+        reason='Cannot use direct plugin filenames in the k8s manager',
+    )
     def test_distro_behaviour(self):
         self.env.copy_file_to_manager(resource('dsl/plugins'), '/tmp')
         basic_blueprint_path = resource('dsl/empty_blueprint.yaml')
