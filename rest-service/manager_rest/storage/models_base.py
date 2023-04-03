@@ -222,10 +222,6 @@ class SQLModelBase(Model):
         }
 
     @classproperty
-    def autoload_relationships(cls):
-        return []
-
-    @classproperty
     def resource_fields(cls):
         """Return a mapping of available field names and their corresponding
         flask types

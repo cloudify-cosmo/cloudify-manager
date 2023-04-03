@@ -2,6 +2,8 @@ import ssl
 import logging
 
 from fastapi import FastAPI
+from sqlalchemy import select
+from sqlalchemy.exc import NoResultFound
 
 from manager_rest import config
 
@@ -57,15 +59,18 @@ def get_settings():
 
 
 class CloudifyAPI(FastAPI):
+    db_session_maker: db.sessionmaker | None
     listener: Listener
     logger: logging.Logger
     settings: Settings
+    _tenants: dict[int, str]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.settings = get_settings()
         self.logger = logging.getLogger('cloudify_api')
         config.instance.logger = self.logger
+        self._tenants = {}
 
     def __str__(self):
         return f"{self.title}-{self.version}"
@@ -105,3 +110,20 @@ class CloudifyAPI(FastAPI):
         if not self.settings.asyncpg_dsn:
             self._update_database_dsn()
         self.listener = Listener(self.settings.asyncpg_dsn, self.logger)
+
+    async def get_tenant_name(self, tenant_id: int) -> str | None:
+        """Get tenant's name based on their id.  Cache the results."""
+        if tenant_id in self._tenants:
+            return self._tenants[tenant_id]
+
+        query = select(db.Tenant).where(db.Tenant.id == tenant_id)
+        async with self.db_session_maker() as session:
+            db_records = await session.execute(query)
+        try:
+            tenant = db_records.scalars().one()
+        except NoResultFound:
+            return None
+
+        if tenant.name:
+            self._tenants[tenant_id] = tenant.name
+        return tenant.name

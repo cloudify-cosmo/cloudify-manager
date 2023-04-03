@@ -17,6 +17,9 @@ from cloudify_system_workflows.snapshots.snapshot_restore import (
 
 PARTIAL_TENANTS = {'anothertenant'}
 TENANTS = {'default_tenant', 'shared', 'other'}
+IDD_DEPENDENCY_CREATOR =\
+    'nodes.n1.operations.cloudify.interfaces.lifecycle.create.inputs.'\
+    'lifecycle_operation.get_capability'
 PARTIAL_SNAP_EXPECTED_CALLS = {
     'tenants': {
         'create': {
@@ -473,6 +476,10 @@ EXPECTED_CALLS = {
                         resource_tags={},
                         blueprint_id='shared_provider',
                         created_by='admin',
+                        sub_services_status='good',
+                        sub_environments_status='good',
+                        sub_services_count=0,
+                        sub_environments_count=0,
                         labels=[],
                         # If the b64zip file does not exist, it should be
                         # auto-populated with the empty zip
@@ -499,6 +506,10 @@ EXPECTED_CALLS = {
                         resource_tags={},
                         blueprint_id='fakecloud',
                         created_by='admin',
+                        sub_services_status='in_progress',
+                        sub_environments_status='requires_attention',
+                        sub_services_count=1,
+                        sub_environments_count=2,
                         labels=[
                             {'key': 'general_usefulness',
                              'value': 'low',
@@ -517,6 +528,49 @@ EXPECTED_CALLS = {
                 ],
             },
             'sort_key': 'deployment_id',
+        },
+    },
+    'inter_deployment_dependencies': {
+        'create': {
+            'expected': {
+                'default_tenant': [
+                    mock.call(
+                        _id='602b6102-e4bd-42ed-a86c-10b526d3b4c2',
+                        _visibility='tenant',
+                        _created_at='2023-03-02T08:38:56.080Z',
+                        _created_by='admin',
+                        dependency_creator=IDD_DEPENDENCY_CREATOR,
+                        target_deployment_func={
+                            'context':
+                                {'self': 'n1_robir7'},
+                            'function':
+                                {'get_attribute': ['rel_target', 'dep_id']},
+                        },
+                        source_deployment='d3',
+                        target_deployment='d1',
+                        external_source=None,
+                        external_target=None,
+                    ),
+                    mock.call(
+                        _id='84c87185-71d9-447b-b1b5-4421c416bdfb',
+                        _visibility='tenant',
+                        _created_at='2023-03-02T08:38:56.080Z',
+                        _created_by='admin',
+                        dependency_creator=IDD_DEPENDENCY_CREATOR,
+                        target_deployment_func={
+                            'context':
+                                {'self': 'n1_x4imdw'},
+                            'function':
+                                {'get_attribute': ['rel_target', 'dep_id']},
+                        },
+                        source_deployment='d3',
+                        target_deployment='d2',
+                        external_source=None,
+                        external_target=None,
+                    ),
+                ]
+            },
+            'sort_key': '',
         },
     },
     'nodes': {
@@ -1064,6 +1118,69 @@ def mock_get_client():
 
 
 @pytest.fixture
+def mock_get_composer_client():
+    class MockComposerBaseSnapshotClient:
+        def __init__(self, entity_name):
+            self._entity_name = entity_name
+
+        def entity_name(self):
+            return f'mock {self._entity_name}'
+
+        def restore_snapshot(self, snapshot_file_name, **_):
+            assert snapshot_file_name is not None
+
+        def restore_snapshot_and_metadata(self, snapshot_file_name,
+                                          metadata_file_name, **_):
+            assert snapshot_file_name is not None
+            assert metadata_file_name is not None
+
+    class MockComposerClient:
+        blueprints = MockComposerBaseSnapshotClient('blueprints')
+        configuration = MockComposerBaseSnapshotClient('configuration')
+        favorites = MockComposerBaseSnapshotClient('favorites')
+
+    with mock.patch(
+        'cloudify_system_workflows.snapshots.utils'
+        '.get_composer_client',
+        side_effect=MockComposerClient,
+    ) as client:
+        yield client
+
+
+@pytest.fixture
+def mock_get_stage_client():
+    class MockStageBaseSnapshotClient:
+        def __init__(self, entity_name):
+            self._entity_name = entity_name
+
+        def entity_name(self):
+            return f'mock {self._entity_name}'
+
+        def restore_snapshot(self, snapshot_file_name, tenant=None, **_):
+            assert snapshot_file_name is not None
+            if self._entity_name == 'ua':
+                assert tenant is not None
+            else:
+                assert tenant is None
+
+    class MockStageClient:
+        blueprint_layouts = MockStageBaseSnapshotClient('blueprint-layouts')
+        configuration = MockStageBaseSnapshotClient('configuration')
+        page_groups = MockStageBaseSnapshotClient('page-groups')
+        pages = MockStageBaseSnapshotClient('pages')
+        templates = MockStageBaseSnapshotClient('templates')
+        ua = MockStageBaseSnapshotClient('ua')
+        widgets = MockStageBaseSnapshotClient('widgets')
+
+    with mock.patch(
+        'cloudify_system_workflows.snapshots.utils'
+        '.get_stage_client',
+        side_effect=MockStageClient,
+    ) as client:
+        yield client
+
+
+@pytest.fixture
 def mock_ctx():
     with mock.patch(
         'cloudify_system_workflows.snapshots.snapshot_restore'
@@ -1179,6 +1296,8 @@ def mock_unlink():
 def test_restore_snapshot(mock_ctx, mock_get_client, mock_zipfile,
                           mock_manager_restoring, mock_mkdir,
                           mock_no_rmtree, mock_unlink,
+                          mock_get_composer_client,
+                          mock_get_stage_client,
                           mock_manager_finished_restoring):
     _test_restore('testsnapshot', 'snapshot_contents', EXPECTED_CALLS,
                   TENANTS, mock_mkdir, mock_manager_restoring,
@@ -1188,6 +1307,8 @@ def test_restore_snapshot(mock_ctx, mock_get_client, mock_zipfile,
 def test_restore_partial_snapshot(mock_ctx, mock_get_client, mock_zipfile,
                                   mock_manager_restoring, mock_mkdir,
                                   mock_no_rmtree, mock_unlink,
+                                  mock_get_composer_client,
+                                  mock_get_stage_client,
                                   mock_manager_finished_restoring):
     _test_restore('testpartialsnapshot', 'partial_snapshot_contents',
                   PARTIAL_SNAP_EXPECTED_CALLS, PARTIAL_TENANTS, mock_mkdir,
@@ -1314,4 +1435,4 @@ def _check_calls(client, tenant, tempdir, calls):
                 print(f'Checking calls to {group}.{call} for {tenant}')
             else:
                 print(f'Checking mgmt calls to {group}.{call}')
-            assert expected == results
+            assert results == expected

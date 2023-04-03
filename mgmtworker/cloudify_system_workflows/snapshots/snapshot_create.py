@@ -8,85 +8,12 @@ from cloudify.workflows import ctx
 from cloudify.manager import get_rest_client
 from cloudify.constants import FILE_SERVER_SNAPSHOTS_FOLDER
 
-from . import constants, utils
+from . import constants, utils, INCLUDES
+from .agents import Agents
 
 
 EMPTY_B64_ZIP = 'UEsFBgAAAAAAAAAAAAAAAAAAAAAAAA=='
 ENTITIES_PER_GROUPING = 500
-FILTERS_INCLUDE = ['created_at', 'id', 'visibility', 'value', 'created_by',
-                   'is_system_filter']
-INCLUDES = {
-    'tenants': ['name', 'rabbitmq_password'],
-    'users': ['username', 'role', 'tenant_roles', 'first_login_at',
-              'last_login_at', 'created_at'],
-    'user_groups': ['name', 'ldap_dn', 'tenants', 'role'],
-    'sites': ['name', 'location', 'visibility', 'created_by', 'created_at'],
-    'plugins': ['id', 'title', 'visibility', 'uploaded_at', 'created_by'],
-    'secrets': ['key', 'value', 'visibility', 'is_hidden_value', 'encrypted',
-                'tenant_name', 'creator', 'created_at'],
-    'blueprints': ['id', 'visibility', 'labels', 'created_at', 'created_by',
-                   'state', 'main_file_name', 'plan', 'description', 'error',
-                   'error_traceback', 'is_hidden', 'requirements'],
-    'deployments': ['id', 'blueprint_id', 'inputs', 'visibility', 'labels',
-                    'display_name', 'runtime_only_evaluation', 'created_by',
-                    'created_at', 'workflows', 'groups', 'policy_triggers',
-                    'policy_types', 'outputs', 'capabilities', 'description',
-                    'scaling_groups', 'resource_tags', 'deployment_status',
-                    'installation_status'],
-    'nodes': ['id', 'host_id', 'plugins', 'plugins_to_install', 'properties',
-              'max_number_of_instances', 'min_number_of_instances',
-              'planned_number_of_instances', 'deploy_number_of_instances',
-              'relationships', 'operations', 'type', 'type_hierarchy',
-              'visibility', 'created_by', 'number_of_instances'],
-    'node_instances': ['id', 'runtime_properties', 'state', 'relationships',
-                       'system_properties', 'scaling_groups', 'host_id',
-                       'index', 'visibility', 'node_id', 'created_by',
-                       'has_configuration_drift',
-                       'is_status_check_ok', 'created_by'],
-    'agents': ['id', 'node_instance_id', 'state', 'created_at', 'created_by',
-               'rabbitmq_password', 'rabbitmq_username', 'rabbitmq_exchange',
-               'version', 'system', 'install_method', 'ip', 'visibility'],
-    'deployment_groups': ['id', 'visibility', 'description', 'labels',
-                          'default_blueprint_id', 'default_inputs',
-                          'deployment_ids', 'created_by', 'created_at',
-                          'creation_counter'],
-    'executions': ['deployment_id', 'workflow_id', 'parameters', 'is_dry_run',
-                   'allow_custom_parameters', 'status', 'created_by',
-                   'created_at', 'id', 'started_at', 'ended_at', 'error'],
-    'events': ['timestamp', 'reported_timestamp', 'blueprint_id',
-               'deployment_id', 'deployment_display_name', 'workflow_id',
-               'message', 'error_causes', 'event_type', 'operation',
-               'source_id', 'target_id', 'node_instance_id',
-               'type', 'logger', 'level', 'manager_name', 'agent_name'],
-    'execution_groups': ['id', 'created_at', 'workflow_id', 'execution_ids',
-                         'concurrency', 'deployment_group_id', 'created_by'],
-    'deployment_updates': ['id', 'deployment_id', 'new_blueprint_id', 'state',
-                           'new_inputs', 'created_at', 'created_by',
-                           'execution_id', 'old_blueprint_id',
-                           'runtime_only_evaluation', 'deployment_plan',
-                           'deployment_update_node_instances',
-                           'visibility', 'steps',
-                           'central_plugins_to_uninstall',
-                           'central_plugins_to_install', 'old_inputs',
-                           'deployment_update_nodes', 'modified_entity_ids'],
-    'execution_schedules': ['id', 'rule', 'deployment_id', 'workflow_id',
-                            'created_at', 'since', 'until', 'stop_on_fail',
-                            'parameters', 'execution_arguments', 'slip',
-                            'enabled', 'created_by'],
-    'plugins_update': ['id', 'state', 'forced', 'all_tenants',
-                       'blueprint_id', 'execution_id', 'created_by',
-                       'created_at', 'deployments_to_update',
-                       'deployments_per_tenant', 'temp_blueprint_id'],
-    'blueprints_filters': FILTERS_INCLUDE,
-    'deployments_filters': FILTERS_INCLUDE,
-    'tasks_graphs': ['created_at', 'execution_id', 'name', 'id'],
-    'operations': ['agent_name', 'created_at', 'dependencies', 'id',
-                   'manager_name', 'name', 'parameters', 'state', 'type',
-                   'tasks_graph_id'],
-    'secrets_providers': ['created_at', 'name', 'visibility', 'type',
-                          'connection_parameters', 'created_by',
-                          'created_at'],
-}
 GET_DATA = [
     'users', 'user_groups',
     'sites', 'plugins', 'secrets', 'blueprints', 'deployments', 'agents',
@@ -99,7 +26,7 @@ EXTRA_DUMP_KWARGS = {
 }
 
 
-class SnapshotCreate(object):
+class SnapshotCreate:
     def __init__(self,
                  snapshot_id,
                  config,
@@ -119,9 +46,12 @@ class SnapshotCreate(object):
 
         self._tempdir = None
         self._client = None
+        self._composer_client = utils.get_composer_client()
+        self._stage_client = utils.get_stage_client()
         self._tenant_clients = {}
         self._zip_handle = None
         self._archive_dest = self._get_snapshot_archive_name()
+        self._agents_handler = Agents()
 
     def create(self):
         self._client = get_rest_client()
@@ -141,6 +71,8 @@ class SnapshotCreate(object):
                 self._dump_metadata(manager_version)
 
                 self._dump_management()
+                self._dump_composer()
+                self._dump_stage()
                 for tenant in self._tenants:
                     self._dump_tenant(tenant)
 
@@ -170,6 +102,72 @@ class SnapshotCreate(object):
         self._dump_objects('users')
         self._dump_objects('permissions')
 
+    def _dump_composer(self):
+        dump_dir_name = os.path.join(self._tempdir, 'composer')
+        os.makedirs(dump_dir_name, exist_ok=True)
+        for dump_type in INCLUDES['composer']:
+            dump_client = getattr(self._composer_client, dump_type)
+            if dump_type == 'blueprints':
+                self._dump_data(
+                    dump_client.get_snapshot(),
+                    os.path.join(dump_dir_name, 'blueprints.zip')
+                )
+                self._dump_data(
+                        dump_client.get_metadata(),
+                        os.path.join(dump_dir_name, 'blueprints.json'),
+                        dump_type
+                )
+            else:
+                self._dump_data(
+                        dump_client.get_snapshot(),
+                        os.path.join(dump_dir_name, f'{dump_type}.json'),
+                        dump_type
+                )
+
+    def _dump_stage(self):
+        dump_dir_name = os.path.join(self._tempdir, 'stage')
+        os.makedirs(dump_dir_name, exist_ok=True)
+        for dump_type in INCLUDES['stage']:
+            dump_client = getattr(self._stage_client,
+                                  dump_type.replace('-', '_'))
+            file_ext = 'zip' if dump_type == 'widgets' else 'json'
+
+            if dump_type == 'ua':
+                for tenant in self._tenants:
+                    os.makedirs(os.path.join(dump_dir_name, tenant),
+                                exist_ok=True)
+                    self._dump_data(
+                            dump_client.get_snapshot(tenant=tenant),
+                            os.path.join(dump_dir_name, tenant,
+                                         f'{dump_type}.{file_ext}'),
+                            dump_type,
+                    )
+            elif file_ext == 'json':
+                self._dump_data(
+                        dump_client.get_snapshot(),
+                        os.path.join(dump_dir_name, f'{dump_type}.{file_ext}'),
+                        dump_type,
+                )
+            else:
+                self._dump_data(
+                        dump_client.get_snapshot(),
+                        os.path.join(dump_dir_name, f'{dump_type}.{file_ext}'),
+                )
+
+    def _dump_data(self, data, file_name, dump_type=None):
+        """Dump data into the file."""
+        if dump_type:
+            data = json.dumps({
+                'type': dump_type,
+                'items': json.loads(data),
+            }).encode('utf-8')
+        with open(file_name, 'wb') as file_handle:
+            file_handle.write(data)
+        self._zip_handle.write(
+            file_name,
+            os.path.relpath(file_name, self._tempdir),
+        )
+
     def _dump_tenant(self, tenant_name):
         """Dump objects from a tenant."""
         self._dump_objects('sites', tenant_name)
@@ -178,6 +176,7 @@ class SnapshotCreate(object):
         self._dump_objects('secrets', tenant_name)
         self._dump_objects('blueprints', tenant_name)
         self._dump_objects('deployments', tenant_name)
+        self._dump_objects('inter_deployment_dependencies', tenant_name)
         self._dump_objects('deployment_groups', tenant_name)
         self._dump_objects('executions', tenant_name)
         self._dump_objects('execution_groups', tenant_name)
@@ -252,7 +251,8 @@ class SnapshotCreate(object):
             finish = (i+1) * ENTITIES_PER_GROUPING
             this_file = os.path.join(destination_base, str(i) + suffix)
             with open(this_file, 'w') as dump_handle:
-                json.dump(data[start:finish], dump_handle)
+                json.dump({'type': dump_type, 'items': data[start:finish]},
+                          dump_handle)
             self._zip_handle.write(this_file,
                                    os.path.relpath(this_file, self._tempdir))
             os.unlink(this_file)
@@ -367,9 +367,23 @@ class SnapshotCreate(object):
                 part for part in parts
                 if not part['id'] == ctx.execution_id
             ]
+        elif part == 'node_instances':
+            # for "agent" node instances, store broker config in runtime-props
+            # as well, so that during agent upgrade, we can connect to the old
+            # rabbitmq. This is later analyzed by snapshot_restore,
+            # _inject_broker_config, and by several calls in
+            # cloudify-agent/operations.py (related to creating the AMQP
+            # client there)
+            for ni in parts:
+                runtime_properties = ni.get('runtime_properties') or {}
+                if 'cloudify_agent' not in runtime_properties:
+                    continue
+                broker_conf = self._agents_handler.get_broker_conf(ni)
+                runtime_properties['cloudify_agent'].update(broker_conf)
+
         parts_dest = os.path.join(dest_dir, filter_id + '.json')
         with open(parts_dest, 'w') as dump_handle:
-            json.dump(parts, dump_handle)
+            json.dump({'type': part, 'items': parts}, dump_handle)
         self._zip_handle.write(parts_dest,
                                os.path.relpath(parts_dest, self._tempdir))
         os.unlink(parts_dest)

@@ -1,3 +1,4 @@
+import inspect
 from functools import wraps
 from collections import OrderedDict
 from typing import Dict
@@ -85,15 +86,15 @@ class marshal_with(object):
         self.force_get_data = force_get_data
 
     def __call__(self, f):
+        # pass _include to the function if it accepts that parameter
+        supports_include = '_include' in inspect.signature(f).parameters
+
         @wraps(f)
         def wrapper(*args, **kwargs):
             if hasattr(request, '__skip_marshalling'):
                 return f(*args, **kwargs)
             fields_to_include = self._get_fields_to_include()
-            if self._is_include_parameter_in_request():
-                # only pushing "_include" into kwargs when the request
-                # contained this parameter, to keep things cleaner (identical
-                # behavior for passing "_include" which contains all fields)
+            if supports_include:
                 kwargs['_include'] = list(fields_to_include.keys())
 
             response = f(*args, **kwargs)

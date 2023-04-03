@@ -31,8 +31,8 @@ from cloudify_rest_client.client import CloudifyClient
 from cloudify_rest_client.exceptions import (CloudifyClientError,
                                              ForbiddenWhileCancelling)
 from cloudify.exceptions import NonRecoverableError, OperationRetry
-from cloudify.deployment_dependencies import (dependency_creator_generator,
-                                              create_deployment_dependency)
+from cloudify.deployment_dependencies import (format_dependency_creator,
+                                              build_deployment_dependency)
 from cloudify.models_states import DeploymentState, ExecutionState
 
 from cloudify_types.constants import EXTERNAL_RESOURCE
@@ -113,8 +113,8 @@ def get_client(kwargs):
 
 
 def get_idd(deployment_id, is_external_host, dependency_type, kwargs):
-    inter_deployment_dependency = create_deployment_dependency(
-        dependency_creator_generator(dependency_type, ctx.instance.id),
+    inter_deployment_dependency = build_deployment_dependency(
+        format_dependency_creator(dependency_type, ctx.instance.id),
         source_deployment=ctx.deployment.id,
         target_deployment=deployment_id
     )
@@ -124,8 +124,8 @@ def get_idd(deployment_id, is_external_host, dependency_type, kwargs):
         manager_ips = set()
         for mgr in manager.get_rest_client().manager.get_managers():
             manager_ips |= {mgr.public_ip}
-        local_dependency = create_deployment_dependency(
-            dependency_creator_generator(dependency_type, ctx.instance.id),
+        local_dependency = build_deployment_dependency(
+            format_dependency_creator(dependency_type, ctx.instance.id),
             source_deployment=ctx.deployment.id,
             external_target={
                 'deployment': deployment_id,

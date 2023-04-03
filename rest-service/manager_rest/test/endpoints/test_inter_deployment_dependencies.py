@@ -2,7 +2,7 @@ import uuid
 
 from cloudify.models_states import DeploymentState
 from cloudify_rest_client.exceptions import CloudifyClientError
-from cloudify.deployment_dependencies import create_deployment_dependency
+from cloudify.deployment_dependencies import build_deployment_dependency
 
 from manager_rest.storage import db, models
 from manager_rest.manager_exceptions import NotFoundError, ConflictError
@@ -624,20 +624,20 @@ class InterDeploymentDependenciesTest(BaseServerTestCase):
         self.dependency_creator = 'dependency_creator'
         self.source_deployment = 'source_deployment'
         self.target_deployment = 'target_deployment'
-        self.dependency = create_deployment_dependency(
+        self.dependency = build_deployment_dependency(
             self.dependency_creator,
-            self.source_deployment,
-            self.target_deployment,
+            source_deployment=self.source_deployment,
+            target_deployment=self.target_deployment,
         )
-        self.reverse_dependency = create_deployment_dependency(
+        self.reverse_dependency = build_deployment_dependency(
             self.dependency_creator,
-            self.target_deployment,
-            self.source_deployment,
+            source_deployment=self.target_deployment,
+            target_deployment=self.source_deployment,
         )
-        self.self_dependency = create_deployment_dependency(
+        self.self_dependency = build_deployment_dependency(
             self.dependency_creator,
-            self.source_deployment,
-            self.source_deployment,
+            source_deployment=self.source_deployment,
+            target_deployment=self.source_deployment,
         )
         self.bp = self._blueprint()
         self._deployment(id=self.source_deployment)
@@ -756,6 +756,35 @@ class InterDeploymentDependenciesTest(BaseServerTestCase):
             'infra'
         )
 
+    def test_list_filter_by_deployment(self):
+        self.client.inter_deployment_dependencies.create(**self.dependency)
+
+        # filtering by source
+        assert len(self.client.inter_deployment_dependencies.list(
+            source_deployment_id=self.source_deployment,
+        )) == 1
+        assert len(self.client.inter_deployment_dependencies.list(
+            source_deployment_id=self.target_deployment,
+        )) == 0
+
+        # filtering by target
+        assert len(self.client.inter_deployment_dependencies.list(
+            target_deployment_id=self.target_deployment,
+        )) == 1
+        assert len(self.client.inter_deployment_dependencies.list(
+            target_deployment_id=self.source_deployment,
+        )) == 0
+
+        # filtering by both
+        assert len(self.client.inter_deployment_dependencies.list(
+            source_deployment_id=self.source_deployment,
+            target_deployment_id=self.target_deployment,
+        )) == 1
+        assert len(self.client.inter_deployment_dependencies.list(
+            source_deployment_id=self.source_deployment,
+            target_deployment_id=self.source_deployment,
+        )) == 0
+
     def test_alerts_force_uninstall_deployment_no_error(self):
         self._prepare_dependent_deployments()
         self.client.executions.start('infra', 'uninstall', force=True)
@@ -772,25 +801,37 @@ class InterDeploymentDependenciesTest(BaseServerTestCase):
             blueprint_id='i{0}'.format(uuid.uuid4()),
             deployment_id='app')
         self.client.inter_deployment_dependencies.create(
-            **create_deployment_dependency('sharedresource.vm',
-                                           'app',
-                                           'infra'))
+            **build_deployment_dependency('sharedresource.vm',
+                                          source_deployment='app',
+                                          target_deployment='infra'))
 
     def _populate_dependencies_table(self):
         for mock_dep_id in ('0', '1', '2', '3', '4', '5'):
             self._deployment(id=mock_dep_id)
         self.client.inter_deployment_dependencies.create(
-            **create_deployment_dependency('sample.vm', '1', '0'))
+            **build_deployment_dependency('sample.vm',
+                                          source_deployment='1',
+                                          target_deployment='0'))
         self.client.inter_deployment_dependencies.create(
-            **create_deployment_dependency('capability.host', '2', '0'))
+            **build_deployment_dependency('capability.host',
+                                          source_deployment='2',
+                                          target_deployment='0'))
         self.client.inter_deployment_dependencies.create(
-            **create_deployment_dependency('component.infra', '3', '2'))
+            **build_deployment_dependency('component.infra',
+                                          source_deployment='3',
+                                          target_deployment='2'))
         self.client.inter_deployment_dependencies.create(
-            **create_deployment_dependency('sharedresource.infra', '3', '1'))
+            **build_deployment_dependency('sharedresource.infra',
+                                          source_deployment='3',
+                                          target_deployment='1'))
         self.client.inter_deployment_dependencies.create(
-            **create_deployment_dependency('sharedresource.mynode', '4', '0'))
+            **build_deployment_dependency('sharedresource.mynode',
+                                          source_deployment='4',
+                                          target_deployment='0'))
         self.client.inter_deployment_dependencies.create(
-            **create_deployment_dependency('capability.ip', '5', '4'))
+            **build_deployment_dependency('capability.ip',
+                                          source_deployment='5',
+                                          target_deployment='4'))
 
     def test_create_conflict_cyclic(self):
         self.client.inter_deployment_dependencies.create(**self.dependency)
