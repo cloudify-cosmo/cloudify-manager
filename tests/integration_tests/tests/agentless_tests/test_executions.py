@@ -55,7 +55,6 @@ class ExecutionsTest(AgentlessTestCase):
                                                 include_credentials=True,
                                                 include_logs=True,
                                                 include_events=True,
-                                                include_metrics=True,
                                                 queue=True)
         execution = self._wait_for_exec_to_end_and_modify_status(snapshot,
                                                                  new_status)
@@ -136,7 +135,6 @@ class ExecutionsTest(AgentlessTestCase):
                                                    include_credentials=True,
                                                    include_logs=True,
                                                    include_events=True,
-                                                   include_metrics=True,
                                                    queue=True)
         self._assert_execution_status(second_snap.id, Execution.QUEUED)
 
@@ -186,7 +184,6 @@ class ExecutionsTest(AgentlessTestCase):
                                                    include_credentials=True,
                                                    include_logs=True,
                                                    include_events=True,
-                                                   include_metrics=True,
                                                    queue=True)
         self._assert_execution_status(second_snap.id, Execution.QUEUED)
 
@@ -271,7 +268,6 @@ class ExecutionsTest(AgentlessTestCase):
                                                   include_credentials=True,
                                                   include_logs=True,
                                                   include_events=True,
-                                                  include_metrics=True,
                                                   queue=True)
 
         # Start 'install' execution
@@ -400,13 +396,11 @@ class ExecutionsTest(AgentlessTestCase):
                                                   include_credentials=True,
                                                   include_logs=True,
                                                   include_events=True,
-                                                  include_metrics=True,
                                                   queue=True)
         snapshot_3 = self.client.snapshots.create('snapshot_3',
                                                   include_credentials=True,
                                                   include_logs=True,
                                                   include_events=True,
-                                                  include_metrics=True,
                                                   queue=True)
 
         # Make sure the 2 snapshots are queued (since there's a
@@ -450,7 +444,6 @@ class ExecutionsTest(AgentlessTestCase):
                                                   include_credentials=True,
                                                   include_logs=True,
                                                   include_events=True,
-                                                  include_metrics=True,
                                                   queue=True)
 
         # Make sure snapshot_2 and execution are queued (since there's a
