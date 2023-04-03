@@ -58,7 +58,7 @@ class SnapshotCreate:
         self._archive_dest = self._get_snapshot_archive_name()
         self._agents_handler = Agents()
 
-    def create(self):
+    def create(self, timeout=10):
         ctx.logger.debug('Using `new` snapshot format')
         self._auditlog_listener.start()
         self._tenants = self._get_tenants()
@@ -95,12 +95,12 @@ class SnapshotCreate:
             try:
                 # Fetch all the remaining items in a queue, don't wait longer
                 # than 10 seconds in case queue is empty.
-                while _ := self._auditlog_queue.get(timeout=10):
+                while audit_log := self._auditlog_queue.get(timeout=timeout):
                     # to be implemented in RND-309
-                    pass
+                    self._append_new_object_from_auditlog(audit_log)
             except queue.Empty:
                 self._auditlog_listener.stop()
-                self._auditlog_listener.join()
+                self._auditlog_listener.join(timeout=timeout)
 
             ctx.logger.debug('Removing temp dir: {0}'.format(self._tempdir))
             shutil.rmtree(self._tempdir)
@@ -426,6 +426,10 @@ class SnapshotCreate:
             metadata_filename,
             os.path.relpath(metadata_filename, self._tempdir))
         os.unlink(metadata_filename)
+
+    def _append_new_object_from_auditlog(self, audit_log):
+        # to be implemented in RND-364
+        pass
 
     def _get_snapshot_archive_name(self):
         """Return the base name for the snapshot archive
