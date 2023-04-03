@@ -87,7 +87,10 @@ def query_service_settings():
     last_updated_subquery = (
         db.session.query(models.Role.updated_at.label('updated_at'))
         .union_all(
-            db.session.query(models.Config.updated_at.label('updated_at'))
+            db.session.query(models.Config.updated_at.label('updated_at')),
+            db.session.query(
+                models.Certificate.updated_at.label('updated_at')
+            ),
         ).subquery()
     )
     db_config_last_updated = db.session.query(
