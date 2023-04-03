@@ -111,6 +111,10 @@ class SnapshotsId(SecuredResource):
             request_dict.get('queue', False)
         )
         tempdir_path = request_dict.get('tempdir_path')
+        legacy = rest_utils.verify_and_convert_bool(
+            'legacy',
+            request_dict.get('legacy', True)
+        )
         if tempdir_path and not os.access(tempdir_path, os.W_OK):
             raise manager_exceptions.ForbiddenError(
                 f'Temp dir cannot be created inside unwriteable location '
@@ -125,6 +129,7 @@ class SnapshotsId(SecuredResource):
             True,
             queue,
             tempdir_path,
+            legacy,
         )
         workflow_executor.execute_workflow(messages)
         return execution, 201

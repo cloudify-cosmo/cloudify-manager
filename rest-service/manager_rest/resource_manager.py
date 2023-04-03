@@ -603,7 +603,8 @@ class ResourceManager(object):
                         include_events,
                         bypass_maintenance,
                         queue,
-                        tempdir_path):
+                        tempdir_path,
+                        legacy):
 
         self.create_snapshot_model(snapshot_id)
         try:
@@ -616,6 +617,7 @@ class ResourceManager(object):
                     'include_events': include_events,
                     'config': self._get_conf_for_snapshots_wf(),
                     'tempdir_path': tempdir_path,
+                    'legacy': legacy,
                 },
                 is_system_workflow=True,
                 status=ExecutionState.PENDING,
