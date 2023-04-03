@@ -1,9 +1,9 @@
-from flask import Flask
+from flask import Flask, current_app
 from flask_migrate import Migrate
 from flask_security import Security
 
 from manager_rest import config, utils
-from manager_rest.storage import user_datastore, db
+from manager_rest.storage import user_datastore, db, models
 from manager_rest.storage.models import Tenant
 from manager_rest.config import instance as manager_config
 
@@ -75,3 +75,30 @@ def get_tenant_by_name(tenant_name):
             'not exist.'.format(name=tenant_name)
         )
     return tenant
+
+
+def query_service_settings():
+    """Check for when was the config updated, and if needed, reload it.
+
+    This makes sure that config updates will (eventually) be propagated
+    to all workers, and that every worker always has the most recent
+    config/permissions settings available.
+    """
+    last_updated_subquery = (
+        db.session.query(models.Role.updated_at.label('updated_at'))
+        .union_all(
+            db.session.query(models.Config.updated_at.label('updated_at'))
+        ).subquery()
+    )
+    db_config_last_updated = db.session.query(
+        db.func.max(last_updated_subquery.c.updated_at)
+    ).scalar()
+    current_app.logger.debug('Last updated locally: %s, in db: %s',
+                             config.instance.last_updated,
+                             db_config_last_updated)
+    if db_config_last_updated is not None and (
+            config.instance.last_updated is None or
+            db_config_last_updated > config.instance.last_updated):
+        current_app.logger.warning('Config has changed - reloading')
+        config.instance.load_from_db()
+        current_app.logger.setLevel(config.instance.rest_service_log_level)

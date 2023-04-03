@@ -10,7 +10,7 @@ from cloudify.models_states import ExecutionState
 
 from manager_rest import config, workflow_executor
 from manager_rest.storage import models
-from manager_rest.flask_utils import setup_flask_app
+from manager_rest.flask_utils import setup_flask_app, query_service_settings
 from manager_rest.maintenance import get_maintenance_state
 from manager_rest.constants import MAINTENANCE_MODE_ACTIVATED
 from manager_rest.resource_manager import get_resource_manager
@@ -58,6 +58,10 @@ def check_schedules():
         db.session.rollback()
         return
 
+    # before running any schedules, let's see if anything changed in the
+    # config, so that we start the executions with the most up-to-date
+    # settings, such as rabbitmq address, etc.
+    query_service_settings()
     for schedule in schedules:
         try_run(schedule)
 
