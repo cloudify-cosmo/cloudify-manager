@@ -23,7 +23,6 @@ class DeploymentStatuses(AgentlessTestCase):
                                                    include_credentials=True,
                                                    include_logs=True,
                                                    include_events=True,
-                                                   include_metrics=True,
                                                    queue=True)
         self.wait_for_execution_to_end(execution_1)
         self.manually_update_execution_status(

@@ -129,7 +129,6 @@ class MaintenanceModeTest(BaseServerTestCase):
         self.assertRaises(exceptions.MaintenanceModeActivatingError,
                           self.client.snapshots.create,
                           snapshot_id='s1',
-                          include_metrics=False,
                           include_credentials=False)
 
     def test_snapshot_restoration_denial_in_maintenance_transition_mode(self):
