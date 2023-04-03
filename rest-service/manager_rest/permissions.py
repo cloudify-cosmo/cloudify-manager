@@ -242,6 +242,7 @@ PERMISSIONS = [
     'widget_environmentButton',
     'widget_events',
     'widget_eventsFilter',
+    'widget_executionLogs',
     'widget_executionNum',
     'widget_executions',
     'widget_executionsStatus',
