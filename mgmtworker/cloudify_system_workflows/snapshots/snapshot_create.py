@@ -1,5 +1,6 @@
 import os
 import json
+import queue
 import shutil
 import tempfile
 import zipfile
@@ -10,6 +11,7 @@ from cloudify.constants import FILE_SERVER_SNAPSHOTS_FOLDER
 
 from cloudify_system_workflows.snapshots import constants, utils, INCLUDES
 from cloudify_system_workflows.snapshots.agents import Agents
+from cloudify_system_workflows.snapshots.audit_listener import AuditLogListener
 
 
 EMPTY_B64_ZIP = 'UEsFBgAAAAAAAAAAAAAAAAAAAAAAAA=='
@@ -49,12 +51,16 @@ class SnapshotCreate:
         self._tenant_clients = {}
         self._composer_client = utils.get_composer_client()
         self._stage_client = utils.get_stage_client()
+        self._auditlog_queue = queue.Queue()
+        self._auditlog_listener = AuditLogListener(self._client.auditlog,
+                                                   self._auditlog_queue)
         self._zip_handle = None
         self._archive_dest = self._get_snapshot_archive_name()
         self._agents_handler = Agents()
 
     def create(self):
         ctx.logger.debug('Using `new` snapshot format')
+        self._auditlog_listener.start()
         self._tenants = self._get_tenants()
         self._prepare_tempdir()
         try:
@@ -86,6 +92,16 @@ class SnapshotCreate:
                 os.unlink(self._archive_dest)
             raise
         finally:
+            try:
+                # Fetch all the remaining items in a queue, don't wait longer
+                # than 10 seconds in case queue is empty.
+                while _ := self._auditlog_queue.get(timeout=10):
+                    # to be implemented in RND-309
+                    pass
+            except queue.Empty:
+                self._auditlog_listener.stop()
+                self._auditlog_listener.join()
+
             ctx.logger.debug('Removing temp dir: {0}'.format(self._tempdir))
             shutil.rmtree(self._tempdir)
 
