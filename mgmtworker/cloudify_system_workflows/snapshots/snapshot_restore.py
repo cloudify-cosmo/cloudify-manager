@@ -749,19 +749,20 @@ class SnapshotRestore(object):
         snapshot_path = self._get_snapshot_path()
         ctx.logger.debug('Going to restore snapshot, '
                          'snapshot_path: {0}'.format(snapshot_path))
-        new_snapshot = False
         try:
             with ZipFile(snapshot_path, 'r') as zipf:
                 self.scan_snapshot(zipf)
 
-                if (
-                    self._snapshot_version.major >= 7
-                    or (
-                        self._snapshot_version.major == 6
-                        and self._snapshot_version.minor > 4
-                    )
-                ):
+                if self._metadata.get(M_SCHEMA_REVISION) and \
+                        self._metadata.get(M_COMPOSER_SCHEMA_REVISION) and \
+                        self._metadata.get(M_STAGE_SCHEMA_REVISION):
+                    new_snapshot = False
+                elif self._snapshot_version >= ManagerVersion('7.1'):
                     new_snapshot = True
+                else:
+                    new_snapshot = False
+
+                if new_snapshot:
                     self._new_restore(zipf)
                     return
 
