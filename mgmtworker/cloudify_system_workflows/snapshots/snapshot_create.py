@@ -8,8 +8,8 @@ from cloudify.workflows import ctx
 from cloudify.manager import get_rest_client
 from cloudify.constants import FILE_SERVER_SNAPSHOTS_FOLDER
 
-from . import constants, utils, INCLUDES
-from .agents import Agents
+from cloudify_system_workflows.snapshots import constants, utils, INCLUDES
+from cloudify_system_workflows.snapshots.agents import Agents
 
 
 EMPTY_B64_ZIP = 'UEsFBgAAAAAAAAAAAAAAAAAAAAAAAA=='
@@ -45,17 +45,16 @@ class SnapshotCreate:
         self._all_tenants = all_tenants
 
         self._tempdir = None
-        self._client = None
+        self._client = get_rest_client()
+        self._tenant_clients = {}
         self._composer_client = utils.get_composer_client()
         self._stage_client = utils.get_stage_client()
-        self._tenant_clients = {}
         self._zip_handle = None
         self._archive_dest = self._get_snapshot_archive_name()
         self._agents_handler = Agents()
 
     def create(self):
         ctx.logger.debug('Using `new` snapshot format')
-        self._client = get_rest_client()
         self._tenants = self._get_tenants()
         self._prepare_tempdir()
         try:
@@ -352,7 +351,7 @@ class SnapshotCreate:
                 '_include': INCLUDES['operations'],
             }
             ops = get_all(client.operations.list, ops_kwargs)
-            ctx.logger.debug('Execution %s has %s operations',
+            ctx.logger.debug('Execution %s has %d operations',
                              filter_id, len(ops))
             for graph in parts:
                 graph_ops = [op for op in ops
