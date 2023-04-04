@@ -16,15 +16,12 @@
 import json
 import logging
 import os
-import secrets
 import shutil
-from string import ascii_uppercase, ascii_lowercase, digits
 
 import argparse
-from flask_security.utils import hash_password
 
 from manager_rest import config
-from manager_rest.storage import db, models, get_storage_manager
+from manager_rest.storage import db, models
 from manager_rest.flask_utils import setup_flask_app
 from manager_rest.constants import (
     BOOTSTRAP_ADMIN_ID,
@@ -101,36 +98,8 @@ def reset_storage(app, script_config):
     _reset_admin_user(script_config)
 
 
-def _random_string(length=10):
-    """A random string that is a bit more user friendly than uuids"""
-    charset = ascii_uppercase + ascii_lowercase + digits
-    return ''.join(secrets.choice(charset) for i in range(length))
-
-
-def regenerate_auth_token():
-    sm = get_storage_manager()
-    secret = _random_string()
-    token = models.Token(
-        id='abc123def4',
-        description='Inte-tests mgmtworker',
-        secret_hash=hash_password(secret),
-        expiration_date=None,
-        _user_fk=0,
-    )
-    sm.put(token)
-
-    token._secret = secret
-    value = token.to_response()['value']
-
-    with open(AUTH_TOKEN_LOCATION, 'w') as f:
-        f.write(value)
-
-
 def clean_dirs():
     dirs_to_clean = [
-        '/opt/mgmtworker/env/plugins',
-        '/opt/mgmtworker/env/source_plugins',
-        '/opt/mgmtworker/work/deployments',
         '/opt/manager/resources/blueprints',
         '/opt/manager/resources/deployments',
         '/opt/manager/resources/uploaded-blueprints',
