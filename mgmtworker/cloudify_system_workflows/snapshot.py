@@ -17,6 +17,7 @@ from cloudify.workflows import ctx
 from cloudify.decorators import workflow
 
 from .snapshots.snapshot_create import SnapshotCreate
+from .snapshots.snapshot_create_legacy import LegacySnapshotCreate
 from .snapshots.snapshot_restore import SnapshotRestore
 
 
@@ -29,15 +30,24 @@ def create(snapshot_id, config, **kwargs):
     include_events = kwargs.get('include_events', True)
     tempdir_path = kwargs.get('tempdir_path')
     legacy = kwargs.get('legacy', False)
-    create_snapshot = SnapshotCreate(
-        snapshot_id,
-        config,
-        include_credentials,
-        include_logs,
-        include_events,
-        tempdir_path,
-        legacy
-    )
+    if legacy:
+        create_snapshot = LegacySnapshotCreate(
+                snapshot_id,
+                config,
+                include_credentials,
+                include_logs,
+                include_events,
+                tempdir_path,
+        )
+    else:
+        create_snapshot = SnapshotCreate(
+                snapshot_id,
+                config,
+                include_credentials,
+                include_logs,
+                include_events,
+                tempdir_path,
+        )
     create_snapshot.create()
 
 
