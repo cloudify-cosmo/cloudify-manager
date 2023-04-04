@@ -25,7 +25,6 @@ from collections import Counter
 from integration_tests.framework import utils
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
-from integration_tests.framework.flask_utils import reset_storage
 
 from cloudify.snapshots import STATES
 from cloudify.models_states import AgentState
@@ -267,7 +266,7 @@ class TestSnapshot(AgentlessTestCase):
             output_file=downloaded_snapshot,
         )
 
-        reset_storage(self.env)
+        self.env.reset_storage()
 
         self.client.snapshots.upload(downloaded_snapshot, snapshot_id)
         self.client.snapshots.restore(snapshot_id)
@@ -299,7 +298,7 @@ class TestSnapshot(AgentlessTestCase):
             output_file=downloaded_snapshot,
         )
 
-        reset_storage(self.env)
+        self.env.reset_storage()
 
         self.client.snapshots.upload(downloaded_snapshot, snapshot_id)
         self.client.maintenance_mode.activate()

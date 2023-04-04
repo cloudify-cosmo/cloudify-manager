@@ -21,7 +21,6 @@ import pytest
 from integration_tests import AgentTestCase
 from cloudify.models_states import AgentState
 from integration_tests.tests.utils import get_resource as resource
-from integration_tests.framework.flask_utils import reset_storage
 
 pytestmark = pytest.mark.group_snapshots
 
@@ -135,7 +134,7 @@ class TestSnapshots(AgentTestCase):
             output_file=downloaded_snapshot,
         )
 
-        reset_storage(self.env)
+        self.env.reset_storage()
         self.client.snapshots.upload(downloaded_snapshot, snapshot_id)
         self._restore_snapshot(states, deployments, snapshot_id)
 
@@ -168,7 +167,7 @@ class TestSnapshots(AgentTestCase):
 
         self._undeploy(states, deployments)
 
-        reset_storage(self.env)
+        self.env.reset_storage()
         self.client.snapshots.upload(downloaded_snapshot, snapshot_id)
         self._restore_snapshot(states, deployments, snapshot_id)
 
@@ -186,6 +185,6 @@ class TestSnapshots(AgentTestCase):
 
         self._undeploy_multitenant(mike_client)
 
-        reset_storage(self.env)
+        self.env.reset_storage()
         self.client.snapshots.upload(downloaded_snapshot, snapshot_id)
         self._restore_snapshot_multitenant(snapshot_id)
