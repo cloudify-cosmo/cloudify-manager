@@ -55,7 +55,7 @@ from .constants import (
     V_4_6_0,
     V_5_0_5,
     V_5_3_0,
-    V_7_0_0,
+    V_7_1_0,
     SECURITY_FILE_LOCATION,
     SECURITY_FILENAME,
     REST_AUTHORIZATION_CONFIG_PATH,
@@ -751,21 +751,13 @@ class SnapshotRestore(object):
                          'snapshot_path: {0}'.format(snapshot_path))
         try:
             with ZipFile(snapshot_path, 'r') as zipf:
-                self.scan_snapshot(zipf)
-
-                if self._metadata.get(M_SCHEMA_REVISION) and \
-                        self._metadata.get(M_COMPOSER_SCHEMA_REVISION) and \
-                        self._metadata.get(M_STAGE_SCHEMA_REVISION):
-                    new_snapshot = False
-                elif self._snapshot_version >= ManagerVersion('7.1'):
-                    new_snapshot = True
-                else:
-                    new_snapshot = False
-
-                if new_snapshot:
+                if not self._is_legacy_snapshot(zipf):
+                    ctx.logger.debug('Using `new` snapshot format')
+                    self.scan_snapshot(zipf)
                     self._new_restore(zipf)
                     return
 
+                ctx.logger.debug('Using `legacy` snapshot format')
                 zipf.extractall(self._tempdir)
 
             schema_revision = self._metadata.get(
@@ -826,12 +818,29 @@ class SnapshotRestore(object):
 
             shutil.rmtree(self._get_snapshot_dir())
         finally:
-            if new_snapshot:
-                self._mark_manager_finished_restoring()
-            else:
+            if self._is_legacy_snapshot():
                 self._trigger_post_restore_commands()
+            else:
+                self._mark_manager_finished_restoring()
             ctx.logger.info('Removing temp dir: {0}'.format(self._tempdir))
             shutil.rmtree(self._tempdir)
+
+    def _is_legacy_snapshot(self, zipf=None):
+        if (not self._metadata or not self._snapshot_version) and zipf:
+            metadata_path = os.path.join(self._tempdir, METADATA_FILENAME)
+            zipf.extract('metadata.json', self._tempdir)
+            with open(metadata_path, 'r') as metadata_handle:
+                self._metadata = json.load(metadata_handle)
+            self._snapshot_version = ManagerVersion(self._metadata[M_VERSION])
+            os.unlink(metadata_path)
+
+        if self._metadata.get(M_SCHEMA_REVISION) and \
+                self._metadata.get(M_COMPOSER_SCHEMA_REVISION) and \
+                self._metadata.get(M_STAGE_SCHEMA_REVISION):
+            return True
+        if self._snapshot_version >= ManagerVersion('7.1'):
+            return False
+        return True
 
     @contextmanager
     def _pause_services(self):
@@ -991,10 +1000,10 @@ class SnapshotRestore(object):
 
     def _restore_inter_deployment_dependencies(self):
         # managers older than 4.6.0 didn't have the support get_capability.
-        # manager newer than 5.0.5 and older than 7.0.0 have the inter
+        # manager newer than 5.0.5 and older than 7.1.0 have the inter
         # deployment dependencies as part of the database dump
         if (self._snapshot_version < V_4_6_0 or
-                V_5_0_5 < self._snapshot_version < V_7_0_0):
+                V_5_0_5 < self._snapshot_version < V_7_1_0):
             return
 
         ctx.logger.info('Restoring inter deployment dependencies')

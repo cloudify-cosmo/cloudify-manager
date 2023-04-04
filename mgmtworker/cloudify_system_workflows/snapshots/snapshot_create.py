@@ -33,8 +33,7 @@ class SnapshotCreate:
                  include_credentials=None,
                  include_logs=True,
                  include_events=True,
-                 all_tenants=True,
-                 legacy=True):
+                 all_tenants=True):
         # include_credentials was for dealing with fs level keys/etc and
         # should've been deprecated long ago as the use-case for it started
         # its slide into history when we converted them to secrets
@@ -44,7 +43,6 @@ class SnapshotCreate:
         self._include_logs = include_logs
         self._include_events = include_events
         self._all_tenants = all_tenants
-        self._create_legacy_snapshot = legacy
 
         self._tempdir = None
         self._client = None
@@ -56,8 +54,7 @@ class SnapshotCreate:
         self._agents_handler = Agents()
 
     def create(self):
-        ctx.logger.debug('Using `%s` snapshot format',
-                         'legacy' if self._create_legacy_snapshot else 'new')
+        ctx.logger.debug('Using `new` snapshot format')
         self._client = get_rest_client()
         self._tenants = self._get_tenants()
         self._prepare_tempdir()
