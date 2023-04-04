@@ -6,8 +6,6 @@ import pytest
 import wagon
 
 import integration_tests_plugins
-from integration_tests.framework.flask_utils import \
-    prepare_reset_storage_script, reset_storage
 from integration_tests.framework import utils
 from integration_tests.tests import utils as test_utils
 
@@ -171,19 +169,19 @@ def tests_env(request, resource_mapping) -> utils.TestEnvironment:
     if container_id:
         keep_container = True
         environment = utils.AllInOneEnvironment(container_id)
-        prepare_reset_storage_script(environment)
-        reset_storage(environment)
+        environment.prepare_reset_storage_script()
+        environment.reset_storage()
     elif k8s_ns:
         environment = utils.DistributedEnvironment(k8s_ns)
-        prepare_reset_storage_script(environment)
-        reset_storage(environment)
+        environment.prepare_reset_storage_script()
+        environment.reset_storage()
     else:
         environment = utils.start_manager_container(
             image_name,
             resource_mapping=resource_mapping,
             lightweight=lightweight,
         )
-        prepare_reset_storage_script(environment)
+        environment.prepare_reset_storage_script()
         utils.upload_mock_license(environment)
     prepare_events_follower(environment)
     _disable_cron_jobs(environment)
@@ -232,7 +230,7 @@ def prepare_manager_storage(request, tests_env):
         request.session.testsfinished = \
             getattr(request.session, 'testsfinished', 0) + 1
         if request.session.testsfinished != request.session.testscollected:
-            reset_storage(tests_env)
+            tests_env.reset_storage()
 
 
 @pytest.fixture(scope='session')
