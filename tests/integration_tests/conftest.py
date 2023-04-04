@@ -234,26 +234,6 @@ def prepare_manager_storage(request, tests_env):
 
 
 @pytest.fixture(scope='session')
-def allow_agent(tests_env, package_agent):
-    """Allow installing an agent on the manager container.
-
-    Agent installation scripts have all kinds of assumptions about
-    sudo and su, so those need to be available.
-    """
-    tests_env.execute_on_manager([
-        'bash',
-        '-c',
-        "echo 'cfyuser ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/cfyuser",
-    ])
-    tests_env.execute_on_manager([
-        'sed',
-        '-i',
-        "1iauth sufficient pam_succeed_if.so user = cfyuser",
-        '/etc/pam.d/su'
-    ])
-
-
-@pytest.fixture(scope='session')
 def package_agent(tests_env, request):
     """Repackage the on-manager agent with the provided sources.
 
