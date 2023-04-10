@@ -282,14 +282,25 @@ class Postgres(object):
         return path
 
     def restore_config_tables(self, config_path):
+        management_tables = ['maintenance_mode', 'plugins_states']
+        for table_name in management_tables:
+            self._switch_table_triggers(table_name, 'disable')
         new_dump_file = self._prepend_dump(config_path, [
             'delete from {0};'.format(table)
             for table in self._CONFIG_TABLES
         ])
         self._restore_dump(new_dump_file, self._db_name)
+        for table_name in management_tables:
+            self._switch_table_triggers(table_name, 'enable')
 
     def restore_manager_tables(self, manager_tables_path):
+        management_tables = ['certificates', 'operations', 'managers',
+                             'maintenance_mode', 'users']
+        for table_name in management_tables:
+            self._switch_table_triggers(table_name, 'disable')
         self._restore_dump(manager_tables_path, self._db_name)
+        for table_name in management_tables:
+            self._switch_table_triggers(table_name, 'enable')
 
     @staticmethod
     def _restore_json_dump_file(dump_path):
@@ -606,7 +617,9 @@ class Postgres(object):
 
     def restore_license_from_dump(self, tmp_dir):
         dump_file = os.path.join(tmp_dir, LICENSE_DUMP_FILE)
+        self._switch_table_triggers('licenses', 'disable')
         self._restore_dump(dump_file, self._db_name, table='licenses')
+        self._switch_table_triggers('licenses', 'enable')
 
     @staticmethod
     def _print_postgres_config(config):
@@ -616,3 +629,7 @@ class Postgres(object):
         ctx.logger.debug('Init Postgres config: %s', config)
         config.postgresql_password, config.postgresql_username = \
             postgres_password, postgres_username
+
+    def _switch_table_triggers(self, table_name, action):
+        self.run_query(f"ALTER TABLE {table_name} "
+                       f"{action} TRIGGER audit_{table_name};")
