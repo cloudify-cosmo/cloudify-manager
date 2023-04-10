@@ -403,6 +403,12 @@ class NodesTest(_NodeSetupMixin, base_test.BaseServerTestCase):
         assert all(ni.node_id == node4.id for ni in dep2_n4_instances)
 
     def test_summarize_instances(self):
+        with self.assertRaises(CloudifyClientError) as cm:
+            self.client.summary.node_instances.get('invalid-field')
+        assert cm.exception.status_code == 400
+        error_text = str(cm.exception)
+        assert 'deployment_id' in error_text and 'node_id' in error_text
+
         summary = self.client.summary.node_instances.get(
             'deployment_id', 'node_id')
         assert not summary
