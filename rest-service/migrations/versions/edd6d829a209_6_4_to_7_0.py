@@ -81,6 +81,7 @@ tables_to_audit = {
     'snapshots': ('_storage_id', ['_tenant_id', 'id']),
     'tasks_graphs': ('_storage_id', ['_tenant_id', 'id']),
     'tenants': ('id', ['_tenant_id', 'name']),
+    'usage_collector': ('id', ['manager_id', 'id']),
     'users': ('id', ['username']),
 }
 
