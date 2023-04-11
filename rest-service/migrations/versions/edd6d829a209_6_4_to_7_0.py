@@ -945,7 +945,7 @@ def create_functions_write_audit_log():
             _user text := public.audit_username();
             -- Execution_id performing the modification, from external context
             _execution_id text := public.audit_execution_id();
-            _operation audit_operation;
+            _operation public.audit_operation;
             _record jsonb;
             _ref_identifier jsonb;
         BEGIN
