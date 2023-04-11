@@ -180,8 +180,11 @@ class TestConfigureManager(base_test.BaseServerTestCase):
             ]
         })
         roles = models.Role.query.all()
-        assert len(roles) == 2
-        assert all(r.description == 'descr' for r in roles)
+        assert len(roles) == 6
+
+        for r in roles:
+            if r.name in ['sys_admin', constants.DEFAULT_TENANT_ROLE]:
+                assert r.description == 'descr'
 
         # ...doing it again, updates them
         configure({
@@ -197,8 +200,11 @@ class TestConfigureManager(base_test.BaseServerTestCase):
             ]
         })
 
-        assert len(roles) == 2
-        assert all(r.description == 'descr2' for r in roles)
+        assert len(roles) == 6
+
+        for r in roles:
+            if r.name in ['sys_admin', constants.DEFAULT_TENANT_ROLE]:
+                assert r.description == 'descr2'
 
     def test_create_permissions(self):
         db.session.execute(models.Permission.__table__.delete())
