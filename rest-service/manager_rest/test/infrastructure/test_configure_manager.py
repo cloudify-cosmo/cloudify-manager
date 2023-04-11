@@ -212,7 +212,9 @@ class TestConfigureManager(base_test.BaseServerTestCase):
         configure({})
 
         created_permissions = models.Permission.query.all()
-        assert len(created_permissions) == len(permissions.PERMISSIONS)
+        assert len(created_permissions) == len(
+            [y for _, x in permissions.PERMISSIONS.items() for y in x]
+        )
 
     def test_create_permissions_set_user(self):
         db.session.execute(models.Permission.__table__.delete())
@@ -227,7 +229,9 @@ class TestConfigureManager(base_test.BaseServerTestCase):
 
         created_permissions = models.Permission.query.all()
         # +1 because we created 1 additional permission: user_get for role=user
-        assert len(created_permissions) == len(permissions.PERMISSIONS) + 1
+        assert len(created_permissions) == len(
+            [y for _, x in permissions.PERMISSIONS.items() for y in x]
+        ) + 1
         user_get_permissions = (
             models.Permission.query
             .filter_by(name='user_get')
