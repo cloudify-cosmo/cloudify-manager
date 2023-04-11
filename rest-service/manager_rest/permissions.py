@@ -17,10 +17,31 @@ ROLES = [
         'description': 'User that can manage Cloudify',
     },
     {
+        'name': 'manager',
+        'type': 'tenant_role',
+        'description': 'User that can manage tenants',
+    },
+    {
         'name': constants.DEFAULT_TENANT_ROLE,
         'type': 'tenant_role',
         'description': 'Regular user, can perform actions on tenants resources'
-    }
+    },
+    {
+        'name': 'operations',
+        'type': 'tenant_role',
+        'description': 'User that can deploy and execute workflows, but cannot'
+                       ' manage blueprints or plugins.'
+    },
+    {
+        'name': 'viewer',
+        'type': 'tenant_role',
+        'description': 'User that can only view tenant resources'
+    },
+    {
+        'name': constants.DEFAULT_SYSTEM_ROLE,
+        'type': 'system_role',
+        'description': 'User exists, but have no permissions'
+    },
 ]
 
 # default permissions; if not configured otherwise, they will all be attached
