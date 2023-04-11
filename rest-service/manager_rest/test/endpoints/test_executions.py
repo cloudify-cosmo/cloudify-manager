@@ -1136,6 +1136,50 @@ class ExecutionsTestCase(BaseServerTestCase):
             )
         assert exc.parameters['x'] == 'foobar'
 
+    def test_executions_summary(self):
+        bp = models.Blueprint(
+            id='bp',
+            creator=self.user,
+            tenant=self.tenant
+        )
+        dep = models.Deployment(
+            id='dep',
+            blueprint=bp,
+            scaling_groups={},
+            workflows={'test': {'parameters': {'x': {}}}},
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        db.session.flush()
+        for status in [
+            ExecutionState.STARTED,
+            ExecutionState.PENDING,
+            ExecutionState.TERMINATED,
+        ]:
+            models.Execution(
+                deployment=dep,
+                status=status,
+                workflow_id='test',
+            )
+
+        summary = self.client.summary.executions.get('status')
+        assert {
+            (item['status'], item['executions']) for item in summary
+        } == {
+            (ExecutionState.STARTED, 1),
+            (ExecutionState.PENDING, 1),
+            (ExecutionState.TERMINATED, 1),
+        }
+
+        summary = self.client.summary.executions.get('status_display')
+        assert {
+            (item['status_display'], item['executions']) for item in summary
+        } == {
+            (ExecutionState.STARTED, 1),
+            (ExecutionState.PENDING, 1),
+            ('completed', 1),
+        }
+
     def _create_execution_and_update_token(self, deployment_id, token):
         self.put_deployment(deployment_id, blueprint_id=deployment_id)
         execution = self.client.executions.start(deployment_id, 'install')
