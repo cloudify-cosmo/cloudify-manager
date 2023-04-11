@@ -29,7 +29,7 @@ def create(snapshot_id, config, **kwargs):
     include_logs = kwargs.get('include_logs', True)
     include_events = kwargs.get('include_events', True)
     tempdir_path = kwargs.get('tempdir_path')
-    legacy = kwargs.get('legacy', False)
+    legacy = kwargs.get('legacy', True)
     if legacy:
         create_snapshot = LegacySnapshotCreate(
                 snapshot_id,
