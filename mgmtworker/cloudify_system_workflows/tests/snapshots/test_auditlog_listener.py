@@ -111,7 +111,7 @@ def test_reconnect(
     snap_cre._dump_tenant = mock.Mock()
     snap_cre._append_new_object_from_auditlog = mock.Mock()
 
-    snap_cre.create(wait_seconds=1)
+    snap_cre.create(timeout=1)
 
     snap_cre._append_new_object_from_auditlog.assert_has_calls([
         mock.call({
