@@ -1,18 +1,21 @@
-[
+{
+  "type": "deployments_filters",
+  "items": [
     {
-        "created_at": "2022-11-25T15:14:25.810Z",
-        "id": "fakecloudfilter",
-        "visibility": "tenant",
-        "value": [
-            {
-                "key": "cake",
-                "values": [
-                    "untrue"
-                ],
-                "operator": "any_of",
-                "type": "label"
-            }
-        ],
-        "created_by": "admin"
+      "created_at": "2022-11-25T15:14:25.810Z",
+      "id": "fakecloudfilter",
+      "visibility": "tenant",
+      "value": [
+        {
+          "key": "cake",
+          "values": [
+            "untrue"
+          ],
+          "operator": "any_of",
+          "type": "label"
+        }
+      ],
+      "created_by": "admin"
     }
-]
+  ]
+}

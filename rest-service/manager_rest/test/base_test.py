@@ -292,6 +292,7 @@ class BaseServerTestCase(unittest.TestCase):
                         client.secrets_providers.api = mock_http_client
                         client.resources.api = mock_http_client
                         client.summary.node_instances.api = mock_http_client
+                        client.summary.executions.api = mock_http_client
 
         return client
 

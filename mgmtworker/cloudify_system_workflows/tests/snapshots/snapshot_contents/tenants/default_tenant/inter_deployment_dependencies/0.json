@@ -1,46 +1,49 @@
-[
+{
+  "type": "inter_deployment_dependencies",
+  "items": [
     {
-        "id": "602b6102-e4bd-42ed-a86c-10b526d3b4c2",
-        "visibility": "tenant",
-        "created_at": "2023-03-02T08:38:56.080Z",
-        "created_by": "admin",
-        "dependency_creator": "nodes.n1.operations.cloudify.interfaces.lifecycle.create.inputs.lifecycle_operation.get_capability",
-        "target_deployment_func": {
-            "context": {
-                "self": "n1_robir7"
-            },
-            "function": {
-                "get_attribute": [
-                    "rel_target",
-                    "dep_id"
-                ]
-            }
+      "id": "602b6102-e4bd-42ed-a86c-10b526d3b4c2",
+      "visibility": "tenant",
+      "created_at": "2023-03-02T08:38:56.080Z",
+      "created_by": "admin",
+      "dependency_creator": "nodes.n1.operations.cloudify.interfaces.lifecycle.create.inputs.lifecycle_operation.get_capability",
+      "target_deployment_func": {
+        "context": {
+          "self": "n1_robir7"
         },
-        "source_deployment_id": "d3",
-        "target_deployment_id": "d1",
-        "external_source": null,
-        "external_target": null
+        "function": {
+          "get_attribute": [
+            "rel_target",
+            "dep_id"
+          ]
+        }
+      },
+      "source_deployment_id": "d3",
+      "target_deployment_id": "d1",
+      "external_source": null,
+      "external_target": null
     },
     {
-        "id": "84c87185-71d9-447b-b1b5-4421c416bdfb",
-        "visibility": "tenant",
-        "created_at": "2023-03-02T08:38:56.080Z",
-        "created_by": "admin",
-        "dependency_creator": "nodes.n1.operations.cloudify.interfaces.lifecycle.create.inputs.lifecycle_operation.get_capability",
-        "target_deployment_func": {
-            "context": {
-                "self": "n1_x4imdw"
-            },
-            "function": {
-                "get_attribute": [
-                    "rel_target",
-                    "dep_id"
-                ]
-            }
+      "id": "84c87185-71d9-447b-b1b5-4421c416bdfb",
+      "visibility": "tenant",
+      "created_at": "2023-03-02T08:38:56.080Z",
+      "created_by": "admin",
+      "dependency_creator": "nodes.n1.operations.cloudify.interfaces.lifecycle.create.inputs.lifecycle_operation.get_capability",
+      "target_deployment_func": {
+        "context": {
+          "self": "n1_x4imdw"
         },
-        "source_deployment_id": "d3",
-        "target_deployment_id": "d2",
-        "external_source": null,
-        "external_target": null
+        "function": {
+          "get_attribute": [
+            "rel_target",
+            "dep_id"
+          ]
+        }
+      },
+      "source_deployment_id": "d3",
+      "target_deployment_id": "d2",
+      "external_source": null,
+      "external_target": null
     }
-]
+  ]
+}

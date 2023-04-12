@@ -542,7 +542,10 @@ def _check_snapshot_mgmt(tempdir, client, unlink, zipfile):
         assert os.listdir(os.path.join(mgmt_base_dir, entity)) == ['0.json']
         file_path = os.path.join(mgmt_base_dir, entity, '0.json')
         _check_zip_and_delete([file_path], unlink, zipfile, tempdir)
-        expected_content = MOCK_CLIENT_RESPONSES[None][entity]['list']
+        expected_content = {
+            'type': entity,
+            'items': MOCK_CLIENT_RESPONSES[None][entity]['list'],
+        }
         with open(file_path) as entity_handle:
             content = json.load(entity_handle)
         assert content == expected_content
@@ -572,7 +575,10 @@ def _assert_tenants(tempdir, clients, unlink, zipfile):
                 method = 'export'
             else:
                 method = 'list'
-            data = methods_data[method]
+            data = {
+                'type': r_type,
+                'items': methods_data[method],
+            }
             if r_type == 'agents' or 'node' in r_type:
                 dep_ids = [
                     dep['id']
@@ -609,7 +615,7 @@ def _assert_tenants(tempdir, clients, unlink, zipfile):
             if r_type == 'plugins':
                 plugin_files = [
                     os.path.join(sub_dir, entity['id'] + '.zip')
-                    for entity in data
+                    for entity in data['items']
                 ]
                 # Make sure we add the plugin zip to the snapshot
                 _check_zip_and_delete(plugin_files, unlink, zipfile,
@@ -617,7 +623,7 @@ def _assert_tenants(tempdir, clients, unlink, zipfile):
             elif r_type == 'blueprints':
                 stored_blueprints = set(os.listdir(sub_dir))
                 expected_blueprints = {blueprint['id'] + '.zip'
-                                       for blueprint in data}
+                                       for blueprint in data['items']}
                 expected_files = [
                     os.path.join(sub_dir, entity)
                     for entity in expected_blueprints
@@ -631,7 +637,8 @@ def _assert_tenants(tempdir, clients, unlink, zipfile):
                     if dep_workdirs[idx]['workdir_zip'] == EMPTY_B64_ZIP:
                         # We don't save empty workdirs.
                         continue
-                    expected_dep_workdirs.add(data[idx]['id'] + '.b64zip')
+                    expected_dep_workdirs.add(data['items'][idx]['id'] +
+                                              '.b64zip')
                 expected_files = [
                     os.path.join(sub_dir, entity)
                     for entity in expected_dep_workdirs
@@ -648,7 +655,7 @@ def _assert_tenants(tempdir, clients, unlink, zipfile):
 
                 expected = []
                 if r_type.endswith('_filters'):
-                    for item in data[data_start:data_end]:
+                    for item in data['items'][data_start:data_end]:
                         if item['is_system_filter']:
                             # We don't expect to copy system filters
                             continue
@@ -656,10 +663,11 @@ def _assert_tenants(tempdir, clients, unlink, zipfile):
                         item.pop('is_system_filter')
                         expected.append(item)
                 else:
-                    expected = data[data_start:data_end]
+                    expected = data['items'][data_start:data_end]
 
-                _check_resource_type(r_type, group, expected, tenant_dir,
-                                     unlink, zipfile)
+                _check_resource_type(r_type, group,
+                                     {'type': r_type, 'items': expected},
+                                     tenant_dir, unlink, zipfile)
 
         _check_tenant_calls(tenant, MOCK_CLIENT_RESPONSES[tenant],
                             clients[tenant], tenant_dir)
@@ -673,6 +681,12 @@ def _check_snapshot_composer(tempdir):
     assert top_level_composer == set(entities)
     for entity in entities:
         expected_content = MOCK_COMPOSER_RESPONSES[entity]
+        if entity.endswith('.json'):
+            _, _, r_type = entity[:-5].rpartition('/')
+            expected_content = json.dumps({
+                'type': r_type,
+                'items': json.loads(expected_content),
+            }).encode('utf-8')
         with open(os.path.join(base_dir_name, entity), 'rb') as entity_file:
             entity_content = entity_file.read()
         assert entity_content == expected_content
@@ -690,6 +704,12 @@ def _check_snapshot_stage(tempdir):
     assert top_level_stage == set(entities)
     for entity in entities:
         expected_content = MOCK_STAGE_RESPONSES[entity]
+        if entity.endswith('.json'):
+            _, _, r_type = entity[:-5].rpartition('/')
+            expected_content = json.dumps({
+                'type': r_type,
+                'items': json.loads(expected_content),
+            }).encode('utf-8')
         with open(os.path.join(base_dir_name, entity), 'rb') as entity_file:
             entity_content = entity_file.read()
         assert entity_content == expected_content
@@ -764,10 +784,13 @@ def _check_exec_entities(r_type, data, exc_ids, group_ids, tenant_dir,
 
 def _check_stored_dependents(base_path, parent_ids, data, operations=None):
     for parent_id in parent_ids:
-        expected = _mangle_dependents(parent_id, data)
+        expected = {
+            'type': data['type'],
+            'items': _mangle_dependents(parent_id, data['items']),
+        }
         if operations:
             operations = _mangle_dependents(parent_id, operations)
-            for item in expected:
+            for item in expected['items']:
                 ops = []
                 for op in operations:
                     if op['tasks_graph_id'] == item['id']:

@@ -6,8 +6,6 @@ import pytest
 import wagon
 
 import integration_tests_plugins
-from integration_tests.framework.flask_utils import \
-    prepare_reset_storage_script, reset_storage
 from integration_tests.framework import utils
 from integration_tests.tests import utils as test_utils
 
@@ -84,7 +82,7 @@ sources = [
     ('cloudify-manager/api-service/cloudify_api', ['/opt/manager/env']),
     ('cloudify-manager/amqp-postgres/amqp_postgres', ['/opt/manager/env']),
     ('cloudify-manager/mgmtworker/cloudify_system_workflows', ['/opt/mgmtworker/env']),  # NOQA
-    ('cloudify-manager/cloudify_types/cloudify_types', ['/opt/mgmtworker/env']),  # NOQA
+    ('cloudify-manager/mgmtworker/cloudify_types', ['/opt/mgmtworker/env']),
     ('cloudify-manager-install/cfy_manager', ['/opt/cloudify/cfy_manager']),
     ('cloudify-manager-install/config.yaml', ['/opt/cloudify/cfy_manager']),
     ('cloudify-manager/execution-scheduler/execution_scheduler', ['/opt/manager/env']),  # NOQA
@@ -171,19 +169,19 @@ def tests_env(request, resource_mapping) -> utils.TestEnvironment:
     if container_id:
         keep_container = True
         environment = utils.AllInOneEnvironment(container_id)
-        prepare_reset_storage_script(environment)
-        reset_storage(environment)
+        environment.prepare_reset_storage_script()
+        environment.reset_storage()
     elif k8s_ns:
         environment = utils.DistributedEnvironment(k8s_ns)
-        prepare_reset_storage_script(environment)
-        reset_storage(environment)
+        environment.prepare_reset_storage_script()
+        environment.reset_storage()
     else:
         environment = utils.start_manager_container(
             image_name,
             resource_mapping=resource_mapping,
             lightweight=lightweight,
         )
-        prepare_reset_storage_script(environment)
+        environment.prepare_reset_storage_script()
         utils.upload_mock_license(environment)
     prepare_events_follower(environment)
     _disable_cron_jobs(environment)
@@ -232,27 +230,7 @@ def prepare_manager_storage(request, tests_env):
         request.session.testsfinished = \
             getattr(request.session, 'testsfinished', 0) + 1
         if request.session.testsfinished != request.session.testscollected:
-            reset_storage(tests_env)
-
-
-@pytest.fixture(scope='session')
-def allow_agent(tests_env, package_agent):
-    """Allow installing an agent on the manager container.
-
-    Agent installation scripts have all kinds of assumptions about
-    sudo and su, so those need to be available.
-    """
-    tests_env.execute_on_manager([
-        'bash',
-        '-c',
-        "echo 'cfyuser ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/cfyuser",
-    ])
-    tests_env.execute_on_manager([
-        'sed',
-        '-i',
-        "1iauth sufficient pam_succeed_if.so user = cfyuser",
-        '/etc/pam.d/su'
-    ])
+            tests_env.reset_storage()
 
 
 @pytest.fixture(scope='session')
