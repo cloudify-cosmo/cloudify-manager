@@ -1123,6 +1123,9 @@ def mock_get_composer_client():
         def __init__(self, entity_name):
             self._entity_name = entity_name
 
+        def entity_name(self):
+            return f'mock {self._entity_name}'
+
         def restore_snapshot(self, snapshot_file_name, **_):
             assert snapshot_file_name is not None
 
@@ -1149,6 +1152,9 @@ def mock_get_stage_client():
     class MockStageBaseSnapshotClient:
         def __init__(self, entity_name):
             self._entity_name = entity_name
+
+        def entity_name(self):
+            return f'mock {self._entity_name}'
 
         def restore_snapshot(self, snapshot_file_name, tenant=None, **_):
             assert snapshot_file_name is not None

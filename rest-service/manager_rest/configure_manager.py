@@ -344,7 +344,9 @@ def _create_permissions(user_config):
 
     for default_permission in default_permissions:
         if default_permission not in permissions_to_make:
-            permissions_to_make[default_permission] = set()
+            permissions_to_make[default_permission] = set(
+                default_permissions[default_permission]
+            )
 
     existing_permissions = {}
     for p in models.Permission.query.all():

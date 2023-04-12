@@ -125,6 +125,36 @@ class TestEnvironment:
     def _run_on_mgmtworker_base_cmd(self):
         raise NotImplementedError('should be implemented in child classes')
 
+    def prepare_reset_storage_script(self):
+        reset_script = test_utils.get_resource('scripts/reset_storage.py')
+        reset_mgmtworker = test_utils.get_resource(
+            'scripts/reset_storage_mgmtworker.py')
+        prepare = test_utils.get_resource('scripts/prepare_reset_storage.py')
+
+        self.copy_file_to_manager(reset_script, '/tmp/reset_storage.py')
+        self.copy_file_to_manager(prepare, '/tmp/prepare_reset_storage.py')
+        self.copy_file_to_mgmtworker(
+            reset_mgmtworker, '/tmp/reset_storage_mgmtworker.py')
+
+        self.execute_python_on_manager([
+            '/tmp/prepare_reset_storage.py',
+            '--config',
+            '/tmp/reset_storage_config.json'
+        ])
+
+    def reset_storage(self):
+        logger.info('Resetting PostgreSQL DB')
+        # reset the storage by calling a script on the manager, to access
+        # localhost-only APIs (rabbitmq management api)
+        self.execute_python_on_manager([
+            '/tmp/reset_storage.py',
+            '--config',
+            '/tmp/reset_storage_config.json',
+        ])
+        self.execute_python_on_mgmtworker([
+            '/tmp/reset_storage_mgmtworker.py'
+        ])
+
 
 class AllInOneEnvironment(TestEnvironment):
     container_id: str

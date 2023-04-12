@@ -1,22 +1,25 @@
-[
+{
+  "type": "permissions",
+  "items": [
     {
-        "role": "sys_admin",
-        "permission": "all_tenants"
+      "role": "sys_admin",
+      "permission": "all_tenants"
     },
     {
-        "role": "sys_admin",
-        "permission": "administrators"
+      "role": "sys_admin",
+      "permission": "administrators"
     },
     {
-        "role": "manager",
-        "permission": "administrators"
+      "role": "manager",
+      "permission": "administrators"
     },
     {
-        "role": "sys_admin",
-        "permission": "create_global_resource"
+      "role": "sys_admin",
+      "permission": "create_global_resource"
     },
     {
-        "role": "sys_admin",
-        "permission": "getting_started"
+      "role": "sys_admin",
+      "permission": "getting_started"
     }
-]
+  ]
+}

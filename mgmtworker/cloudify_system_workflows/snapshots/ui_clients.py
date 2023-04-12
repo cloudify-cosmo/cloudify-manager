@@ -1,5 +1,8 @@
+import json
+
 import requests
 import requests.sessions
+from requests_toolbelt import MultipartEncoder
 
 from cloudify.utils import get_admin_api_token
 
@@ -54,6 +57,9 @@ class UIBaseSnapshotClient:
             })
         return headers
 
+    def entity_name(self):
+        return f'{self._ui_service_name} {self._entity_name}'
+
     def get_snapshot(self, tenant=None,
                      expected_status_code=requests.codes.ok):
         """Retrieve a snapshot of UI entities."""
@@ -72,9 +78,11 @@ class UIBaseSnapshotClient:
             'content-type': 'application/json; charset=utf-8',
             'tenant': tenant,
         })
-        with open(snapshot_file_name, 'rb') as data:
-            with requests.session() as session:
-                resp = session.post(self._url(), headers=headers, data=data)
+        with open(snapshot_file_name, 'rb') as snapshot_handle:
+            data = json.load(snapshot_handle)['items']
+        with requests.session() as session:
+            resp = session.post(self._url(), headers=headers,
+                                data=json.dumps(data).encode('utf-8'))
         handle_response(f'restoring {self._ui_service_name} snapshot '
                         f'of {self._entity_name}',
                         expected_status_code, resp)
@@ -104,14 +112,20 @@ class ComposerBlueprintsSnapshotClient(ComposerBaseSnapshotClient):
             self, snapshot_file_name, metadata_file_name,
             tenant=None, expected_status_code=requests.codes.created):
         """Restore blueprint's snapshot and metadata"""
-        headers = self._request_headers({'tenant': tenant})
-        request_files = {
-            'metadata': (None, open(metadata_file_name, 'rb')),
-            'snapshot': (None, open(snapshot_file_name, 'rb')),
-        }
+        with open(metadata_file_name, 'rb') as metadata_handle:
+            metadata = json.load(metadata_handle)['items']
+        data = MultipartEncoder({
+            'metadata': ('blueprints.json',
+                         json.dumps(metadata).encode('utf-8'),
+                         'application/json'),
+            'snapshot': ('blueprints.zip',
+                         open(snapshot_file_name, 'rb'),
+                         'application/zip'),
+        })
+        headers = self._request_headers({'content-type': data.content_type,
+                                         'tenant': tenant})
         with requests.session() as session:
-            resp = session.post(self._url(), headers=headers,
-                                files=request_files)
+            resp = session.post(self._url(), headers=headers, data=data)
         handle_response(f'restoring composer snapshot of {self._entity_name}',
                         expected_status_code, resp)
 

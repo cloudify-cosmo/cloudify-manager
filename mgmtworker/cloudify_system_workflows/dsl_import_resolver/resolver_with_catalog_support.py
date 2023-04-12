@@ -325,7 +325,20 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
         max_item = max(matching_versions, key=lambda i_v: i_v[1])
         return plugins[max_item[0]]
 
-    def _resolve_blueprint_url(self, import_url):
+    def _fetch_blueprint_import(self, import_url):
+        """
+        :param import_url: blueprint id in the catalog.
+        :return: Blueprint of type Holder with all imports already resolved.
+        """
+        main_blueprint = self._resolve_blueprint_import(import_url)
+        merged_blueprint = parser.parse_from_import_blueprint(
+            dsl_string=main_blueprint,
+            dsl_location=import_url,
+            resources_base_path=self.file_server_root,
+            resolver=self)
+        return merged_blueprint
+
+    def _resolve_blueprint_import(self, import_url):
         blueprint_id = import_url.replace(BLUEPRINT_PREFIX, '', 1).strip()
         try:
             blueprint = self.client.blueprints.get(blueprint_id)
@@ -336,31 +349,11 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
                 .format(blueprint_id)
             )
 
-        return self._make_blueprint_url(blueprint)
-
-    def _fetch_blueprint_import(self, import_url):
-        """
-        :param import_url: blueprint id in the catalog.
-        :return: Blueprint of type Holder with all imports already resolved.
-        """
-        import_url = self._resolve_blueprint_url(import_url)
-        main_blueprint = super(ResolverWithCatalogSupport, self).\
-            fetch_import(import_url)
-        merged_blueprint = parser.parse_from_import_blueprint(
-            dsl_string=main_blueprint,
-            dsl_location=import_url,
-            resources_base_path=self.file_server_root,
-            resolver=self)
-        return merged_blueprint
-
-    def _make_blueprint_url(self, blueprint):
-        blueprint_path = os.path.join(
-            self.file_server_root,
-            FILE_SERVER_BLUEPRINTS_FOLDER,
-            blueprint['tenant_name'],
-            blueprint.id)
-        filename = os.path.join(blueprint_path, blueprint.main_file_name)
-        return 'file://{0}'.format(filename)
+        bp_resp = self.client.resources.get_file(
+            f'/resources/blueprints/{blueprint.tenant_name}/{blueprint.id}'
+            f'/{blueprint.main_file_name}',
+        )
+        return b''.join(bp_resp.bytes_stream()).decode()
 
     @retry(stop_max_attempt_number=120, wait_fixed=1000)
     def _wait_for_matching_plugin_to_upload(

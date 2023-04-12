@@ -17,260 +17,1374 @@ ROLES = [
         'description': 'User that can manage Cloudify',
     },
     {
+        'name': 'manager',
+        'type': 'tenant_role',
+        'description': 'User that can manage tenants',
+    },
+    {
         'name': constants.DEFAULT_TENANT_ROLE,
         'type': 'tenant_role',
         'description': 'Regular user, can perform actions on tenants resources'
-    }
+    },
+    {
+        'name': 'operations',
+        'type': 'tenant_role',
+        'description': 'User that can deploy and execute workflows, but cannot'
+                       ' manage blueprints or plugins.'
+    },
+    {
+        'name': 'viewer',
+        'type': 'tenant_role',
+        'description': 'User that can only view tenant resources'
+    },
+    {
+        'name': constants.DEFAULT_SYSTEM_ROLE,
+        'type': 'system_role',
+        'description': 'User exists, but have no permissions'
+    },
 ]
 
 # default permissions; if not configured otherwise, they will all be attached
 # to the sys_admin role only
-PERMISSIONS = [
-    'administrators',
-    'agent_create',
-    'agent_get',
-    'agent_list',
-    'agent_replace_certs',
-    'agent_update',
-    'all_tenants',
-    'audit_log_inject',
-    'audit_log_truncate',
-    'audit_log_view',
-    'blueprint_delete',
-    'blueprint_download',
-    'blueprint_get',
-    'blueprint_list',
-    'blueprint_upload',
-    'broker_credentials',
-    'broker_get',
-    'broker_manage',
-    'cluster_node_config_update',
-    'cluster_status_get',
-    'community_contact_create',
-    'create_global_resource',
-    'create_token',
-    'db_nodes_get',
-    'delete_token',
-    'deployment_capabilities',
-    'deployment_create',
-    'deployment_delete',
-    'deployment_get',
-    'deployment_group_create',
-    'deployment_group_delete',
-    'deployment_group_get',
-    'deployment_group_list',
-    'deployment_group_update',
-    'deployment_list',
-    'deployment_modification_finish',
-    'deployment_modification_get',
-    'deployment_modification_list',
-    'deployment_modification_outputs',
-    'deployment_modification_rollback',
-    'deployment_modify',
-    'deployment_set_site',
-    'deployment_set_visibility',
-    'deployment_update',
-    'deployment_update_create',
-    'deployment_update_get',
-    'deployment_update_list',
-    'deployment_update_update',
-    'event_create',
-    'event_delete',
-    'event_list',
-    'execute_global_workflow',
-    'execution_cancel',
-    'execution_delete',
-    'execution_get',
-    'execution_group_cancel',
-    'execution_group_create',
-    'execution_group_get',
-    'execution_group_list',
-    'execution_group_update',
-    'execution_list',
-    'execution_schedule_create',
-    'execution_schedule_get',
-    'execution_schedule_list',
-    'execution_should_start',
-    'execution_start',
-    'execution_status_update',
-    'file_server_auth',
-    'filter_create',
-    'filter_delete',
-    'filter_get',
-    'filter_list',
-    'filter_update',
-    'functions_evaluate',
-    'get_password_hash',
-    'getting_started',
-    'identity_provider_get',
-    'inject_token',
-    'inter_deployment_dependency_create',
-    'inter_deployment_dependency_delete',
-    'inter_deployment_dependency_get',
-    'inter_deployment_dependency_list',
-    'inter_deployment_dependency_update',
-    'labels_list',
-    'ldap_set',
-    'ldap_status_get',
-    'license_list',
-    'license_remove',
-    'license_upload',
-    'list_token',
-    'log_bundle_create',
-    'log_bundle_delete',
-    'log_bundle_download',
-    'log_bundle_get',
-    'log_bundle_list',
-    'log_bundle_status_update',
-    'maintenance_mode_get',
-    'maintenance_mode_set',
-    'manage_others_tokens',
-    'manager_config_get',
-    'manager_config_put',
-    'manager_get',
-    'manager_manage',
-    'monitoring',
-    'node_delete',
-    'node_instance_delete',
-    'node_instance_get',
-    'node_instance_list',
-    'node_instance_update',
-    'node_list',
-    'node_update',
-    'operations',
-    'plugin_delete',
-    'plugin_download',
-    'plugin_get',
-    'plugin_list',
-    'plugin_upload',
-    'plugins_update_create',
-    'plugins_update_get',
-    'plugins_update_list',
-    'provider_context_create',
-    'provider_context_get',
-    'resource_set_global',
-    'resource_set_visibility',
-    'secret_create',
-    'secret_delete',
-    'secret_export',
-    'secret_get',
-    'secret_import',
-    'secret_list',
-    'secret_update',
-    'secrets_provider_create',
-    'secrets_provider_credentials',
-    'secrets_provider_delete',
-    'secrets_provider_get',
-    'secrets_provider_list',
-    'secrets_provider_update',
-    'set_execution_details',
-    'set_execution_group_details',
-    'set_owner',
-    'set_plugin_update_details',
-    'set_timestamp',
-    'site_create',
-    'site_delete',
-    'site_get',
-    'site_list',
-    'site_update',
-    'snapshot_create',
-    'snapshot_delete',
-    'snapshot_download',
-    'snapshot_get',
-    'snapshot_list',
-    'snapshot_restore',
-    'snapshot_status_update',
-    'snapshot_upload',
-    'stage_configure',
-    'stage_edit_mode',
-    'stage_install_widgets',
-    'stage_maintenance_mode',
-    'stage_services_status',
-    'stage_template_management',
-    'status_get',
-    'tenant_add_group',
-    'tenant_add_user',
-    'tenant_create',
-    'tenant_delete',
-    'tenant_get',
-    'tenant_list',
-    'tenant_list_get_data',
-    'tenant_rabbitmq_credentials',
-    'tenant_remove_group',
-    'tenant_remove_user',
-    'tenant_update_group',
-    'tenant_update_user',
-    'token_get',
-    'user_create',
-    'user_delete',
-    'user_get',
-    'user_get_self',
-    'user_group_add_user',
-    'user_group_create',
-    'user_group_delete',
-    'user_group_get',
-    'user_group_list',
-    'user_group_remove_user',
-    'user_group_update',
-    'user_list',
-    'user_set_activated',
-    'user_token',
-    'user_unlock',
-    'user_update',
-    'version_get',
-    'widget_agents',
-    'widget_blueprintActionButtons',
-    'widget_blueprintCatalog',
-    'widget_blueprintInfo',
-    'widget_blueprintNum',
-    'widget_blueprintSources',
-    'widget_blueprintUploadButton',
-    'widget_blueprints',
-    'widget_buttonLink',
-    'widget_cloudButton',
-    'widget_cloudNum',
-    'widget_composerLink',
-    'widget_custom_admin',
-    'widget_custom_all',
-    'widget_custom_sys_admin',
-    'widget_deploymentActionButtons',
-    'widget_deploymentButton',
-    'widget_deploymentInfo',
-    'widget_deploymentNum',
-    'widget_deployments',
-    'widget_deploymentsView',
-    'widget_environmentButton',
-    'widget_events',
-    'widget_eventsFilter',
-    'widget_executionNum',
-    'widget_executions',
-    'widget_executionsStatus',
-    'widget_filter',
-    'widget_filters',
-    'widget_highAvailability',
-    'widget_inputs',
-    'widget_labels',
-    'widget_maintenanceModeButton',
-    'widget_nodes',
-    'widget_nodesComputeNum',
-    'widget_nodesStats',
-    'widget_onlyMyResources',
-    'widget_outputs',
-    'widget_pluginUploadButton',
-    'widget_plugins',
-    'widget_pluginsCatalog',
-    'widget_pluginsNum',
-    'widget_secretProviders',
-    'widget_secrets',
-    'widget_serversNum',
-    'widget_serviceButton',
-    'widget_sites',
-    'widget_sitesMap',
-    'widget_snapshots',
-    'widget_tenants',
-    'widget_text',
-    'widget_tokens',
-    'widget_topology',
-    'widget_userGroups',
-    'widget_userManagement',
-]
+PERMISSIONS = {
+    'all_tenants': [
+        'sys_admin'
+    ],
+    'administrators': [
+        'sys_admin',
+        'manager'
+    ],
+    'create_global_resource': [
+        'sys_admin'
+    ],
+    'getting_started': [
+        'sys_admin'
+    ],
+    'agent_list': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'agent_create': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'agent_update': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'agent_get': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'agent_replace_certs': [
+        'sys_admin'
+    ],
+    'blueprint_get': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'blueprint_download': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'blueprint_list': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'blueprint_upload': [
+        'sys_admin',
+        'manager',
+        'user'
+    ],
+    'blueprint_delete': [
+        'sys_admin',
+        'manager',
+        'user'
+    ],
+    'cluster_status_get': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'cluster_node_config_update': [
+        'sys_admin'
+    ],
+    'deployment_get': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'deployment_list': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'deployment_create': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'deployment_delete': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'deployment_update': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'deployment_modify': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'deployment_set_site': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'deployment_modification_get': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'deployment_modification_list': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'deployment_modification_finish': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'deployment_modification_rollback': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'deployment_modification_outputs': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'deployment_capabilities': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'deployment_update_get': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'deployment_update_list': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'deployment_update_create': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'deployment_update_update': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'deployment_group_list': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'deployment_group_get': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'deployment_group_create': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'deployment_group_update': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'deployment_group_delete': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'event_create': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'event_list': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'event_delete': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'execute_global_workflow': [
+        'sys_admin',
+        'manager'
+    ],
+    'execution_get': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'execution_list': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'execution_start': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'execution_cancel': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'execution_status_update': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'execution_schedule_get': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'execution_schedule_list': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'execution_schedule_create': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'execution_group_list': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'execution_group_get': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'execution_group_create': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'execution_group_cancel': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'execution_group_update': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'set_execution_group_details': [
+        'sys_admin'
+    ],
+    'file_server_auth': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'functions_evaluate': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'ldap_set': [
+        'sys_admin'
+    ],
+    'ldap_status_get': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer',
+        'default'
+    ],
+    'maintenance_mode_get': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer',
+        'default'
+    ],
+    'maintenance_mode_set': [
+        'sys_admin'
+    ],
+    'manager_config_get': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer',
+        'default'
+    ],
+    'manager_config_put': [
+        'sys_admin',
+        'manager'
+    ],
+    'manager_get': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'manager_manage': [
+        'sys_admin'
+    ],
+    'monitoring': [
+        'sys_admin'
+    ],
+    'broker_get': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer',
+        'default'
+    ],
+    'broker_manage': [
+        'sys_admin'
+    ],
+    'broker_credentials': [
+        'sys_admin'
+    ],
+    'db_nodes_get': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer',
+        'default'
+    ],
+    'node_list': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'node_update': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'node_delete': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'node_instance_get': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'node_instance_list': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'node_instance_update': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'node_instance_delete': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'operations': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'plugin_get': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'plugin_list': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'plugin_upload': [
+        'sys_admin',
+        'manager',
+        'user'
+    ],
+    'plugin_download': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'plugin_delete': [
+        'sys_admin',
+        'manager',
+        'user'
+    ],
+    'plugins_update_get': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'plugins_update_list': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'plugins_update_create': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'provider_context_get': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer',
+        'default'
+    ],
+    'provider_context_create': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer',
+        'default'
+    ],
+    'secret_get': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'secret_create': [
+        'sys_admin',
+        'manager',
+        'user'
+    ],
+    'secret_update': [
+        'sys_admin',
+        'manager',
+        'user'
+    ],
+    'secret_delete': [
+        'sys_admin',
+        'manager',
+        'user'
+    ],
+    'secret_list': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'secret_export': [
+        'sys_admin',
+        'manager',
+        'user'
+    ],
+    'secret_import': [
+        'sys_admin',
+        'manager',
+        'user'
+    ],
+    'status_get': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer',
+        'default'
+    ],
+    'site_get': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'site_create': [
+        'sys_admin',
+        'manager',
+        'user'
+    ],
+    'site_update': [
+        'sys_admin',
+        'manager',
+        'user'
+    ],
+    'site_delete': [
+        'sys_admin',
+        'manager',
+        'user'
+    ],
+    'site_list': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'tenant_rabbitmq_credentials': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'tenant_get': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'tenant_list': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer',
+        'default'
+    ],
+    'tenant_list_get_data': [
+        'sys_admin'
+    ],
+    'tenant_create': [
+        'sys_admin'
+    ],
+    'tenant_delete': [
+        'sys_admin'
+    ],
+    'tenant_add_user': [
+        'sys_admin'
+    ],
+    'tenant_update_user': [
+        'sys_admin'
+    ],
+    'tenant_remove_user': [
+        'sys_admin'
+    ],
+    'tenant_add_group': [
+        'sys_admin'
+    ],
+    'tenant_update_group': [
+        'sys_admin'
+    ],
+    'tenant_remove_group': [
+        'sys_admin'
+    ],
+    'token_get': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer',
+        'default'
+    ],
+    'user_get': [
+        'sys_admin'
+    ],
+    'user_get_self': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer',
+        'default'
+    ],
+    'user_list': [
+        'sys_admin'
+    ],
+    'user_create': [
+        'sys_admin'
+    ],
+    'user_delete': [
+        'sys_admin'
+    ],
+    'user_update': [
+        'sys_admin'
+    ],
+    'user_set_activated': [
+        'sys_admin'
+    ],
+    'user_unlock': [
+        'sys_admin'
+    ],
+    'user_group_get': [
+        'sys_admin'
+    ],
+    'user_group_list': [
+        'sys_admin'
+    ],
+    'user_group_create': [
+        'sys_admin'
+    ],
+    'user_group_delete': [
+        'sys_admin'
+    ],
+    'user_group_update': [
+        'sys_admin'
+    ],
+    'user_group_add_user': [
+        'sys_admin'
+    ],
+    'user_group_remove_user': [
+        'sys_admin'
+    ],
+    'version_get': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer',
+        'default'
+    ],
+    'snapshot_get': [
+        'sys_admin'
+    ],
+    'snapshot_list': [
+        'sys_admin'
+    ],
+    'snapshot_create': [
+        'sys_admin'
+    ],
+    'snapshot_delete': [
+        'sys_admin'
+    ],
+    'snapshot_upload': [
+        'sys_admin'
+    ],
+    'snapshot_download': [
+        'sys_admin'
+    ],
+    'snapshot_status_update': [
+        'sys_admin'
+    ],
+    'snapshot_restore': [
+        'sys_admin'
+    ],
+    'resource_set_global': [
+        'sys_admin'
+    ],
+    'resource_set_visibility': [
+        'sys_admin',
+        'manager',
+        'user'
+    ],
+    'deployment_set_visibility': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'inter_deployment_dependency_create': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'inter_deployment_dependency_update': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'inter_deployment_dependency_delete': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'inter_deployment_dependency_get': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'inter_deployment_dependency_list': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'labels_list': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'filter_create': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'filter_list': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'filter_get': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'filter_update': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'filter_delete': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'stage_services_status': [
+        'sys_admin'
+    ],
+    'stage_edit_mode': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'stage_maintenance_mode': [
+        'sys_admin'
+    ],
+    'stage_configure': [
+        'sys_admin'
+    ],
+    'stage_template_management': [
+        'sys_admin'
+    ],
+    'stage_install_widgets': [
+        'sys_admin'
+    ],
+    'widget_custom_admin': [
+        'sys_admin',
+        'manager'
+    ],
+    'widget_custom_sys_admin': [
+        'sys_admin'
+    ],
+    'widget_custom_all': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'widget_agents': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'widget_blueprintCatalog': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'widget_blueprintActionButtons': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'widget_blueprintInfo': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'widget_blueprints': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'widget_blueprintSources': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'widget_blueprintNum': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'widget_blueprintUploadButton': [
+        'sys_admin',
+        'manager',
+        'user'
+    ],
+    'widget_buttonLink': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'widget_composerLink': [
+        'sys_admin',
+        'manager',
+        'user'
+    ],
+    'widget_cloudButton': [
+        'sys_admin',
+        'manager',
+        'user'
+    ],
+    'widget_cloudNum': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'widget_deploymentActionButtons': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'widget_deploymentButton': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'widget_deploymentInfo': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'widget_deploymentNum': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'widget_deployments': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'widget_deploymentsView': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'widget_environmentButton': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'widget_events': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'widget_eventsFilter': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'widget_executionLogs': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'widget_executionNum': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'widget_executions': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'widget_executionsStatus': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'widget_filter': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'widget_filters': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'widget_highAvailability': [
+        'sys_admin'
+    ],
+    'widget_inputs': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'widget_labels': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'widget_maintenanceModeButton': [
+        'sys_admin'
+    ],
+    'widget_nodes': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'widget_nodesComputeNum': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'widget_nodesStats': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'widget_onlyMyResources': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'widget_outputs': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'widget_plugins': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'widget_pluginsCatalog': [
+        'sys_admin',
+        'manager',
+        'user'
+    ],
+    'widget_pluginsNum': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'widget_pluginUploadButton': [
+        'sys_admin',
+        'manager',
+        'user'
+    ],
+    'widget_secretProviders': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'widget_secrets': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'widget_serversNum': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'widget_serviceButton': [
+        'sys_admin',
+        'manager',
+        'user'
+    ],
+    'widget_sites': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'widget_sitesMap': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'widget_snapshots': [
+        'sys_admin'
+    ],
+    'widget_tenants': [
+        'sys_admin'
+    ],
+    'widget_text': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'widget_tokens': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'widget_topology': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'widget_userGroups': [
+        'sys_admin'
+    ],
+    'widget_userManagement': [
+        'sys_admin'
+    ],
+    'user_token': [
+        'sys_admin'
+    ],
+    'execution_delete': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations'
+    ],
+    'execution_should_start': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'license_upload': [
+        'sys_admin'
+    ],
+    'license_remove': [
+        'sys_admin'
+    ],
+    'license_list': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer',
+        'default'
+    ],
+    'get_password_hash': [
+        'sys_admin'
+    ],
+    'set_timestamp': [
+        'sys_admin'
+    ],
+    'set_owner': [
+        'sys_admin'
+    ],
+    'set_execution_details': [
+        'sys_admin'
+    ],
+    'audit_log_view': [
+        'sys_admin'
+    ],
+    'audit_log_truncate': [
+        'sys_admin'
+    ],
+    'audit_log_inject': [
+        'sys_admin'
+    ],
+    'set_plugin_update_details': [
+        'sys_admin'
+    ],
+    'identity_provider_get': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer',
+        'default'
+    ],
+    'community_contact_create': [
+        'sys_admin'
+    ],
+    'create_token': [
+        'sys_admin',
+        'manager',
+        'user',
+        'default',
+        'viewer'
+    ],
+    'delete_token': [
+        'sys_admin',
+        'manager',
+        'user',
+        'default',
+        'viewer'
+    ],
+    'list_token': [
+        'sys_admin',
+        'manager',
+        'user',
+        'default',
+        'viewer'
+    ],
+    'manage_others_tokens': [
+        'sys_admin'
+    ],
+    'inject_token': [
+        'sys_admin'
+    ],
+    'log_bundle_list': [
+        'sys_admin'
+    ],
+    'log_bundle_get': [
+        'sys_admin'
+    ],
+    'log_bundle_create': [
+        'sys_admin'
+    ],
+    'log_bundle_delete': [
+        'sys_admin'
+    ],
+    'log_bundle_status_update': [
+        'sys_admin'
+    ],
+    'log_bundle_download': [
+        'sys_admin'
+    ],
+    'secrets_provider_credentials': [
+        'sys_admin'
+    ],
+    'secrets_provider_list': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'secrets_provider_create': [
+        'sys_admin',
+        'manager',
+        'user'
+    ],
+    'secrets_provider_get': [
+        'sys_admin',
+        'manager',
+        'user',
+        'operations',
+        'viewer'
+    ],
+    'secrets_provider_update': [
+        'sys_admin',
+        'manager',
+        'user'
+    ],
+    'secrets_provider_delete': [
+        'sys_admin',
+        'manager',
+        'user'
+    ]
+}

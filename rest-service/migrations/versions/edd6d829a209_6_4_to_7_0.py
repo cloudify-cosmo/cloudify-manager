@@ -81,7 +81,6 @@ tables_to_audit = {
     'snapshots': ('_storage_id', ['_tenant_id', 'id']),
     'tasks_graphs': ('_storage_id', ['_tenant_id', 'id']),
     'tenants': ('id', ['_tenant_id', 'name']),
-    'usage_collector': ('id', ['manager_id', 'id']),
     'users': ('id', ['username']),
 }
 
@@ -946,7 +945,7 @@ def create_functions_write_audit_log():
             _user text := public.audit_username();
             -- Execution_id performing the modification, from external context
             _execution_id text := public.audit_execution_id();
-            _operation audit_operation;
+            _operation public.audit_operation;
             _record jsonb;
             _ref_identifier jsonb;
         BEGIN
