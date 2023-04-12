@@ -5,7 +5,7 @@ from unittest import mock
 
 import pytest
 
-from cloudify_rest_client.tests import MockClient
+from cloudify_system_workflows.tests.snapshots.mock_client import MockClient
 from cloudify_system_workflows.snapshots.audit_listener import AuditLogListener
 from cloudify_system_workflows.snapshots.snapshot_create import SnapshotCreate
 
