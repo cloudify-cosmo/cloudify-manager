@@ -40,6 +40,9 @@ MOCK_CLIENT_RESPONSES = {
         'snapshots': {
             'update_status': [],
         },
+        'auditlog': {
+            'stream': [],
+        }
     },
     'tenant1': {
         'sites': {

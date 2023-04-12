@@ -1,5 +1,6 @@
 import os
 import json
+import queue
 import shutil
 import tempfile
 import zipfile
@@ -8,8 +9,9 @@ from cloudify.workflows import ctx
 from cloudify.manager import get_rest_client
 from cloudify.constants import FILE_SERVER_SNAPSHOTS_FOLDER
 
-from . import constants, utils, INCLUDES
-from .agents import Agents
+from cloudify_system_workflows.snapshots import constants, utils, INCLUDES
+from cloudify_system_workflows.snapshots.agents import Agents
+from cloudify_system_workflows.snapshots.audit_listener import AuditLogListener
 
 
 EMPTY_B64_ZIP = 'UEsFBgAAAAAAAAAAAAAAAAAAAAAAAA=='
@@ -45,17 +47,20 @@ class SnapshotCreate:
         self._all_tenants = all_tenants
 
         self._tempdir = None
-        self._client = None
+        self._client = get_rest_client()
+        self._tenant_clients = {}
         self._composer_client = utils.get_composer_client()
         self._stage_client = utils.get_stage_client()
-        self._tenant_clients = {}
+        self._auditlog_queue = queue.Queue()
+        self._auditlog_listener = AuditLogListener(self._client.auditlog,
+                                                   self._auditlog_queue)
         self._zip_handle = None
         self._archive_dest = self._get_snapshot_archive_name()
         self._agents_handler = Agents()
 
-    def create(self):
+    def create(self, timeout=10):
         ctx.logger.debug('Using `new` snapshot format')
-        self._client = get_rest_client()
+        self._auditlog_listener.start()
         self._tenants = self._get_tenants()
         self._prepare_tempdir()
         try:
@@ -87,6 +92,16 @@ class SnapshotCreate:
                 os.unlink(self._archive_dest)
             raise
         finally:
+            try:
+                # Fetch all the remaining items in a queue, don't wait longer
+                # than 10 seconds in case queue is empty.
+                while audit_log := self._auditlog_queue.get(timeout=timeout):
+                    # to be implemented in RND-309
+                    self._append_new_object_from_auditlog(audit_log)
+            except queue.Empty:
+                self._auditlog_listener.stop()
+                self._auditlog_listener.join(timeout=timeout)
+
             ctx.logger.debug('Removing temp dir: {0}'.format(self._tempdir))
             shutil.rmtree(self._tempdir)
 
@@ -352,7 +367,7 @@ class SnapshotCreate:
                 '_include': INCLUDES['operations'],
             }
             ops = get_all(client.operations.list, ops_kwargs)
-            ctx.logger.debug('Execution %s has %s operations',
+            ctx.logger.debug('Execution %s has %d operations',
                              filter_id, len(ops))
             for graph in parts:
                 graph_ops = [op for op in ops
@@ -411,6 +426,10 @@ class SnapshotCreate:
             metadata_filename,
             os.path.relpath(metadata_filename, self._tempdir))
         os.unlink(metadata_filename)
+
+    def _append_new_object_from_auditlog(self, audit_log):
+        # to be implemented in RND-364
+        pass
 
     def _get_snapshot_archive_name(self):
         """Return the base name for the snapshot archive
