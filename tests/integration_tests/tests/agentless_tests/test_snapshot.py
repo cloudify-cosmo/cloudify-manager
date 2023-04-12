@@ -320,11 +320,17 @@ class TestSnapshot(AgentlessTestCase):
         self.assertIn('status', restore_status)
         self.assertEqual(restore_status['status'], status_msg)
 
-    def _all_services_restarted_properly(self):
-        manager_status = self.client.manager.get_status()
-        if manager_status['status'] == 'OK':
-            self.logger.info('All processes restarted properly')
-            return True
+    def _all_services_restarted_properly(self, retries=None):
+        # Since we rely on Prometheus to get manager's status, let's give it
+        # some time to scrape it properly.
+        retries = retries or 10
+        while retries > 0:
+            manager_status = self.client.manager.get_status()
+            if manager_status['status'] == 'OK':
+                self.logger.info('All processes restarted properly')
+                return True
+            time.sleep(5)
+            retries -= 1
         for display_name, service in manager_status['services'].items():
             if service['status'] == 'Active':
                 continue
