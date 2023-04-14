@@ -20,6 +20,7 @@ import requests
 import shutil
 from retrying import retry
 from contextlib import closing
+from setuptools import archive_util
 from urllib.parse import parse_qs
 
 from packaging.specifiers import SpecifierSet, InvalidSpecifier
@@ -61,13 +62,15 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
                  plugin_mappings=None,
                  file_server_root=None,
                  marketplace_api_url=None,
-                 client=None):
+                 client=None,
+                 tempdir=None):
         super(ResolverWithCatalogSupport, self).__init__(rules, fallback)
         self.version_constraints = plugin_version_constraints or {}
         self.mappings = plugin_mappings or {}
         self.file_server_root = file_server_root
         self.marketplace_api_url = marketplace_api_url
         self.client = client
+        self.tempdir = tempdir
 
     @staticmethod
     def _is_plugin_url(import_url):
@@ -330,15 +333,6 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
         :param import_url: blueprint id in the catalog.
         :return: Blueprint of type Holder with all imports already resolved.
         """
-        main_blueprint = self._resolve_blueprint_import(import_url)
-        merged_blueprint = parser.parse_from_import_blueprint(
-            dsl_string=main_blueprint,
-            dsl_location=import_url,
-            resources_base_path=self.file_server_root,
-            resolver=self)
-        return merged_blueprint
-
-    def _resolve_blueprint_import(self, import_url):
         blueprint_id = import_url.replace(BLUEPRINT_PREFIX, '', 1).strip()
         try:
             blueprint = self.client.blueprints.get(blueprint_id)
@@ -349,11 +343,24 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
                 .format(blueprint_id)
             )
 
-        bp_resp = self.client.resources.get_file(
-            f'/resources/blueprints/{blueprint.tenant_name}/{blueprint.id}'
-            f'/{blueprint.main_file_name}',
-        )
-        return b''.join(bp_resp.bytes_stream()).decode()
+        archive_target_path = tempfile.mkdtemp(dir=self.tempdir)
+        archive = self.client.blueprints.download(
+            blueprint_id, output_file=archive_target_path)
+        archive_util.unpack_archive(archive, archive_target_path)
+        archive_file_list = os.listdir(archive_target_path)
+        archive_file_list.remove(os.path.basename(archive))
+        app_dir = os.path.join(archive_target_path, archive_file_list[0])
+
+        blueprint_path = os.path.join(app_dir, blueprint.main_file_name)
+        with open(blueprint_path) as f:
+            main_blueprint = f.read()
+        merged_blueprint = parser.parse_from_import_blueprint(
+            dsl_string=main_blueprint,
+            dsl_location=f'file:{blueprint_path}',
+            resources_base_path=app_dir,
+            resolver=self)
+
+        return merged_blueprint
 
     @retry(stop_max_attempt_number=120, wait_fixed=1000)
     def _wait_for_matching_plugin_to_upload(
