@@ -42,11 +42,11 @@ charset-normalizer==2.0.12
     #   requests
 click==8.0.4
     # via cloudify-agent
-cloudify-agent @ git+https://github.com/cloudify-cosmo/cloudify-agent@master
+cloudify-agent @ https://github.com/cloudify-cosmo/cloudify-agent/archive/7.0.0-build.zip
     # via
     #   -r requirements.in
     #   cloudify-mgmtworker (setup.py)
-cloudify-common @ git+https://github.com/cloudify-cosmo/cloudify-common@master
+cloudify-common @ https://github.com/cloudify-cosmo/cloudify-common/archive/7.0.0-build.zip
     # via
     #   -r requirements.in
     #   cloudify-agent
