@@ -201,7 +201,9 @@ def ca_cert(tests_env, tmpdir_factory):
 
 @pytest.fixture(scope='session')
 def rest_client(tests_env, ca_cert):
-    yield tests_env.rest_client(ca_cert)
+    yield tests_env.rest_client(
+        cert_path=ca_cert,
+    )
 
 
 @pytest.fixture(scope='class')

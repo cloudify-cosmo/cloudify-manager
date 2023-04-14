@@ -323,11 +323,10 @@ class BaseTestCase(unittest.TestCase):
 
     def create_rest_client(self, **kwargs):
         params = {
-            'host': self.env.address,
             'cert_path': self.ca_cert,
             **kwargs
         }
-        return utils.create_rest_client(**params)
+        return self.env.rest_client(**params)
 
     @contextmanager
     def client_using_tenant(self, client, tenant_name):

@@ -202,12 +202,10 @@ class AllInOneEnvironment(TestEnvironment):
     def python_executable_location(self):
         return MANAGER_PYTHON
 
-    def rest_client(self, ca_cert):
+    def rest_client(self, **kwargs):
         client = test_utils.create_rest_client(
             host=self.address,
-            rest_port=443,
-            rest_protocol='https',
-            cert_path=ca_cert
+            **kwargs,
         )
         return client
 
@@ -303,11 +301,11 @@ class DistributedEnvironment(TestEnvironment):
     def python_executable_location(self):
         return '/usr/local/bin/python'
 
-    def rest_client(self, _):
+    def rest_client(self, **kwargs):
         client = test_utils.create_rest_client(
             host=self.address,
             rest_port=80,
-            rest_protocol='http',
+            **kwargs,
         )
         return client
 
