@@ -132,7 +132,8 @@ def upload(ctx, **kwargs):
             resolver_parameters={
                 'file_server_root': file_server_root,
                 'marketplace_api_url': marketplace_api_url,
-                'client': client
+                'client': client,
+                'tempdir': archive_target_path,
             })
     except dsl_parser_utils.ResolverInstantiationError as e:
         client.blueprints.update(
