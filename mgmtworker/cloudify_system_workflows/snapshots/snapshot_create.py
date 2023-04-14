@@ -52,7 +52,7 @@ class SnapshotCreate:
         self._composer_client = utils.get_composer_client()
         self._stage_client = utils.get_stage_client()
         self._auditlog_queue = queue.Queue()
-        self._auditlog_listener = AuditLogListener(self._client.auditlog,
+        self._auditlog_listener = AuditLogListener(self._client,
                                                    self._auditlog_queue)
         self._zip_handle = None
         self._archive_dest = self._get_snapshot_archive_name()
@@ -60,9 +60,13 @@ class SnapshotCreate:
 
     def create(self, timeout=10):
         ctx.logger.debug('Using `new` snapshot format')
-        self._auditlog_listener.start()
-        self._tenants = self._get_tenants()
         self._prepare_tempdir()
+        self._initialize_tenants()
+
+        self._auditlog_listener.start(
+            self._blueprints_list(),
+            self._plugins_list(),
+        )
         try:
             with zipfile.ZipFile(
                 self._archive_dest,
@@ -104,6 +108,13 @@ class SnapshotCreate:
 
             ctx.logger.debug('Removing temp dir: {0}'.format(self._tempdir))
             shutil.rmtree(self._tempdir)
+
+    def _initialize_tenants(self):
+        self._tenants = self._get_tenants()
+        for tenant_name in set(self._tenants.keys()):
+            if tenant_name not in self._tenant_clients:
+                self._tenant_clients[tenant_name] = get_rest_client(
+                        tenant=tenant_name)
 
     def _prepare_tempdir(self):
         self._tempdir = tempfile.mkdtemp('-snapshot-data')
@@ -213,15 +224,10 @@ class SnapshotCreate:
         get_kwargs = {}
         suffix = '.json'
         if tenant_name:
-            add_tenant_dir = False
-            if tenant_name not in self._tenant_clients:
-                add_tenant_dir = True
-                self._tenant_clients[tenant_name] = get_rest_client(
-                    tenant=tenant_name)
             client = self._tenant_clients[tenant_name]
             dump_dir = os.path.join(self._tempdir, 'tenants', tenant_name)
-            if add_tenant_dir:
-                os.makedirs(dump_dir, exist_ok=True)
+            if not os.path.isdir(dump_dir):
+                os.makedirs(dump_dir)
                 self._zip_handle.write(dump_dir,
                                        os.path.relpath(dump_dir,
                                                        self._tempdir))
@@ -451,6 +457,20 @@ class SnapshotCreate:
         if not os.path.exists(snapshots_dir):
             os.makedirs(snapshots_dir)
         return snapshots_dir
+
+    def _blueprints_list(self) -> list[tuple[str, str]]:
+        for blueprint in get_all(
+            self._client.blueprints.list,
+            {'_all_tenants': True, '_include': ['tenant_name', 'id']}
+        ):
+            yield blueprint['tenant_name'], blueprint['id']
+
+    def _plugins_list(self) -> list[tuple[str, str]]:
+        for plugin in get_all(
+                self._client.plugins.list,
+                {'_all_tenants': True, '_include': ['tenant_name', 'id']}
+        ):
+            yield plugin['tenant_name'], plugin['id']
 
 
 def get_all(method, kwargs=None):

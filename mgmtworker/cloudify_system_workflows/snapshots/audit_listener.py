@@ -1,24 +1,46 @@
 import asyncio
 import json
+from collections import defaultdict
 from datetime import datetime
 from queue import Queue
 from threading import Event, Thread
 
 from cloudify.exceptions import NonRecoverableError
-from cloudify_async_client.audit_log import AuditLogAsyncClient
+from cloudify_rest_client import CloudifyClient
 
 
 class AuditLogListener(Thread):
     """AuditLogListener is a threaded wrapper for AuditLogAsyncClient.stream"""
-    def __init__(self, client: AuditLogAsyncClient, queue: Queue, **kwargs):
-        if not hasattr(client, 'stream'):
+    def __init__(
+            self,
+            client: CloudifyClient,
+            queue: Queue,
+            daemon=True,
+            **kwargs
+    ):
+        if not hasattr(client.auditlog, 'stream'):
             raise NonRecoverableError('Asynchronous client for audit_log has '
                                       'not been initialised.')
-        super().__init__(daemon=kwargs.pop('daemon', True), **kwargs)
+        super().__init__(daemon=daemon, **kwargs)
         self._client = client
         self._queue = queue
         self._loop = asyncio.new_event_loop()
         self.stopped = Event()
+        self._blueprints = defaultdict(list)
+        self._plugins = defaultdict(list)
+
+    def start(
+            self,
+            blueprints: list[tuple[str, str]] | None = None,
+            plugins: list[tuple[str, str]] | None = None,
+    ):
+        if blueprints:
+            for tenant_name, blueprint_id in blueprints:
+                self._blueprints[tenant_name].append(blueprint_id)
+        if plugins:
+            for tenant_name, plugin_id in plugins:
+                self._plugins[tenant_name].append(plugin_id)
+        super().start()
 
     def run(self):
         self._loop.run_until_complete(self._stream_logs())
@@ -34,7 +56,7 @@ class AuditLogListener(Thread):
 
         while not self.stopped.is_set():
             try:
-                response = await self._client.stream(since=since)
+                response = await self._client.auditlog.stream(since=since)
                 async for data in response.content:
                     for audit_log in _streamed_audit_log(data):
                         self._queue.put(audit_log)
