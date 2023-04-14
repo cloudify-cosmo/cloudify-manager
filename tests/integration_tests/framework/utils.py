@@ -301,10 +301,10 @@ class DistributedEnvironment(TestEnvironment):
     def python_executable_location(self):
         return '/usr/local/bin/python'
 
-    def rest_client(self, **kwargs):
+    def rest_client(self, rest_port=80, **kwargs):
         client = test_utils.create_rest_client(
             host=self.address,
-            rest_port=80,
+            rest_port=rest_port,
             **kwargs,
         )
         return client
