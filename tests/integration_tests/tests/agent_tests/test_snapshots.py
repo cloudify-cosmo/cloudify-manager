@@ -45,7 +45,7 @@ class TestSnapshots(AgentTestCase):
 
         for execution_id in execution_ids:
             exc = self.client.executions.get(execution_id)
-            self.wait_for_execution_to_end(exc)
+            self.wait_for_execution_to_end(exc, timeout_seconds=600)
 
         for deployment, state in zip(deployments, states):
             agent = self.client.agents.list(deployment_id=deployment.id)
