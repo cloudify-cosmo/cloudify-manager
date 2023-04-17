@@ -23,9 +23,7 @@ pytestmark = pytest.mark.group_plugins
 
 
 @pytest.mark.usefixtures('testmockoperations_plugin')
-@pytest.mark.usefixtures('allow_agent')
 class PluginWorkdirTest(AgentTestCase):
-
     def test_plugin_workdir(self):
         filename = 'test_plugin_workdir.txt'
         host_content = 'HOST_CONTENT'
