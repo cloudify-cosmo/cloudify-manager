@@ -90,6 +90,7 @@ def db_conn(timeout_sec=5):
         sleep(0.2)
     raise RuntimeError("Timeout making a DB connection")
 
+
 def run_loop(conn):
     loop = asyncio.new_event_loop()
     loop.add_reader(conn, lambda: handle(conn))
