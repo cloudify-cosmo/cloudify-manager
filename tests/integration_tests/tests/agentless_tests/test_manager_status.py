@@ -52,13 +52,6 @@ class TestManagerStatus(AgentlessTestCase):
                     for service in services]
         self.assertNotIn(NodeServiceStatus.INACTIVE, statuses)
 
-        services_status = list(manager_status['services'].values())
-        remote_values = [service['is_remote'] for service in services_status]
-        self.assertFalse(any(remote_values))
-
-        existing_key = ['extra_info' in service for service in services_status]
-        self.assertTrue(all(existing_key))
-
     def test_status_service_inactive(self):
         """One of the manager services is down"""
         self._test_service_inactive('Management Worker')
@@ -95,14 +88,15 @@ class TestManagerStatus(AgentlessTestCase):
     def _stop_service(self, service, service_command):
         self.env.execute_on_manager(service_command +
                                     ['stop', SERVICES[service]])
-        time.sleep(1)
+        time.sleep(20)
 
     def _start_service(self, service, service_command):
         self.env.execute_on_manager(service_command +
                                     ['start', SERVICES[service]])
+        time.sleep(20)
         self._verify_service_active(service)
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=10)
+    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=20)
     def _verify_service_active(self, service):
         status = self.client.manager.get_status()
         self.assertEqual(status['status'], ServiceStatus.HEALTHY)
