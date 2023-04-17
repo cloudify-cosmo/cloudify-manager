@@ -75,16 +75,20 @@ def db_conn(timeout_sec=5):
     end_at = start_at + timedelta(seconds=timeout_sec)
     while datetime.now() < end_at:
         try:
-            return psycopg2.connect(
+            conn = psycopg2.connect(
                 host=config.instance.postgresql_host,
                 user=config.instance.postgresql_username,
                 password=config.instance.postgresql_password,
                 dbname=config.instance.postgresql_db_name,
             )
+            if conn is None:
+                continue
+            return conn
         except psycopg2.OperationalError:
             if datetime.now() >= end_at:
                 raise
         sleep(0.2)
+    raise RuntimeError("Timeout making a DB connection")
 
 
 def run_loop(conn):
