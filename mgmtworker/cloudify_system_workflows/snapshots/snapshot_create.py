@@ -62,8 +62,8 @@ class SnapshotCreate:
         ctx.logger.debug('Using `new` snapshot format')
         self._prepare_tempdir()
         self._initialize_tenants()
-
         self._auditlog_listener.start(
+            self._tenant_clients,
             self._blueprints_list(),
             self._plugins_list(),
         )
