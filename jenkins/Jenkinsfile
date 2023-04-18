@@ -40,7 +40,6 @@ pipeline {
   options {
     checkoutToSubdirectory('cloudify-manager')
     buildDiscarder(logRotator(numToKeepStr:'10'))
-    timeout(time: 60, unit: 'MINUTES')
     timestamps()
   }
 
