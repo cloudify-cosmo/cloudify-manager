@@ -17,15 +17,6 @@ from .ui_clients import ComposerClient, StageClient
 from cloudify.utils import ManagerVersion, get_local_rest_certificate
 from cloudify.utils import get_tenant_name
 
-COMPOSER_HOST = os.getenv('COMPOSER_BACKEND_HOST', 'localhost')
-COMPOSER_PORT = os.getenv('COMPOSER_BACKEND_SERVICE_PORT', 3000)
-
-STAGE_HOST = os.getenv('STAGE_BACKEND_HOST', 'localhost')
-STAGE_PORT = os.getenv('STAGE_BACKEND_SERVICE_PORT', 8088)
-
-COMPOSER_BASE_URL = f'http://{COMPOSER_HOST}:{COMPOSER_PORT}/composer/backend'
-STAGE_BASE_URL = f'http://{STAGE_HOST}:{STAGE_HOST}/console'
-
 
 class DictToAttributes(dict):
     def __init__(self, dictionary):
@@ -387,11 +378,19 @@ def is_later_than_now(datetime_str):
     return datetime.datetime.utcnow() < datetime_ts
 
 
-def get_composer_client(base_url: str = COMPOSER_BASE_URL) -> ComposerClient:
+def get_composer_client(base_url: str | None = None) -> ComposerClient:
     """Initialize composer client with a given base_url."""
+    if not base_url:
+        composer_host = os.environ.get('COMPOSER_BACKEND_HOST', 'localhost')
+        composer_port = os.environ.get('COMPOSER_BACKEND_SERVICE_PORT', 3000)
+        base_url = f'http://{composer_host}:{composer_port}/composer/backend'
     return ComposerClient(base_url)
 
 
-def get_stage_client(base_url: str = STAGE_BASE_URL) -> StageClient:
+def get_stage_client(base_url: str | None = None) -> StageClient:
     """Initialize composer client with a given base_url."""
+    if not base_url:
+        stage_host = os.environ.get('STAGE_BACKEND_HOST', 'localhost')
+        stage_port = os.environ.get('STAGE_BACKEND_SERVICE_PORT', 8088)
+        base_url = f'http://{stage_host}:{stage_port}/console'
     return StageClient(base_url)
