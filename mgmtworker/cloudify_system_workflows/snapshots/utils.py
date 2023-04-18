@@ -381,8 +381,8 @@ def is_later_than_now(datetime_str):
 def get_composer_client(base_url: str | None = None) -> ComposerClient:
     """Initialize composer client with a given base_url."""
     if not base_url:
-        composer_host = os.environ.get('COMPOSER_BACKEND_HOST', 'localhost')
-        composer_port = os.environ.get('COMPOSER_BACKEND_SERVICE_PORT', 3000)
+        composer_host = os.environ.get('COMPOSER_BACKEND_HOST') or 'localhost'
+        composer_port = os.environ.get('COMPOSER_BACKEND_SERVICE_PORT') or 3000
         base_url = f'http://{composer_host}:{composer_port}/composer/backend'
     return ComposerClient(base_url)
 
@@ -390,7 +390,7 @@ def get_composer_client(base_url: str | None = None) -> ComposerClient:
 def get_stage_client(base_url: str | None = None) -> StageClient:
     """Initialize composer client with a given base_url."""
     if not base_url:
-        stage_host = os.environ.get('STAGE_BACKEND_HOST', 'localhost')
-        stage_port = os.environ.get('STAGE_BACKEND_SERVICE_PORT', 8088)
+        stage_host = os.environ.get('STAGE_BACKEND_HOST') or 'localhost'
+        stage_port = os.environ.get('STAGE_BACKEND_SERVICE_PORT') or 8088
         base_url = f'http://{stage_host}:{stage_port}/console'
     return StageClient(base_url)
