@@ -140,7 +140,11 @@ class TestSnapshots(AgentTestCase):
 
         deps = self.client.deployments.list()
         for dep in deps:
-            self.execute_workflow('install_new_agents', dep.id)
+            self.execute_workflow(
+                'install_new_agents',
+                dep.id,
+                parameters={'stop_old_agent': True},
+            )
 
         # unlike the other tenant tests, in this one we FIRST reset + restore,
         # and only then undeploy. This checks that agent connectivity is
@@ -149,7 +153,7 @@ class TestSnapshots(AgentTestCase):
         # there's 4 agents, but 2 of those are the "upgraded" ones
         self.assertEqual(len(agents), 4)
         assert sum(
-            agent.state == AgentState.UPGRADED for agent in agents
+            agent.state == AgentState.STOPPED for agent in agents
         ) == 2
         self._undeploy(states, deployments)
         self.assertEqual(len(self.client.agents.list().items), 0)
