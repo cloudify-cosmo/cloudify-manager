@@ -17,8 +17,14 @@ from .ui_clients import ComposerClient, StageClient
 from cloudify.utils import ManagerVersion, get_local_rest_certificate
 from cloudify.utils import get_tenant_name
 
-COMPOSER_BASE_URL = 'http://localhost:3000/composer/backend'
-STAGE_BASE_URL = 'http://localhost:8088/console'
+COMPOSER_HOST = os.getenv('COMPOSER_BACKEND_HOST', 'localhost')
+COMPOSER_PORT = os.getenv('COMPOSER_BACKEND_SERVICE_PORT', 3000)
+
+STAGE_HOST = os.getenv('STAGE_BACKEND_HOST', 'localhost')
+STAGE_PORT = os.getenv('STAGE_BACKEND_SERVICE_PORT', 8088)
+
+COMPOSER_BASE_URL = f'http://{COMPOSER_HOST}:{COMPOSER_PORT}/composer/backend'
+STAGE_BASE_URL = f'http://{STAGE_HOST}:{STAGE_HOST}/console'
 
 
 class DictToAttributes(dict):
