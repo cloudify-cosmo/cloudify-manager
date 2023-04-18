@@ -61,6 +61,13 @@ class TestEnvironment:
             redirect_logs,
         )
 
+    def execute_on_postgresql(self, command, redirect_logs=False):
+        return _execute_command(
+            self._run_on_postgresql_base_cmd(),
+            command,
+            redirect_logs,
+        )
+
     def execute_python_on_manager(self, params):
         if not isinstance(params, list):
             raise CommandAsListException
@@ -123,6 +130,9 @@ class TestEnvironment:
         raise NotImplementedError('should be implemented in child classes')
 
     def _run_on_mgmtworker_base_cmd(self):
+        raise NotImplementedError('should be implemented in child classes')
+
+    def _run_on_postgresql_base_cmd(self):
         raise NotImplementedError('should be implemented in child classes')
 
     def prepare_reset_storage_script(self):
@@ -215,12 +225,16 @@ class AllInOneEnvironment(TestEnvironment):
         ]
 
     _run_on_mgmtworker_base_cmd = _run_on_manager_base_cmd
+    _run_on_postgresql_base_cmd = _run_on_manager_base_cmd
+
+    run_postgresql_command = test_utils.run_postgresql_command
 
 
 class DistributedEnvironment(TestEnvironment):
     k8s_namespace: str
     manager_pod: str
     mgmtworker_pod: str
+    postgresql_pod: str
 
     def __init__(self, k8s_namespace: str):
         self.k8s_namespace = k8s_namespace
@@ -297,6 +311,8 @@ class DistributedEnvironment(TestEnvironment):
                 self.manager_pod = pod_name
             elif pod_name.startswith('mgmtworker-'):
                 self.mgmtworker_pod = pod_name
+            elif pod_name.startswith('postgresql-'):
+                self.postgresql_pod = pod_name
 
     def python_executable_location(self):
         return '/usr/local/bin/python'
@@ -320,6 +336,17 @@ class DistributedEnvironment(TestEnvironment):
         if container_name:
             cmd += ['-c', container_name]
         return cmd + ['--']
+
+    def _run_on_postgresql_base_cmd(self, container_name='postgresql'):
+        cmd = ['kubectl', 'exec', self.postgresql_pod]
+        if container_name:
+            cmd += ['-c', container_name]
+        return cmd + ['--']
+
+    def run_postgresql_command(self, cmd):
+        return self.execute_on_postgresql(
+            ['psql', '-U', 'cloudify', 'cloudify_db', '-c', cmd]
+        )
 
 
 def _execute_command(base_cmd, command, redirect_logs=False):
@@ -469,7 +496,4 @@ services_to_install:
 
 
 def upload_mock_license(environment):
-    environment.execute_on_manager([
-        'sudo', '-u', 'postgres', 'psql', 'cloudify_db',
-        '-c', INSERT_MOCK_LICENSE_QUERY,
-    ])
+    environment.run_postgresql_command(INSERT_MOCK_LICENSE_QUERY)
