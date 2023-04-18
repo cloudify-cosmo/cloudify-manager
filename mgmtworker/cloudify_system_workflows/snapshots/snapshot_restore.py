@@ -834,13 +834,11 @@ class SnapshotRestore(object):
             self._snapshot_version = ManagerVersion(self._metadata[M_VERSION])
             os.unlink(metadata_path)
 
-        if self._metadata.get(M_SCHEMA_REVISION) and \
-                self._metadata.get(M_COMPOSER_SCHEMA_REVISION) and \
-                self._metadata.get(M_STAGE_SCHEMA_REVISION):
-            return True
-        if self._snapshot_version >= ManagerVersion('7.1'):
-            return False
-        return True
+        return (
+            M_SCHEMA_REVISION in self._metadata and
+            M_COMPOSER_SCHEMA_REVISION in self._metadata and
+            M_STAGE_SCHEMA_REVISION in self._metadata
+        )
 
     @contextmanager
     def _pause_services(self):
