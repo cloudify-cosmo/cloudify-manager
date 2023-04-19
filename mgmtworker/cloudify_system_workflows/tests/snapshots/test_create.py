@@ -21,6 +21,17 @@ from cloudify_system_workflows.snapshots.snapshot_create import (
     SnapshotCreate,
 )
 
+
+class AuditLogResponse:
+    def __init__(self, content: list[bytes]):
+        self.content = self.async_iterator(content)
+
+    @staticmethod
+    async def async_iterator(iterable):
+        for i in iterable:
+            yield i
+
+
 FAKE_MANAGER_VERSION = 'THIS_MANAGER_VERSION'
 ENTITIES_PER_GROUP = 2
 MOCK_CLIENT_RESPONSES = {
@@ -41,7 +52,7 @@ MOCK_CLIENT_RESPONSES = {
             'update_status': [],
         },
         'auditlog': {
-            'stream': mock.AsyncMock(side_effect=[])
+            'stream': mock.AsyncMock(return_value=AuditLogResponse([]))
         }
     },
     'tenant1': {
@@ -474,7 +485,7 @@ def test_create_snapshot(mock_shutil_rmtree, mock_get_manager_version,
     )
     # Disable archive creation
     snap_cre._create_archive = mock.Mock()
-    snap_cre.create()
+    snap_cre.create(timeout=1)
     snap_dir = snap_cre._tempdir
 
     try:
