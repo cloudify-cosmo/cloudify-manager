@@ -24,7 +24,6 @@ except ImportError:
 
 BASE_SERVICES = {
     'nginx': 'Webserver',
-    'cloudify-amqp-postgres': 'AMQP-Postgres',
     'cloudify-mgmtworker': 'Management Worker',
     'cloudify-restservice': 'Manager Rest-Service',
     'cloudify-api': 'Cloudify API',
@@ -32,6 +31,7 @@ BASE_SERVICES = {
 }
 OPTIONAL_SERVICES = {
     'cloudify-stage': 'Cloudify Console',
+    'cloudify-amqp-postgres': 'AMQP-Postgres',
     'haproxy': 'Haproxy for DB HA',
     'patroni': 'Patroni HA Postgres',
     'postgresql-14': 'PostgreSQL',

@@ -21,6 +21,17 @@ from cloudify_system_workflows.snapshots.snapshot_create import (
     SnapshotCreate,
 )
 
+
+class AuditLogResponse:
+    def __init__(self, content: list[bytes]):
+        self.content = self.async_iterator(content)
+
+    @staticmethod
+    async def async_iterator(iterable):
+        for i in iterable:
+            yield i
+
+
 FAKE_MANAGER_VERSION = 'THIS_MANAGER_VERSION'
 ENTITIES_PER_GROUP = 2
 MOCK_CLIENT_RESPONSES = {
@@ -41,7 +52,7 @@ MOCK_CLIENT_RESPONSES = {
             'update_status': [],
         },
         'auditlog': {
-            'stream': [],
+            'stream': mock.AsyncMock(return_value=AuditLogResponse([]))
         }
     },
     'tenant1': {
@@ -303,7 +314,11 @@ def _get_rest_client(tenant=None):
     for group in tenant_responses:
         mock_group = mock.Mock(spec=tenant_responses[group])
         for call, return_value in tenant_responses[group].items():
-            setattr(mock_group, call, _FakeCaller(return_value, call, group))
+            if isinstance(return_value, mock.AsyncMock):
+                setattr(mock_group, call, return_value)
+            else:
+                setattr(mock_group, call,
+                        _FakeCaller(return_value, call, group))
         setattr(mock_client, group, mock_group)
     return mock_client
 
@@ -470,7 +485,7 @@ def test_create_snapshot(mock_shutil_rmtree, mock_get_manager_version,
     )
     # Disable archive creation
     snap_cre._create_archive = mock.Mock()
-    snap_cre.create()
+    snap_cre.create(timeout=1)
     snap_dir = snap_cre._tempdir
 
     try:
