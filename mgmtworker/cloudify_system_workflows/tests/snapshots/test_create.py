@@ -41,7 +41,7 @@ MOCK_CLIENT_RESPONSES = {
             'update_status': [],
         },
         'auditlog': {
-            'stream': [],
+            'stream': mock.AsyncMock(side_effect=[])
         }
     },
     'tenant1': {
@@ -303,7 +303,11 @@ def _get_rest_client(tenant=None):
     for group in tenant_responses:
         mock_group = mock.Mock(spec=tenant_responses[group])
         for call, return_value in tenant_responses[group].items():
-            setattr(mock_group, call, _FakeCaller(return_value, call, group))
+            if isinstance(return_value, mock.AsyncMock):
+                setattr(mock_group, call, return_value)
+            else:
+                setattr(mock_group, call,
+                        _FakeCaller(return_value, call, group))
         setattr(mock_client, group, mock_group)
     return mock_client
 

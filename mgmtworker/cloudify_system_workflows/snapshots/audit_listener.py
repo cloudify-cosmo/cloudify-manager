@@ -36,6 +36,8 @@ class AuditLogListener(Thread):
                     for audit_log in _streamed_audit_log(data):
                         self._queue.put(audit_log)
                         since = audit_log.get('created_at')
+            except StopAsyncIteration:
+                break
             except Exception:
                 pass
 
