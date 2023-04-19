@@ -2,7 +2,7 @@ import asyncio
 import json
 from datetime import datetime
 from queue import Queue
-from threading import Thread
+from threading import Event, Thread
 
 from cloudify.exceptions import NonRecoverableError
 from cloudify_async_client.audit_log import AuditLogAsyncClient
@@ -18,18 +18,21 @@ class AuditLogListener(Thread):
         self._client = client
         self._queue = queue
         self._loop = asyncio.new_event_loop()
+        self.stopped = Event()
 
     def run(self):
         self._loop.run_until_complete(self._stream_logs())
 
     def stop(self):
+        self.stopped.set()
         self._loop.call_soon_threadsafe(self._loop.stop)
         self._loop.call_soon_threadsafe(self._loop.close)
 
     async def _stream_logs(self):
         """Keep putting logs in a queue, reconnect in case of any errors."""
         since = datetime.now()
-        while True:
+
+        while not self.stopped.is_set():
             try:
                 response = await self._client.stream(since=since)
                 async for data in response.content:
