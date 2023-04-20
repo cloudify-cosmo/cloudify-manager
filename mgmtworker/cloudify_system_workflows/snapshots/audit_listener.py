@@ -28,21 +28,16 @@ class AuditLogListener(Thread):
         self.stopped = Event()
         self._tenant_clients = {}
         self._blueprints = defaultdict(list)
-        self._plugins = defaultdict(list)
 
     def start(
             self,
             tenant_clients: dict[str, CloudifyClient] | None = None,
             blueprints: list[tuple[str, str]] | None = None,
-            plugins: list[tuple[str, str]] | None = None,
     ):
         self._tenant_clients = tenant_clients
         if blueprints:
             for tenant_name, blueprint_id in blueprints:
                 self._blueprints[tenant_name].append(blueprint_id)
-        if plugins:
-            for tenant_name, plugin_id in plugins:
-                self._plugins[tenant_name].append(plugin_id)
         super().start()
 
     def run(self):
