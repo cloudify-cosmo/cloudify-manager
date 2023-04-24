@@ -181,6 +181,7 @@ class SnapshotRestore(object):
         self._new_tenants = set()
         self._tenant_clients = {}
         self._snapshot_files = {}
+        self._legacy = None
 
     def _new_restore(self, zipfile):
         self._new_restore_parse_and_restore('tenants', zipfile)
@@ -826,6 +827,9 @@ class SnapshotRestore(object):
             shutil.rmtree(self._tempdir)
 
     def _is_legacy_snapshot(self, zipf=None):
+        if self._legacy is not None:
+            return self._legacy
+
         if (not self._metadata or not self._snapshot_version) and zipf:
             metadata_path = os.path.join(self._tempdir, METADATA_FILENAME)
             zipf.extract('metadata.json', self._tempdir)
@@ -834,11 +838,12 @@ class SnapshotRestore(object):
             self._snapshot_version = ManagerVersion(self._metadata[M_VERSION])
             os.unlink(metadata_path)
 
-        return (
+        self._legacy = (
             M_SCHEMA_REVISION in self._metadata and
             M_COMPOSER_SCHEMA_REVISION in self._metadata and
             M_STAGE_SCHEMA_REVISION in self._metadata
         )
+        return self._legacy
 
     @contextmanager
     def _pause_services(self):
