@@ -715,7 +715,7 @@ class Manager(_WithCACert, SQLModelBase, CloudifyNodeMixin):
     id = db.Column(db.Integer, autoincrement=True, primary_key=True)
     hostname = db.Column(db.Text, unique=True, nullable=False)
     private_ip = db.Column(db.Text, unique=True, nullable=False)
-    public_ip = db.Column(db.Text, unique=True, nullable=False)
+    public_ip = db.Column(db.Text, nullable=False)
     version = db.Column(db.Text, nullable=False)
     edition = db.Column(db.Text, nullable=False)
     distribution = db.Column(db.Text, nullable=False)
