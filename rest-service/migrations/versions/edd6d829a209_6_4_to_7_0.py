@@ -104,9 +104,11 @@ def upgrade():
     add_audit_log_ref_identifier()
     create_functions_write_audit_log()
     update_audit_triggers()
+    managers_public_ip_not_unique()
 
 
 def downgrade():
+    managers_public_ip_unique()
     revert_audit_triggers()
     drop_functions_write_audit_log()
     drop_audit_log_ref_identifier()
@@ -1010,3 +1012,14 @@ def revert_audit_triggers():
         EXECUTE PROCEDURE
         write_audit_log_{ref_id_field.strip('_')}('{table_name}');
         """)
+
+
+def managers_public_ip_not_unique():
+    with op.batch_alter_table('managers', schema=None) as batch_op:
+        batch_op.drop_constraint('managers_public_ip_key', type_='unique')
+
+
+def managers_public_ip_unique():
+    with op.batch_alter_table('managers', schema=None) as batch_op:
+        batch_op.create_unique_constraint(
+            'managers_public_ip_key', ['public_ip'])
