@@ -88,13 +88,15 @@ class BlueprintsId(resources_v2.BlueprintsId):
         form_params = request.form.get('params')
         if form_params:
             args = json.loads(form_params)
+            labels = args.get('labels', [])
         if not args:
-            args = request.args.to_dict(flat=False)
+            args = request.args.to_dict()
+            labels = request.args.getlist('labels') or []
 
         async_upload = args.get('async_upload', False)
         created_at = args.get('created_at')
         created_by = args.get('created_by')
-        labels = args.get('labels', [])
+
         visibility = args.get('visibility')
         private_resource = args.get('private_resource')
         application_file_name = args.get('application_file_name', '')
