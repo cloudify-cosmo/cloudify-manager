@@ -1,4 +1,4 @@
-https://github.com/cloudify-cosmo/cloudify-common/archive/7.0.0-build.zip
+https://github.com/cloudify-cosmo/cloudify-common/archive/7.0.1-build.zip
 
 # test dependencies
 aiohttp==3.8.3
