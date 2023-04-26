@@ -87,6 +87,13 @@ class UIBaseSnapshotClient:
                         f'of {self._entity_name}',
                         expected_status_code, resp)
 
+    def dump(self, output_dir, tenant=None):
+        snapshot = json.loads(self.get_snapshot(tenant=tenant))
+        this_file = output_dir / f'{self._entity_name}.json'
+        with open(this_file, 'w') as handle:
+            json.dump({'type': self._entity_name, 'items': snapshot}, handle)
+        return len(snapshot)
+
 
 class ComposerBaseSnapshotClient(UIBaseSnapshotClient):
     """A base client for Cloudify Composer snapshots."""
@@ -96,7 +103,7 @@ class ComposerBaseSnapshotClient(UIBaseSnapshotClient):
 
 class ComposerBlueprintsSnapshotClient(ComposerBaseSnapshotClient):
     """A client for Cloudify Composer blueprints' snapshots and metadata."""
-    def get_metadata(self,  tenant=None,
+    def get_metadata(self, tenant=None,
                      expected_status_code=requests.codes.ok):
         """Retrieve Composer blueprints' metadata."""
         headers = self._request_headers({'tenant': tenant})
@@ -128,6 +135,15 @@ class ComposerBlueprintsSnapshotClient(ComposerBaseSnapshotClient):
             resp = session.post(self._url(), headers=headers, data=data)
         handle_response(f'restoring composer snapshot of {self._entity_name}',
                         expected_status_code, resp)
+
+    def dump(self, output_dir):
+        snapshot = self.get_snapshot()
+        metadata = json.loads(self.get_metadata())
+        with open(output_dir / f'{self._entity_name}.zip', 'wb') as handle:
+            handle.write(snapshot)
+        with open(output_dir / f'{self._entity_name}.json', 'w') as handle:
+            json.dump({'type': self._entity_name, 'items': metadata}, handle)
+        return len(metadata)
 
 
 class ComposerClient:
@@ -163,6 +179,12 @@ class StageWidgetsSnapshotClient(StageBaseSnapshotClient):
                                 files=request_files)
         handle_response(f'restoring stage snapshot of {self._entity_name}',
                         expected_status_code, resp)
+
+    def dump(self, output_dir):
+        snapshot = self.get_snapshot()
+        with open(output_dir / f'{self._entity_name}.zip', 'wb') as handle:
+            handle.write(snapshot)
+        return 1
 
 
 class StageClient:
