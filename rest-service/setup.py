@@ -16,7 +16,7 @@
 from setuptools import setup, find_packages
 
 install_requires = [
-    'Flask>2,<3',
+    'Flask>2,<2.3',
     'flask-restful',
     'flask-sqlalchemy>=2.5,<2.6',
     'flask-security',
