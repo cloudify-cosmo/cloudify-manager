@@ -6,6 +6,7 @@ from unittest import mock
 
 import pytest
 
+from cloudify_rest_client.responses import ListResponse
 from cloudify_system_workflows.tests.snapshots.mock_client import MockClient
 from cloudify_system_workflows.snapshots.audit_listener import AuditLogListener
 from cloudify_system_workflows.snapshots.snapshot_create import SnapshotCreate
@@ -45,6 +46,11 @@ def _get_rest_client(
         client.auditlog.stream = mock.AsyncMock(side_effect=auditlog_stream_se)
     if deployments_get_se:
         client.deployments.get = mock.Mock(side_effect=deployments_get_se)
+
+    client.tenants.list = mock.Mock(return_value=ListResponse(
+            items=[{'name': 'tenant1'}, {'name': 'tenant2'}],
+            metadata={'pagination': {'offset': 0, 'size': 2, 'total': 2}}
+    ))
     return client
 
 
@@ -55,17 +61,18 @@ def mock_get_breaking_client(**_):
         side_effect=lambda **_: _get_rest_client(
             auditlog_stream_se=[
                 AuditLogResponse([
-                    b'{"id": "1192", "ref_table": "users", "ref_id": "0", '
-                    b'"ref_identifier": {"username": "admin"}, '
+                    b'{"id": "1192", "ref_table": "blueprints", '
+                    b'"ref_id": "0", "ref_identifier": {"id": "bp1", '
+                    b'"tenant_name": "tenant1"}, '
                     b'"operation": "update", "creator_name": "", '
                     b'"execution_id": "", '
                     b'"created_at": "2023-04-05T09:27:57.926"}',
                 ]),
                 Exception('breaking connection'),
                 AuditLogResponse([
-                    b'{"id": "1193", "ref_table": "usage_collector", '
-                    b'"ref_id": "0", "ref_identifier": {"id": "0", '
-                    b'"manager_id": "manager_id"}, '
+                    b'{"id": "1193", "ref_table": "blueprints", '
+                    b'"ref_id": "0", "ref_identifier": {"id": "bp1", '
+                    b'"tenant_name": "tenant1"}, '
                     b'"operation": "update", "creator_name": "", '
                     b'"execution_id": "", '
                     b'"created_at": "2023-04-05T09:27:57.927"}',
@@ -136,7 +143,7 @@ def mock_ctx():
 @pytest.fixture
 def mock_get_manager_version():
     with mock.patch(
-        'cloudify_system_workflows.snapshots.snapshot_create.utils'
+        'cloudify_system_workflows.snapshots.snapshot_create'
         '.get_manager_version',
         return_value=FAKE_MANAGER_VERSION
     ):
@@ -149,7 +156,7 @@ def test_reconnect(
         mock_get_breaking_client,
         mock_get_manager_version
 ):
-    snap_id = 'testsnapshot'
+    snap_id = 'testreconnectsnapshot'
     tempdir = tempfile.mkdtemp(prefix='snap-cre-auditlog-reconnect-test')
     snap_cre = SnapshotCreate(
         snapshot_id=snap_id,
@@ -159,8 +166,6 @@ def test_reconnect(
             'file_server_root': tempdir,
         },
     )
-    snap_cre._get_tenants = \
-        mock.Mock(return_value={'tenant1': {}, 'tenant2': {}})
     snap_cre._blueprints_list = mock.Mock(return_value=[('tenant1', 'bp1')])
     snap_cre._plugins_list = mock.Mock(return_value=[])
     snap_cre._dump_management = mock.Mock()
@@ -174,18 +179,19 @@ def test_reconnect(
     snap_cre._append_new_object_from_auditlog.assert_has_calls([
         mock.call({
             'id': '1192',
-            'ref_table': 'users',
+            'ref_table': 'blueprints',
             'ref_id': '0',
-            'ref_identifier': {'username': 'admin'},
+            'ref_identifier': {'id': 'bp1', 'tenant_name': 'tenant1'},
             'operation': 'update',
-            'creator_name': '', 'execution_id': '',
+            'creator_name': '',
+            'execution_id': '',
             'created_at': '2023-04-05T09:27:57.926'
         }),
         mock.call({
             'id': '1193',
-            'ref_table': 'usage_collector',
+            'ref_table': 'blueprints',
             'ref_id': '0',
-            'ref_identifier': {'id': '0', 'manager_id': 'manager_id'},
+            'ref_identifier': {'id': 'bp1', 'tenant_name': 'tenant1'},
             'operation': 'update',
             'creator_name': '',
             'execution_id': '',
