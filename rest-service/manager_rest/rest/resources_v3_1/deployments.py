@@ -1059,8 +1059,16 @@ class DeploymentGroupsId(SecuredResource):
         return set()
 
     def _set_group_labels(self, sm, group, raw_labels):
+        labels = []
+        for raw_label in raw_labels:
+            if isinstance(raw_label, dict) \
+                    and 'key' in raw_label \
+                    and 'value' in raw_label:
+                labels.append({raw_label['key']: raw_label['value']})
+            else:
+                labels.append(raw_label)
         rm = get_resource_manager()
-        new_labels = set(rest_utils.get_labels_list(raw_labels))
+        new_labels = set(rest_utils.get_labels_list(labels))
         labels_to_create = rm.get_labels_to_create(group, new_labels)
         labels_to_delete = {
             label for label in group.labels

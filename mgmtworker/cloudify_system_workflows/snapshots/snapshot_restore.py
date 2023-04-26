@@ -418,7 +418,7 @@ class SnapshotRestore(object):
             entity_type + '_archives', [])
         suffix = {
             'plugins': '.zip',
-            'blueprints': '.zip',
+            'blueprints': '.tar.gz',
             'deployments': '.b64zip',
         }[entity_type]
 
