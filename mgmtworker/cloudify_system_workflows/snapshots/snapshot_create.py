@@ -185,6 +185,7 @@ class SnapshotCreate:
                     'get_broker_conf': self._agents_handler.get_broker_conf
                 }
             elif dump_type in ['events']:
+                output_dir = self._temp_dir / 'tenants' / tenant_name
                 extra_args = {
                     'execution_ids': execution_ids,
                     'execution_group_ids': execution_group_ids,
@@ -199,10 +200,10 @@ class SnapshotCreate:
 
             if dump_type == 'events':
                 if execution_ids:
-                    os.makedirs(output_dir / '..' / 'executions_events',
+                    os.makedirs(output_dir / 'executions_events',
                                 exist_ok=True)
                 if execution_group_ids:
-                    os.makedirs(output_dir / '..' / 'execution_groups_events',
+                    os.makedirs(output_dir / 'execution_groups_events',
                                 exist_ok=True)
             else:
                 os.makedirs(output_dir, exist_ok=True)
