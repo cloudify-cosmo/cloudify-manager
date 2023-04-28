@@ -72,10 +72,7 @@ class SnapshotCreate:
 
     def create(self, timeout=10):
         ctx.logger.debug('Using `new` snapshot format')
-        self._auditlog_listener.start(
-                self._tenant_clients,
-                self._blueprints_list(),
-        )
+        self._auditlog_listener.start(self._tenant_clients)
         try:
             self._dump_metadata()
             self._dump_management()
@@ -113,13 +110,6 @@ class SnapshotCreate:
                 {'_include': ['name', 'rabbitmq_password']})
         }
 
-    def _blueprints_list(self) -> list[tuple[str, str]]:
-        for blueprint in get_all(
-            self._client.blueprints.list,
-            {'_all_tenants': True, '_include': ['tenant_name', 'id']}
-        ):
-            yield blueprint['tenant_name'], blueprint['id']
-
     def _dump_metadata(self):
         ctx.logger.debug('Dumping metadata')
         manager_version = get_manager_version(self._client)
@@ -134,7 +124,10 @@ class SnapshotCreate:
             ctx.logger.debug(f'Dumping {dump_type}')
             output_dir = self._temp_dir / 'mgmt' / dump_type
             os.makedirs(output_dir, exist_ok=True)
-            getattr(self._client, dump_type).dump(output_dir)
+            client = getattr(self._client, dump_type)
+            ids_dumped = client.dump(output_dir)
+            self._auditlog_listener.append_entities(None, dump_type,
+                                                    ids_dumped)
 
     def _dump_composer(self):
         output_dir = self._temp_dir / 'composer'
@@ -207,11 +200,10 @@ class SnapshotCreate:
                                 exist_ok=True)
             else:
                 os.makedirs(output_dir, exist_ok=True)
-            ids_dumped = getattr(
-                    self._tenant_clients[tenant_name],
-                    dump_type
-            ).dump(output_dir, **extra_args)
-
+            client = getattr(self._tenant_clients[tenant_name], dump_type)
+            ids_dumped = client.dump(output_dir, **extra_args)
+            self._auditlog_listener.append_entities(tenant_name, dump_type,
+                                                    ids_dumped)
             if dump_type == 'deployments':
                 deployment_ids = ids_dumped
             elif dump_type == 'executions':
