@@ -1,6 +1,7 @@
 import json
 import shutil
 import tempfile
+import typing
 from collections import namedtuple
 from contextlib import contextmanager
 from typing import Type
@@ -135,7 +136,10 @@ def get_mocked_client(
         obj = client
         for attr in attrs[:-1]:
             obj = getattr(obj, attr)
-        setattr(obj, attrs[-1], _mock(side_effect=side_effect))
+        if isinstance(side_effect, typing.Iterable):
+            setattr(obj, attrs[-1], _mock(side_effect=side_effect))
+        else:
+            setattr(obj, attrs[-1], _mock(return_value=side_effect))
     return client
 
 

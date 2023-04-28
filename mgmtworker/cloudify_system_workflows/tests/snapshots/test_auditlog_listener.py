@@ -1,13 +1,8 @@
-from queue import Queue
 from unittest import mock
 
-import pytest
-
-from cloudify_system_workflows.snapshots.audit_listener import AuditLogListener
 from cloudify_system_workflows.tests.snapshots.mocks import (
     AuditLogResponse,
     DeploymentResponse,
-    MockClient,
     prepare_snapshot_create_with_mocks,
     TWO_TENANTS_LIST_SE,
     ONE_BLUEPRINT_LIST_SE,
@@ -15,16 +10,7 @@ from cloudify_system_workflows.tests.snapshots.mocks import (
 )
 
 
-@pytest.fixture(scope='function')
-def auditlog_listener() -> AuditLogListener:
-    queue = Queue()
-    client = MockClient()
-    listener = AuditLogListener(client, queue)
-    yield listener
-    listener.stop()
-
-
-def test_reconnect(auditlog_listener):
+def test_reconnect():
     auditlog_stream_se = [
         AuditLogResponse([{
             'id': 1192,
@@ -82,7 +68,7 @@ def test_reconnect(auditlog_listener):
         ])
 
 
-def test_dont_append_new_blueprints(auditlog_listener):
+def test_dont_append_new_blueprints():
     auditlog_stream_se = [
         AuditLogResponse([{
             'id': 1292,

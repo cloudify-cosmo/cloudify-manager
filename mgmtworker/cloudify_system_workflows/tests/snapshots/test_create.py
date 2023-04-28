@@ -5,6 +5,7 @@ from unittest import mock
 import pytest
 
 from cloudify_system_workflows.tests.snapshots.mocks import (
+    AuditLogResponse,
     prepare_snapshot_create_with_mocks,
     FAKE_MANAGER_VERSION,
     EMPTY_TENANTS_LIST_SE,
@@ -132,6 +133,7 @@ def test_create_success():
             (mock.Mock, ('blueprints', 'list'), TWO_BLUEPRINTS_LIST_SE),
             (mock.Mock, ('executions', 'dump'), [['e1', 'e2']]),
             (mock.Mock, ('execution_groups', 'dump'), [['eg1', 'eg2']]),
+            (mock.AsyncMock, ('auditlog', 'stream'), AuditLogResponse([])),
         ],
     ) as sc:
         sc.create(timeout=0.2)
@@ -155,6 +157,7 @@ def test_create_events_dump_failure():
             (mock.Mock, ('tenants', 'list'), TWO_TENANTS_LIST_SE),
             (mock.Mock, ('blueprints', 'list'), TWO_BLUEPRINTS_LIST_SE),
             (mock.Mock, ('events', 'dump'), [BaseException('test failure')]),
+            (mock.AsyncMock, ('auditlog', 'stream'), AuditLogResponse([])),
         ],
     ) as sc:
         with pytest.raises(BaseException):
@@ -171,6 +174,7 @@ def test_create_failure_removes_snapshot_zip():
         rest_mocks=[
             (mock.Mock, ('tenants', 'list'), TWO_TENANTS_LIST_SE),
             (mock.Mock, ('blueprints', 'list'), TWO_BLUEPRINTS_LIST_SE),
+            (mock.AsyncMock, ('auditlog', 'stream'), AuditLogResponse([])),
         ],
     ) as sc:
         sc._update_snapshot_status = mock.Mock(side_effect=[
@@ -191,6 +195,7 @@ def test_create_skip_events():
             (mock.Mock, ('blueprints', 'list'), TWO_BLUEPRINTS_LIST_SE),
             (mock.Mock, ('deployments', 'dump'), [['d1', 'd2']]),
             (mock.Mock, ('executions', 'dump'), [['e1', 'e2']]),
+            (mock.AsyncMock, ('auditlog', 'stream'), AuditLogResponse([])),
         ],
         include_events=False,
     ) as sc:
