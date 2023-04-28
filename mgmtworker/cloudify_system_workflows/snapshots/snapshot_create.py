@@ -89,8 +89,8 @@ class SnapshotCreate:
         except BaseException as exc:
             self._update_snapshot_status(self._config.failed_status, str(exc))
             ctx.logger.error(f'Snapshot creation failed: {str(exc)}')
-            if os.path.exists(f'{self._archive_dest}.zip'):
-                os.unlink(f'{self._archive_dest}.zip')
+            if os.path.exists(self._archive_dest.with_suffix('.zip')):
+                os.unlink(self._archive_dest.with_suffix('.zip'))
             raise
         finally:
             try:
