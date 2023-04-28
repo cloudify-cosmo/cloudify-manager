@@ -8,6 +8,8 @@ from threading import Event, Thread
 from cloudify.exceptions import NonRecoverableError
 from cloudify_rest_client import CloudifyClient
 
+DEFAULT_HTTP_TIMEOUT_SECONDS = 10.0
+
 
 class AuditLogListener(Thread):
     """AuditLogListener is a threaded wrapper for AuditLogAsyncClient.stream"""
@@ -16,6 +18,7 @@ class AuditLogListener(Thread):
             client: CloudifyClient,
             queue: Queue,
             daemon=True,
+            stream_timeout=DEFAULT_HTTP_TIMEOUT_SECONDS,
             **kwargs
     ):
         if not hasattr(client.auditlog, 'stream'):
@@ -25,9 +28,10 @@ class AuditLogListener(Thread):
         self._client = client
         self._queue = queue
         self._loop = asyncio.new_event_loop()
-        self.stopped = Event()
+        self._stopped = Event()
         self._tenant_clients = {}
         self._blueprints = defaultdict(list)
+        self._stream_timeout = stream_timeout
 
     def start(
             self,
@@ -44,7 +48,7 @@ class AuditLogListener(Thread):
         self._loop.run_until_complete(self._stream_logs())
 
     def stop(self):
-        self.stopped.set()
+        self._stopped.set()
         self._loop.call_soon_threadsafe(self._loop.stop)
         self._loop.call_soon_threadsafe(self._loop.close)
 
@@ -52,15 +56,16 @@ class AuditLogListener(Thread):
         """Keep putting logs in a queue, reconnect in case of any errors."""
         since = datetime.now()
 
-        while not self.stopped.is_set():
+        while not self._stopped.is_set():
             try:
-                response = await self._client.auditlog.stream(since=since)
+                response = await self._client.auditlog.stream(
+                    timeout=self._stream_timeout, since=since)
                 async for data in response.content:
                     for audit_log in _streamed_audit_log(data):
                         if self._in_right_context(audit_log):
                             self._queue.put(audit_log)
                         since = audit_log.get('created_at')
-            except Exception:
+            except BaseException:
                 pass
 
     def _in_right_context(self, audit_log: dict) -> bool:
