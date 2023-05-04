@@ -74,7 +74,7 @@ fastapi==0.92.0
     # via cloudify-api (setup.py)
 fasteners==0.17.3
     # via cloudify-common
-flask==2.2.3
+flask==2.2.5
     # via
     #   cloudify-rest-service
     #   flask-babelex
