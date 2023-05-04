@@ -2,6 +2,7 @@ import asyncio
 import os
 import json
 from datetime import datetime, timedelta
+from time import sleep
 
 import psycopg2
 
@@ -69,13 +70,25 @@ def listen(conn):
         conn.commit()
 
 
-def db_conn():
-    return psycopg2.connect(
-        host=config.instance.postgresql_host,
-        user=config.instance.postgresql_username,
-        password=config.instance.postgresql_password,
-        dbname=config.instance.postgresql_db_name,
-    )
+def db_conn(timeout_sec=5):
+    start_at = datetime.now()
+    end_at = start_at + timedelta(seconds=timeout_sec)
+    while datetime.now() < end_at:
+        try:
+            conn = psycopg2.connect(
+                host=config.instance.postgresql_host,
+                user=config.instance.postgresql_username,
+                password=config.instance.postgresql_password,
+                dbname=config.instance.postgresql_db_name,
+            )
+            if conn is None:
+                continue
+            return conn
+        except psycopg2.OperationalError:
+            if datetime.now() >= end_at:
+                raise
+        sleep(0.2)
+    raise RuntimeError("Timeout making a DB connection")
 
 
 def run_loop(conn):

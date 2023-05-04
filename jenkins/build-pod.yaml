@@ -15,7 +15,8 @@ spec:
         cpu: 2
         memory: 4Gi
       limits:
-        memory: 5Gi
+        cpu: 2
+        memory: 4Gi
     command:
     - cat
     tty: true

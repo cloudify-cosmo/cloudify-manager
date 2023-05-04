@@ -81,10 +81,16 @@ class ResourceManager(object):
         self.sm = sm or get_storage_manager()
         self._cached_queued_execs_query = None
 
-    def list_executions(self, include=None, is_include_system_workflows=False,
-                        filters=None, pagination=None, sort=None,
-                        all_tenants=False, get_all_results=False,
-                        load_relationships=False):
+    def list_executions(
+        self,
+        include=None,
+        is_include_system_workflows=False,
+        filters=None,
+        pagination=None,
+        sort=None,
+        all_tenants=False,
+        get_all_results=False,
+    ):
         filters = filters or {}
         is_system_workflow = filters.get('is_system_workflow')
         if is_system_workflow:
@@ -102,7 +108,6 @@ class ResourceManager(object):
             sort=sort,
             all_tenants=all_tenants,
             get_all_results=get_all_results,
-            load_relationships=load_relationships,
         )
 
     def update_deployment_statuses(self, latest_execution):
@@ -598,7 +603,8 @@ class ResourceManager(object):
                         include_events,
                         bypass_maintenance,
                         queue,
-                        tempdir_path):
+                        tempdir_path,
+                        legacy):
 
         self.create_snapshot_model(snapshot_id)
         try:
@@ -611,6 +617,7 @@ class ResourceManager(object):
                     'include_events': include_events,
                     'config': self._get_conf_for_snapshots_wf(),
                     'tempdir_path': tempdir_path,
+                    'legacy': legacy,
                 },
                 is_system_workflow=True,
                 status=ExecutionState.PENDING,
@@ -1684,8 +1691,10 @@ class ResourceManager(object):
         allowed_overrides = {
             'created_by', 'workflows', 'policy_types', 'policy_triggers',
             'groups', 'scaling_groups', 'inputs', 'outputs', 'resource_tags',
-            'capabilities', 'description', 'deployment_status',
-            'installation_status', 'labels',
+            'capabilities', 'description', 'labels', 'deployment_status',
+            'installation_status', 'sub_services_status',
+            'sub_environments_status', 'sub_services_count',
+            'sub_environments_count',
         }
         bad_overrides = kwargs.keys() - allowed_overrides
         if bad_overrides:

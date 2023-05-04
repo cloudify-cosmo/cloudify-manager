@@ -15,10 +15,11 @@
 
 from typing import List, Optional, Type, Dict, Tuple
 
-from .. import rest_utils
+import pydantic
 from flask import request
 from dateutil import rrule
-from manager_rest.rest import rest_decorators
+
+from manager_rest.rest import rest_decorators, rest_utils
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import get_storage_manager, models
@@ -30,38 +31,87 @@ from cloudify_rest_client.responses import ListResponse
 from functools import wraps
 
 
+class SummaryFieldBase(str):
+    """A str field with a set of allowed values, with a custom error message
+
+    This is just a regular field, but it will show the allowed fields in
+    a custom format, in the validation error message.
+
+    To use this with a given set of allowed fields, create a subclass of this
+    by using .with_allowed_values
+    """
+    @classmethod
+    def with_allowed_values(cls, allowed_values):
+        return type(
+            'AllowedSummaryField',
+            (cls, ),
+            {'allowed_values': allowed_values},
+        )
+
+    @classmethod
+    def __get_validators__(cls):
+        yield cls.validate
+
+    @classmethod
+    def validate(cls, value):
+        if value not in cls.allowed_values:
+            raise ValueError(
+                f'Invalid summary field: {value}. '
+                f'Allowed values: { ", ".join(cls.allowed_values) }'
+            )
+        return value
+
+
+def parse_summary_request(summary_fields):
+    """Load the summary request args.
+
+    Use this for all summary requests, to parse and validate the request
+    arguments, including target_field and subfield.
+    """
+    allowed_choices_field = SummaryFieldBase.with_allowed_values(
+        summary_fields,
+    )
+    summary_model = pydantic.create_model(
+        'SummaryRequest',
+        target_field=(
+            allowed_choices_field,
+            pydantic.Field(alias='_target_field')
+        ),
+        subfield=(
+            Optional[allowed_choices_field],
+            pydantic.Field(alias='_sub_field')
+        ),
+        get_all_results=(
+            Optional[bool],
+            pydantic.Field(alias='_get_all_results', default=False),
+        )
+    )
+
+    def _deco(f):
+        @wraps(f)
+        def _inner(*args, **kwargs):
+            parsed = summary_model.parse_obj(request.args)
+            kwargs.update(parsed.dict())
+            return f(*args, **kwargs)
+        return _inner
+    return _deco
+
+
 class BaseSummary(SecuredResource):
     summary_fields: List[str] = []
     auth_req: Optional[str] = None
     model: Optional[Type[SQLModelBase]] = None
 
-    def get(self, pagination=None, all_tenants=None, filters=None):
-        target_field = request.args.get('_target_field')
-        subfield = request.args.get('_sub_field')
-
-        get_all_results = rest_utils.verify_and_convert_bool(
-            '_get_all_results',
-            request.args.get('_get_all_results', False)
-        )
-
-        if target_field not in self.summary_fields:
-            raise manager_exceptions.BadParametersError(
-                'Field {target} is not available for summary. Valid fields '
-                'are: {valid}'.format(
-                    target=target_field,
-                    valid=', '.join(self.summary_fields),
-                )
-            )
-
-        if subfield and subfield not in self.summary_fields:
-            raise manager_exceptions.BadParametersError(
-                'Field {target} is not available for summary. Valid fields '
-                'are: {valid}'.format(
-                    target=subfield,
-                    valid=', '.join(self.summary_fields),
-                )
-            )
-
+    def get(
+        self,
+        *,
+        target_field,
+        subfield=None,
+        pagination=None,
+        all_tenants=None,
+        filters=None,
+        get_all_results=False,
+    ):
         return get_storage_manager().summarize(
             target_field=target_field,
             sub_field=subfield,
@@ -106,13 +156,6 @@ def marshal_summary(summary_type):
 
 
 class SummarizeDeployments(BaseSummary):
-    summary_fields = [
-        'blueprint_id',
-        'tenant_name',
-        'visibility',
-        'site_name',
-        'deployment_status',
-    ]
     auth_req = 'deployment_list'
     model = models.Deployment
 
@@ -121,16 +164,18 @@ class SummarizeDeployments(BaseSummary):
     @rest_decorators.all_tenants
     @rest_decorators.create_filters(models.Deployment)
     @rest_decorators.paginate
+    @parse_summary_request([
+        'blueprint_id',
+        'tenant_name',
+        'visibility',
+        'site_name',
+        'deployment_status',
+    ])
     def get(self, *args, **kwargs):
         return super(SummarizeDeployments, self).get(*args, **kwargs)
 
 
 class SummarizeNodes(BaseSummary):
-    summary_fields = [
-        'deployment_id',
-        'tenant_name',
-        'visibility',
-    ]
     auth_req = 'node_list'
     model = models.Node
 
@@ -139,20 +184,16 @@ class SummarizeNodes(BaseSummary):
     @rest_decorators.create_filters(models.Node)
     @rest_decorators.paginate
     @rest_decorators.all_tenants
+    @parse_summary_request([
+        'deployment_id',
+        'tenant_name',
+        'visibility',
+    ])
     def get(self, *args, **kwargs):
         return super(SummarizeNodes, self).get(*args, **kwargs)
 
 
 class SummarizeNodeInstances(BaseSummary):
-    summary_fields = [
-        'deployment_id',
-        'index',
-        'node_id',
-        'state',
-        'host_id',
-        'tenant_name',
-        'visibility',
-    ]
     auth_req = 'node_instance_list'
     model = models.NodeInstance
 
@@ -161,20 +202,20 @@ class SummarizeNodeInstances(BaseSummary):
     @rest_decorators.create_filters(models.NodeInstance)
     @rest_decorators.paginate
     @rest_decorators.all_tenants
+    @parse_summary_request([
+        'deployment_id',
+        'index',
+        'node_id',
+        'state',
+        'host_id',
+        'tenant_name',
+        'visibility',
+    ])
     def get(self, *args, **kwargs):
         return super(SummarizeNodeInstances, self).get(*args, **kwargs)
 
 
 class SummarizeExecutions(BaseSummary):
-    summary_fields = [
-        'status',
-        'status_display',
-        'blueprint_id',
-        'deployment_id',
-        'workflow_id',
-        'tenant_name',
-        'visibility',
-    ]
     auth_req = 'execution_list'
     model = models.Execution
 
@@ -183,15 +224,75 @@ class SummarizeExecutions(BaseSummary):
     @rest_decorators.create_filters(models.Execution)
     @rest_decorators.paginate
     @rest_decorators.all_tenants
-    def get(self, *args, **kwargs):
-        return super(SummarizeExecutions, self).get(*args, **kwargs)
+    @parse_summary_request([
+        'status',
+        'status_display',
+        'blueprint_id',
+        'deployment_id',
+        'workflow_id',
+        'tenant_name',
+        'visibility',
+    ])
+    def get(self, *, target_field, subfield, **kwargs):
+        postprocess = None
+
+        # sm.summarize doesn't play nicely with the status_display
+        # property; this is just a rename though, so if the user wants to
+        # summarize on status_display, let's just summarize on status
+        # instead, and then postprocess the result, to relabel the
+        # status into status_display
+        if target_field == 'status_display':
+            target_field = 'status'
+            postprocess = self._postprocess_target_status_display
+        if subfield == 'status_display':
+            subfield = 'status'
+            postprocess = self.postprocess_subfield_status_display
+
+        summary = super(SummarizeExecutions, self).get(
+            target_field=target_field,
+            subfield=subfield,
+            **kwargs,
+        )
+
+        if postprocess is None:
+            return summary
+
+        rewritten_summary = [
+            postprocess(item) for item in summary
+        ]
+        return ListResponse(rewritten_summary, metadata=summary.metadata)
+
+    @staticmethod
+    def _postprocess_target_status_display(item):
+        # if we're postprocessing target_field, there can either be 2 fields
+        # in each item (no subfield) or 3 (including subfield)
+        if len(item) == 2:
+            field_value, count = item
+            field_value = models.Execution.STATUS_DISPLAY_NAMES.get(
+                field_value, field_value,
+            )
+            return (field_value, count)
+        elif len(item) == 3:
+            field_value, subfield_value, count = item
+            field_value = models.Execution.STATUS_DISPLAY_NAMES.get(
+                field_value, field_value,
+            )
+            return (field_value, subfield_value, count)
+        else:
+            return item
+
+    @staticmethod
+    def postprocess_subfield_status_display(item):
+        # when we're postprocessing subfield, there's always going to be
+        # 3 attributes in each item
+        field_value, subfield_value, count = item
+        subfield_value = models.Execution.STATUS_DISPLAY_NAMES.get(
+            subfield_value, subfield_value,
+        )
+        return (field_value, subfield_value, count)
 
 
 class SummarizeBlueprints(BaseSummary):
-    summary_fields = [
-        'tenant_name',
-        'visibility',
-    ]
     auth_req = 'blueprint_list'
     model = models.Blueprint
 
@@ -200,17 +301,15 @@ class SummarizeBlueprints(BaseSummary):
     @rest_decorators.all_tenants
     @rest_decorators.create_filters(models.Blueprint)
     @rest_decorators.paginate
+    @parse_summary_request([
+        'tenant_name',
+        'visibility',
+    ])
     def get(self, *args, **kwargs):
         return super(SummarizeBlueprints, self).get(*args, **kwargs)
 
 
 class SummarizeExecutionSchedules(BaseSummary):
-    summary_fields = [
-        'deployment_id',
-        'workflow_id',
-        'tenant_name',
-        'visibility',
-    ]
     auth_req = 'execution_schedule_list'
     model = models.ExecutionSchedule
 
@@ -219,6 +318,12 @@ class SummarizeExecutionSchedules(BaseSummary):
     @rest_decorators.all_tenants
     @rest_decorators.create_filters(models.ExecutionSchedule)
     @rest_decorators.paginate
+    @parse_summary_request([
+        'deployment_id',
+        'workflow_id',
+        'tenant_name',
+        'visibility',
+    ])
     def get(self, *args, **kwargs):
         target_field = request.args.get('_target_field')
         get_all_results = rest_utils.verify_and_convert_bool(

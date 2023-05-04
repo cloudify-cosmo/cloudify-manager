@@ -21,7 +21,6 @@ import pytest
 from integration_tests import AgentTestCase
 from cloudify.models_states import AgentState
 from integration_tests.tests.utils import get_resource as resource
-from integration_tests.framework.flask_utils import reset_storage
 
 pytestmark = pytest.mark.group_snapshots
 
@@ -46,7 +45,7 @@ class TestSnapshots(AgentTestCase):
 
         for execution_id in execution_ids:
             exc = self.client.executions.get(execution_id)
-            self.wait_for_execution_to_end(exc)
+            self.wait_for_execution_to_end(exc, timeout_seconds=600)
 
         for deployment, state in zip(deployments, states):
             agent = self.client.agents.list(deployment_id=deployment.id)
@@ -135,14 +134,27 @@ class TestSnapshots(AgentTestCase):
             output_file=downloaded_snapshot,
         )
 
-        reset_storage(self.env.container_id)
+        self.env.reset_storage()
         self.client.snapshots.upload(downloaded_snapshot, snapshot_id)
         self._restore_snapshot(states, deployments, snapshot_id)
+
+        deps = self.client.deployments.list()
+        for dep in deps:
+            self.execute_workflow(
+                'install_new_agents',
+                dep.id,
+                parameters={'stop_old_agent': True},
+            )
 
         # unlike the other tenant tests, in this one we FIRST reset + restore,
         # and only then undeploy. This checks that agent connectivity is
         # still available after that reset + restore
-        self.assertEqual(len(self.client.agents.list().items), 2)
+        agents = self.client.agents.list()
+        # there's 4 agents, but 2 of those are the "upgraded" ones
+        self.assertEqual(len(agents), 4)
+        assert sum(
+            agent.state == AgentState.STOPPED for agent in agents
+        ) == 2
         self._undeploy(states, deployments)
         self.assertEqual(len(self.client.agents.list().items), 0)
 
@@ -159,7 +171,7 @@ class TestSnapshots(AgentTestCase):
 
         self._undeploy(states, deployments)
 
-        reset_storage(self.env.container_id)
+        self.env.reset_storage()
         self.client.snapshots.upload(downloaded_snapshot, snapshot_id)
         self._restore_snapshot(states, deployments, snapshot_id)
 
@@ -177,6 +189,6 @@ class TestSnapshots(AgentTestCase):
 
         self._undeploy_multitenant(mike_client)
 
-        reset_storage(self.env.container_id)
+        self.env.reset_storage()
         self.client.snapshots.upload(downloaded_snapshot, snapshot_id)
         self._restore_snapshot_multitenant(snapshot_id)

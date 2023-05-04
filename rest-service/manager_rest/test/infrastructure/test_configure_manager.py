@@ -1,6 +1,8 @@
 from datetime import datetime
 from unittest import mock
 
+from sqlalchemy import select
+
 from manager_rest import config, constants, permissions
 from manager_rest.configure_manager import (
     configure,
@@ -63,7 +65,6 @@ class TestConfigureManager(base_test.BaseServerTestCase):
     def test_update_admin_password(self):
         assert models.User.query.count() == 1
         original_password = models.User.query.one().password
-
         configure({
             'manager': {
                 'security': {
@@ -88,7 +89,7 @@ class TestConfigureManager(base_test.BaseServerTestCase):
         config.instance.load_from_db()
         assert not config.instance.amqp_host
 
-        user_config = {
+        configure({
             'rabbitmq': {
                 'username': 'username1',
                 'password': 'password1',
@@ -105,9 +106,7 @@ class TestConfigureManager(base_test.BaseServerTestCase):
                     },
                 },
             },
-        }
-
-        configure(user_config)
+        })
 
         test_hostname_1 = models.RabbitMQBroker.query.filter_by(
             name='test_hostname_1',
@@ -181,8 +180,11 @@ class TestConfigureManager(base_test.BaseServerTestCase):
             ]
         })
         roles = models.Role.query.all()
-        assert len(roles) == 2
-        assert all(r.description == 'descr' for r in roles)
+        assert len(roles) == 6
+
+        for r in roles:
+            if r.name in ['sys_admin', constants.DEFAULT_TENANT_ROLE]:
+                assert r.description == 'descr'
 
         # ...doing it again, updates them
         configure({
@@ -198,8 +200,11 @@ class TestConfigureManager(base_test.BaseServerTestCase):
             ]
         })
 
-        assert len(roles) == 2
-        assert all(r.description == 'descr2' for r in roles)
+        assert len(roles) == 6
+
+        for r in roles:
+            if r.name in ['sys_admin', constants.DEFAULT_TENANT_ROLE]:
+                assert r.description == 'descr2'
 
     def test_create_permissions(self):
         db.session.execute(models.Permission.__table__.delete())
@@ -207,7 +212,9 @@ class TestConfigureManager(base_test.BaseServerTestCase):
         configure({})
 
         created_permissions = models.Permission.query.all()
-        assert len(created_permissions) == len(permissions.PERMISSIONS)
+        assert len(created_permissions) == len(
+            [y for _, x in permissions.PERMISSIONS.items() for y in x]
+        )
 
     def test_create_permissions_set_user(self):
         db.session.execute(models.Permission.__table__.delete())
@@ -222,7 +229,9 @@ class TestConfigureManager(base_test.BaseServerTestCase):
 
         created_permissions = models.Permission.query.all()
         # +1 because we created 1 additional permission: user_get for role=user
-        assert len(created_permissions) == len(permissions.PERMISSIONS) + 1
+        assert len(created_permissions) == len(
+            [y for _, x in permissions.PERMISSIONS.items() for y in x]
+        ) + 1
         user_get_permissions = (
             models.Permission.query
             .filter_by(name='user_get')
@@ -337,3 +346,23 @@ class TestConfigureManager(base_test.BaseServerTestCase):
                 },
             })
         assert mgr.private_ip == 'example2.com'
+
+    def test_create_config_with_defaults(self):
+        configure({
+            'manager': {'public_ip': 'example.org'},
+            'mgmtworker': {'max_workers': 9},
+            'agent': {'heartbeat': 99},
+        })
+        created_config = db.session.scalars(select(models.Config)).all()
+        assert len(created_config) > 0
+
+        for scope, name, value in [
+            ('rest', 'public_ip', 'example.org'),
+            ('rest', 'file_server_url', 'https://localhost:443/resources'),
+            ('mgmtworker', 'max_workers', 9),
+            ('agent', 'heartbeat', 99),
+        ]:
+            inst = db.session.scalars(
+                select(models.Config).filter_by(scope=scope, name=name)
+            ).one()
+            assert inst.value == value

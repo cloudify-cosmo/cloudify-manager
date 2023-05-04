@@ -1,0 +1,45 @@
+{
+  "type": "blueprints",
+  "items": [
+    {
+      "id": 1,
+      "filename": "tempfile4f9eee0d-fa44-4111-ad25-ab5aea6b46d2.yaml",
+      "name": "bp1_1",
+      "username": "admin",
+      "createdAt": "2023-03-13T09:49:18.262Z",
+      "updatedAt": "2023-03-13T09:49:18.262Z"
+    },
+    {
+      "id": 2,
+      "filename": "tempfile4f9eee0d-fa44-4111-ad25-ab5aea6b46d2.yaml",
+      "name": "bp1_2",
+      "username": "admin",
+      "createdAt": "2023-03-13T09:49:23.251Z",
+      "updatedAt": "2023-03-13T09:49:23.251Z"
+    },
+    {
+      "id": 3,
+      "filename": "tempfile4f9eee0d-fa44-4111-ad25-ab5aea6b46d2.yaml",
+      "name": "bp1_3",
+      "username": "admin",
+      "createdAt": "2023-03-13T09:49:24.819Z",
+      "updatedAt": "2023-03-13T09:49:24.819Z"
+    },
+    {
+      "id": 4,
+      "filename": "tempfilea87ef950-fd32-416c-8ca0-407429fbd7e2.yaml",
+      "name": "bp2_1",
+      "username": "admin",
+      "createdAt": "2023-03-13T09:49:28.066Z",
+      "updatedAt": "2023-03-13T09:49:38.583Z"
+    },
+    {
+      "id": 9,
+      "filename": "tempfile4f9eee0d-fa44-4111-ad25-ab5aea6b46d2.yaml",
+      "name": "bp1_4",
+      "username": "admin",
+      "createdAt": "2023-03-13T11:05:07.786Z",
+      "updatedAt": "2023-03-13T11:05:28.545Z"
+    }
+  ]
+}

@@ -10,8 +10,9 @@ from typing import TYPE_CHECKING, Optional, Type, List
 
 from flask_restful import fields as flask_fields
 
-from sqlalchemy import case
+from sqlalchemy import case, Integer
 from sqlalchemy import func, select, table, column, exists
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import validates, aliased
@@ -31,7 +32,7 @@ from dsl_parser.constants import (WORKFLOW_PLUGINS_TO_INSTALL,
 from dsl_parser.constraints import extract_constraints, validate_input_value
 from dsl_parser import exceptions as dsl_exceptions
 
-from manager_rest import manager_exceptions
+from manager_rest import config, manager_exceptions
 from manager_rest.rest.responses import Workflow, Label
 from manager_rest.utils import (get_rrule,
                                 classproperty)
@@ -48,7 +49,7 @@ from .models_base import (
     JSONString,
     UTCDateTime,
 )
-from .management_models import User, Manager
+from .management_models import User, Manager, Tenant
 from .resource_models_base import SQLResourceBase, SQLModelBase
 from .relationships import (
     foreign_key,
@@ -526,25 +527,19 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                                        unique=True)
 
     deployment_group_id = association_proxy('deployment_groups', 'id')
+    latest_execution_id = association_proxy(
+        'latest_execution', 'id')
     latest_execution_finished_operations = association_proxy(
         'latest_execution', 'finished_operations')
     latest_execution_total_operations = association_proxy(
         'latest_execution', 'total_operations')
+    latest_execution_workflow_id = association_proxy(
+        'latest_execution', 'workflow_id')
 
     drifted_instances =\
         db.Column(db.Integer, server_default='0', nullable=False, default=0)
     unavailable_instances =\
         db.Column(db.Integer, server_default='0', nullable=False, default=0)
-
-    @classproperty
-    def autoload_relationships(cls):
-        return [
-            cls.create_execution,
-            cls.latest_execution,
-            cls.deployment_groups,
-            cls.labels,
-            cls.schedules,
-        ]
 
     @classproperty
     def labels_model(cls):
@@ -588,15 +583,15 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             fields['workflows'] = flask_fields.List(
                 flask_fields.Nested(Workflow.resource_fields)
             )
-            fields['schedules'] = flask_fields.List(
-                flask_fields.Nested(ExecutionSchedule.resource_fields))
             fields['deployment_groups'] = \
                 flask_fields.List(flask_fields.String)
+            fields['latest_execution_id'] = flask_fields.String()
             fields['latest_execution_status'] = flask_fields.String()
             fields['latest_execution_total_operations'] = \
                 flask_fields.Integer()
             fields['latest_execution_finished_operations'] = \
                 flask_fields.Integer()
+            fields['latest_execution_workflow_id'] = flask_fields.String()
             fields['has_sub_deployments'] = flask_fields.Boolean()
             fields['create_execution'] = flask_fields.String()
             fields['latest_execution'] = flask_fields.String()
@@ -605,7 +600,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
 
     @classproperty
     def allowed_filter_attrs(cls):
-        return ['blueprint_id', 'created_by', 'site_name', 'schedules',
+        return ['id', 'blueprint_id', 'created_by', 'site_name', 'schedules',
                 'tenant_name', 'display_name', 'installation_status']
 
     def to_response(self, include=None, **kwargs):
@@ -636,8 +631,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             dep_dict['create_execution'] = \
                 self.create_execution.id if self.create_execution else None
         if 'latest_execution' in include:
-            dep_dict['latest_execution'] = \
-                self.latest_execution.id if self.latest_execution else None
+            dep_dict['latest_execution'] = self.latest_execution_id
         return dep_dict
 
     def _list_workflows(self):
@@ -1196,12 +1190,6 @@ class Execution(CreatedAtMixin, SQLResourceBase):
     execution_group_id = association_proxy('execution_groups', 'id')
     deployment_display_name = association_proxy('deployment', 'display_name')
 
-    @classproperty
-    def autoload_relationships(cls):
-        return [
-            cls.deployment,
-        ]
-
     def __repr__(self):
         return (
             f'<Execution id=`{self.id}` tenant=`{self.tenant_name}` '
@@ -1320,6 +1308,9 @@ class Execution(CreatedAtMixin, SQLResourceBase):
     def merge_workflow_parameters(self, parameters, deployment, workflow_id):
         if not deployment or not deployment.workflows:
             return
+
+        if parameters is None:
+            parameters = {}
 
         # Keep this import line here because of circular dependencies
         from manager_rest.rest.search_utils \
@@ -1458,6 +1449,7 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             'rest_host': [
                 mgr.private_ip for mgr in session.query(Manager).all()
             ],
+            'rest_port': config.instance.default_agent_port,
         }
         if self.deployment is not None:
             context['deployment_id'] = self.deployment.id
@@ -2713,6 +2705,7 @@ class AuditLog(CreatedAtMixin, SQLModelBase):
     _storage_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     ref_table = db.Column(db.Text, nullable=False, index=True)
     ref_id = db.Column(db.Integer, nullable=False)
+    ref_identifier = db.Column(JSONB)
     operation = db.Column(db.Enum(*AUDIT_OPERATIONS, name='audit_operation'),
                           nullable=False)
     creator_name = db.Column(db.Text, nullable=True, index=True)
@@ -2721,4 +2714,19 @@ class AuditLog(CreatedAtMixin, SQLModelBase):
     @property
     def id(self):
         return self._storage_id
+
+    @declared_attr
+    def tenant(cls):
+        """The tenant for this audit log if one exists"""
+        return db.relationship(
+                Tenant,
+                primaryjoin=Tenant.id == db.foreign(
+                    cls.ref_identifier.cast(JSONB)["_tenant_id"]
+                    .astext.cast(Integer)
+                ),
+                viewonly=True,
+                lazy='joined',
+                # Must be loaded eagerly, see
+                # https://github.com/sqlalchemy/sqlalchemy/issues/5832
+        )
 # endregion

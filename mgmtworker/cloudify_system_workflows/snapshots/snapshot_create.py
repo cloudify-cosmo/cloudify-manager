@@ -1,378 +1,226 @@
-import os
 import json
+import os
+import queue
 import shutil
 import tempfile
-import zipfile
+from pathlib import Path
+from typing import Any
 
-from cloudify.workflows import ctx
-from cloudify.manager import get_rest_client
 from cloudify.constants import FILE_SERVER_SNAPSHOTS_FOLDER
-
-from . import constants, utils
-
-
-EMPTY_B64_ZIP = 'UEsFBgAAAAAAAAAAAAAAAAAAAAAAAA=='
-ENTITIES_PER_GROUPING = 500
-FILTERS_INCLUDE = ['created_at', 'id', 'visibility', 'value', 'created_by',
-                   'is_system_filter']
-INCLUDES = {
-    'tenants': ['name', 'rabbitmq_password'],
-    'users': ['username', 'role', 'tenant_roles', 'first_login_at',
-              'last_login_at', 'created_at'],
-    'user_groups': ['name', 'ldap_dn', 'tenants', 'role'],
-    'sites': ['name', 'location', 'visibility', 'created_by', 'created_at'],
-    'plugins': ['id', 'title', 'visibility', 'uploaded_at', 'created_by'],
-    'secrets': ['key', 'value', 'visibility', 'is_hidden_value', 'encrypted',
-                'tenant_name', 'creator', 'created_at'],
-    'blueprints': ['id', 'visibility', 'labels', 'created_at', 'created_by',
-                   'state', 'main_file_name', 'plan', 'description', 'error',
-                   'error_traceback', 'is_hidden', 'requirements'],
-    'deployments': ['id', 'blueprint_id', 'inputs', 'visibility', 'labels',
-                    'display_name', 'runtime_only_evaluation', 'created_by',
-                    'created_at', 'workflows', 'groups', 'policy_triggers',
-                    'policy_types', 'outputs', 'capabilities', 'description',
-                    'scaling_groups', 'resource_tags', 'deployment_status',
-                    'installation_status'],
-    'nodes': ['id', 'host_id', 'plugins', 'plugins_to_install', 'properties',
-              'max_number_of_instances', 'min_number_of_instances',
-              'planned_number_of_instances', 'deploy_number_of_instances',
-              'relationships', 'operations', 'type', 'type_hierarchy',
-              'visibility', 'created_by', 'number_of_instances'],
-    'node_instances': ['id', 'runtime_properties', 'state', 'relationships',
-                       'system_properties', 'scaling_groups', 'host_id',
-                       'index', 'visibility', 'node_id', 'created_by',
-                       'has_configuration_drift',
-                       'is_status_check_ok', 'created_by'],
-    'agents': ['id', 'node_instance_id', 'state', 'created_at', 'created_by',
-               'rabbitmq_password', 'rabbitmq_username', 'rabbitmq_exchange',
-               'version', 'system', 'install_method', 'ip', 'visibility'],
-    'deployment_groups': ['id', 'visibility', 'description', 'labels',
-                          'default_blueprint_id', 'default_inputs',
-                          'deployment_ids', 'created_by', 'created_at',
-                          'creation_counter'],
-    'executions': ['deployment_id', 'workflow_id', 'parameters', 'is_dry_run',
-                   'allow_custom_parameters', 'status', 'created_by',
-                   'created_at', 'id', 'started_at', 'ended_at', 'error'],
-    'events': ['timestamp', 'reported_timestamp', 'blueprint_id',
-               'deployment_id', 'deployment_display_name', 'workflow_id',
-               'message', 'error_causes', 'event_type', 'operation',
-               'source_id', 'target_id', 'node_instance_id',
-               'type', 'logger', 'level', 'manager_name', 'agent_name'],
-    'execution_groups': ['id', 'created_at', 'workflow_id', 'execution_ids',
-                         'concurrency', 'deployment_group_id', 'created_by'],
-    'deployment_updates': ['id', 'deployment_id', 'new_blueprint_id', 'state',
-                           'new_inputs', 'created_at', 'created_by',
-                           'execution_id', 'old_blueprint_id',
-                           'runtime_only_evaluation', 'deployment_plan',
-                           'deployment_update_node_instances',
-                           'visibility', 'steps',
-                           'central_plugins_to_uninstall',
-                           'central_plugins_to_install', 'old_inputs',
-                           'deployment_update_nodes', 'modified_entity_ids'],
-    'execution_schedules': ['id', 'rule', 'deployment_id', 'workflow_id',
-                            'created_at', 'since', 'until', 'stop_on_fail',
-                            'parameters', 'execution_arguments', 'slip',
-                            'enabled', 'created_by'],
-    'plugins_update': ['id', 'state', 'forced', 'all_tenants',
-                       'blueprint_id', 'execution_id', 'created_by',
-                       'created_at', 'deployments_to_update',
-                       'deployments_per_tenant', 'temp_blueprint_id'],
-    'blueprints_filters': FILTERS_INCLUDE,
-    'deployments_filters': FILTERS_INCLUDE,
-    'tasks_graphs': ['created_at', 'execution_id', 'name', 'id'],
-    'operations': ['agent_name', 'created_at', 'dependencies', 'id',
-                   'manager_name', 'name', 'parameters', 'state', 'type',
-                   'tasks_graph_id'],
-    'secrets_providers': ['created_at', 'name', 'visibility', 'type',
-                          'connection_parameters', 'created_by',
-                          'created_at'],
-}
-GET_DATA = [
-    'users', 'user_groups',
-    'sites', 'plugins', 'secrets', 'blueprints', 'deployments', 'agents',
-    'deployment_groups', 'executions', 'events', 'execution_groups',
-]
-EXTRA_DUMP_KWARGS = {
-    'users': {'_include_hash': True},
-    'executions': {'include_system_workflows': True},
-    'secrets': {'_include_metadata': True},
-}
+from cloudify.manager import get_rest_client
+from cloudify.workflows import ctx
+from cloudify_rest_client import CloudifyClient
+from cloudify_system_workflows.snapshots import constants
+from cloudify_system_workflows.snapshots.agents import Agents
+from cloudify_system_workflows.snapshots.audit_listener import AuditLogListener
+from cloudify_system_workflows.snapshots.ui_clients import (ComposerClient,
+                                                            StageClient)
+from cloudify_system_workflows.snapshots.utils import (DictToAttributes,
+                                                       get_manager_version,
+                                                       get_composer_client,
+                                                       get_stage_client)
 
 
-class SnapshotCreate(object):
-    def __init__(self,
-                 snapshot_id,
-                 config,
-                 include_credentials=None,
-                 include_logs=True,
-                 include_events=True,
-                 all_tenants=True):
-        # include_credentials was for dealing with fs level keys/etc and
-        # should've been deprecated long ago as the use-case for it started
-        # its slide into history when we converted them to secrets
-        # (and that's why it's just thrown away)
+class SnapshotCreate:
+    _snapshot_id: str
+    _config: DictToAttributes
+    _include_logs: bool
+    _include_events: bool
+    _client: CloudifyClient
+    _tenant_clients: dict[str, CloudifyClient]
+    _composer_client: ComposerClient
+    _stage_client: StageClient
+    _archive_dest: Path
+    _temp_dir: Path
+
+    def __init__(
+            self,
+            snapshot_id: str,
+            config: dict[str, Any],
+            include_logs=True,
+            include_events=True,
+    ):
         self._snapshot_id = snapshot_id
-        self._config = utils.DictToAttributes(config)
+        self._config = DictToAttributes(config)
         self._include_logs = include_logs
         self._include_events = include_events
-        self._all_tenants = all_tenants
 
-        self._tempdir = None
-        self._client = None
-        self._tenant_clients = {}
-        self._zip_handle = None
-        self._archive_dest = self._get_snapshot_archive_name()
-
-    def create(self):
+        # Initialize clients
         self._client = get_rest_client()
+        self._composer_client = get_composer_client()
+        self._stage_client = get_stage_client()
+
+        # Initialize tenants and per-tenant clients
         self._tenants = self._get_tenants()
-        self._prepare_tempdir()
+        self._tenant_clients = {}
+        for tenant_name in set(self._tenants.keys()):
+            if tenant_name not in self._tenant_clients:
+                self._tenant_clients[tenant_name] = get_rest_client(
+                        tenant=tenant_name)
+
+        # Initialize directories
+        snapshot_dir = _prepare_snapshot_dir(self._config.file_server_root,
+                                             self._snapshot_id)
+        self._archive_dest = snapshot_dir / f'{self._snapshot_id}'
+        self._temp_dir = _prepare_temp_dir()
+
+        # Initialize tools
+        self._agents_handler = Agents()
+        self._auditlog_queue = queue.Queue()
+        self._auditlog_listener = AuditLogListener(self._client,
+                                                   self._auditlog_queue)
+
+    def create(self, timeout=10):
+        ctx.logger.debug('Using `new` snapshot format')
+        self._auditlog_listener.start(
+                self._tenant_clients,
+                self._blueprints_list(),
+        )
         try:
-            with zipfile.ZipFile(
-                self._archive_dest,
-                'w',
-                compression=zipfile.ZIP_DEFLATED,
-                allowZip64=True,
-            ) as zip_handle:
-                self._zip_handle = zip_handle
-
-                manager_version = utils.get_manager_version(self._client)
-
-                self._dump_metadata(manager_version)
-
-                self._dump_management()
-                for tenant in self._tenants:
-                    self._dump_tenant(tenant)
-
-                self._update_snapshot_status(self._config.created_status)
-                ctx.logger.info('Snapshot created successfully')
-        except BaseException as e:
-            self._update_snapshot_status(self._config.failed_status, str(e))
-            ctx.logger.error('Snapshot creation failed: {0}'.format(str(e)))
-            if os.path.exists(self._archive_dest):
-                # Clean up snapshot archive
-                os.unlink(self._archive_dest)
+            self._dump_metadata()
+            self._dump_management()
+            self._dump_composer()
+            self._dump_stage()
+            for tenant_name in self._tenants:
+                self._dump_tenant(tenant_name)
+            self._create_archive()
+            self._update_snapshot_status(self._config.created_status)
+            ctx.logger.info('Snapshot created successfully')
+        except BaseException as exc:
+            self._update_snapshot_status(self._config.failed_status, str(exc))
+            ctx.logger.error(f'Snapshot creation failed: {str(exc)}')
+            if os.path.exists(self._archive_dest.with_suffix('.zip')):
+                os.unlink(self._archive_dest.with_suffix('.zip'))
             raise
         finally:
-            ctx.logger.debug('Removing temp dir: {0}'.format(self._tempdir))
-            shutil.rmtree(self._tempdir)
-
-    def _prepare_tempdir(self):
-        self._tempdir = tempfile.mkdtemp('-snapshot-data')
-        nested = ['mgmt', 'tenants']
-        for nested_dir in nested:
-            os.makedirs(os.path.join(self._tempdir, nested_dir))
-
-    def _dump_management(self):
-        """Dump top level objects that don't reside in a tenant."""
-        self._dump_objects('user_groups')
-        self._dump_objects('tenants')
-        self._dump_objects('users')
-        self._dump_objects('permissions')
-
-    def _dump_tenant(self, tenant_name):
-        """Dump objects from a tenant."""
-        self._dump_objects('sites', tenant_name)
-        self._dump_objects('plugins', tenant_name)
-        self._dump_objects('secrets_providers', tenant_name)
-        self._dump_objects('secrets', tenant_name)
-        self._dump_objects('blueprints', tenant_name)
-        self._dump_objects('deployments', tenant_name)
-        self._dump_objects('deployment_groups', tenant_name)
-        self._dump_objects('executions', tenant_name)
-        self._dump_objects('execution_groups', tenant_name)
-        self._dump_objects('deployment_updates', tenant_name)
-        self._dump_objects('plugins_update', tenant_name)
-        self._dump_objects('deployments_filters', tenant_name)
-        self._dump_objects('blueprints_filters', tenant_name)
-        self._dump_objects('execution_schedules', tenant_name)
+            try:
+                # Fetch all the remaining items in a queue, don't wait longer
+                # than `timeout` seconds in case queue is empty.
+                while audit_log := self._auditlog_queue.get(timeout=timeout):
+                    # to be implemented in RND-309
+                    self._append_new_object_from_auditlog(audit_log)
+            except queue.Empty:
+                self._auditlog_listener.stop()
+                self._auditlog_listener.join(timeout=timeout)
+            ctx.logger.debug(f'Removing temp dir: {self._temp_dir}')
+            shutil.rmtree(self._temp_dir)
 
     def _get_tenants(self):
         return {
             tenant['name']: tenant
             for tenant in get_all(
-                self._client.tenants.list, {'_include': INCLUDES['tenants']})
+                self._client.tenants.list,
+                {'_include': ['name', 'rabbitmq_password']})
         }
 
-    def _dump_objects(self, dump_type, tenant_name=None):
-        get_kwargs = {}
-        suffix = '.json'
-        if tenant_name:
-            add_tenant_dir = False
-            if tenant_name not in self._tenant_clients:
-                add_tenant_dir = True
-                self._tenant_clients[tenant_name] = get_rest_client(
-                    tenant=tenant_name)
-            client = self._tenant_clients[tenant_name]
-            dump_dir = os.path.join(self._tempdir, 'tenants', tenant_name)
-            if add_tenant_dir:
-                os.makedirs(dump_dir, exist_ok=True)
-                self._zip_handle.write(dump_dir,
-                                       os.path.relpath(dump_dir,
-                                                       self._tempdir))
-            destination_base = os.path.join(dump_dir, dump_type)
-            get_kwargs = {'tenant_name': tenant_name}
-        else:
-            client = self._client
-            destination_base = os.path.join(
-                self._tempdir, 'mgmt', dump_type
-            )
-        if dump_type in GET_DATA:
-            get_kwargs['_get_data'] = True
+    def _blueprints_list(self) -> list[tuple[str, str]]:
+        for blueprint in get_all(
+            self._client.blueprints.list,
+            {'_all_tenants': True, '_include': ['tenant_name', 'id']}
+        ):
+            yield blueprint['tenant_name'], blueprint['id']
 
-        os.makedirs(destination_base, exist_ok=True)
+    def _dump_metadata(self):
+        ctx.logger.debug('Dumping metadata')
+        manager_version = get_manager_version(self._client)
+        metadata = {
+            constants.M_VERSION: str(manager_version),
+        }
+        with open(self._temp_dir / constants.METADATA_FILENAME, 'w') as f:
+            json.dump(metadata, f)
 
-        include = INCLUDES.get(dump_type)
-        if include:
-            get_kwargs['_include'] = include
+    def _dump_management(self):
+        for dump_type in ['user_groups', 'tenants', 'users', 'permissions']:
+            ctx.logger.debug(f'Dumping {dump_type}')
+            output_dir = self._temp_dir / 'mgmt' / dump_type
+            os.makedirs(output_dir, exist_ok=True)
+            getattr(self._client, dump_type).dump(output_dir)
 
-        extra_kwargs = EXTRA_DUMP_KWARGS.get(dump_type)
-        if extra_kwargs:
-            get_kwargs.update(extra_kwargs)
+    def _dump_composer(self):
+        output_dir = self._temp_dir / 'composer'
+        os.makedirs(output_dir, exist_ok=True)
+        for dump_type in ['blueprints', 'configuration', 'favorites']:
+            ctx.logger.debug(f'Dumping composer\'s {dump_type}')
+            getattr(self._composer_client, dump_type).dump(output_dir)
 
-        if dump_type == 'tenants':
-            data = list(self._tenants.values())
-        elif dump_type == 'secrets':
-            data = getattr(client, dump_type).export(**get_kwargs)
-        else:
-            data = get_all(getattr(client, dump_type).list, get_kwargs)
-
-        if include and 'is_system_filter' in include:
-            data = [item for item in data
-                    if not item['is_system_filter']]
-            for item in data:
-                item.pop('is_system_filter')
-
-        remainder = len(data) % ENTITIES_PER_GROUPING
-        file_count = len(data) // ENTITIES_PER_GROUPING
-        if remainder:
-            file_count += 1
-        for i in range(file_count):
-            start = i * ENTITIES_PER_GROUPING
-            finish = (i+1) * ENTITIES_PER_GROUPING
-            this_file = os.path.join(destination_base, str(i) + suffix)
-            with open(this_file, 'w') as dump_handle:
-                json.dump(data[start:finish], dump_handle)
-            self._zip_handle.write(this_file,
-                                   os.path.relpath(this_file, self._tempdir))
-            os.unlink(this_file)
-
-        if dump_type in ('plugins', 'blueprints', 'deployments'):
-            self._dump_blobs(data, dump_type, client, tenant_name)
-        elif dump_type in ('executions', 'execution_groups'):
-            ctx.logger.debug('Dumped %s %s. Kwargs %s; getter %s',
-                             len(data), dump_type, get_kwargs,
-                             str(getattr(client, dump_type).list))
-            self._dump_events(data, dump_type, client, tenant_name)
-
-        if dump_type == 'executions':
-            self._dump_tasks_graphs(data, client, tenant_name)
-
-        if dump_type == 'deployments':
-            self._dump_nodes_and_instances(data, client, tenant_name)
-
-    def _dump_blobs(self, entities, dump_type, client, tenant_name):
-        dest_dir = os.path.join(self._tempdir, 'tenants', tenant_name,
-                                dump_type + '_archives')
-        os.makedirs(dest_dir, exist_ok=True)
-        suffix = {
-            'plugins': '.zip',
-            'blueprints': '.zip',
-            'deployments': '.b64zip',
-        }[dump_type]
-        for entity in entities:
-            entity_id = entity['id']
-            entity_dest = os.path.join(dest_dir, entity_id + suffix)
-            if dump_type == 'deployments':
-                data = getattr(client, dump_type).get(
-                   deployment_id=entity_id, _include=['workdir_zip'],
-                   include_workdir=True)
-                b64_zip = data['workdir_zip']
-                if b64_zip == EMPTY_B64_ZIP:
-                    continue
-                with open(entity_dest, 'w') as dump_handle:
-                    dump_handle.write(b64_zip)
+    def _dump_stage(self):
+        output_dir = self._temp_dir / 'stage'
+        os.makedirs(output_dir, exist_ok=True)
+        for dump_type in ['blueprint_layouts', 'configuration', 'page_groups',
+                          'pages', 'templates', 'ua', 'widgets']:
+            ctx.logger.debug(f'Dumping stage\'s {dump_type}')
+            dump_client = getattr(self._stage_client, dump_type)
+            if dump_type == 'ua':
+                for tenant_name in self._tenants:
+                    os.makedirs(output_dir / tenant_name, exist_ok=True)
+                    dump_client.dump(output_dir / tenant_name,
+                                     tenant=tenant_name)
             else:
-                if dump_type == 'plugins':
-                    getattr(client, dump_type).download(entity_id, entity_dest,
-                                                        full_archive=True)
-                else:
-                    getattr(client, dump_type).download(entity_id, entity_dest)
-            self._zip_handle.write(
-                entity_dest, os.path.relpath(entity_dest, self._tempdir))
-            os.unlink(entity_dest)
+                dump_client.dump(output_dir)
 
-    def _dump_events(self, event_sources, event_source_type, client,
-                     tenant_name):
-        if not self._include_events:
-            return
-        dest_dir = os.path.join(self._tempdir, 'tenants', tenant_name,
-                                event_source_type + '_events')
-        # executions -> execution_id, execution-groups -> execution-group_id
-        event_source_id_prop = event_source_type[:-1] + '_id'
-        for source in event_sources:
-            source_id = source['id']
-            self._dump_parts(event_source_id_prop, source_id, client,
-                             dest_dir, 'events')
+    def _dump_tenant(self, tenant_name):
+        deployment_ids = []
+        execution_ids = []
+        execution_group_ids = []
+        for dump_type in ['sites', 'plugins', 'secrets_providers', 'secrets',
+                          'blueprints', 'deployments', 'deployment_groups',
+                          'nodes', 'node_instances', 'agents',
+                          'inter_deployment_dependencies',
+                          'executions', 'execution_groups',
+                          'events', 'operations',
+                          'deployment_updates', 'plugins_update',
+                          'deployments_filters', 'blueprints_filters',
+                          'execution_schedules']:
+            if dump_type == 'events' and not self._include_events:
+                continue
 
-    def _dump_tasks_graphs(self, executions, client, tenant_name):
-        dest_dir = os.path.join(self._tempdir, 'tenants', tenant_name,
-                                'tasks_graphs')
-        for execution in executions:
-            source_id = execution['id']
-            self._dump_parts('execution_id', source_id, client,
-                             dest_dir, 'tasks_graphs')
+            ctx.logger.debug(f'Dumping {dump_type} of {tenant_name}')
+            output_dir = self._temp_dir / 'tenants' / tenant_name / dump_type
+            extra_args = {}
+            if dump_type in ['nodes', 'agents']:
+                extra_args = {'deployment_ids': deployment_ids}
+            elif dump_type in ['node_instances']:
+                extra_args = {
+                    'deployment_ids': deployment_ids,
+                    'get_broker_conf': self._agents_handler.get_broker_conf
+                }
+            elif dump_type in ['events']:
+                extra_args = {
+                    'execution_ids': execution_ids,
+                    'execution_group_ids': execution_group_ids,
+                    'include_logs': self._include_logs,
+                }
+            elif dump_type in ['operations']:
+                output_dir = self._temp_dir / 'tenants' / \
+                             tenant_name / 'tasks_graphs'
+                extra_args = {
+                    'execution_ids': execution_ids,
+                }
 
-    def _dump_nodes_and_instances(self, deployments, client, tenant_name):
-        dest_dir_base = os.path.join(self._tempdir, 'tenants', tenant_name)
-        for deployment in deployments:
-            dep_id = deployment['id']
-            for part in ['nodes', 'node_instances', 'agents']:
-                dest_dir = os.path.join(dest_dir_base, part)
-                self._dump_parts('deployment_id', dep_id, client, dest_dir,
-                                 part)
+            if dump_type == 'events':
+                if execution_ids:
+                    os.makedirs(output_dir / '..' / 'executions_events',
+                                exist_ok=True)
+                if execution_group_ids:
+                    os.makedirs(output_dir / '..' / 'execution_groups_events',
+                                exist_ok=True)
+            else:
+                os.makedirs(output_dir, exist_ok=True)
+            ids_dumped = getattr(
+                    self._tenant_clients[tenant_name],
+                    dump_type
+            ).dump(output_dir, **extra_args)
 
-    def _dump_parts(self, filter_name, filter_id, client, dest_dir, part):
-        os.makedirs(dest_dir, exist_ok=True)
-        part_kwargs = {
-            filter_name: filter_id,
-            '_include': INCLUDES[part],
-        }
-        if part == 'events':
-            part_kwargs['include_logs'] = self._include_logs
-        if part in GET_DATA:
-            part_kwargs['_get_data'] = True
-        parts = get_all(getattr(client, part).list, part_kwargs)
-        if not parts:
-            return
-        if part == 'tasks_graphs':
-            ops_kwargs = {
-                filter_name: filter_id,
-                '_include': INCLUDES['operations'],
-            }
-            ops = get_all(client.operations.list, ops_kwargs)
-            ctx.logger.debug('Execution %s has %s operations',
-                             filter_id, len(ops))
-            for graph in parts:
-                graph_ops = [op for op in ops
-                             if op['tasks_graph_id'] == graph['id']]
-                ops = [op for op in ops
-                       if op['tasks_graph_id'] != graph['id']]
-                for op in graph_ops:
-                    op.pop('tasks_graph_id')
-                if graph_ops:
-                    graph['operations'] = graph_ops
-        elif part == 'executions':
-            parts = [
-                part for part in parts
-                if not part['id'] == ctx.execution_id
-            ]
-        parts_dest = os.path.join(dest_dir, filter_id + '.json')
-        with open(parts_dest, 'w') as dump_handle:
-            json.dump(parts, dump_handle)
-        self._zip_handle.write(parts_dest,
-                               os.path.relpath(parts_dest, self._tempdir))
-        os.unlink(parts_dest)
+            if dump_type == 'deployments':
+                deployment_ids = ids_dumped
+            elif dump_type == 'executions':
+                execution_ids = ids_dumped
+            elif dump_type == 'execution_groups':
+                execution_group_ids = ids_dumped
+
+    def _create_archive(self):
+        ctx.logger.debug('Creating snapshot archive')
+        shutil.make_archive(self._archive_dest, 'zip', self._temp_dir)
 
     def _update_snapshot_status(self, status, error=None):
         self._client.snapshots.update_status(
@@ -381,42 +229,28 @@ class SnapshotCreate(object):
             error=error
         )
 
-    def _dump_metadata(self, manager_version):
-        ctx.logger.info('Dumping metadata')
-        metadata = {
-            constants.M_VERSION: str(manager_version),
-        }
-        metadata_filename = os.path.join(
-            self._tempdir,
-            constants.METADATA_FILENAME
-        )
-        with open(metadata_filename, 'w') as f:
-            json.dump(metadata, f)
-        self._zip_handle.write(
-            metadata_filename,
-            os.path.relpath(metadata_filename, self._tempdir))
-        os.unlink(metadata_filename)
+    def _append_new_object_from_auditlog(self, audit_log):
+        # to be implemented in RND-364
+        pass
 
-    def _get_snapshot_archive_name(self):
-        """Return the base name for the snapshot archive
-        """
-        snapshots_dir = self._get_and_create_snapshots_dir()
-        snapshot_dir = os.path.join(snapshots_dir, self._snapshot_id)
-        # Cope with existing dir from a previous attempt to create a snap with
-        # the same name
-        os.makedirs(snapshot_dir, exist_ok=True)
-        return os.path.join(snapshot_dir, '{}.zip'.format(self._snapshot_id))
 
-    def _get_and_create_snapshots_dir(self):
-        """Create (if necessary) and return the snapshots directory
-        """
-        snapshots_dir = os.path.join(
-            self._config.file_server_root,
-            FILE_SERVER_SNAPSHOTS_FOLDER
-        )
-        if not os.path.exists(snapshots_dir):
-            os.makedirs(snapshots_dir)
-        return snapshots_dir
+def _prepare_temp_dir() -> Path:
+    """Prepare temporary (working) directory structure"""
+    temp_dir = tempfile.mkdtemp('-snapshot-data')
+    nested = ['mgmt', 'tenants', 'composer', 'stage']
+    for nested_dir in nested:
+        os.makedirs(os.path.join(temp_dir, nested_dir))
+    return Path(temp_dir)
+
+
+def _prepare_snapshot_dir(file_server_root: str, snapshot_id: str) -> Path:
+    snapshot_dir = os.path.join(
+            file_server_root,
+            FILE_SERVER_SNAPSHOTS_FOLDER,
+            snapshot_id,
+    )
+    os.makedirs(snapshot_dir, exist_ok=True)
+    return Path(snapshot_dir)
 
 
 def get_all(method, kwargs=None):

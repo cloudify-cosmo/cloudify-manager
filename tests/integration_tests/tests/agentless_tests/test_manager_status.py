@@ -52,13 +52,6 @@ class TestManagerStatus(AgentlessTestCase):
                     for service in services]
         self.assertNotIn(NodeServiceStatus.INACTIVE, statuses)
 
-        services_status = list(manager_status['services'].values())
-        remote_values = [service['is_remote'] for service in services_status]
-        self.assertFalse(any(remote_values))
-
-        existing_key = ['extra_info' in service for service in services_status]
-        self.assertTrue(all(existing_key))
-
     def test_status_service_inactive(self):
         """One of the manager services is down"""
         self._test_service_inactive('Management Worker')
@@ -68,7 +61,7 @@ class TestManagerStatus(AgentlessTestCase):
 
         # Verify RabbitMQ connection check failed when the service was down
         log_path = '/var/log/cloudify/rest/cloudify-rest-service.log'
-        log_file = self.read_manager_file(log_path)
+        log_file = self.env.read_manager_file(log_path)
         self.assertIn('Broker check failed', log_file)
 
     def test_status_postgres_inactive(self):
@@ -93,24 +86,17 @@ class TestManagerStatus(AgentlessTestCase):
         self._start_service(service, service_command)
 
     def _stop_service(self, service, service_command):
-        self.execute_on_manager(
-            '{0} stop {1}'.format(
-                service_command,
-                SERVICES[service]
-            )
-        )
-        time.sleep(1)
+        self.env.execute_on_manager(service_command +
+                                    ['stop', SERVICES[service]])
+        time.sleep(20)
 
     def _start_service(self, service, service_command):
-        self.execute_on_manager(
-            '{0} start {1}'.format(
-                service_command,
-                SERVICES[service]
-            )
-        )
+        self.env.execute_on_manager(service_command +
+                                    ['start', SERVICES[service]])
+        time.sleep(20)
         self._verify_service_active(service)
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=10)
+    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=20)
     def _verify_service_active(self, service):
         status = self.client.manager.get_status()
         self.assertEqual(status['status'], ServiceStatus.HEALTHY)

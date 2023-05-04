@@ -1,6 +1,7 @@
 import argparse
 import datetime
 import logging
+import os
 import socket
 import sys
 import time
@@ -10,6 +11,8 @@ from collections.abc import MutableMapping
 
 from flask_security.utils import hash_password
 
+from cloudify.utils import ipv6_url_compat
+
 from manager_rest import config, constants, permissions, version
 from manager_rest.storage import (
     db,
@@ -18,6 +21,12 @@ from manager_rest.storage import (
 )
 from manager_rest.amqp_manager import AMQPManager
 from manager_rest.flask_utils import setup_flask_app
+
+
+REST_LOG_DIR = '/var/log/cloudify/rest'
+REST_HOME_DIR = '/opt/manager'
+DEFAULT_FILE_SERVER_ROOT = os.path.join(REST_HOME_DIR, 'resources')
+DEFAULT_INTERNAL_REST_PORT = 443
 
 
 def dict_merge(target, source):
@@ -335,7 +344,9 @@ def _create_permissions(user_config):
 
     for default_permission in default_permissions:
         if default_permission not in permissions_to_make:
-            permissions_to_make[default_permission] = set()
+            permissions_to_make[default_permission] = set(
+                default_permissions[default_permission]
+            )
 
     existing_permissions = {}
     for p in models.Permission.query.all():
@@ -509,8 +520,88 @@ def _add_deployments_filter(sys_filter_dict, creator, tenant, now):
     db.session.add(models.DeploymentsFilter(**sys_filter_dict))
 
 
+def _generate_db_config_entries(cfg):
+    def build_dict(**kwargs):
+        target = {}
+        for k, v in kwargs.items():
+            if v is not None:
+                target[k] = v
+        return target
+
+    agent_cfg = cfg.get('agent', {})
+    manager_cfg = cfg.get('manager', {})
+    mgmtworker_cfg = cfg.get('mgmtworker', {})
+    prometheus_cfg = cfg.get('prometheus', {})
+    restservice_cfg = cfg.get('restservice', {})
+    internal_rest_port = (
+        manager_cfg.get('internal_rest_port') or DEFAULT_INTERNAL_REST_PORT
+    )
+
+    manager_private_ip = manager_cfg.get('private_ip', 'localhost')
+    default_file_server_url = f'https://{ipv6_url_compat(manager_private_ip)}'\
+                              f':{internal_rest_port}/resources'
+    rest_cfg = build_dict(
+        rest_service_log_path=os.path.join(
+            REST_LOG_DIR, 'cloudify-rest-service.log'),
+        rest_service_log_level=restservice_cfg.get('log', {}).get('level'),
+        file_server_type=manager_cfg.get('file_server_type'),
+        file_server_root=manager_cfg.get(
+            'file_server_root', DEFAULT_FILE_SERVER_ROOT),
+        file_server_url=manager_cfg.get(
+            'file_server_url', default_file_server_url),
+        insecure_endpoints_disabled=restservice_cfg.get(
+            'insecure_endpoints_disabled'),
+        maintenance_folder=os.path.join(REST_HOME_DIR, 'maintenance'),
+        min_available_memory_mb=restservice_cfg.get('min_available_memory_mb'),
+        failed_logins_before_account_lock=restservice_cfg.get(
+            'failed_logins_before_account_lock'),
+        account_lock_period=restservice_cfg.get('account_lock_period'),
+        public_ip=manager_cfg.get('public_ip'),
+        default_page_size=restservice_cfg.get('default_page_size'),
+        monitoring_timeout=prometheus_cfg.get('request_timeout', 4),
+        log_fetch_username=prometheus_cfg.get(
+            'credentials', {}).get('username'),
+        log_fetch_password=prometheus_cfg.get(
+            'credentials', {}).get('password'),
+        default_agent_port=internal_rest_port,
+        prometheus_url=manager_cfg.get('prometheus_url'),
+    )
+    mgmtworker_cfg = build_dict(
+        max_workers=mgmtworker_cfg.get('max_workers'),
+        min_workers=mgmtworker_cfg.get('min_workers'),
+    )
+    agent_cfg = build_dict(
+        min_workers=agent_cfg.get('min_workers'),
+        max_workers=agent_cfg.get('max_workers'),
+        broker_port=agent_cfg.get('broker_port'),
+        heartbeat=agent_cfg.get('heartbeat'),
+        log_level=agent_cfg.get('log_level')
+    )
+    workflow_cfg = mgmtworker_cfg.get('workflows')
+    return [
+        ('mgmtworker', mgmtworker_cfg),
+        ('workflow', workflow_cfg),
+        ('agent', agent_cfg),
+        ('rest', rest_cfg)
+    ]
+
+
+def _populate_config_in_db(cfg):
+    config_for_db = _generate_db_config_entries(cfg)
+    for scope, entries in config_for_db:
+        if not entries:
+            continue
+        for name, value in entries.items():
+            inst = db.session.get(
+                models.Config,
+                {'name': name, 'scope': scope}
+            )
+            inst.value = value
+
+
 def configure(user_config):
     """Configure the manager based on the provided config"""
+    _populate_config_in_db(user_config)
     _register_rabbitmq_brokers(user_config)
 
     default_tenant = _get_default_tenant()
@@ -566,6 +657,7 @@ def _create_admin_token(target):
     db.session.commit()
     with open(target, 'w') as f:
         f.write(token.value)
+    return 0
 
 
 def _wait_for_db(address):
@@ -620,11 +712,12 @@ if __name__ == '__main__':
         sys.exit(_wait_for_db(args.db_wait))
     if args.rabbitmq_wait:
         sys.exit(_wait_for_rabbitmq(args.rabbitmq_wait))
+    if args.create_admin_token:
+        with setup_flask_app().app_context():
+            sys.exit(_create_admin_token(args.create_admin_token))
 
     config.instance.load_configuration(from_db=False)
     with setup_flask_app().app_context():
-        config.instance.load_from_db(session=db.session)
         user_config = _load_user_config(args.config_file_path)
+        config.instance.load_from_db(session=db.session)
         configure(user_config)
-        if args.create_admin_token:
-            _create_admin_token(args.create_admin_token)

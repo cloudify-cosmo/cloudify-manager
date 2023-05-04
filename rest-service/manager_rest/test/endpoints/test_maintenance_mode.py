@@ -129,7 +129,6 @@ class MaintenanceModeTest(BaseServerTestCase):
         self.assertRaises(exceptions.MaintenanceModeActivatingError,
                           self.client.snapshots.create,
                           snapshot_id='s1',
-                          include_metrics=False,
                           include_credentials=False)
 
     def test_snapshot_restoration_denial_in_maintenance_transition_mode(self):
@@ -234,7 +233,7 @@ class MaintenanceModeTest(BaseServerTestCase):
 
     def _test_different_execution_status_in_activating_mode(
             self,
-            execution_status=None):
+            execution_status=ExecutionState.STARTED):
         self.put_blueprint(blueprint_id='b1')
         self._start_maintenance_transition_mode(
             execution_status=execution_status)

@@ -39,7 +39,7 @@ class DeploymentsLabelsTest(AgentlessTestCase):
         deployment = self.client.deployments.create(blueprint_id,
                                                     deployment_id,
                                                     labels=new_labels)
-        utils.wait_for_deployment_creation_to_complete(self.env.container_id,
+        utils.wait_for_deployment_creation_to_complete(self.env,
                                                        deployment_id,
                                                        self.client)
         return deployment

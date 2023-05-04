@@ -23,7 +23,7 @@ from cloudify.utils import ManagerVersion, get_local_rest_certificate
 
 from cloudify_rest_client.executions import Execution
 
-from . import networks, utils
+from . import networks, utils, INCLUDES
 from cloudify_system_workflows.deployment_environment import \
     _create_deployment_workdir
 from cloudify_system_workflows.snapshots import npm
@@ -55,6 +55,7 @@ from .constants import (
     V_4_6_0,
     V_5_0_5,
     V_5_3_0,
+    V_7_1_0,
     SECURITY_FILE_LOCATION,
     SECURITY_FILENAME,
     REST_AUTHORIZATION_CONFIG_PATH,
@@ -63,6 +64,7 @@ from .constants import (
     COMPOSER_USER,
     COMPOSER_APP
 )
+from .ui_clients import UIClientError
 from .utils import is_later_than_now, parse_datetime_string, get_tenants_list
 
 EMPTY_B64_ZIP = 'UEsFBgAAAAAAAAAAAAAAAAAAAAAAAA=='
@@ -170,6 +172,8 @@ class SnapshotRestore(object):
         self._metadata = None
         self._snapshot_version = None
         self._client = get_rest_client()
+        self._composer_client = utils.get_composer_client()
+        self._stage_client = utils.get_stage_client()
         self._manager_version = utils.get_manager_version(self._client)
         self._encryption_key = None
         self._semaphore = threading.Semaphore(
@@ -177,6 +181,7 @@ class SnapshotRestore(object):
         self._new_tenants = set()
         self._tenant_clients = {}
         self._snapshot_files = {}
+        self._legacy = None
 
     def _new_restore(self, zipfile):
         self._new_restore_parse_and_restore('tenants', zipfile)
@@ -184,13 +189,17 @@ class SnapshotRestore(object):
         self._new_restore_parse_and_restore('user_groups', zipfile)
         self._new_restore_parse_and_restore('users', zipfile)
 
+        self._new_restore_composer(zipfile)
+        self._new_restore_stage(zipfile)
+
         for resource in [
             'sites', 'secrets_providers', 'secrets', 'plugins',
             'blueprints_filters', 'deployments_filters', 'blueprints',
             # Everything after this point requires blueprints and plugins
-            'deployments', 'deployment_groups', 'executions',
-            'execution_groups', 'events', 'execution_schedules',
-            'deployment_updates', 'plugins_update',
+            'deployments', 'deployment_groups',
+            'inter_deployment_dependencies', 'executions', 'execution_groups',
+            'events', 'execution_schedules', 'deployment_updates',
+            'plugins_update',
         ]:
             for tenant in self._new_tenants:
                 self._new_restore_parse_and_restore(resource, zipfile,
@@ -235,7 +244,8 @@ class SnapshotRestore(object):
                 data = json.load(data_handle)
             os.unlink(extract_path)
 
-            self._new_restore_entities(entity_type, data, zipfile, tenant)
+            self._new_restore_entities(data['type'], data['items'],
+                                       zipfile, tenant)
 
     def _new_restore_events(self, tenant, zipfile):
         client = self._tenant_clients.setdefault(
@@ -266,7 +276,7 @@ class SnapshotRestore(object):
                 events = {}
                 logs = {}
                 logger_names = set()
-                for item in data:
+                for item in data['items']:
                     manager = item.pop('manager_name')
                     agent = item.pop('agent_name')
                     logger_name = (manager, agent)
@@ -364,7 +374,7 @@ class SnapshotRestore(object):
                          sub_entity_type, entity_id)
         zipfile.extract(target_file, self._tempdir)
         with open(extract_path) as sub_entity_handle:
-            kwargs[sub_entity_type] = json.load(sub_entity_handle)
+            kwargs[sub_entity_type] = json.load(sub_entity_handle)['items']
         os.unlink(extract_path)
 
         if sub_entity_type == 'agents':
@@ -408,7 +418,7 @@ class SnapshotRestore(object):
             entity_type + '_archives', [])
         suffix = {
             'plugins': '.zip',
-            'blueprints': '.zip',
+            'blueprints': '.tar.gz',
             'deployments': '.b64zip',
         }[entity_type]
 
@@ -514,6 +524,16 @@ class SnapshotRestore(object):
                 entity['group_id'] = entity.pop('id')
                 entity['blueprint_id'] = entity.pop('default_blueprint_id')
                 restore_func = entity_client.put
+            elif entity_type == 'inter_deployment_dependencies':
+                entity['_id'] = entity.pop('id')
+                entity['_visibility'] = entity.pop('visibility')
+                entity['_created_at'] = entity.pop('created_at')
+                entity['_created_by'] = entity.pop('created_by')
+                entity['source_deployment'] =\
+                    entity.pop('source_deployment_id')
+                entity['target_deployment'] =\
+                    entity.pop('target_deployment_id')
+                restore_func = entity_client.create
             elif entity_type == 'executions':
                 entity['execution_id'] = entity.pop('id')
                 entity['force_status'] = entity.pop('status')
@@ -566,11 +586,111 @@ class SnapshotRestore(object):
             elif entity_type == 'plugins':
                 os.unlink(entity['plugin_path'])
 
+    def _new_restore_ui_entity(self, zipfile, client, files_list, tenant=None):
+        ctx.logger.info('Restoring %s%s', client.entity_name(),
+                        f' for {tenant}' if tenant else '')
+        for file_name in files_list:
+            zipfile.extract(file_name, self._tempdir)
+            file_path = os.path.join(self._tempdir, file_name)
+            try:
+                client.restore_snapshot(file_path, tenant=tenant)
+            except UIClientError as exc:
+                # Composer will return 400 in case there are
+                # duplicates. Let us not worry about that until we
+                #  figure out how to deal with that situation.
+                if exc.status_code == 400:
+                    ctx.logger.error(exc)
+                else:
+                    raise
+            os.unlink(file_path)
+
+    def _new_restore_composer(self, zipfile):
+        dump_files = self._snapshot_files.get('composer')
+        if not dump_files:
+            ctx.logger.debug('No composer entities found')
+            return
+
+        for entity in dump_files:
+            restore_client = getattr(self._composer_client, entity)
+            if entity == 'blueprints':
+                file_names_set = set(dump_files[entity])
+
+                metadata_file_names = [
+                    file_name for file_name in file_names_set
+                    if file_name.endswith('.json')
+                ]
+                if len(metadata_file_names) == 1:
+                    metadata_file_name = metadata_file_names[0]
+                else:
+                    raise NonRecoverableError(
+                        "Cannot find blueprints' metadata in composer "
+                        f"snapshot.  Blueprint files: {file_names_set}")
+
+                snapshot_file_names = file_names_set - {metadata_file_name}
+                if len(snapshot_file_names) == 1:
+                    snapshot_file_name = snapshot_file_names.pop()
+                else:
+                    raise NonRecoverableError(
+                        "Cannot find blueprints' snapshot in composer "
+                        f"snapshot.  Blueprint files: {file_names_set}")
+
+                zipfile.extract(metadata_file_name, self._tempdir)
+                zipfile.extract(snapshot_file_name, self._tempdir)
+                snapshot_file_path = os.path.join(
+                    self._tempdir, snapshot_file_name)
+                metadata_file_path = os.path.join(
+                    self._tempdir, metadata_file_name)
+                ctx.logger.info('Restoring composer blueprints')
+                try:
+                    restore_client.restore_snapshot_and_metadata(
+                        snapshot_file_path, metadata_file_path)
+                except UIClientError as exc:
+                    # Composer will return 400 in case there are duplicates.
+                    # Let us not worry about that until we figure out how to
+                    # deal with that situation.
+                    if exc.status_code == 400:
+                        ctx.logger.error(exc)
+                    else:
+                        raise
+                os.unlink(snapshot_file_path)
+                os.unlink(metadata_file_path)
+            else:
+                self._new_restore_ui_entity(
+                        zipfile,
+                        restore_client,
+                        dump_files[entity]
+                )
+
+    def _new_restore_stage(self, zipfile):
+        dump_files = self._snapshot_files.get('stage')
+        if not dump_files:
+            ctx.logger.debug('No stage entities found')
+            return
+
+        for element in dump_files:
+            if element in INCLUDES['stage']:
+                self._new_restore_ui_entity(
+                        zipfile,
+                        getattr(self._stage_client, element.replace('-', '_')),
+                        dump_files[element],
+                )
+            else:
+                for entity in dump_files[element]:
+                    self._new_restore_ui_entity(
+                            zipfile,
+                            getattr(self._stage_client,
+                                    entity.replace('-', '_')),
+                            dump_files[element][entity],
+                            tenant=element,
+                    )
+
     def scan_snapshot(self, zipfile):
         tree = {
             'metadata': None,
             'mgmt': {},
             'tenants': {},
+            'composer': {},
+            'stage': {},
         }
         for entry in zipfile.filelist:
             if entry.is_dir():
@@ -591,10 +711,25 @@ class SnapshotRestore(object):
                     entity_type = parts[2]
                     tree['tenants'].setdefault(tenant, {}).setdefault(
                         entity_type, []).append(filename)
+                elif parts[0] == 'stage':
+                    tenant = parts[1]
+                    entity_type, _, _ = parts[2].rpartition('.')
+                    tree['stage'].setdefault(tenant, {}).setdefault(
+                            entity_type, []).append(filename)
                 else:
                     # This is probably an old snapshot
                     ctx.logger.debug('Unexpected file in snapshot: %s',
                                      filename)
+            elif filename.count('/') >= 1:
+                parts = filename.split('/')
+                if parts[0] == 'composer':
+                    entity_type, _, _ = parts[1].rpartition('.')
+                    tree['composer'].setdefault(entity_type, []).append(
+                        filename)
+                if parts[0] == 'stage':
+                    entity_type, _, _ = parts[1].rpartition('.')
+                    tree['stage'].setdefault(entity_type, []).append(
+                            filename)
             else:
                 # This is probably an old snapshot
                 ctx.logger.debug('Unexpected file in snapshot: %s', filename)
@@ -615,22 +750,15 @@ class SnapshotRestore(object):
         snapshot_path = self._get_snapshot_path()
         ctx.logger.debug('Going to restore snapshot, '
                          'snapshot_path: {0}'.format(snapshot_path))
-        new_snapshot = False
         try:
             with ZipFile(snapshot_path, 'r') as zipf:
-                self.scan_snapshot(zipf)
-
-                if (
-                    self._snapshot_version.major >= 7
-                    or (
-                        self._snapshot_version.major == 6
-                        and self._snapshot_version.minor > 4
-                    )
-                ):
-                    new_snapshot = True
+                if not self._is_legacy_snapshot(zipf):
+                    ctx.logger.debug('Using `new` snapshot format')
+                    self.scan_snapshot(zipf)
                     self._new_restore(zipf)
                     return
 
+                ctx.logger.debug('Using `legacy` snapshot format')
                 zipf.extractall(self._tempdir)
 
             schema_revision = self._metadata.get(
@@ -664,6 +792,7 @@ class SnapshotRestore(object):
                         composer_revision
                     )
                 self._migrate_pickle_to_json()
+                self._compute_blueprint_requirements()
                 self._restore_hash_salt()
                 self._encrypt_secrets(postgres)
                 self._encrypt_rabbitmq_passwords(postgres)
@@ -690,12 +819,31 @@ class SnapshotRestore(object):
 
             shutil.rmtree(self._get_snapshot_dir())
         finally:
-            if new_snapshot:
-                self._mark_manager_finished_restoring()
-            else:
+            if self._is_legacy_snapshot():
                 self._trigger_post_restore_commands()
+            else:
+                self._mark_manager_finished_restoring()
             ctx.logger.info('Removing temp dir: {0}'.format(self._tempdir))
             shutil.rmtree(self._tempdir)
+
+    def _is_legacy_snapshot(self, zipf=None):
+        if self._legacy is not None:
+            return self._legacy
+
+        if (not self._metadata or not self._snapshot_version) and zipf:
+            metadata_path = os.path.join(self._tempdir, METADATA_FILENAME)
+            zipf.extract('metadata.json', self._tempdir)
+            with open(metadata_path, 'r') as metadata_handle:
+                self._metadata = json.load(metadata_handle)
+            self._snapshot_version = ManagerVersion(self._metadata[M_VERSION])
+            os.unlink(metadata_path)
+
+        self._legacy = (
+            M_SCHEMA_REVISION in self._metadata and
+            M_COMPOSER_SCHEMA_REVISION in self._metadata and
+            M_STAGE_SCHEMA_REVISION in self._metadata
+        )
+        return self._legacy
 
     @contextmanager
     def _pause_services(self):
@@ -855,10 +1003,10 @@ class SnapshotRestore(object):
 
     def _restore_inter_deployment_dependencies(self):
         # managers older than 4.6.0 didn't have the support get_capability.
-        # manager newer than 5.0.5 have the inter deployment dependencies as
-        # part of the database dump
+        # manager newer than 5.0.5 and older than 7.1.0 have the inter
+        # deployment dependencies as part of the database dump
         if (self._snapshot_version < V_4_6_0 or
-                self._snapshot_version > V_5_0_5):
+                V_5_0_5 < self._snapshot_version < V_7_1_0):
             return
 
         ctx.logger.info('Restoring inter deployment dependencies')
@@ -1267,6 +1415,15 @@ class SnapshotRestore(object):
         scrip_path = os.path.join(
             dir_path,
             'migrate_pickle_to_json.py'
+        )
+        command = [MANAGER_PYTHON, scrip_path, self._tempdir]
+        utils.run(command)
+
+    def _compute_blueprint_requirements(self):
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        scrip_path = os.path.join(
+            dir_path,
+            'compute_blueprint_requirements.py'
         )
         command = [MANAGER_PYTHON, scrip_path, self._tempdir]
         utils.run(command)

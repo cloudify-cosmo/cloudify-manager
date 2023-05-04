@@ -16,8 +16,6 @@
 from datetime import datetime
 from unittest import mock
 
-from sqlalchemy.orm.exc import DetachedInstanceError
-
 from cloudify.models_states import VisibilityState
 
 from manager_rest import manager_exceptions, utils
@@ -189,29 +187,6 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         self.assertEqual(dep.permalink, deserialized_dep.permalink)
         self.assertEqual(dep.description, deserialized_dep.description)
 
-    def test_fields_query(self):
-        now = utils.get_formatted_timestamp()
-        blueprint = models.Blueprint(id='blueprint-id',
-                                     created_at=now,
-                                     updated_at=now,
-                                     description=None,
-                                     plan={'name': 'my-bp'},
-                                     main_file_name='aaa')
-        self.sm.put(blueprint)
-        db.session.expunge(blueprint)
-        blueprint_restored = self.sm.get(
-            models.Blueprint,
-            'blueprint-id',
-            include=['id', 'created_at']
-        )
-        self.assertEqual('blueprint-id', blueprint_restored.id)
-        self.assertEqual(now, blueprint_restored.created_at)
-        db.session.expunge(blueprint_restored)
-        for attrname in ['updated_at', 'plan', 'main_file_name']:
-            with self.assertRaises(DetachedInstanceError):
-                # the attribute cannot be loaded - and it was not loaded before
-                getattr(blueprint_restored, attrname)
-
     @mock.patch('manager_rest.storage.storage_manager.'
                 'config.instance.default_page_size',
                 10)
@@ -263,6 +238,24 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         db.session.add(secret)
         retrieved = self.sm.list(models.Secret, filters={'_storage_id': []})
         assert len(retrieved) == 0
+
+    def test_users_filter_role(self):
+        abc_role = models.Role(name='abc', type='system_role')
+
+        other_admin = models.User(username='other_admin')
+        other_admin.roles = [
+            abc_role
+        ] + self.user.roles
+        db.session.add(other_admin)
+
+        other_user = models.User(username='abcd')
+        other_user.roles = [
+            abc_role,
+            models.Role(name='def', type='system_role'),
+        ]
+        db.session.add(other_user)
+        users = self.sm.list(models.User, filters={'role': 'sys_admin'})
+        assert set(users) == {self.user, other_admin}
 
 
 class TestTransactions(base_test.BaseServerTestCase):

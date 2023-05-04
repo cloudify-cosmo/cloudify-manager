@@ -37,6 +37,8 @@ class Agents(SecuredResource):
             '_get_all_results',
             request.args.get('_get_all_results', False)
         )
+        if 'node_instance_ids' in filters:
+            filters['node_instance_id'] = filters.pop('node_instance_ids')
         return get_storage_manager().list(
             models.Agent,
             include=_include,
@@ -170,16 +172,30 @@ class AgentsName(SecuredResource):
     @rest_decorators.marshal_with(models.Agent)
     @authorize('agent_update')
     def patch(self, name):
-        """
-        Update an existing agent
-        """
-        request_dict = get_json_and_verify_params({
-            'state': {'type': str}
-        })
+        """Update an existing agent"""
         validate_inputs({'name': name})
-        state = request_dict['state']
-        self._validate_state(state)
-        return self._update_agent(name, state)
+        sm = get_storage_manager()
+
+        request_dict = get_json_and_verify_params({
+            'state': {'type': str, 'optional': True},
+            'system': {'type': str, 'optional': True},
+            'version': {'type': str, 'optional': True},
+        })
+
+        updated_agent = sm.get(models.Agent, name)
+        updated_agent.updated_at = utils.get_formatted_timestamp()
+
+        if state := request_dict.get('state'):
+            self._validate_state(state)
+            updated_agent.state = state
+
+        if system := request_dict.get('system'):
+            updated_agent.system = system
+
+        if version := request_dict.get('version'):
+            updated_agent.version = version
+
+        return sm.update(updated_agent)
 
     def _create_agent(self, name, state, request_dict):
         created_at = owner = None
@@ -210,7 +226,7 @@ class AgentsName(SecuredResource):
             install_method=request_dict.get('install_method'),
             system=request_dict.get('system'),
             state=state,
-            version=request_dict.get('version'),
+            version=request_dict.get('version') or '',
             rabbitmq_username=request_dict.get('rabbitmq_username'),
             rabbitmq_password=rabbitmq_password,
             rabbitmq_exchange=request_dict.get('rabbitmq_exchange'),
@@ -223,13 +239,6 @@ class AgentsName(SecuredResource):
         if request_dict.get('visibility'):
             new_agent.visibility = request_dict['visibility']
         return storage_manager.put(new_agent)
-
-    def _update_agent(self, name, state):
-        storage_manager = get_storage_manager()
-        updated_agent = storage_manager.get(models.Agent, name)
-        updated_agent.state = state
-        updated_agent.updated_at = utils.get_formatted_timestamp()
-        return storage_manager.update(updated_agent)
 
     def _validate_state(self, state):
         if state not in AgentState.STATES:

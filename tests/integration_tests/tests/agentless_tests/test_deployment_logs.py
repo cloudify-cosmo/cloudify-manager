@@ -45,7 +45,8 @@ class TestDeploymentLogs(AgentlessTestCase):
                                .format(deployment.id))
 
         def read_deployment_logs():
-            return self.read_manager_file(deployment_log_path, no_strip=True)
+            return self.env.read_manager_file(deployment_log_path,
+                                              no_strip=True)
 
         def verify_logs_exist_with_content():
             deployment_logs = read_deployment_logs()

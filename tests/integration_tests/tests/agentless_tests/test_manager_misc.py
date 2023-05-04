@@ -44,9 +44,12 @@ class MiscManagerTest(AgentlessTestCase):
         ]
         # the mgmtworker doesn't create a log file upon loading so we're
         # generating one for him.
-        self.execute_on_manager('mkdir -p /var/log/cloudify/mgmtworker/logs')
-        self.execute_on_manager(
-            'touch /var/log/cloudify/mgmtworker/logs/test.log')
+        self.env.execute_on_manager([
+            'mkdir', '-p', '/var/log/cloudify/mgmtworker/logs',
+        ])
+        self.env.execute_on_manager([
+            'touch', '/var/log/cloudify/mgmtworker/logs/test.log'
+        ])
 
         self.logger.info('Cancelling date suffix on rotation...')
         # We need to do this separately for each logrotate configuration.
@@ -57,24 +60,26 @@ class MiscManagerTest(AgentlessTestCase):
                               'nginx',
                               'restservice']:
             self.logger.info('Cancelling for %s', logrotate_cfg)
-            sed_cmd = 'sed -i -e s/dateext.*/nodateext/ /etc/logrotate.d/' \
-                      '{}'.format(logrotate_cfg)
-            self.execute_on_manager(sed_cmd)
+            self.env.execute_on_manager([
+                'sed', '-i', '-e', 's/dateext.*/nodateext/',
+                f'/etc/logrotate.d/{logrotate_cfg}'
+            ])
 
         self.logger.info('Installing crontab on manager')
-        self.execute_on_manager('yum install -y cronie')
+        self.env.execute_on_manager(['yum', 'install', '-y', 'cronie'])
 
         for rotation in range(1, 7):
             for log_file in test_log_files:
                 full_log_path = os.path.join(logs_dir, log_file)
                 self.logger.info('Allocating 101M in {0}...'.format(
                     full_log_path))
-                self.execute_on_manager(
-                    # Allocate 101 blocks of 1024Kb each (101M in total)
-                    'dd if=/dev/zero of={0} bs=1024k count=101'
-                    .format(full_log_path))
+                # Allocate 101 blocks of 1024Kb each (101M in total)
+                self.env.execute_on_manager([
+                    'dd', 'if=/dev/zero', f'of={full_log_path}',
+                    'bs=1024k', 'count=101',
+                ])
                 self.logger.info('Running cron.daily to apply rotation...')
-                self.execute_on_manager('run-parts /etc/cron.daily')
+                self.env.execute_on_manager(['run-parts', '/etc/cron.daily'])
                 rotated_log_path = '{0}.{1}'.format(full_log_path, rotation)
                 compressed_log_path = '{0}.gz'.format(rotated_log_path)
                 if rotation == 8:
@@ -101,8 +106,7 @@ class MiscManagerTest(AgentlessTestCase):
         authorization.conf, and forget to add them to the default permissions
         list. Then, this will remind you.
         """
-        permissions_source = self.execute_on_manager([
-            '/opt/manager/env/bin/python',
+        permissions_source = self.env.execute_python_on_manager([
             '-c',
             textwrap.dedent('''
                 import json

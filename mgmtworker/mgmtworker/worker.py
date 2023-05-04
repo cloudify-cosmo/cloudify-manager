@@ -236,7 +236,8 @@ class MgmtworkerServiceTaskConsumer(ServiceTaskConsumer):
                                tenant_name, deployment_id)
         shutil.rmtree(dep_dir, ignore_errors=True)
 
-    def cancel_workflow_task(self, executions, tenant, rest_host):
+    def cancel_workflow_task(
+            self, executions, tenant, rest_host, rest_port=53333):
         logger.info('Cancelling workflows %s',
                     [exc['id'] for exc in executions])
 
@@ -245,6 +246,7 @@ class MgmtworkerServiceTaskConsumer(ServiceTaskConsumer):
             """
             def __init__(self, execution_token):
                 self.rest_host = rest_host
+                self.rest_port = rest_port
                 self.tenant_name = tenant['name']
                 self.rest_token = execution_token
                 self.execution_token = execution_token

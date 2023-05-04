@@ -9,8 +9,8 @@ from datetime import datetime, timedelta
 from cloudify.models_states import ExecutionState
 
 from manager_rest import config, workflow_executor
-from manager_rest.storage import models, get_storage_manager
-from manager_rest.flask_utils import setup_flask_app
+from manager_rest.storage import models
+from manager_rest.flask_utils import setup_flask_app, query_service_settings
 from manager_rest.maintenance import get_maintenance_state
 from manager_rest.constants import MAINTENANCE_MODE_ACTIVATED
 from manager_rest.resource_manager import get_resource_manager
@@ -48,24 +48,25 @@ def check_schedules():
         return
 
     logger.debug('Checking schedules...')
-    sm = get_storage_manager()
-    schedules = sm.full_access_list(
-        models.ExecutionSchedule,
-        filters={
-            models.ExecutionSchedule.enabled: True,
-            models.ExecutionSchedule.next_occurrence:
-            lambda x: x < datetime.utcnow()
-        }
+    schedules = (
+        models.ExecutionSchedule.query
+        .filter_by(enabled=True)
+        .filter(models.ExecutionSchedule.next_occurrence < datetime.utcnow())
+        .all()
     )
     if not schedules:
         db.session.rollback()
         return
 
+    # before running any schedules, let's see if anything changed in the
+    # config, so that we start the executions with the most up-to-date
+    # settings, such as rabbitmq address, etc.
+    query_service_settings()
     for schedule in schedules:
-        try_run(schedule, sm)
+        try_run(schedule)
 
 
-def try_run(schedule, sm):
+def try_run(schedule):
     lock_num = SCHEDULER_LOCK_BASE + schedule._storage_id
     with scheduler_lock(lock_num) as locked:
         if not locked:
@@ -84,7 +85,7 @@ def try_run(schedule, sm):
             execution = execute_workflow(schedule)
             schedule.latest_execution = execution
         schedule.next_occurrence = next_occurrence
-        sm.update(schedule)
+        db.session.commit()
 
 
 @contextmanager

@@ -55,7 +55,6 @@ class ExecutionsTest(AgentlessTestCase):
                                                 include_credentials=True,
                                                 include_logs=True,
                                                 include_events=True,
-                                                include_metrics=True,
                                                 queue=True)
         execution = self._wait_for_exec_to_end_and_modify_status(snapshot,
                                                                  new_status)
@@ -136,7 +135,6 @@ class ExecutionsTest(AgentlessTestCase):
                                                    include_credentials=True,
                                                    include_logs=True,
                                                    include_events=True,
-                                                   include_metrics=True,
                                                    queue=True)
         self._assert_execution_status(second_snap.id, Execution.QUEUED)
 
@@ -186,7 +184,6 @@ class ExecutionsTest(AgentlessTestCase):
                                                    include_credentials=True,
                                                    include_logs=True,
                                                    include_events=True,
-                                                   include_metrics=True,
                                                    queue=True)
         self._assert_execution_status(second_snap.id, Execution.QUEUED)
 
@@ -271,7 +268,6 @@ class ExecutionsTest(AgentlessTestCase):
                                                   include_credentials=True,
                                                   include_logs=True,
                                                   include_events=True,
-                                                  include_metrics=True,
                                                   queue=True)
 
         # Start 'install' execution
@@ -400,13 +396,11 @@ class ExecutionsTest(AgentlessTestCase):
                                                   include_credentials=True,
                                                   include_logs=True,
                                                   include_events=True,
-                                                  include_metrics=True,
                                                   queue=True)
         snapshot_3 = self.client.snapshots.create('snapshot_3',
                                                   include_credentials=True,
                                                   include_logs=True,
                                                   include_events=True,
-                                                  include_metrics=True,
                                                   queue=True)
 
         # Make sure the 2 snapshots are queued (since there's a
@@ -450,7 +444,6 @@ class ExecutionsTest(AgentlessTestCase):
                                                   include_credentials=True,
                                                   include_logs=True,
                                                   include_events=True,
-                                                  include_metrics=True,
                                                   queue=True)
 
         # Make sure snapshot_2 and execution are queued (since there's a
@@ -582,12 +575,12 @@ class ExecutionsTest(AgentlessTestCase):
         dep = self.deploy(dsl_path, wait=False, client=self.client)
         do_retries(verify_deployment_env_created,
                    timeout_seconds=30,
-                   container_id=self.env.container_id,
+                   environment=self.env,
                    deployment_id=dep.id,
                    client=self.client)
         execution = self.client.executions.start(deployment_id=dep.id,
                                                  workflow_id='install')
-        pid = do_retries(self.read_manager_file,
+        pid = do_retries(self.env.read_manager_file,
                          timeout_seconds=60,
                          file_path='/tmp/pid.txt')
         path = '/proc/{}/status'.format(pid)
@@ -601,7 +594,7 @@ class ExecutionsTest(AgentlessTestCase):
         # the process.
         do_retries(self.assertRaises,
                    subprocess.CalledProcessError,
-                   self.read_manager_file,
+                   self.env.read_manager_file,
                    path)
 
     def test_legacy_cancel_execution(self):
@@ -677,7 +670,7 @@ class ExecutionsTest(AgentlessTestCase):
 
         do_retries(verify_deployment_env_created,
                    timeout_seconds=60,
-                   container_id=self.env.container_id,
+                   environment=self.env,
                    deployment_id=deployment_id,
                    client=self.client)
         execution_parameters = {
@@ -723,7 +716,7 @@ class ExecutionsTest(AgentlessTestCase):
         # Manually updating the status, because the client checks for
         # correct transitions
         run_postgresql_command(
-            self.env.container_id,
+            self.env,
             "UPDATE executions SET status='started' "
             "WHERE id='{0}'".format(execution_id)
         )
@@ -764,7 +757,7 @@ class ExecutionsTest(AgentlessTestCase):
                                        skip_plugins_validation=True)
         do_retries(verify_deployment_env_created,
                    timeout_seconds=30,
-                   container_id=self.env.container_id,
+                   environment=self.env,
                    deployment_id=deployment_id,
                    client=self.client)
         execution = self.client.executions.start(
@@ -848,7 +841,7 @@ class ExecutionsTest(AgentlessTestCase):
         dep_id = dep.id
         do_retries(verify_deployment_env_created,
                    timeout_seconds=30,
-                   container_id=self.env.container_id,
+                   environment=self.env,
                    deployment_id=dep_id,
                    client=self.client)
         scheduled_time = generate_scheduled_for_date()
@@ -912,12 +905,12 @@ class ExecutionsTest(AgentlessTestCase):
         dep2_id = dep2.id
         do_retries(verify_deployment_env_created,
                    timeout_seconds=30,
-                   container_id=self.env.container_id,
+                   environment=self.env,
                    deployment_id=dep1_id,
                    client=self.client)
         do_retries(verify_deployment_env_created,
                    timeout_seconds=30,
-                   container_id=self.env.container_id,
+                   environment=self.env,
                    deployment_id=dep2_id,
                    client=self.client)
         scheduled_time = generate_scheduled_for_date()
@@ -944,7 +937,7 @@ class ExecutionsTest(AgentlessTestCase):
         dep_id = dep.id
         do_retries(verify_deployment_env_created,
                    timeout_seconds=30,
-                   container_id=self.env.container_id,
+                   environment=self.env,
                    deployment_id=dep_id,
                    client=self.client)
         # Create snapshot and keep it's status 'started'
@@ -974,7 +967,7 @@ class ExecutionsTest(AgentlessTestCase):
         dep_id = dep.id
         do_retries(verify_deployment_env_created,
                    timeout_seconds=30,
-                   container_id=self.env.container_id,
+                   environment=self.env,
                    deployment_id=dep_id,
                    client=self.client)
 
@@ -1005,7 +998,7 @@ class ExecutionsTest(AgentlessTestCase):
         dep_id = dep.id
         do_retries(verify_deployment_env_created,
                    timeout_seconds=30,
-                   container_id=self.env.container_id,
+                   environment=self.env,
                    deployment_id=dep_id,
                    client=self.client)
         execution1 = self.client.executions.start(deployment_id=dep_id,

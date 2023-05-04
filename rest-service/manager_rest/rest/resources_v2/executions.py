@@ -77,5 +77,4 @@ class Executions(resources_v1.Executions):
             include=_include,
             all_tenants=all_tenants,
             get_all_results=get_all_results,
-            load_relationships=True,
         )

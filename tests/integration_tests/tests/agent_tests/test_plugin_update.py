@@ -194,7 +194,7 @@ class TestPluginUpdate(AgentTestWithPlugins):
         for dep_id in self.setup_deployment_ids:
             self.client.deployments.create(blueprint.id, dep_id)
             wait_for_deployment_creation_to_complete(
-                self.env.container_id,
+                self.env,
                 dep_id,
                 self.client
             )
@@ -269,14 +269,14 @@ class TestPluginUpdate(AgentTestWithPlugins):
         for dep_id in ['default_tenants_deployment', 'same_name_deployment']:
             self.client.deployments.create(blueprint.id, dep_id)
             wait_for_deployment_creation_to_complete(
-                self.env.container_id, dep_id, self.client)
+                self.env, dep_id, self.client)
             self.execute_workflow('install', dep_id)
 
         # ... and another two for other_tenant
         for dep_id in ['other_tenants_deployment', 'same_name_deployment']:
             other_client.deployments.create(blueprint.id, dep_id)
             wait_for_deployment_creation_to_complete(
-                self.env.container_id, dep_id, other_client)
+                self.env, dep_id, other_client)
             self.execute_workflow('install', dep_id, client=other_client)
 
         self._upload_v_2_plugin()

@@ -419,6 +419,10 @@ class BasicWorkflowsTest(AgentlessTestCase):
         ])
         self.assertEqual('started', node_instance.state)
 
+    @pytest.mark.skipif(
+        "config.getoption('--k8s-namespace')",
+        reason='Cant assert on paths with a distributed manager',
+    )
     def test_deployment_create_workflow_and_source_plugin(self):
         # Get the whole directory
         dsl_path = get_resource('dsl/plugin_tests')
@@ -485,7 +489,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
 
     def _assert_path_exists_on_manager(self, path, directory=False):
         flag = '-d' if directory else '-f'
-        self.execute_on_manager('test {0} {1}'.format(flag, path))
+        self.env.execute_on_manager(['test', flag, path])
 
     @pytest.mark.usefixtures('testmockoperations_plugin')
     @pytest.mark.usefixtures('get_attribute_plugin')

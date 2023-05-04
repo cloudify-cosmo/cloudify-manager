@@ -44,7 +44,7 @@ class ComponentCascadingCancelAndResume(AgentlessTestCase):
         client = client or self.client
         do_retries(
             verify_deployment_env_created,
-            container_id=self.env.container_id,
+            environment=self.env,
             deployment_id=deployment_id,
             client=client,
             timeout_seconds=timeout_seconds

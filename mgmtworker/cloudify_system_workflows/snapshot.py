@@ -13,11 +13,13 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-from cloudify.workflows import ctx
 from cloudify.decorators import workflow
-
-from .snapshots.snapshot_create import SnapshotCreate
-from .snapshots.snapshot_restore import SnapshotRestore
+from cloudify.workflows import ctx
+from cloudify_system_workflows.snapshots.snapshot_create import SnapshotCreate
+from cloudify_system_workflows.snapshots.snapshot_create_legacy import \
+    LegacySnapshotCreate
+from cloudify_system_workflows.snapshots.snapshot_restore import \
+    SnapshotRestore
 
 
 @workflow(system_wide=True)
@@ -28,14 +30,23 @@ def create(snapshot_id, config, **kwargs):
     include_logs = kwargs.get('include_logs', True)
     include_events = kwargs.get('include_events', True)
     tempdir_path = kwargs.get('tempdir_path')
-    create_snapshot = SnapshotCreate(
-        snapshot_id,
-        config,
-        include_credentials,
-        include_logs,
-        include_events,
-        tempdir_path,
-    )
+    legacy = kwargs.get('legacy', False)
+    if legacy:
+        create_snapshot = LegacySnapshotCreate(
+                snapshot_id,
+                config,
+                include_credentials,
+                include_logs,
+                include_events,
+                tempdir_path,
+        )
+    else:
+        create_snapshot = SnapshotCreate(
+                snapshot_id,
+                config,
+                include_logs,
+                include_events
+        )
     create_snapshot.create()
 
 

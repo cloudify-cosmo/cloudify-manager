@@ -997,7 +997,7 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
 class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
     def setUp(self):
         super().setUp()
-        bp = models.Blueprint(
+        self.bp = models.Blueprint(
             id='bp1',
             creator=self.user,
             tenant=self.tenant,
@@ -1008,12 +1008,12 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
             creator=self.user,
             display_name='',
             tenant=self.tenant,
-            blueprint=bp,
+            blueprint=self.bp,
             workflows={'install': {'operation': ''}}
         )
         self.dep_group = models.DeploymentGroup(
             id='group1',
-            default_blueprint=bp,
+            default_blueprint=self.bp,
             tenant=self.tenant,
             creator=self.user,
         )
@@ -1531,6 +1531,112 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
                 exc.id, status=ExecutionState.FAILED)
         target_group = self.sm.get(models.DeploymentGroup, 'group3')
         assert len(target_group.deployments) == 1
+
+    def test_set_concurrency(self):
+        exc_group = models.ExecutionGroup(
+            id='excgroup1',
+            workflow_id='install',
+            deployment_group=self.dep_group,
+            concurrency=10,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        self.client.execution_groups.set_concurrency(exc_group.id, 20)
+        assert exc_group.concurrency == 20
+
+    def test_set_invalid_concurrency(self):
+        exc_group = models.ExecutionGroup(
+            id='excgroup1',
+            workflow_id='install',
+            deployment_group=self.dep_group,
+            concurrency=10,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        for try_concurrency in [-1, 'abcd', {}]:
+            with self.assertRaises(CloudifyClientError) as cm:
+                self.client.execution_groups.set_concurrency(
+                    exc_group.id, try_concurrency)
+            assert cm.exception.status_code == 400
+        assert exc_group.concurrency == 10
+
+    def test_wake_up_group(self):
+        # when changing concurrency from zero to nonzero, some executions
+        # are dequeued immediately
+        exc_group = models.ExecutionGroup(
+            id='excgroup1',
+            workflow_id='install',
+            deployment_group=self.dep_group,
+            concurrency=0,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        for dep in self.dep_group.deployments:
+            exc = models.Execution(
+                id=f'{dep.id}_exc1',
+                workflow_id=exc_group.workflow_id,
+                deployment=dep,
+                status=ExecutionState.QUEUED,
+            )
+            exc_group.executions.append(exc)
+
+        assert {exc.status for exc in exc_group.executions} == {
+            ExecutionState.QUEUED}
+
+        self.client.execution_groups.set_concurrency(exc_group.id, 1)
+
+        assert {
+                # There exists an execution in the group that has a status
+                # of pending or terminated, depending on mocks.
+                # Anyway, not all of them are queued.
+                ExecutionState.PENDING,
+                ExecutionState.TERMINATED,
+            } & {exc.status for exc in exc_group.executions}
+
+    def test_pause_group(self):
+        # when concurrency is set to 0, no executions are dequeued
+        dep_group = models.DeploymentGroup(
+            id='group1',
+            tenant=self.tenant,
+            creator=self.user,
+        )
+        for dep_id in ['dep10', 'dep11', 'dep12']:
+            deployment = models.Deployment(
+                id=dep_id,
+                display_name='',
+                creator=self.user,
+                tenant=self.tenant,
+                blueprint=self.bp,
+                workflows={'install': {'operation': ''}}
+            )
+            dep_group.deployments.append(deployment)
+
+        exc_group = models.ExecutionGroup(
+            id='excgroup1',
+            workflow_id='install',
+            deployment_group=dep_group,
+            creator=self.user,
+            tenant=self.tenant,
+            concurrency=1,
+        )
+        for dep in dep_group.deployments:
+            exc = models.Execution(
+                id=f'{dep.id}_exc1',
+                workflow_id=exc_group.workflow_id,
+                deployment=dep,
+                status=ExecutionState.QUEUED,
+            )
+            exc_group.executions.append(exc)
+
+        assert {exc.status for exc in exc_group.executions} == {
+            ExecutionState.QUEUED}
+        self.client.execution_groups.set_concurrency(exc_group.id, 0)
+
+        self.rm.start_queued_executions()
+
+        # still queued! nothing has started.
+        assert {exc.status for exc in exc_group.executions} == {
+            ExecutionState.QUEUED}
 
 
 class TestGenerateID(unittest.TestCase):

@@ -402,6 +402,30 @@ class NodesTest(_NodeSetupMixin, base_test.BaseServerTestCase):
         assert all(ni.deployment_id == dep2.id for ni in dep2_n4_instances)
         assert all(ni.node_id == node4.id for ni in dep2_n4_instances)
 
+    def test_summarize_instances(self):
+        with self.assertRaises(CloudifyClientError) as cm:
+            self.client.summary.node_instances.get('invalid-field')
+        assert cm.exception.status_code == 400
+        error_text = str(cm.exception)
+        assert 'deployment_id' in error_text and 'node_id' in error_text
+
+        summary = self.client.summary.node_instances.get(
+            'deployment_id', 'node_id')
+        assert not summary
+
+        dep = self._deployment('d2')
+        node1 = self._node('1', deployment=dep)
+        self._instance('11', node=node1)
+
+        summary = self.client.summary.node_instances.get(
+            'deployment_id', 'node_id')
+        assert len(summary) == 1
+        assert summary[0]['deployment_id'] == dep.id
+        assert summary[0]['node_instances'] == 1
+        assert len(summary[0]['by node_id']) == 1
+        assert summary[0]['by node_id'][0]['node_id'] == node1.id
+        assert summary[0]['by node_id'][0]['node_instances'] == 1
+
     def test_sort_node_instances_list(self):
         dep2 = self._deployment('d2')
         node1 = self._node('0', deployment=self.dep1)

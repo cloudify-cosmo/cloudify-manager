@@ -18,7 +18,7 @@ from requests.exceptions import ConnectionError
 import cloudify.utils
 from cloudify.snapshots import STATES, SNAPSHOT_RESTORE_FLAG_FILE
 
-from integration_tests.framework import utils, docker
+from integration_tests.framework import utils
 from integration_tests.tests import utils as test_utils
 from integration_tests.tests.utils import (
     get_resource,
@@ -26,7 +26,6 @@ from integration_tests.tests.utils import (
     wait_for_deployment_creation_to_complete,
     wait_for_deployment_deletion_to_complete,
     verify_deployment_env_created,
-    run_postgresql_command,
     do_retries,
 )
 
@@ -52,19 +51,13 @@ class BaseTestCase(unittest.TestCase):
             handlers=[handler],
         )
 
-    def read_manager_file(self, file_path, no_strip=False):
-        """Read a file from the cloudify manager filesystem."""
-        return docker.read_file(
-            self.env.container_id, file_path, no_strip=no_strip)
-
     def delete_manager_file(self, file_path, quiet=True):
         """Remove file from a cloudify manager"""
-        return docker.execute(
-            self.env.container_id, 'rm -rf {0}'.format(file_path))
+        return self.env.execute_on_manager(['rm', '-rf', file_path])
 
     def _test_path(self, path, flag='-f'):
         try:
-            self.execute_on_manager(['test', flag, path])
+            self.env.execute_on_manager(['test', flag, path])
             return True
         except subprocess.CalledProcessError:
             return False
@@ -75,47 +68,11 @@ class BaseTestCase(unittest.TestCase):
     def directory_exists(self, path):
         return self._test_path(path, flag='-d')
 
-    def execute_on_manager(self, command):
-        """
-        Execute a shell command on the cloudify manager container.
-        """
-        return docker.execute(self.env.container_id, command)
-
-    def copy_file_to_manager(self, source, target, owner=None):
-        """Copy a file to the cloudify manager filesystem"""
-        ret_val = docker.copy_file_to_manager(
-            self.env.container_id,
-            source=source, target=target)
-        if owner:
-            docker.execute(
-                self.env.container_id,
-                ['chown', owner, target]
-            )
-        return ret_val
-
-    def copy_file_from_manager(self, source, target, owner=None):
-        """
-        Copy a file to the cloudify manager filesystem
-
-        """
-        ret_val = docker.copy_file_from_manager(
-            self.env.container_id,
-            source=source, target=target)
-        if owner:
-            BaseTestCase.env.chown(owner, target)
-        return ret_val
-
     def restart_service(self, service_name):
         """restart service by name in the manager container"""
         service_command = self.get_service_management_command()
-        docker.execute(
-            self.env.container_id,
-            '{0} stop {1}'.format(service_command, service_name)
-        )
-        docker.execute(
-            self.env.container_id,
-            '{0} start {1}'.format(service_command, service_name)
-        )
+        self.env.execute_on_manager(service_command + ['stop', service_name])
+        self.env.execute_on_manager(service_command + ['start', service_name])
 
     def get_runtime_property(self, deployment_id, property_name, client=None):
         client = client or self.client
@@ -211,7 +168,7 @@ class BaseTestCase(unittest.TestCase):
         deployment = client.deployments.create(**deployment_create_kw)
         if wait:
             wait_for_deployment_creation_to_complete(
-                self.env.container_id, deployment_id, client
+                self.env, deployment_id, client
             )
         return deployment
 
@@ -285,9 +242,6 @@ class BaseTestCase(unittest.TestCase):
         if is_delete_deployment:
             self.delete_deployment(deployment_id, validate=True, client=client)
         return execution.id
-
-    def get_manager_ip(self):
-        return docker.get_manager_ip(self.env.container_id)
 
     def delete_deployment(self,
                           deployment_id,
@@ -368,11 +322,10 @@ class BaseTestCase(unittest.TestCase):
 
     def create_rest_client(self, **kwargs):
         params = {
-            'host': self.env.container_ip,
             'cert_path': self.ca_cert,
             **kwargs
         }
-        return utils.create_rest_client(**params)
+        return self.env.rest_client(**params)
 
     @contextmanager
     def client_using_tenant(self, client, tenant_name):
@@ -453,7 +406,7 @@ class BaseTestCase(unittest.TestCase):
     def wait_for_deployment_environment(self, deployment_id):
         do_retries(
             verify_deployment_env_created,
-            container_id=self.env.container_id,
+            environment=self.env,
             deployment_id=deployment_id,
             client=self.client,
             timeout_seconds=60
@@ -464,7 +417,7 @@ class BaseTestCase(unittest.TestCase):
         return client.manager.get_config(name=name, scope=scope)
 
     def get_service_management_command(self):
-        return 'supervisorctl -c /etc/supervisord.conf'
+        return ['supervisorctl', '-c', '/etc/supervisord.conf']
 
 
 class AgentlessTestCase(BaseTestCase):
@@ -475,9 +428,15 @@ class AgentlessTestCase(BaseTestCase):
         functions must deal with strings as returned by psql
         (eg. false is the string 'f', NULL is the empty string, etc.)
         """
-        out = docker.execute(self.env.container_id, [
-            'sudo', '-upostgres', 'psql', '-t', '-F,', 'cloudify_db',
-            '-c', '\\copy ({0}) to stdout with csv'.format(query)
+        out = self.env.execute_on_manager([
+            'sudo',
+            '-upostgres',
+            'psql',
+            '-t',
+            '-F,',
+            'cloudify_db',
+            '-c',
+            f'\\copy ({query}) to stdout with csv',
         ])
         return list(csv.reader(out.strip().split('\n')))
 
@@ -494,11 +453,10 @@ class AgentlessTestCase(BaseTestCase):
 
         self.assertEqual(simplified_labels, compared_labels_set)
 
-    def manually_update_execution_status(self, new_status, id):
-        run_postgresql_command(
-            self.env.container_id,
+    def manually_update_execution_status(self, new_status, _id):
+        self.env.run_postgresql_command(
             "UPDATE executions SET status = '{0}' WHERE id = '{1}'"
-                .format(new_status, id)
+                .format(new_status, _id)
         )
 
     @staticmethod
@@ -507,7 +465,7 @@ class AgentlessTestCase(BaseTestCase):
 
 
 @pytest.mark.usefixtures('dockercompute_plugin')
-@pytest.mark.usefixtures('allow_agent')
+@pytest.mark.usefixtures('package_agent')
 class AgentTestCase(BaseTestCase):
     pass
 

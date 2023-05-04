@@ -1,21 +1,16 @@
+import logging
 import os
 import subprocess
-import logging
+
 import pytest
 import wagon
 
 import integration_tests_plugins
-
-from collections import namedtuple
+from integration_tests.framework import utils
 from integration_tests.tests import utils as test_utils
-from integration_tests.framework import docker
-from integration_tests.framework.utils import zip_files
-from integration_tests.framework.flask_utils import \
-    prepare_reset_storage_script, reset_storage
-
 
 logger = logging.getLogger('TESTENV')
-Env = namedtuple('Env', ['container_id', 'container_ip'])
+
 
 test_groups = [
     'group_deployments', 'group_service_composition', 'group_scale',
@@ -29,8 +24,8 @@ test_groups = [
 def pytest_collection_modifyitems(items, config):
     for item in items:
         if not [m for m in item.iter_markers() if m.name in test_groups]:
-            raise Exception('Test {} not marked as belonging to any known '
-                            'test group!'.format(item.nodeid))
+            raise Exception(f'Test {item.nodeid} not marked as belonging '
+                            'to any known test group!')
 
 
 def pytest_addoption(parser):
@@ -52,6 +47,10 @@ def pytest_addoption(parser):
     parser.addoption(
         '--container-id',
         help='Run integration tests on this container',
+    )
+    parser.addoption(
+        '--k8s-namespace',
+        help='Run integration tests in this Kubernetes namespace',
     )
     parser.addoption(
         '--lightweight',
@@ -83,7 +82,7 @@ sources = [
     ('cloudify-manager/api-service/cloudify_api', ['/opt/manager/env']),
     ('cloudify-manager/amqp-postgres/amqp_postgres', ['/opt/manager/env']),
     ('cloudify-manager/mgmtworker/cloudify_system_workflows', ['/opt/mgmtworker/env']),  # NOQA
-    ('cloudify-manager/cloudify_types/cloudify_types', ['/opt/mgmtworker/env']),  # NOQA
+    ('cloudify-manager/mgmtworker/cloudify_types', ['/opt/mgmtworker/env']),
     ('cloudify-manager-install/cfy_manager', ['/opt/cloudify/cfy_manager']),
     ('cloudify-manager-install/config.yaml', ['/opt/cloudify/cfy_manager']),
     ('cloudify-manager/execution-scheduler/execution_scheduler', ['/opt/manager/env']),  # NOQA
@@ -93,7 +92,7 @@ sources = [
 # directory directly.
 sources_static = [
     (
-        'cloudify-manager/resources/rest-service/cloudify/migrations',
+        'cloudify-manager/rest-service/migrations',
         ['/opt/manager/resources/cloudify/migrations']
     ),
     (
@@ -138,125 +137,106 @@ def resource_mapping(request):
     yield resources
 
 
-def prepare_events_follower(container_id):
-    docker.copy_file_to_manager(
-        container_id,
+def prepare_events_follower(environment):
+    environment.copy_file_to_manager(
         test_utils.get_resource('scripts/follow_events.py'),
         '/tmp/follow_events.py'
     )
 
 
 @pytest.fixture(autouse=True)
-def start_events_follower(manager_container):
-    follower = subprocess.Popen([
-        'docker', 'exec', manager_container.container_id,
-        '/opt/manager/env/bin/python', '-u', '/tmp/follow_events.py',
-    ])
+def start_events_follower(tests_env):
+    follower = tests_env.run_python_on_manager(['-u', '/tmp/follow_events.py'])
     yield
     follower.kill()
-    subprocess.run([
-        'docker', 'exec', manager_container.container_id,
-        'pkill', '-f', 'follow_events.py'
-    ])
+    try:
+        tests_env.execute_on_manager(['pkill', '-f', 'follow_events.py'])
+    except subprocess.CalledProcessError:
+        pass
 
 
 @pytest.fixture(scope='session')
-def manager_container(request, resource_mapping):
+def tests_env(request, resource_mapping) -> utils.TestEnvironment:
     image_name = request.config.getoption("--image-name")
     keep_container = request.config.getoption("--keep-container")
     container_id = request.config.getoption("--container-id")
+    k8s_ns = request.config.getoption("--k8s-namespace")
     lightweight = request.config.getoption('--lightweight')
+    if container_id and k8s_ns:
+        raise Exception('Expecting either `--container-id` or '
+                        '`--k8s_namespace`, not both.')
+
     if container_id:
-        reset_storage(container_id)
         keep_container = True
+        environment = utils.AllInOneEnvironment(container_id)
+        environment.prepare_reset_storage_script()
+        environment.reset_storage()
+    elif k8s_ns:
+        environment = utils.DistributedEnvironment(k8s_ns)
+        environment.prepare_reset_storage_script()
+        environment.reset_storage()
     else:
-        container_id = docker.run_manager(
+        environment = utils.start_manager_container(
             image_name,
             resource_mapping=resource_mapping,
             lightweight=lightweight,
         )
-        docker.upload_mock_license(container_id)
-    container_ip = docker.get_manager_ip(container_id)
-    container = Env(container_id, container_ip)
-    prepare_reset_storage_script(container_id)
-    prepare_events_follower(container_id)
-    _disable_cron_jobs(container_id)
-    yield container
+        environment.prepare_reset_storage_script()
+        utils.upload_mock_license(environment)
+    prepare_events_follower(environment)
+    _disable_cron_jobs(environment)
+    yield environment
     if not keep_container:
-        docker.clean(container_id)
+        environment.cleanup()
 
 
 @pytest.fixture(scope='session')
-def ca_cert(manager_container, tmpdir_factory):
+def ca_cert(tests_env, tmpdir_factory):
     cert_path = tmpdir_factory.mktemp('certs').join('internal_ca_cert.pem')
-    docker.copy_file_from_manager(
-        manager_container.container_id,
-        '/etc/cloudify/ssl/cloudify_internal_ca_cert.pem',
-        cert_path)
+    ca_cert = tests_env.ca_cert()
+    with open(cert_path, 'wt') as cert_file:
+        cert_file.write(ca_cert)
     yield cert_path
 
 
 @pytest.fixture(scope='session')
-def rest_client(manager_container, ca_cert):
-    client = test_utils.create_rest_client(
-        host=manager_container.container_ip,
-        rest_port=443,
-        rest_protocol='https',
-        cert_path=ca_cert
+def rest_client(tests_env, ca_cert):
+    yield tests_env.rest_client(
+        cert_path=ca_cert,
     )
-    yield client
 
 
 @pytest.fixture(scope='class')
-def manager_class_fixtures(request, manager_container, rest_client, ca_cert):
+def manager_class_fixtures(request, tests_env, rest_client, ca_cert):
     """Just a hack to put some fixtures on the test class.
 
     This is for compatibility with class-based tests, who don't have
     a better way of using fixtures. Eventually, those old tests will
     transition to be function-based, and they won't need to use this.
     """
-    request.cls.env = manager_container
+    request.cls.env = tests_env
     request.cls.client = rest_client
     request.cls.ca_cert = ca_cert
 
 
 @pytest.fixture(autouse=True)
-def prepare_manager_storage(request, manager_container):
+def prepare_manager_storage(request, tests_env):
     """Make sure that for each test, the manager storage is the same.
 
     This involves uploading the license before the tests, and
     cleaning the db & storage directories between tests.
     """
-    container_id = manager_container.container_id
     try:
         yield
     finally:
         request.session.testsfinished = \
             getattr(request.session, 'testsfinished', 0) + 1
         if request.session.testsfinished != request.session.testscollected:
-            reset_storage(container_id)
+            tests_env.reset_storage()
 
 
 @pytest.fixture(scope='session')
-def allow_agent(manager_container, package_agent):
-    """Allow installing an agent on the manager container.
-
-    Agent installation scripts have all kinds of assumptions about
-    sudo and su, so those need to be available.
-    """
-    docker.execute(manager_container.container_id, [
-        'bash', '-c',
-        "echo 'cfyuser ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/cfyuser"
-    ])
-    docker.execute(manager_container.container_id, [
-        'sed', '-i',
-        "1iauth sufficient pam_succeed_if.so user = cfyuser",
-        '/etc/pam.d/su'
-    ])
-
-
-@pytest.fixture(scope='session')
-def package_agent(manager_container, request):
+def package_agent(tests_env, request):
     """Repackage the on-manager agent with the provided sources.
 
     If the user provides sources (--tests-source-root), then
@@ -285,24 +265,21 @@ def package_agent(manager_container, request):
             agent_sources.append(os.path.basename(src))
     if not agent_sources:
         return
-    docker.execute(manager_container.container_id, [
-        'bash', '-c', 'cd /tmp && tar xvf {0}'.format(agent_package)
+    tests_env.execute_on_manager([
+        'bash', '-c', f'cd /tmp && tar xvf {agent_package}'
     ])
     for package in agent_sources:
         source = os.path.join(mgmtworker_env, package)
         target = os.path.join('/tmp', agent_source_path)
-        docker.execute(manager_container.container_id, [
-            'bash', '-c',
-            'cp -fr {0} {1}'.format(source, target)
+        tests_env.execute_on_manager([
+            'bash', '-c', f'cp -fr {source} {target}'
         ])
-    docker.execute(manager_container.container_id, [
+    tests_env.execute_on_manager([
         'bash', '-c',
         'cd /tmp && tar czf manylinux-x86_64-agent.tar.gz cloudify'
     ])
-    docker.execute(manager_container.container_id, [
-        'mv', '-f',
-        '/tmp/manylinux-x86_64-agent.tar.gz',
-        agent_package
+    tests_env.execute_on_manager([
+        'mv', '-f', '/tmp/manylinux-x86_64-agent.tar.gz', agent_package
     ])
 
 
@@ -323,7 +300,7 @@ def _make_wagon_fixture(plugin_name):
             force=True
         )
         yaml_path = os.path.join(plugins_dir, plugin_name, 'plugin.yaml')
-        with zip_files([wagon_path, yaml_path]) as zip_path:
+        with utils.zip_files([wagon_path, yaml_path]) as zip_path:
             yield zip_path
     _fixture.__name__ = '{0}_wagon'.format(plugin_name)
     return _fixture
@@ -345,9 +322,9 @@ def {0}_plugin(rest_client, {0}_wagon):
     return pytest.fixture()(func)
 
 
-def _disable_cron_jobs(container_id):
-    if docker.file_exists(container_id, '/var/spool/cron/cfyuser'):
-        docker.execute(container_id, 'crontab -u cfyuser -r')
+def _disable_cron_jobs(environment):
+    if environment.file_exists_on_manager('/var/spool/cron/cfyuser'):
+        environment.execute_on_manager(['crontab', '-u', 'cfyuser', '-r'])
 
 
 cloudmock_wagon = _make_wagon_fixture('cloudmock')

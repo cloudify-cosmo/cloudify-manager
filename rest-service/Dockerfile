@@ -10,8 +10,10 @@ ENV POSTGRES_DB=cloudify_db
 ENV POSTGRES_HOST=postgresql
 ENV POSTGRES_USER=cloudify
 ENV POSTGRES_PASSWORD=cloudify
-# FILE_SERVER_TYPE=minio or local
+# FILE_SERVER_TYPE=s3 or local
 ENV FILE_SERVER_TYPE=s3
+
+ARG PREMIUM=true
 
 RUN --mount=type=cache,target=/root/.cache \
     apt-get update \
@@ -23,7 +25,8 @@ RUN --mount=type=cache,target=/root/.cache \
       libsasl2-dev \
       libldap2-dev \
       libkrb5-dev \
-      git
+      git \
+      procps
 
 RUN mkdir -p -m 0600 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
 
@@ -40,8 +43,7 @@ RUN --mount=type=cache,target=/root/.cache \
       -r requirements.txt
 
 RUN --mount=type=ssh \
-    pip install \
-    -r requirements_ssh.txt
+    if [ -n "${PREMIUM}" ]; then pip install -r requirements_ssh.txt; fi
 
 RUN mkdir /src
 COPY docker/cloudify.pth /usr/local/lib/python3.11/site-packages/cloudify.pth

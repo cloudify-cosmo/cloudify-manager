@@ -60,10 +60,9 @@ def one_to_many_relationship(child_class,
     """
     if backref is None:
         backref = db.backref(child_class.__tablename__, cascade=cascade)
-    parent_primary_key = getattr(parent_class, parent_class_primary_key)
     return db.relationship(
         parent_class,
-        primaryjoin=lambda: parent_primary_key == foreign_key_column,
+        foreign_keys=[foreign_key_column],
         backref=backref,
         **relationship_kwargs
     )

@@ -1,1 +1,9 @@
-[{"type": "something", "name": "whatever"}]
+{
+  "type": "secrets_providers",
+  "items": [
+    {
+      "type": "something",
+      "name": "whatever"
+    }
+  ]
+}

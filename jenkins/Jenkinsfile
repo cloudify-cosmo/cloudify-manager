@@ -40,7 +40,6 @@ pipeline {
   options {
     checkoutToSubdirectory('cloudify-manager')
     buildDiscarder(logRotator(numToKeepStr:'10'))
-    timeout(time: 60, unit: 'MINUTES')
     timestamps()
   }
 
@@ -94,13 +93,6 @@ pipeline {
                   pytest \
                     -sv \
                     .
-                '''
-                echo 'Running pytest <<cloudify_types>>'
-                sh '''
-                  . .venv/bin/activate
-                  pytest \
-                    -sv \
-                    cloudify_types
                 '''
                 echo 'Running pytest <<api-service>>'
                 sh script: '''

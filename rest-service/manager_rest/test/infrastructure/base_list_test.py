@@ -110,7 +110,6 @@ class BaseListTest(BaseServerTestCase):
         for i in range(number_of_snapshots):
             self.client.snapshots.create(
                 snapshot_id='{0}{1}{2}'.format(prefix, i, suffix),
-                include_metrics=False,
                 include_credentials=False
             )
 

@@ -16,8 +16,6 @@
 from os.path import join
 
 from integration_tests import BaseTestCase
-from integration_tests.framework import docker
-from integration_tests.tests.constants import MANAGER_PYTHON
 from integration_tests.tests.utils import (assert_messages_in_log,
                                            get_resource as resource)
 from integration_tests.tests.utils import run_postgresql_command
@@ -37,11 +35,10 @@ class TestUsageCollectorBase(BaseTestCase):
 
     def run_collector_scripts_and_assert(self, messages):
         for script in COLLECTOR_SCRIPTS:
-            docker.execute(self.env.container_id, '{0} {1}.py'.format(
-                MANAGER_PYTHON,
-                join(SCRIPTS_DESTINATION_PATH, script))
+            self.env.execute_python_on_manager(
+                [f'{join(SCRIPTS_DESTINATION_PATH, script)}.py']
             )
-        assert_messages_in_log(self.env.container_id,
+        assert_messages_in_log(self.env,
                                self.workdir,
                                messages,
                                join(LOG_PATH, LOG_FILE))
@@ -50,7 +47,7 @@ class TestUsageCollectorBase(BaseTestCase):
         # This is necessary for forcing the collector scripts to actually run
         # in subsequent tests, despite not enough time passing since last run
         run_postgresql_command(
-            self.env.container_id,
+            self.env,
             "UPDATE usage_collector SET hourly_timestamp=NULL, "
             "daily_timestamp=NULL")
 
@@ -60,5 +57,5 @@ class TestUsageCollectorBase(BaseTestCase):
         old_usage_log = join(LOG_PATH, self._testMethodName)
         test_usage_log = join(LOG_PATH, LOG_FILE)
 
-        self.execute_on_manager(['mv', test_usage_log, old_usage_log])
-        self.execute_on_manager(['touch', test_usage_log])
+        self.env.execute_on_manager(['mv', test_usage_log, old_usage_log])
+        self.env.execute_on_manager(['touch', test_usage_log])
