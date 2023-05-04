@@ -175,3 +175,5 @@ xmltodict==0.13.0
     # via pywinrm
 yarl==1.8.2
     # via aiohttp
+
+setuptools>=65.5.1 # not directly required, pinned by Snyk to avoid a vulnerability
