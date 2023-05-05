@@ -122,6 +122,8 @@ class AuditLogResponse:
 
 
 DeploymentResponse = namedtuple('Deployment', 'id blueprint_id')
+ExecutionResponse = namedtuple('Execution', 'id deployment_id')
+ExecutionGroupResponse = namedtuple('ExecutionGroup', 'id deployment_group_id')
 
 
 def get_mocked_client(
@@ -135,7 +137,10 @@ def get_mocked_client(
         obj = client
         for attr in attrs[:-1]:
             obj = getattr(obj, attr)
-        setattr(obj, attrs[-1], _mock(side_effect=side_effect))
+        if isinstance(side_effect, list):
+            setattr(obj, attrs[-1], _mock(side_effect=side_effect))
+        else:
+            setattr(obj, attrs[-1], _mock(return_value=side_effect))
     return client
 
 
