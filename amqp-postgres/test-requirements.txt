@@ -3,3 +3,5 @@ git+https://github.com/cloudify-cosmo/cloudify-common@master#egg=cloudify-common
 mock
 pytest
 pytest-cov
+# Pin urllib3 to the version which does not depend on appengine
+urllib3<1.27,>=1.21.1
