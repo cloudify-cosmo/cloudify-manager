@@ -34,7 +34,7 @@ class AuditLogListener(Thread):
         self._stopped = Event()
         self._tenant_clients: dict[str: CloudifyClient] = {}
         self._stream_timeout = stream_timeout
-        self.__snapshot_entities: dict[tuple[str | None, str]: set[str]] = \
+        self.__snapshot_entities: dict[tuple[str | None, str], set[str]] = \
             defaultdict(set)
 
     def start(self, tenant_clients: dict[str, CloudifyClient] | None = None):
