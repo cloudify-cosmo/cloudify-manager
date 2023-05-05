@@ -11,6 +11,7 @@ from cloudify_rest_client import CloudifyClient
 
 DEFAULT_HTTP_TIMEOUT_SECONDS = 10.0
 WAIT_FOR_SNAPSHOT_ENTITIES_SECONDS = 0.1
+RELATED_TABLES = {'executions', 'execution_groups', 'events', 'logs'}
 
 
 class AuditLogListener(Thread):
@@ -71,7 +72,8 @@ class AuditLogListener(Thread):
                     timeout=self._stream_timeout, since=since)
                 async for data in response.content:
                     for audit_log in _streamed_audit_log(data):
-                        if self._ref_in_snapshot(audit_log):
+                        if self._ref_in_snapshot(audit_log) \
+                                or self._related_to_snapshot(audit_log):
                             self._queue.put(audit_log)
                         since = audit_log.get('created_at')
             except BaseException:
@@ -93,6 +95,32 @@ class AuditLogListener(Thread):
                     entity_id in
                     self.__snapshot_entities[(tenant_name, ref_table)]
             )
+        return False
+
+    def _related_to_snapshot(self, audit_log: dict) -> bool:
+        if audit_log['ref_table'] not in RELATED_TABLES:
+            return False
+
+        ref_identifier = audit_log.get('ref_identifier', {})
+        client = self._tenant_clients[ref_identifier['tenant_name']]
+
+        if audit_log['ref_table'] == 'executions':
+            execution = client.executions.get(ref_identifier['id'])
+            deployment_id = execution.deployment_id
+            key = (ref_identifier['tenant_name'], 'deployments')
+            return deployment_id in self.__snapshot_entities[key]
+
+        if audit_log['ref_table'] == 'execution_groups':
+            execution_group = client.execution_groups.get(ref_identifier['id'])
+            deployment_group_id = execution_group.deployment_group_id
+            key = (ref_identifier['tenant_name'], 'deployment_groups')
+            return deployment_group_id in self.__snapshot_entities[key]
+
+        # Since https://github.com/cloudify-cosmo/cloudify-manager/pull/3225
+        # neither events nor logs with a valid execution_id are reported in
+        # audit_log.  Hence, we will not try to figure out if modified rows
+        # are related to the snapshot.
+
         return False
 
 
