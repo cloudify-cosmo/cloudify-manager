@@ -80,6 +80,7 @@ class SnapshotCreate:
             self._dump_stage()
             for tenant_name in self._tenants:
                 self._dump_tenant(tenant_name)
+            self._append_from_auditlog(timeout)
             self._create_archive()
             self._update_snapshot_status(self._config.created_status)
             ctx.logger.info('Snapshot created successfully')
@@ -90,15 +91,6 @@ class SnapshotCreate:
                 os.unlink(self._archive_dest.with_suffix('.zip'))
             raise
         finally:
-            try:
-                # Fetch all the remaining items in a queue, don't wait longer
-                # than `timeout` seconds in case queue is empty.
-                while audit_log := self._auditlog_queue.get(timeout=timeout):
-                    # to be implemented in RND-309
-                    self._append_new_object_from_auditlog(audit_log)
-            except queue.Empty:
-                self._auditlog_listener.stop()
-                self._auditlog_listener.join(timeout=timeout)
             ctx.logger.debug(f'Removing temp dir: {self._temp_dir}')
             shutil.rmtree(self._temp_dir)
 
@@ -215,16 +207,26 @@ class SnapshotCreate:
         ctx.logger.debug('Creating snapshot archive')
         shutil.make_archive(self._archive_dest, 'zip', self._temp_dir)
 
+    def _append_from_auditlog(self, timeout):
+        try:
+            # Fetch all the remaining items in a queue, don't wait longer
+            # than `timeout` seconds in case queue is empty.
+            while audit_log := self._auditlog_queue.get(timeout=timeout):
+                self._append_new_object_from_auditlog(audit_log)
+        except queue.Empty:
+            self._auditlog_listener.stop()
+            self._auditlog_listener.join(timeout=timeout)
+
+    def _append_new_object_from_auditlog(self, audit_log):
+        # to be implemented in RND-309
+        pass
+
     def _update_snapshot_status(self, status, error=None):
         self._client.snapshots.update_status(
             self._snapshot_id,
             status=status,
             error=error
         )
-
-    def _append_new_object_from_auditlog(self, audit_log):
-        # to be implemented in RND-364
-        pass
 
 
 def _prepare_temp_dir() -> Path:
