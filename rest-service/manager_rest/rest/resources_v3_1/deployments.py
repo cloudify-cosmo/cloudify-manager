@@ -1427,12 +1427,12 @@ class DeploymentGroupsId(SecuredResource):
         rm = get_resource_manager()
 
         group = sm.get(models.DeploymentGroup, group_id)
+        response = None, 204
         if args.delete_deployments:
             with sm.transaction():
                 delete_exc_group = models.ExecutionGroup(
                     id=str(uuid.uuid4()),
                     workflow_id='delete_deployment_environment',
-                    deployment_group=group,
                 )
                 sm.put(delete_exc_group)
                 for dep in group.deployments:
@@ -1443,13 +1443,14 @@ class DeploymentGroupsId(SecuredResource):
                     )
                     delete_exc_group.executions.append(delete_exc)
                 messages = delete_exc_group.start_executions(sm, rm)
+            response = {'execution_group_id': delete_exc_group.id}, 200
 
         sm.delete(group)
 
         if args.delete_deployments:
             workflow_executor.execute_workflow(messages)
 
-        return None, 204
+        return response
 
 
 def _create_inter_deployment_dependency(
