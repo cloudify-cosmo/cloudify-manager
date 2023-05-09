@@ -1,5 +1,6 @@
 from unittest import mock
 
+from cloudify_system_workflows.snapshots.snapshot_create import EMPTY_B64_ZIP
 from cloudify_system_workflows.tests.snapshots.mocks import (
     AuditLogResponse,
     ExecutionResponse,
@@ -52,7 +53,8 @@ def test_reconnect():
             (mock.AsyncMock, ('auditlog', 'stream'), auditlog_stream_se),
             (mock.Mock, ('tenants', 'list'), TWO_TENANTS_LIST_SE),
             (mock.Mock, ('blueprints', 'list'), TWO_BLUEPRINTS_LIST_SE),
-            (mock.Mock, ('blueprints', 'dump'), [['bp1', 'bp2']]),
+            (mock.Mock, ('blueprints', 'dump'),
+             [[{'id': 'bp1'}, {'id': 'bp2'}]]),
         ],
     ) as snap_cre:
         snap_cre._append_new_object_from_auditlog = mock.Mock()
@@ -121,7 +123,7 @@ def test_dont_append_new_blueprints():
             (mock.AsyncMock, ('auditlog', 'stream'), auditlog_stream_se),
             (mock.Mock, ('tenants', 'list'), TWO_TENANTS_LIST_SE),
             (mock.Mock, ('blueprints', 'list'), ONE_BLUEPRINT_LIST_SE),
-            (mock.Mock, ('blueprints', 'dump'), [['bp1']]),
+            (mock.Mock, ('blueprints', 'dump'), [[{'id': 'bp1'}]]),
         ],
     ) as snap_cre:
         snap_cre._append_new_object_from_auditlog = mock.Mock()
@@ -179,11 +181,13 @@ def test_append_related_executions():
         ] + [
             (mock.AsyncMock, ('auditlog', 'stream'), auditlog_stream_se),
             (mock.Mock, ('tenants', 'list'), TWO_TENANTS_LIST_SE),
-            (mock.Mock, ('deployments', 'dump'), [['d1']]),
-            (mock.Mock, ('deployment_groups', 'dump'), [['g1']]),
-            (mock.Mock, ('executions', 'dump'), [['exec1']]),
+            (mock.Mock, ('deployments', 'dump'), [[{'id': 'd1'}]]),
+            (mock.Mock, ('deployments', 'get'),
+             {'workdir_zip': EMPTY_B64_ZIP}),
+            (mock.Mock, ('deployment_groups', 'dump'), [[{'id': 'g1'}]]),
+            (mock.Mock, ('executions', 'dump'), [[{'id': 'exec1'}]]),
             (mock.Mock, ('executions', 'get'), executions_get_se),
-            (mock.Mock, ('execution_groups', 'dump'), [['execgr1']]),
+            (mock.Mock, ('execution_groups', 'dump'), [[{'id': 'execgr1'}]]),
             (mock.Mock, ('execution_groups', 'get'), execution_groups_get_se),
         ],
     ) as snap_cre:

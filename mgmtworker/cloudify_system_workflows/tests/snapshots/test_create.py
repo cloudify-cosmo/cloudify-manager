@@ -4,6 +4,7 @@ from unittest import mock
 
 import pytest
 
+from cloudify_system_workflows.snapshots.snapshot_create import EMPTY_B64_ZIP
 from cloudify_system_workflows.tests.snapshots.mocks import (
     AuditLogResponse,
     prepare_snapshot_create_with_mocks,
@@ -38,14 +39,10 @@ def test_dump_management():
     ) as sc:
         sc._dump_management()
         sc._client.blueprints.dump.assert_not_called()
-        sc._client.permissions.dump.assert_called_once_with(
-                sc._temp_dir / 'mgmt' / 'permissions')
-        sc._client.user_groups.dump.assert_called_once_with(
-                sc._temp_dir / 'mgmt' / 'user_groups')
-        sc._client.users.dump.assert_called_once_with(
-                sc._temp_dir / 'mgmt' / 'users')
-        sc._client.tenants.dump.assert_called_once_with(
-                sc._temp_dir / 'mgmt' / 'tenants')
+        sc._client.permissions.dump.assert_called_once_with()
+        sc._client.user_groups.dump.assert_called_once_with()
+        sc._client.users.dump.assert_called_once_with()
+        sc._client.tenants.dump.assert_called_once_with()
 
 
 def test_dump_composer():
@@ -104,10 +101,15 @@ def test_dump_tenants():
         ] + [
             (mock.Mock, ('tenants', 'list'), TWO_TENANTS_LIST_SE),
             (mock.Mock, ('blueprints', 'list'), TWO_BLUEPRINTS_LIST_SE),
-            (mock.Mock, ('deployments', 'dump'), [['d1', 'd2']]),
+            (mock.Mock, ('deployments', 'dump'),
+             [[{'id': 'd1'}, {'id': 'd2'}]]),
+            (mock.Mock, ('deployments', 'get'),
+             {'workdir_zip': EMPTY_B64_ZIP}),
             (mock.Mock, ('inter_deployment_dependencies', 'dump'), [[]]),
-            (mock.Mock, ('executions', 'dump'), [['e1', 'e2']]),
-            (mock.Mock, ('execution_groups', 'dump'), [['eg1', 'eg2']]),
+            (mock.Mock, ('executions', 'dump'),
+             [[{'id': 'e1'}, {'id': 'e2'}]]),
+            (mock.Mock, ('execution_groups', 'dump'),
+             [[{'id': 'eg1'}, {'id': 'eg2'}]]),
         ],
         include_logs=False
     ) as sc:
@@ -120,26 +122,19 @@ def test_dump_tenants():
                           'plugins_update', 'deployments_filters',
                           'blueprints_filters', 'execution_schedules']:
             method = getattr(sc._tenant_clients['tenant1'], dump_type).dump
-            method.assert_called_once_with(
-                sc._temp_dir / 'tenants' / 'tenant1' / dump_type)
+            method.assert_called_once_with()
         for dump_type in ['nodes', 'agents']:
             method = getattr(cli, dump_type).dump
-            method.assert_called_once_with(
-                sc._temp_dir / 'tenants' / 'tenant1' / dump_type,
-                deployment_ids=['d1', 'd2'])
+            method.assert_called_once_with(deployment_ids=['d1', 'd2'])
         cli.node_instances.dump.assert_called_once_with(
-            sc._temp_dir / 'tenants' / 'tenant1' / 'node_instances',
             deployment_ids=['d1', 'd2'],
             get_broker_conf=sc._agents_handler.get_broker_conf
         )
         cli.events.dump.assert_called_once_with(
-            sc._temp_dir / 'tenants' / 'tenant1',
             execution_ids=['e1', 'e2'],
             execution_group_ids=['eg1', 'eg2'],
             include_logs=False)
-        cli.operations.dump.assert_called_once_with(
-            sc._temp_dir / 'tenants' / 'tenant1' / 'tasks_graphs',
-            execution_ids=['e1', 'e2'])
+        cli.operations.dump.assert_called_once_with(execution_ids=['e1', 'e2'])
 
 
 def test_create_success():
@@ -159,17 +154,16 @@ def test_create_success():
         ] + [
             (mock.Mock, ('tenants', 'list'), TWO_TENANTS_LIST_SE),
             (mock.Mock, ('blueprints', 'list'), TWO_BLUEPRINTS_LIST_SE),
-            (mock.Mock, ('executions', 'dump'), [['e1', 'e2']]),
-            (mock.Mock, ('execution_groups', 'dump'), [['eg1', 'eg2']]),
+            (mock.Mock, ('executions', 'dump'),
+             [[{'id': 'e1'}, {'id': 'e2'}]]),
+            (mock.Mock, ('execution_groups', 'dump'),
+             [[{'id': 'eg1'}, {'id': 'eg2'}]]),
             (mock.AsyncMock, ('auditlog', 'stream'), AuditLogResponse([])),
         ],
     ) as sc:
         sc.create(timeout=0.2)
-        sc._tenant_clients['tenant1'].executions.dump.assert_called_once_with(
-            sc._temp_dir / 'tenants' / 'tenant1' / 'executions',
-        )
+        sc._tenant_clients['tenant1'].executions.dump.assert_called_once_with()
         sc._tenant_clients['tenant1'].events.dump.assert_called_once_with(
-            sc._temp_dir / 'tenants' / 'tenant1',
             execution_ids=['e1', 'e2'],
             execution_group_ids=['eg1', 'eg2'],
             include_logs=True)
@@ -255,8 +249,12 @@ def test_create_skip_events():
         ] + [
             (mock.Mock, ('tenants', 'list'), TWO_TENANTS_LIST_SE),
             (mock.Mock, ('blueprints', 'list'), TWO_BLUEPRINTS_LIST_SE),
-            (mock.Mock, ('deployments', 'dump'), [['d1', 'd2']]),
-            (mock.Mock, ('executions', 'dump'), [['e1', 'e2']]),
+            (mock.Mock, ('deployments', 'dump'),
+             [[{'id': 'd1'}, {'id': 'd2'}]]),
+            (mock.Mock, ('deployments', 'get'),
+             {'workdir_zip': EMPTY_B64_ZIP}),
+            (mock.Mock, ('executions', 'dump'),
+             [[{'id': 'e1'}, {'id': 'e2'}]]),
             (mock.AsyncMock, ('auditlog', 'stream'), AuditLogResponse([])),
         ],
         include_events=False,
