@@ -17,7 +17,6 @@ from setuptools import setup, find_packages
 
 setup(
     name='cloudify-integration-tests',
-    version='5.2.0-.dev1',
     author='Cloudify',
     author_email='cosmo-admin@cloudify.co',
     packages=find_packages(),
@@ -25,7 +24,6 @@ setup(
     zip_safe=False,
     install_requires=[
         'aiohttp',
-        'dataclasses',
         'fasteners',
         'pytest',
         'pytest-asyncio',
