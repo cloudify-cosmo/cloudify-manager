@@ -18,12 +18,16 @@ bottle==0.12.23
     # via cloudify-common
 certifi==2023.5.7
     # via requests
+cffi==1.15.1
+    # via cryptography
 charset-normalizer==3.1.0
     # via
     #   aiohttp
     #   requests
 cloudify-common @ https://github.com/cloudify-cosmo/cloudify-common/archive/master.zip
     # via -r requirements.in
+cryptography==39.0.2
+    # via cloudify-integration-tests (setup.py)
 distro==1.8.0
     # via cloudify-common
 fasteners==0.17.3
@@ -56,6 +60,8 @@ pluggy==1.0.0
     # via pytest
 proxy-tools==0.1.0
     # via cloudify-common
+pycparser==2.21
+    # via cffi
 pytest==7.3.1
     # via
     #   cloudify-integration-tests (setup.py)
@@ -66,6 +72,8 @@ python-dateutil==2.8.2
     # via cloudify-integration-tests (setup.py)
 pytz==2022.2.1
     # via cloudify-common
+pyyaml==6.0
+    # via cloudify-integration-tests (setup.py)
 requests==2.30.0
     # via
     #   cloudify-common

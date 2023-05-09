@@ -30,5 +30,7 @@ setup(
         'python-dateutil',
         'requests',
         'retrying',
+        'PyYAML',
+        'cryptography>=37,<40',
     ]
 )
