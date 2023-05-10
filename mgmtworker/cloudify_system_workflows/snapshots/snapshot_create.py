@@ -302,7 +302,7 @@ def _prepare_dump_entity(dump_type, entity_raw, file_number):
     else:
         entity_id = entity.get('id')
         if source_id:
-            file_name = pathlib.Path(source_id)
+            file_name = pathlib.Path(f'{source_id}.json')
         else:
             file_name = pathlib.Path(f'{file_number}.json')
             limit_entities_per_file = True
