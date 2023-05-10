@@ -1422,6 +1422,7 @@ class DeploymentGroupsId(SecuredResource):
             Argument('delete_deployments', type=boolean, default=False),
             Argument('force', type=boolean, default=False),
             Argument('delete_logs', type=boolean, default=False),
+            Argument('recursive', type=boolean, default=False),
         ])
         sm = get_storage_manager()
         rm = get_resource_manager()
@@ -1436,10 +1437,15 @@ class DeploymentGroupsId(SecuredResource):
                 )
                 sm.put(delete_exc_group)
                 for dep in group.deployments:
-                    rm.check_deployment_delete(dep, force=args.force)
+                    rm.check_deployment_delete(
+                        dep,
+                        force=args.force,
+                        recursive=args.recursive,
+                    )
                     delete_exc = dep.make_delete_environment_execution(
                         delete_logs=args.delete_logs,
                         force=args.force,
+                        recursive=args.recursive,
                     )
                     delete_exc_group.executions.append(delete_exc)
                 messages = delete_exc_group.start_executions(sm, rm)
