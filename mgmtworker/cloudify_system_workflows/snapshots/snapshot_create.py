@@ -27,6 +27,7 @@ EMPTY_B64_ZIP = 'UEsFBgAAAAAAAAAAAAAAAAAAAAAAAA=='
 
 
 class SnapshotCreate:
+    """SnapshotCreate is a class, which handles snapshot creation process."""
     _snapshot_id: str
     _config: DictToAttributes
     _include_logs: bool
@@ -78,6 +79,7 @@ class SnapshotCreate:
         self._ids_dumped = {}
 
     def create(self, timeout=10):
+        """Dumps manager's data and some metadata into a single zip file"""
         ctx.logger.debug('Using `new` snapshot format')
         self._auditlog_listener.start(self._tenant_clients)
         try:
@@ -189,23 +191,14 @@ class SnapshotCreate:
         if tenant_name:
             if dump_type == 'events':
                 output_dir = self._temp_dir / 'tenants' / tenant_name
-                if 'executions' in self._ids_dumped:
-                    os.makedirs(output_dir / 'executions_events',
-                                exist_ok=True)
-                if 'execution_groups' in self._ids_dumped:
-                    os.makedirs(output_dir / 'execution_groups_events',
-                                exist_ok=True)
             elif dump_type == 'operations':
                 output_dir = self._temp_dir / 'tenants' / \
                              tenant_name / 'tasks_graphs'
-                os.makedirs(output_dir, exist_ok=True)
             else:
                 output_dir = self._temp_dir / 'tenants' / \
                              tenant_name / dump_type
-                os.makedirs(output_dir, exist_ok=True)
         else:
             output_dir = self._temp_dir / 'mgmt' / dump_type
-            os.makedirs(output_dir, exist_ok=True)
         return output_dir
 
     def _write_files(self, tenant_name, dump_type, data):
@@ -234,7 +227,9 @@ class SnapshotCreate:
                     len(data_buckets[file_name]) == DUMP_ENTITIES_PER_FILE):
                 file_number += 1
         for file_name, items in data_buckets.items():
-            with open(output_dir / file_name, 'w') as handle:
+            output_file = output_dir / file_name
+            os.makedirs(output_file.parent, exist_ok=True)
+            with open(output_file, 'w') as handle:
                 json.dump({'type': dump_type, 'items': items}, handle)
         return ids_added
 
