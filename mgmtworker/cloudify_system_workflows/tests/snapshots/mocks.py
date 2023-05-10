@@ -20,6 +20,12 @@ EMPTY_TENANTS_LIST_SE = [
         metadata={'pagination': {'offset': 0, 'size': 0, 'total': 0}}
     )
 ]
+ONE_TENANTS_LIST_SE = [
+    ListResponse(
+        items=[{'name': 'tenant1'}],
+        metadata={'pagination': {'offset': 0, 'size': 1, 'total': 1}}
+    ),
+]
 TWO_TENANTS_LIST_SE = [
     ListResponse(
         items=[{'name': 'tenant1'}, {'name': 'tenant2'}],

@@ -1,15 +1,20 @@
 import json
 import os
+import zipfile
 from unittest import mock
 
 import pytest
 
-from cloudify_system_workflows.snapshots.snapshot_create import EMPTY_B64_ZIP
+from cloudify_system_workflows.snapshots.snapshot_create import (
+    DUMP_ENTITIES_PER_FILE,
+    EMPTY_B64_ZIP,
+)
 from cloudify_system_workflows.tests.snapshots.mocks import (
     AuditLogResponse,
     prepare_snapshot_create_with_mocks,
     FAKE_MANAGER_VERSION,
     EMPTY_TENANTS_LIST_SE,
+    ONE_TENANTS_LIST_SE,
     TWO_TENANTS_LIST_SE,
     TWO_BLUEPRINTS_LIST_SE,
 )
@@ -261,3 +266,223 @@ def test_create_skip_events():
     ) as sc:
         sc.create(timeout=0.2)
         sc._tenant_clients['tenant1'].events.dump.assert_not_called()
+
+
+def test_create_with_events():
+    timestamp_seconds = '2023-05-09T08:28:46'
+    events_dump_se = [[
+        {
+            '__entity': {
+                '_storage_id': 1,
+                'timestamp': f'{timestamp_seconds}.001Z'
+            },
+            '__source': 'executions',
+            '__source_id': 'e1'
+        },
+        {
+            '__entity': {
+                '_storage_id': 2,
+                'timestamp': f'{timestamp_seconds}.002Z'
+            },
+            '__source': 'executions',
+            '__source_id': 'e1'
+        },
+        {
+            '__entity': {
+                '_storage_id': 3,
+                'timestamp': f'{timestamp_seconds}.003Z'
+            },
+            '__source': 'executions',
+            '__source_id': 'e2'
+        },
+    ]]
+    with prepare_snapshot_create_with_mocks(
+        'test-create-with-events',
+        rest_mocks=[
+            (mock.Mock, (dump_type, 'dump'), [[]])
+            for dump_type in ['user_groups', 'tenants', 'users', 'permissions',
+                              'sites', 'plugins', 'secrets_providers',
+                              'secrets', 'blueprints', 'execution_groups',
+                              'inter_deployment_dependencies',
+                              'deployment_groups', 'deployment_updates',
+                              'plugins_update', 'deployments_filters',
+                              'blueprints_filters', 'execution_schedules',
+                              'nodes', 'node_instances', 'agents',
+                              'operations']
+        ] + [
+            (mock.Mock, ('tenants', 'list'), ONE_TENANTS_LIST_SE),
+            (mock.Mock, ('blueprints', 'list'), TWO_BLUEPRINTS_LIST_SE),
+            (mock.Mock, ('deployments', 'dump'),
+             [[{'id': 'd1'}, {'id': 'd2'}]]),
+            (mock.Mock, ('deployments', 'get'),
+             {'workdir_zip': EMPTY_B64_ZIP}),
+            (mock.Mock, ('executions', 'dump'),
+             [[{'id': 'e1'}, {'id': 'e2'}]]),
+            (mock.Mock, ('events', 'dump'), events_dump_se),
+            (mock.AsyncMock, ('auditlog', 'stream'), AuditLogResponse([])),
+        ],
+    ) as sc:
+        sc.create(timeout=0.2)
+        sc._tenant_clients['tenant1'].events.dump.assert_called_once_with(
+            execution_ids=['e1', 'e2'],
+            execution_group_ids=[],
+            include_logs=True
+        )
+        with zipfile.ZipFile(sc._archive_dest.with_suffix('.zip'), 'r') as zf:
+            e1_events = json.loads(
+                    zf.read('tenants/tenant1/executions_events/e1.json'))
+            e2_events = json.loads(
+                    zf.read('tenants/tenant1/executions_events/e2.json'))
+            assert e1_events['type'] == 'events'
+            assert e1_events['latest_timestamp'] == f'{timestamp_seconds}.003Z'
+            assert len(e1_events['items']) == 2
+            assert e2_events['latest_timestamp'] == f'{timestamp_seconds}.003Z'
+            assert len(e2_events['items']) == 1
+
+
+def test_create_many_blueprints():
+    timestamp_seconds = '2023-05-09T08:28:47'
+    many_blueprints_dump_se = [[{
+        'id': f'bp{n}',
+        'tenant_name': 'tenant1',
+        'created_at': f'{timestamp_seconds}.{(n % 1000):03d}Z'
+    } for n in range(1002)]]
+    with prepare_snapshot_create_with_mocks(
+        'test-create-many-blueprints',
+        rest_mocks=[
+            (mock.Mock, (dump_type, 'dump'), [[]])
+            for dump_type in ['user_groups', 'tenants', 'users', 'permissions',
+                              'sites', 'plugins', 'secrets_providers',
+                              'secrets', 'deployments',
+                              'inter_deployment_dependencies',
+                              'deployment_groups', 'deployment_updates',
+                              'executions', 'execution_groups',
+                              'plugins_update', 'deployments_filters',
+                              'blueprints_filters', 'execution_schedules',
+                              'nodes', 'node_instances', 'agents', 'events',
+                              'operations']
+        ] + [
+            (mock.Mock, ('tenants', 'list'), ONE_TENANTS_LIST_SE),
+            (mock.Mock, ('blueprints', 'dump'), many_blueprints_dump_se),
+            (mock.AsyncMock, ('auditlog', 'stream'), AuditLogResponse([])),
+        ],
+    ) as sc:
+        sc.create(timeout=0.2)
+        sc._tenant_clients['tenant1'].blueprints.dump.assert_called_once_with()
+        with zipfile.ZipFile(sc._archive_dest.with_suffix('.zip'), 'r') as zf:
+            filenames = [file.filename for file in zf.filelist]
+            assert 'tenants/tenant1/blueprints/0.json' in filenames
+            one = json.loads(zf.read('tenants/tenant1/blueprints/1.json'))
+            assert 'tenants/tenant1/blueprints/2.json' in filenames
+            assert 'tenants/tenant1/blueprints/3.json' not in filenames
+            assert one['type'] == 'blueprints'
+            assert len(one['items']) == DUMP_ENTITIES_PER_FILE
+            assert one['latest_timestamp'] == f'{timestamp_seconds}.999Z'
+
+
+def test_create_with_plugins():
+    timestamp_seconds = '2023-05-09T08:28:48'
+    many_plugins_dump_se = [[{
+        'id': f'plugin{n}',
+        'tenant_name': 'tenant1',
+        'uploaded_at': f'{timestamp_seconds}.{(n % 1000):03d}Z'
+    } for n in range(995, 1005)]]
+    with prepare_snapshot_create_with_mocks(
+        'test-create-with-plugins',
+        rest_mocks=[
+            (mock.Mock, (dump_type, 'dump'), [[]])
+            for dump_type in ['user_groups', 'tenants', 'users', 'permissions',
+                              'sites', 'blueprints', 'secrets_providers',
+                              'secrets', 'deployments',
+                              'inter_deployment_dependencies',
+                              'deployment_groups', 'deployment_updates',
+                              'executions', 'execution_groups',
+                              'plugins_update', 'deployments_filters',
+                              'blueprints_filters', 'execution_schedules',
+                              'nodes', 'node_instances', 'agents', 'events',
+                              'operations']
+        ] + [
+            (mock.Mock, ('tenants', 'list'), ONE_TENANTS_LIST_SE),
+            (mock.Mock, ('plugins', 'dump'), many_plugins_dump_se),
+            (mock.AsyncMock, ('auditlog', 'stream'), AuditLogResponse([])),
+        ],
+    ) as sc:
+        sc.create(timeout=0.2)
+        sc._tenant_clients['tenant1'].plugins.dump.assert_called_once_with()
+        with zipfile.ZipFile(sc._archive_dest.with_suffix('.zip'), 'r') as zf:
+            plugins = json.loads(zf.read('tenants/tenant1/plugins/0.json'))
+            assert plugins['type'] == 'plugins'
+            assert plugins['latest_timestamp'] == f'{timestamp_seconds}.999Z'
+            assert len(plugins['items']) == 10
+
+
+def test_create_with_agents():
+    timestamp_seconds = '2023-05-09T08:28:49'
+    many_agents_dump_se = [[{
+        '__entity': {
+            'id': f'agent{n}',
+            'tenant_name': 'tenant1',
+            'created_at': f'{timestamp_seconds}.{(n % 1000):03d}Z',
+        },
+        '__source_id': 'd1',
+    } for n in range(995, 1005)]]
+    with prepare_snapshot_create_with_mocks(
+        'test-create-with-agents',
+        rest_mocks=[
+            (mock.Mock, (dump_type, 'dump'), [[]])
+            for dump_type in ['user_groups', 'tenants', 'users', 'permissions',
+                              'sites', 'blueprints', 'secrets_providers',
+                              'secrets', 'inter_deployment_dependencies',
+                              'deployment_groups', 'deployment_updates',
+                              'executions', 'execution_groups',
+                              'plugins_update', 'deployments_filters',
+                              'blueprints_filters', 'execution_schedules',
+                              'nodes', 'node_instances', 'events', 'plugins',
+                              'operations']
+        ] + [
+            (mock.Mock, ('tenants', 'list'), ONE_TENANTS_LIST_SE),
+            (mock.Mock, ('deployments', 'dump'),
+             [[{'id': 'd1'}, {'id': 'd2'}]]),
+            (mock.Mock, ('deployments', 'get'),
+             {'workdir_zip': EMPTY_B64_ZIP}),
+            (mock.Mock, ('agents', 'dump'), many_agents_dump_se),
+            (mock.AsyncMock, ('auditlog', 'stream'), AuditLogResponse([])),
+        ],
+    ) as sc:
+        sc.create(timeout=0.2)
+        sc._tenant_clients['tenant1'].agents.dump.assert_called_once_with(
+                deployment_ids=['d1', 'd2'])
+        with zipfile.ZipFile(sc._archive_dest.with_suffix('.zip'), 'r') as zf:
+            agents = json.loads(zf.read('tenants/tenant1/agents/d1.json'))
+            assert agents['type'] == 'agents'
+            assert agents['latest_timestamp'] == f'{timestamp_seconds}.999Z'
+            assert len(agents['items']) == 10
+
+
+def test_create_deployment_workdir():
+    with prepare_snapshot_create_with_mocks(
+        'test-create-deployment-workdir',
+        rest_mocks=[
+            (mock.Mock, (dump_type, 'dump'), [[]])
+            for dump_type in ['user_groups', 'tenants', 'users', 'permissions',
+                              'sites', 'blueprints', 'secrets_providers',
+                              'secrets', 'inter_deployment_dependencies',
+                              'deployment_groups', 'deployment_updates',
+                              'executions', 'execution_groups', 'agents',
+                              'plugins_update', 'deployments_filters',
+                              'blueprints_filters', 'execution_schedules',
+                              'nodes', 'node_instances', 'events', 'plugins',
+                              'operations']
+        ] + [
+            (mock.Mock, ('tenants', 'list'), ONE_TENANTS_LIST_SE),
+            (mock.Mock, ('deployments', 'dump'), [[{'id': 'd1'}]]),
+            (mock.Mock, ('deployments', 'get'),
+             {'workdir_zip': 'non-empty-workdir-content'}),
+            (mock.AsyncMock, ('auditlog', 'stream'), AuditLogResponse([])),
+        ],
+    ) as sc:
+        sc.create(timeout=0.2)
+        with zipfile.ZipFile(sc._archive_dest.with_suffix('.zip'), 'r') as zf:
+            d1_archive = zf.read(
+                    'tenants/tenant1/deployments_archives/d1.b64zip')
+            assert d1_archive == b'non-empty-workdir-content'
