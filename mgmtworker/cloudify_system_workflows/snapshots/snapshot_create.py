@@ -207,10 +207,13 @@ class SnapshotCreate:
         ids_added = []
         output_dir = self._prepare_output_dir(tenant_name, dump_type)
         data_buckets = defaultdict(list)
+        latest_timestamp = None
         for entity_raw in data:
             entity_id, entity, file_name, limit_entities_per_file = \
                 _prepare_dump_entity(dump_type, entity_raw, file_number)
             data_buckets[file_name].append(entity)
+            latest_timestamp = _extract_latest_timestamp(entity, dump_type,
+                                                         latest_timestamp)
             if dump_type in ['blueprints', 'deployments', 'plugins']:
                 _write_dump_archive(
                         dump_type,
@@ -229,8 +232,11 @@ class SnapshotCreate:
         for file_name, items in data_buckets.items():
             output_file = output_dir / file_name
             os.makedirs(output_file.parent, exist_ok=True)
+            data = {'type': dump_type, 'items': items}
+            if latest_timestamp:
+                data['latest_timestamp'] = latest_timestamp
             with open(output_file, 'w') as handle:
-                json.dump({'type': dump_type, 'items': items}, handle)
+                json.dump(data, handle)
         return ids_added
 
     def _create_archive(self):
@@ -302,6 +308,25 @@ def _prepare_dump_entity(dump_type, entity_raw, file_number):
             limit_entities_per_file = True
 
     return entity_id, entity, str(file_name), limit_entities_per_file
+
+
+def _extract_latest_timestamp(entity: dict[str, Any], dump_type: str,
+                              latest_timestamp: str | None) -> str | None:
+    if dump_type == 'events':
+        timestamp = entity['timestamp']
+    elif dump_type == 'plugins':
+        timestamp = entity['uploaded_at']
+    else:
+        timestamp = entity.get('created_at')
+
+    if not timestamp:
+        return latest_timestamp
+
+    if not latest_timestamp:
+        latest_timestamp = timestamp
+    else:
+        latest_timestamp = max(latest_timestamp, timestamp)
+    return latest_timestamp
 
 
 def _write_dump_archive(
