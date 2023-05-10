@@ -148,7 +148,8 @@ class DeploymentsId(SecuredResource):
         """Delete deployment by id"""
         args = get_args_and_verify_arguments([
             Argument('force', type=boolean, default=False),
-            Argument('delete_logs', type=boolean, default=False)
+            Argument('delete_logs', type=boolean, default=False),
+            Argument('recursive', type=boolean, default=False),
         ])
 
         bypass_maintenance = is_bypass_maintenance_mode()
@@ -157,10 +158,15 @@ class DeploymentsId(SecuredResource):
         dep.deployment_status = DeploymentState.IN_PROGRESS
         sm.update(dep, modified_attrs=('deployment_status',))
         rm = get_resource_manager()
-        rm.check_deployment_delete(dep, force=args.force)
+        rm.check_deployment_delete(
+            dep,
+            force=args.force,
+            recursive=args.recursive,
+        )
         delete_execution = dep.make_delete_environment_execution(
             delete_logs=args.delete_logs,
             force=args.force,
+            recursive=args.recursive,
         )
         messages = rm.prepare_executions(
             [delete_execution], bypass_maintenance=bypass_maintenance)

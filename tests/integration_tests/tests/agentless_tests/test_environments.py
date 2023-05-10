@@ -3,7 +3,10 @@ import time
 import pytest
 
 from integration_tests import AgentlessTestCase
-from integration_tests.tests.utils import get_resource as resource
+from integration_tests.tests.utils import (
+    get_resource as resource,
+    wait_for_deployment_deletion_to_complete,
+)
 
 from cloudify.models_states import DeploymentState
 
@@ -1202,3 +1205,71 @@ capabilities:
             _get_capability('dep2', ['cap1', 'nonexistent'])
 
         assert _get_capability('dep2', ['cap1', 'a']) == 5
+
+    def test_recursive_delete(self):
+        bp = """
+tosca_definitions_version: cloudify_dsl_1_5
+imports:
+  - cloudify/types/types.yaml
+"""
+        self.upload_blueprint_resource(
+            self.make_yaml_file(bp),
+            blueprint_id='bp',
+        )
+
+        # prepare a structure: dep1->dep2->dep3, and also an unrelated
+        # deployment
+        self.deploy(
+            blueprint_id='bp',
+            deployment_id='dep1',
+        )
+        self.deploy(
+            blueprint_id='bp',
+            deployment_id='dep2',
+            deployment_labels=[{'csys-obj-parent': 'dep1'}],
+        )
+        self.deploy(
+            blueprint_id='bp',
+            deployment_id='dep3',
+            deployment_labels=[{'csys-obj-parent': 'dep2'}],
+        )
+        self.deploy(
+            blueprint_id='bp',
+            deployment_id='unrelated',
+        )
+
+        # let's check that we created what we wanted to create
+        services = self.client.deployments.list(
+            filter_rules=[
+                {
+                    'key': 'csys-obj-parent',
+                    'values': ['dep1'],
+                    'operator': 'any_of',
+                    'type': 'label',
+                }
+            ]
+        )
+        assert [d.id for d in services] == ['dep2']
+        services_2 = self.client.deployments.list(
+            filter_rules=[
+                {
+                    'key': 'csys-obj-parent',
+                    'values': ['dep2'],
+                    'operator': 'any_of',
+                    'type': 'label',
+                }
+            ]
+        )
+        assert [d.id for d in services_2] == ['dep3']
+        assert len(self.client.deployments.list()) == 4
+
+        # delete the root environment, and the contained-in services
+        # should both be deleted!
+        self.client.deployments.delete('dep1', recursive=True)
+        wait_for_deployment_deletion_to_complete(
+            'dep1',
+            self.client,
+        )
+
+        # only the unrelated deployment was spared
+        assert [d.id for d in self.client.deployments.list()] == ['unrelated']

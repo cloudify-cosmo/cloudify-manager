@@ -939,7 +939,12 @@ class ResourceManager(object):
 
         return self.sm.delete(blueprint)
 
-    def check_deployment_delete(self, deployment, force=False):
+    def check_deployment_delete(
+        self,
+        deployment,
+        force=False,
+        recursive=False,
+    ):
         """Check that deployment can be deleted"""
         executions = self.sm.list(models.Execution, filters={
             'deployment_id': deployment.id,
@@ -959,7 +964,7 @@ class ResourceManager(object):
             )
 
         idds = self._get_blocking_dependencies(
-            deployment, skip_component_children=False)
+            deployment, skip_component_children=False, recursive=recursive)
         if idds:
             formatted_dependencies = '\n'.join(
                 f'[{i}] {idd.format()}' for i, idd in enumerate(idds, 1)
@@ -2471,6 +2476,7 @@ class ResourceManager(object):
             self,
             deployment: models.Deployment,
             skip_component_children: bool,
+            recursive: bool = False,
             limit=3) -> List[models.BaseDeploymentDependencies]:
         """Get dependencies that would block destructive actions on deployment
 
@@ -2488,24 +2494,31 @@ class ResourceManager(object):
             so this has to be used to allow uninstalling a deployment that
             uses some components.
         :param limit: only return up to this many DLDs and this many IDDs
+        :param recursive: if set, we're deleting all service deployments
+            recursively, so no need to block on DLD children
         :return: a list of dependencies blocking destructive actions on
             the given deployment
         """
         dld = aliased(models.DeploymentLabelsDependencies)
         idd = aliased(models.InterDeploymentDependencies)
-        children = (
-            db.session.query(dld)
-            .filter_by(target_deployment=deployment)
-        )
-        if skip_component_children:
-            children = children.filter(
-                ~db.session.query(idd)
-                .filter(dld._target_deployment == idd._source_deployment)
-                .filter(idd.dependency_creator.like('component.%'))
-                .exists()
+        if recursive:
+            # if we're deleting recursively, "child" (service/DLD) deployments
+            # aren't blocking, because they'll be deleted as well
+            children = []
+        else:
+            children = (
+                db.session.query(dld)
+                .filter_by(target_deployment=deployment)
             )
+            if skip_component_children:
+                children = children.filter(
+                    ~db.session.query(idd)
+                    .filter(dld._target_deployment == idd._source_deployment)
+                    .filter(idd.dependency_creator.like('component.%'))
+                    .exists()
+                )
 
-        children = children.limit(limit)
+            children = children.limit(limit).all()
         component_creators = (
             db.session.query(idd)
             .filter_by(target_deployment=deployment)
@@ -2529,12 +2542,12 @@ class ResourceManager(object):
             .filter(~sql_and(idd.external_source != text("'null'"),
                              idd.dependency_creator.like('component.%')))
             .limit(limit)
-        )
+        ).all()
         # TODO: the last filter is a temporary measure to allow external
         #  components to be uninstalled during their parent's uninstall
         #  (RD-4420). This should be solved properly.
 
-        return children.all() + component_creators.all()
+        return children + component_creators
 
     def _verify_dependencies_not_affected(self, execution, force):
         if execution.workflow_id not in [
