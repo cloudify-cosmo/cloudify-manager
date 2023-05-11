@@ -12,6 +12,7 @@ from cloudify_system_workflows.snapshots.snapshot_create import (
 from cloudify_system_workflows.tests.snapshots.mocks import (
     AuditLogResponse,
     prepare_snapshot_create_with_mocks,
+    FAKE_EXECUTION_ID,
     FAKE_MANAGER_VERSION,
     EMPTY_TENANTS_LIST_SE,
     ONE_TENANTS_LIST_SE,
@@ -28,7 +29,10 @@ def test_dump_metadata():
         sc._dump_metadata()
         with open(sc._temp_dir / 'metadata.json', 'r') as f:
             metadata = json.load(f)
-        assert metadata == {'snapshot_version': FAKE_MANAGER_VERSION}
+        assert metadata == {
+            'snapshot_version': FAKE_MANAGER_VERSION,
+            'execution_id': FAKE_EXECUTION_ID,
+        }
 
 
 def test_dump_management():
@@ -102,7 +106,7 @@ def test_dump_tenants():
                               'plugins_update', 'deployments_filters',
                               'blueprints_filters', 'execution_schedules',
                               'nodes', 'node_instances', 'agents', 'events',
-                              'operations']
+                              'operations', 'tasks_graphs']
         ] + [
             (mock.Mock, ('tenants', 'list'), TWO_TENANTS_LIST_SE),
             (mock.Mock, ('blueprints', 'list'), TWO_BLUEPRINTS_LIST_SE),
@@ -155,7 +159,7 @@ def test_create_success():
                               'plugins_update', 'deployments_filters',
                               'blueprints_filters', 'execution_schedules',
                               'nodes', 'node_instances', 'agents', 'events',
-                              'operations']
+                              'operations', 'tasks_graphs']
         ] + [
             (mock.Mock, ('tenants', 'list'), TWO_TENANTS_LIST_SE),
             (mock.Mock, ('blueprints', 'list'), TWO_BLUEPRINTS_LIST_SE),
@@ -250,7 +254,7 @@ def test_create_skip_events():
                               'plugins_update', 'deployments_filters',
                               'blueprints_filters', 'execution_schedules',
                               'nodes', 'node_instances', 'agents',
-                              'operations']
+                              'operations', 'tasks_graphs']
         ] + [
             (mock.Mock, ('tenants', 'list'), TWO_TENANTS_LIST_SE),
             (mock.Mock, ('blueprints', 'list'), TWO_BLUEPRINTS_LIST_SE),
@@ -308,7 +312,7 @@ def test_create_with_events():
                               'plugins_update', 'deployments_filters',
                               'blueprints_filters', 'execution_schedules',
                               'nodes', 'node_instances', 'agents',
-                              'operations']
+                              'operations', 'tasks_graphs']
         ] + [
             (mock.Mock, ('tenants', 'list'), ONE_TENANTS_LIST_SE),
             (mock.Mock, ('blueprints', 'list'), TWO_BLUEPRINTS_LIST_SE),
@@ -360,7 +364,7 @@ def test_create_many_blueprints():
                               'plugins_update', 'deployments_filters',
                               'blueprints_filters', 'execution_schedules',
                               'nodes', 'node_instances', 'agents', 'events',
-                              'operations']
+                              'operations', 'tasks_graphs']
         ] + [
             (mock.Mock, ('tenants', 'list'), ONE_TENANTS_LIST_SE),
             (mock.Mock, ('blueprints', 'dump'), many_blueprints_dump_se),
@@ -400,7 +404,7 @@ def test_create_with_plugins():
                               'plugins_update', 'deployments_filters',
                               'blueprints_filters', 'execution_schedules',
                               'nodes', 'node_instances', 'agents', 'events',
-                              'operations']
+                              'operations', 'tasks_graphs']
         ] + [
             (mock.Mock, ('tenants', 'list'), ONE_TENANTS_LIST_SE),
             (mock.Mock, ('plugins', 'dump'), many_plugins_dump_se),
@@ -438,7 +442,7 @@ def test_create_with_agents():
                               'plugins_update', 'deployments_filters',
                               'blueprints_filters', 'execution_schedules',
                               'nodes', 'node_instances', 'events', 'plugins',
-                              'operations']
+                              'operations', 'tasks_graphs']
         ] + [
             (mock.Mock, ('tenants', 'list'), ONE_TENANTS_LIST_SE),
             (mock.Mock, ('deployments', 'dump'),
@@ -472,7 +476,7 @@ def test_create_deployment_workdir():
                               'plugins_update', 'deployments_filters',
                               'blueprints_filters', 'execution_schedules',
                               'nodes', 'node_instances', 'events', 'plugins',
-                              'operations']
+                              'operations', 'tasks_graphs']
         ] + [
             (mock.Mock, ('tenants', 'list'), ONE_TENANTS_LIST_SE),
             (mock.Mock, ('deployments', 'dump'), [[{'id': 'd1'}]]),
@@ -486,3 +490,71 @@ def test_create_deployment_workdir():
             d1_archive = zf.read(
                     'tenants/tenant1/deployments_archives/d1.b64zip')
             assert d1_archive == b'non-empty-workdir-content'
+
+
+def test_create_tasks_graphs():
+    with prepare_snapshot_create_with_mocks(
+        'test-create-tasks-graphs',
+        rest_mocks=[
+            (mock.Mock, (dump_type, 'dump'), [[]])
+            for dump_type in ['user_groups', 'tenants', 'users', 'permissions',
+                              'secrets_providers', 'secrets',
+                              'sites', 'blueprints', 'deployments',
+                              'inter_deployment_dependencies',
+                              'deployment_groups', 'deployment_updates',
+                              'executions', 'execution_groups', 'agents',
+                              'plugins_update', 'deployments_filters',
+                              'blueprints_filters', 'execution_schedules',
+                              'nodes', 'node_instances', 'events', 'plugins',
+                              'operations', '']
+        ] + [
+            (mock.Mock, ('tenants', 'list'), ONE_TENANTS_LIST_SE),
+            (mock.Mock, ('executions', 'dump'), [[{'id': 'e1'}]]),
+            (mock.Mock, ('operations', 'dump'), [[
+                {
+                    '__entity': {'id': 'op1', 'tasks_graph_id': 'tg1'},
+                    '__source_id': 'e1',
+                },
+                {
+                    '__entity': {'id': 'op2', 'tasks_graph_id': 'tg2'},
+                    '__source_id': 'e1',
+                },
+                {
+                    '__entity': {'id': 'op3', 'tasks_graph_id': 'tg1'},
+                    '__source_id': 'e2',
+                },
+            ]]),
+            (mock.Mock, ('tasks_graphs', 'dump'), [[
+                {
+                    '__entity': {
+                        'created_at': '2022-11-25T15:14:39.194Z',
+                        'id': 'tg1',
+                        'name': 'update_check_drift',
+                        'execution_id': 'e1'
+                    },
+                    '__source_id': 'e1'
+                }
+            ]]),
+            (mock.AsyncMock, ('auditlog', 'stream'), AuditLogResponse([])),
+        ],
+    ) as sc:
+        sc.create(timeout=0.2)
+        cli = sc._tenant_clients['tenant1']
+        cli.operations.dump.assert_called_once_with(execution_ids=['e1'])
+        cli.tasks_graphs.dump.assert_called_once_with(
+            execution_ids=['e1'],
+            operations={
+                'e1': [
+                    {'id': 'op1', 'tasks_graph_id': 'tg1'},
+                    {'id': 'op2', 'tasks_graph_id': 'tg2'}
+                ],
+                'e2': [
+                    {'id': 'op3', 'tasks_graph_id': 'tg1'}
+                ]
+            }
+        )
+        with zipfile.ZipFile(sc._archive_dest.with_suffix('.zip'), 'r') as zf:
+            tasks_graphs = json.loads(
+                    zf.read('tenants/tenant1/tasks_graphs/e1.json'))
+            assert tasks_graphs['type'] == 'tasks_graphs'
+            assert len(tasks_graphs['items']) == 1

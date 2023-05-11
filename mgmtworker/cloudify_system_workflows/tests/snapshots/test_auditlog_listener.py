@@ -47,7 +47,7 @@ def test_reconnect():
                 'execution_groups', 'deployment_groups', 'deployment_updates',
                 'plugins_update', 'deployments_filters', 'blueprints_filters',
                 'execution_schedules', 'nodes', 'node_instances', 'agents',
-                'operations', 'events',
+                'operations', 'tasks_graphs', 'events',
             ]
         ] + [
             (mock.AsyncMock, ('auditlog', 'stream'), auditlog_stream_se),
@@ -117,7 +117,7 @@ def test_dont_append_new_blueprints():
                 'execution_groups', 'deployment_groups', 'deployment_updates',
                 'plugins_update', 'deployments_filters', 'blueprints_filters',
                 'execution_schedules', 'nodes', 'node_instances', 'agents',
-                'operations', 'events',
+                'operations', 'tasks_graphs', 'events',
             ]
         ] + [
             (mock.AsyncMock, ('auditlog', 'stream'), auditlog_stream_se),
@@ -176,7 +176,7 @@ def test_append_related_executions():
                 'inter_deployment_dependencies', 'deployment_updates',
                 'plugins_update', 'deployments_filters', 'blueprints_filters',
                 'execution_schedules', 'nodes', 'node_instances', 'agents',
-                'operations', 'events',
+                'operations', 'tasks_graphs', 'events',
             ]
         ] + [
             (mock.AsyncMock, ('auditlog', 'stream'), auditlog_stream_se),
