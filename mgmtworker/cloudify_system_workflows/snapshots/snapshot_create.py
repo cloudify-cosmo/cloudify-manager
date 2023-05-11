@@ -154,20 +154,21 @@ class SnapshotCreate:
                           'blueprints', 'deployments', 'deployment_groups',
                           'nodes', 'node_instances', 'agents',
                           'inter_deployment_dependencies',
-                          'executions', 'execution_groups',
-                          'events', 'operations',
+                          'executions', 'execution_groups', 'events',
                           'deployment_updates', 'plugins_update',
                           'deployments_filters', 'blueprints_filters',
-                          'execution_schedules']:
+                          'tasks_graphs', 'execution_schedules']:
             if dump_type == 'events' and not self._include_events:
                 continue
             ctx.logger.debug(f'Dumping {dump_type} of {tenant_name}')
             api = getattr(self._tenant_clients[tenant_name], dump_type)
-            entities = api.dump(**self._dump_call_extra_args(dump_type))
+            entities = api.dump(
+                    **self._dump_call_extra_args(tenant_name, dump_type)
+            )
             self._ids_dumped[dump_type] = \
                 self._write_files(tenant_name, dump_type, entities)
 
-    def _dump_call_extra_args(self, dump_type: str):
+    def _dump_call_extra_args(self, tenant_name: str, dump_type: str):
         if dump_type in ['agents', 'nodes']:
             return {'deployment_ids': self._ids_dumped['deployments']}
         if dump_type == 'node_instances':
@@ -181,9 +182,15 @@ class SnapshotCreate:
                 'execution_group_ids': self._ids_dumped['execution_groups'],
                 'include_logs': self._include_logs,
             }
-        if dump_type == 'operations':
+        if dump_type == 'tasks_graphs':
+            execution_ids = self._ids_dumped['executions']
+            operations = defaultdict(list)
+            for op in self._tenant_clients[tenant_name].operations\
+                    .dump(execution_ids=execution_ids):
+                operations[op['__source_id']].append(op['__entity'])
             return {
-                'execution_ids': self._ids_dumped['executions'],
+                'execution_ids': execution_ids,
+                'operations': operations,
             }
         return {}
 
@@ -191,9 +198,6 @@ class SnapshotCreate:
         if tenant_name:
             if dump_type == 'events':
                 output_dir = self._temp_dir / 'tenants' / tenant_name
-            elif dump_type == 'operations':
-                output_dir = self._temp_dir / 'tenants' / \
-                             tenant_name / 'tasks_graphs'
             else:
                 output_dir = self._temp_dir / 'tenants' / \
                              tenant_name / dump_type

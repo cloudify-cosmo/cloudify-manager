@@ -102,7 +102,7 @@ def test_dump_tenants():
                               'plugins_update', 'deployments_filters',
                               'blueprints_filters', 'execution_schedules',
                               'nodes', 'node_instances', 'agents', 'events',
-                              'operations']
+                              'operations', 'tasks_graphs']
         ] + [
             (mock.Mock, ('tenants', 'list'), TWO_TENANTS_LIST_SE),
             (mock.Mock, ('blueprints', 'list'), TWO_BLUEPRINTS_LIST_SE),
@@ -155,7 +155,7 @@ def test_create_success():
                               'plugins_update', 'deployments_filters',
                               'blueprints_filters', 'execution_schedules',
                               'nodes', 'node_instances', 'agents', 'events',
-                              'operations']
+                              'operations', 'tasks_graphs']
         ] + [
             (mock.Mock, ('tenants', 'list'), TWO_TENANTS_LIST_SE),
             (mock.Mock, ('blueprints', 'list'), TWO_BLUEPRINTS_LIST_SE),
@@ -250,7 +250,7 @@ def test_create_skip_events():
                               'plugins_update', 'deployments_filters',
                               'blueprints_filters', 'execution_schedules',
                               'nodes', 'node_instances', 'agents',
-                              'operations']
+                              'operations', 'tasks_graphs']
         ] + [
             (mock.Mock, ('tenants', 'list'), TWO_TENANTS_LIST_SE),
             (mock.Mock, ('blueprints', 'list'), TWO_BLUEPRINTS_LIST_SE),
@@ -308,7 +308,7 @@ def test_create_with_events():
                               'plugins_update', 'deployments_filters',
                               'blueprints_filters', 'execution_schedules',
                               'nodes', 'node_instances', 'agents',
-                              'operations']
+                              'operations', 'tasks_graphs']
         ] + [
             (mock.Mock, ('tenants', 'list'), ONE_TENANTS_LIST_SE),
             (mock.Mock, ('blueprints', 'list'), TWO_BLUEPRINTS_LIST_SE),
@@ -360,7 +360,7 @@ def test_create_many_blueprints():
                               'plugins_update', 'deployments_filters',
                               'blueprints_filters', 'execution_schedules',
                               'nodes', 'node_instances', 'agents', 'events',
-                              'operations']
+                              'operations', 'tasks_graphs']
         ] + [
             (mock.Mock, ('tenants', 'list'), ONE_TENANTS_LIST_SE),
             (mock.Mock, ('blueprints', 'dump'), many_blueprints_dump_se),
@@ -400,7 +400,7 @@ def test_create_with_plugins():
                               'plugins_update', 'deployments_filters',
                               'blueprints_filters', 'execution_schedules',
                               'nodes', 'node_instances', 'agents', 'events',
-                              'operations']
+                              'operations', 'tasks_graphs']
         ] + [
             (mock.Mock, ('tenants', 'list'), ONE_TENANTS_LIST_SE),
             (mock.Mock, ('plugins', 'dump'), many_plugins_dump_se),
@@ -438,7 +438,7 @@ def test_create_with_agents():
                               'plugins_update', 'deployments_filters',
                               'blueprints_filters', 'execution_schedules',
                               'nodes', 'node_instances', 'events', 'plugins',
-                              'operations']
+                              'operations', 'tasks_graphs']
         ] + [
             (mock.Mock, ('tenants', 'list'), ONE_TENANTS_LIST_SE),
             (mock.Mock, ('deployments', 'dump'),
@@ -472,7 +472,7 @@ def test_create_deployment_workdir():
                               'plugins_update', 'deployments_filters',
                               'blueprints_filters', 'execution_schedules',
                               'nodes', 'node_instances', 'events', 'plugins',
-                              'operations']
+                              'operations', 'tasks_graphs']
         ] + [
             (mock.Mock, ('tenants', 'list'), ONE_TENANTS_LIST_SE),
             (mock.Mock, ('deployments', 'dump'), [[{'id': 'd1'}]]),
