@@ -38,4 +38,13 @@ COPY . api-service
 RUN --mount=type=cache,target=/root/.cache \
     pip install api-service/
 
+RUN groupadd k8s && useradd -u 1000 -g k8s k8s
+
+RUN chown -R k8s:k8s \
+    /opt \
+    /run/cloudify-api \
+    /var/log/cloudify
+
+USER 1000
+
 ENTRYPOINT /opt/api-service/docker/entrypoint.sh

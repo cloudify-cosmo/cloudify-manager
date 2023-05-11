@@ -40,4 +40,10 @@ COPY . mgmtworker
 RUN --mount=type=cache,target=/root/.cache \
     pip install mgmtworker/
 
+RUN groupadd k8s && useradd -u 1000 -g k8s k8s
+
+RUN chown -R k8s:k8s /opt
+
+USER 1000
+
 ENTRYPOINT /opt/mgmtworker/docker/entrypoint.sh

@@ -60,4 +60,13 @@ COPY . rest-service
 RUN --mount=type=cache,target=/root/.cache \
     pip install rest-service/
 
+RUN groupadd k8s && useradd -u 1000 -g k8s k8s
+
+RUN chown -R k8s:k8s \
+    /opt \
+    /run/cloudify-restservice \
+    /var/log/cloudify
+
+USER 1000
+
 ENTRYPOINT /opt/rest-service/docker/entrypoint.sh
