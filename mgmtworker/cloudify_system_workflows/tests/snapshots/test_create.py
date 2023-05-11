@@ -12,6 +12,7 @@ from cloudify_system_workflows.snapshots.snapshot_create import (
 from cloudify_system_workflows.tests.snapshots.mocks import (
     AuditLogResponse,
     prepare_snapshot_create_with_mocks,
+    FAKE_EXECUTION_ID,
     FAKE_MANAGER_VERSION,
     EMPTY_TENANTS_LIST_SE,
     ONE_TENANTS_LIST_SE,
@@ -28,7 +29,10 @@ def test_dump_metadata():
         sc._dump_metadata()
         with open(sc._temp_dir / 'metadata.json', 'r') as f:
             metadata = json.load(f)
-        assert metadata == {'snapshot_version': FAKE_MANAGER_VERSION}
+        assert metadata == {
+            'snapshot_version': FAKE_MANAGER_VERSION,
+            'execution_id': FAKE_EXECUTION_ID,
+        }
 
 
 def test_dump_management():
