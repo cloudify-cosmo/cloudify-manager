@@ -116,6 +116,7 @@ class SnapshotCreate:
         manager_version = get_manager_version(self._client)
         metadata = {
             constants.M_VERSION: str(manager_version),
+            constants.M_EXECUTION_ID: ctx.execution_id,
         }
         with open(self._temp_dir / constants.METADATA_FILENAME, 'w') as f:
             json.dump(metadata, f)

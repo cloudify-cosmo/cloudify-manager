@@ -47,6 +47,7 @@ from .constants import (
     M_STAGE_SCHEMA_REVISION,
     M_COMPOSER_SCHEMA_REVISION,
     M_VERSION,
+    M_EXECUTION_ID,
     MANAGER_PYTHON,
     V_4_0_0,
     V_4_2_0,
@@ -171,6 +172,7 @@ class SnapshotRestore(object):
         self._tempdir = None
         self._metadata = None
         self._snapshot_version = None
+        self._create_execution_id = None
         self._client = get_rest_client()
         self._composer_client = utils.get_composer_client()
         self._stage_client = utils.get_stage_client()
@@ -209,6 +211,8 @@ class SnapshotRestore(object):
             for tenant in self._new_tenants:
                 self._find_and_restore_sub_entities(sub_entity_type,
                                                     zipfile, tenant)
+
+        self._new_restore_update_execution_status()
 
     def _new_restore_parse_and_restore(self, entity_type, zipfile,
                                        tenant=None):
@@ -684,6 +688,11 @@ class SnapshotRestore(object):
                             tenant=element,
                     )
 
+    def _new_restore_update_execution_status(self):
+        if self._create_execution_id:
+            self._client.executions.update(self._create_execution_id,
+                                           'terminated')
+
     def scan_snapshot(self, zipfile):
         tree = {
             'metadata': None,
@@ -742,6 +751,7 @@ class SnapshotRestore(object):
         with open(metadata_path, 'r') as metadata_handle:
             self._metadata = json.load(metadata_handle)
         self._snapshot_version = ManagerVersion(self._metadata[M_VERSION])
+        self._create_execution_id = self._metadata.get(M_EXECUTION_ID)
         os.unlink(metadata_path)
 
     def restore(self):
