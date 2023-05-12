@@ -1,5 +1,8 @@
 FROM python:3.11-slim
 
+ARG username=cfyuser
+ARG groupname=cfyuser
+
 ENV REST_HOST=nginx
 ENV REST_PORT=53333
 ENV LOCAL_REST_CERT_FILE=/etc/cloudify/ssl/cloudify_internal_ca_cert.pem
@@ -40,9 +43,10 @@ COPY . mgmtworker
 RUN --mount=type=cache,target=/root/.cache \
     pip install mgmtworker/
 
-RUN groupadd k8s && useradd -u 1000 -g k8s k8s
+RUN groupadd $groupname && useradd -u 1000 -g $groupname $username
 
-RUN chown -R k8s:k8s /opt
+RUN chown -R $username:$groupname \
+    /opt
 
 USER 1000
 

@@ -1,5 +1,8 @@
 FROM python:3.11-slim
 
+ARG username=cfyuser
+ARG groupname=cfyuser
+
 # For rest-service
 ENV SECRET_KEY=abcdefgh-secret-1234
 ENV POSTGRES_DB=cloudify_db
@@ -36,12 +39,12 @@ COPY . execution-scheduler
 RUN --mount=type=cache,target=/root/.cache \
     pip install execution-scheduler/
 
-RUN groupadd k8s && useradd -u 1000 -g k8s k8s
+RUN groupadd $groupname && useradd -u 1000 -g $groupname $username
 
-RUN chown -R k8s:k8s \
+RUN chown -R $username:$groupname \
     /opt \
-    /var/log/cloudify \
-    /src
+    /src \
+    /var/log/cloudify
 
 USER 1000
 

@@ -1,5 +1,8 @@
 FROM python:3.11-slim
 
+ARG username=cfyuser
+ARG groupname=cfyuser
+
 ENV WORKER_COUNT=4
 ENV MAX_WORKER_COUNT=4
 ENV MAX_REQUESTS=1000
@@ -60,9 +63,9 @@ COPY . rest-service
 RUN --mount=type=cache,target=/root/.cache \
     pip install rest-service/
 
-RUN groupadd k8s && useradd -u 1000 -g k8s k8s
+RUN groupadd $groupname && useradd -u 1000 -g $groupname $username
 
-RUN chown -R k8s:k8s \
+RUN chown -R $username:$groupname \
     /opt \
     /run/cloudify-restservice \
     /var/log/cloudify

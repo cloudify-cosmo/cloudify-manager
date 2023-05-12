@@ -20,14 +20,5 @@ COPY ./docker /opt/rabbitmq/docker
 RUN mkdir -p /var/log/cloudify/rabbitmq
 RUN chmod 777 -R /var/log/cloudify/rabbitmq
 
-RUN groupadd k8s && useradd -u 1000 -g k8s k8s
-
-RUN chown -R k8s:k8s \
-    /opt \
-    /etc/cloudify \
-    /var/log/cloudify
-
-USER 1000
-
 ENTRYPOINT ["/opt/rabbitmq/docker/entrypoint.sh"]
 CMD ["rabbitmq-server"]
