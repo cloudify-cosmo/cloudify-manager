@@ -182,13 +182,16 @@ class BaseTestCase(unittest.TestCase):
                                     parameters=None,
                                     inputs=None,
                                     queue=False,
+                                    deployment_labels=None,
                                     **kwargs):
         """
         A blocking method which deploys an application from
         the provided dsl path, and runs the requested workflows
         """
         deployment = self.deploy(
-            dsl_path, blueprint_id, deployment_id, inputs)
+            dsl_path, blueprint_id, deployment_id, inputs,
+            deployment_labels=deployment_labels,
+        )
         execution = self.execute_workflow(
             workflow_name, deployment.id, parameters,
             timeout_seconds, wait_for_execution, queue=queue, **kwargs)
