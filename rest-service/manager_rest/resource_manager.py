@@ -2558,8 +2558,16 @@ class ResourceManager(object):
         # if we're in the middle of an execution initiated by the component
         # creator, we'd like to drop the component dependency from the list
         deployment = execution.deployment
+        is_recursive_uninstall = (
+            execution.workflow_id == 'uninstall'
+            and execution.parameters
+            and execution.parameters.get('recursive')
+        )
         idds = self._get_blocking_dependencies(
-            deployment, skip_component_children=True)
+            deployment,
+            skip_component_children=True,
+            recursive=is_recursive_uninstall,
+        )
         # allow uninstall of get-capability dependencies
         # if the dependent deployment is inactive
         if execution.workflow_id == 'uninstall':
