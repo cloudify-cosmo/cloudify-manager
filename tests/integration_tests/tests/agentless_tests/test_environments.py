@@ -1273,3 +1273,67 @@ imports:
 
         # only the unrelated deployment was spared
         assert [d.id for d in self.client.deployments.list()] == ['unrelated']
+
+    def test_recursive_uninstall(self):
+        bp = """
+tosca_definitions_version: cloudify_dsl_1_5
+imports:
+  - cloudify/types/types.yaml
+node_templates:
+  n1:
+    type: cloudify.nodes.Root
+"""
+        self.upload_blueprint_resource(
+            self.make_yaml_file(bp),
+            blueprint_id='bp',
+        )
+
+        # prepare a structure: dep1->dep2->dep3, and also an unrelated
+        # deployment. Install all deployments.
+        self.deploy_application(
+            dsl_path=None,
+            blueprint_id='bp',
+            deployment_id='dep1',
+        )
+        self.deploy_application(
+            dsl_path=None,
+            blueprint_id='bp',
+            deployment_id='dep2',
+            deployment_labels=[{'csys-obj-parent': 'dep1'}],
+        )
+        self.deploy_application(
+            dsl_path=None,
+            blueprint_id='bp',
+            deployment_id='dep3',
+            deployment_labels=[{'csys-obj-parent': 'dep2'}],
+        )
+        self.deploy_application(
+            dsl_path=None,
+            blueprint_id='bp',
+            deployment_id='unrelated',
+        )
+
+        # let's check that we created what we wanted to create:
+        # each deployment has a node-instance that has been installed
+        instances = self.client.node_instances.list()
+        assert {ni.deployment_id for ni in instances} == {
+            'dep1', 'dep2', 'dep3', 'unrelated',
+        }
+        assert all(ni.state == 'started' for ni in instances)
+
+        # now, recursive-uninstall the whole tree!
+        self.execute_workflow('uninstall', 'dep1', parameters={
+            'recursive': True,
+        })
+
+        # check that all instances still exist, but ones in the tree
+        # were deleted, while the unrelated one was left untouched
+        instances = self.client.node_instances.list()
+        assert {ni.deployment_id for ni in instances} == {
+            'dep1', 'dep2', 'dep3', 'unrelated',
+        }
+        for ni in instances:
+            if ni.deployment_id == 'unrelated':
+                assert ni.state == 'started'
+            else:
+                assert ni.state == 'deleted'
