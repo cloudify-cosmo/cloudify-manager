@@ -816,6 +816,13 @@ workflows:
       ignore_failure:
         default: false
         type: boolean
+      recursive:
+        default: false
+        type: boolean
+        description: >
+          Before uninstalling node instances of this deployments, first
+          uninstall service deployments - that is, deployments that are
+          using the current deployment as an environment.
       type_names:
         type: list
         item_type: node_type
