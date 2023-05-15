@@ -78,7 +78,7 @@ SECRETS_PROVIDER_SCHEMA = {
 }
 
 
-def evaluate_node(node):
+def evaluate_node(node, instance_context=None):
     # dsl-parser uses name in plans, while the db storage uses id :(
     node['name'] = node['id']
     deployment_id = node['deployment_id']
@@ -86,7 +86,8 @@ def evaluate_node(node):
     sm.get(Deployment, deployment_id, include=['id'])
     storage = FunctionEvaluationStorage(deployment_id, sm)
     try:
-        return functions.evaluate_node_functions(node, storage)
+        return functions.evaluate_node_functions(
+            node, storage, instance_context=instance_context)
     except parser_exceptions.FunctionEvaluationError as e:
         raise FunctionsEvaluationError(str(e))
 

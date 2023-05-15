@@ -13,6 +13,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from flask import request
+
 from manager_rest.security.authorization import authorize
 from manager_rest.dsl_functions import (
     evaluate_node,
@@ -32,8 +34,9 @@ class Nodes(v2_Nodes):
         # object, to avoid setting evaluated secrets in the node's properties
         nodes = super(Nodes, self).get(*args, **kwargs)
         if evaluate_functions:
+            context = request.args.get('_instance_context')
             for node in nodes['items']:
-                evaluate_node(node)
+                evaluate_node(node, instance_context=context)
         return nodes
 
 
