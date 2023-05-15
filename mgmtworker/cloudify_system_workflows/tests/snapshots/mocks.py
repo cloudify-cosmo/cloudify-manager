@@ -7,18 +7,26 @@ from typing import Type
 from unittest import mock
 
 from cloudify import constants
+from cloudify.mocks import MockContext
 from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.responses import ListResponse
 from cloudify_system_workflows.snapshots.snapshot_create import SnapshotCreate
 
 FAKE_MANAGER_VERSION = 'THIS_MANAGER_VERSION'
 FAKE_MGMTWORKER_TOKEN = 'FAKE_TOKEN'
+FAKE_EXECUTION_ID = 'fake-snapshot-create-execution-id'
 
 EMPTY_TENANTS_LIST_SE = [
     ListResponse(
         items=[],
         metadata={'pagination': {'offset': 0, 'size': 0, 'total': 0}}
     )
+]
+ONE_TENANTS_LIST_SE = [
+    ListResponse(
+        items=[{'name': 'tenant1'}],
+        metadata={'pagination': {'offset': 0, 'size': 1, 'total': 1}}
+    ),
 ]
 TWO_TENANTS_LIST_SE = [
     ListResponse(
@@ -163,7 +171,10 @@ def prepare_snapshot_create_with_mocks(
 ):
     with mock.patch(
         'cloudify_system_workflows.snapshots.snapshot_create.ctx',
-        new=mock.Mock(),
+        new=MockContext({
+            'execution_id': FAKE_EXECUTION_ID,
+            'logger': mock.Mock(),
+        }),
     ):
         with mock.patch(
             'cloudify_system_workflows.snapshots.snapshot_create'

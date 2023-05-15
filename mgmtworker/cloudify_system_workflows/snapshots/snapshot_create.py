@@ -27,6 +27,7 @@ EMPTY_B64_ZIP = 'UEsFBgAAAAAAAAAAAAAAAAAAAAAAAA=='
 
 
 class SnapshotCreate:
+    """SnapshotCreate is a class, which handles snapshot creation process."""
     _snapshot_id: str
     _config: DictToAttributes
     _include_logs: bool
@@ -78,6 +79,7 @@ class SnapshotCreate:
         self._ids_dumped = {}
 
     def create(self, timeout=10):
+        """Dumps manager's data and some metadata into a single zip file"""
         ctx.logger.debug('Using `new` snapshot format')
         self._auditlog_listener.start(self._tenant_clients)
         try:
@@ -114,6 +116,7 @@ class SnapshotCreate:
         manager_version = get_manager_version(self._client)
         metadata = {
             constants.M_VERSION: str(manager_version),
+            constants.M_EXECUTION_ID: ctx.execution_id,
         }
         with open(self._temp_dir / constants.METADATA_FILENAME, 'w') as f:
             json.dump(metadata, f)
@@ -152,20 +155,21 @@ class SnapshotCreate:
                           'blueprints', 'deployments', 'deployment_groups',
                           'nodes', 'node_instances', 'agents',
                           'inter_deployment_dependencies',
-                          'executions', 'execution_groups',
-                          'events', 'operations',
+                          'executions', 'execution_groups', 'events',
                           'deployment_updates', 'plugins_update',
                           'deployments_filters', 'blueprints_filters',
-                          'execution_schedules']:
+                          'tasks_graphs', 'execution_schedules']:
             if dump_type == 'events' and not self._include_events:
                 continue
             ctx.logger.debug(f'Dumping {dump_type} of {tenant_name}')
             api = getattr(self._tenant_clients[tenant_name], dump_type)
-            entities = api.dump(**self._dump_call_extra_args(dump_type))
+            entities = api.dump(
+                    **self._dump_call_extra_args(tenant_name, dump_type)
+            )
             self._ids_dumped[dump_type] = \
                 self._write_files(tenant_name, dump_type, entities)
 
-    def _dump_call_extra_args(self, dump_type: str):
+    def _dump_call_extra_args(self, tenant_name: str, dump_type: str):
         if dump_type in ['agents', 'nodes']:
             return {'deployment_ids': self._ids_dumped['deployments']}
         if dump_type == 'node_instances':
@@ -179,9 +183,15 @@ class SnapshotCreate:
                 'execution_group_ids': self._ids_dumped['execution_groups'],
                 'include_logs': self._include_logs,
             }
-        if dump_type == 'operations':
+        if dump_type == 'tasks_graphs':
+            execution_ids = self._ids_dumped['executions']
+            operations = defaultdict(list)
+            for op in self._tenant_clients[tenant_name].operations\
+                    .dump(execution_ids=execution_ids):
+                operations[op['__source_id']].append(op['__entity'])
             return {
-                'execution_ids': self._ids_dumped['executions'],
+                'execution_ids': execution_ids,
+                'operations': operations,
             }
         return {}
 
@@ -189,23 +199,11 @@ class SnapshotCreate:
         if tenant_name:
             if dump_type == 'events':
                 output_dir = self._temp_dir / 'tenants' / tenant_name
-                if 'executions' in self._ids_dumped:
-                    os.makedirs(output_dir / 'executions_events',
-                                exist_ok=True)
-                if 'execution_groups' in self._ids_dumped:
-                    os.makedirs(output_dir / 'execution_groups_events',
-                                exist_ok=True)
-            elif dump_type == 'operations':
-                output_dir = self._temp_dir / 'tenants' / \
-                             tenant_name / 'tasks_graphs'
-                os.makedirs(output_dir, exist_ok=True)
             else:
                 output_dir = self._temp_dir / 'tenants' / \
                              tenant_name / dump_type
-                os.makedirs(output_dir, exist_ok=True)
         else:
             output_dir = self._temp_dir / 'mgmt' / dump_type
-            os.makedirs(output_dir, exist_ok=True)
         return output_dir
 
     def _write_files(self, tenant_name, dump_type, data):
@@ -214,10 +212,13 @@ class SnapshotCreate:
         ids_added = []
         output_dir = self._prepare_output_dir(tenant_name, dump_type)
         data_buckets = defaultdict(list)
+        latest_timestamp = None
         for entity_raw in data:
             entity_id, entity, file_name, limit_entities_per_file = \
                 _prepare_dump_entity(dump_type, entity_raw, file_number)
             data_buckets[file_name].append(entity)
+            latest_timestamp = _extract_latest_timestamp(entity, dump_type,
+                                                         latest_timestamp)
             if dump_type in ['blueprints', 'deployments', 'plugins']:
                 _write_dump_archive(
                         dump_type,
@@ -234,8 +235,13 @@ class SnapshotCreate:
                     len(data_buckets[file_name]) == DUMP_ENTITIES_PER_FILE):
                 file_number += 1
         for file_name, items in data_buckets.items():
-            with open(output_dir / file_name, 'w') as handle:
-                json.dump({'type': dump_type, 'items': items}, handle)
+            output_file = output_dir / file_name
+            os.makedirs(output_file.parent, exist_ok=True)
+            data = {'type': dump_type, 'items': items}
+            if latest_timestamp:
+                data['latest_timestamp'] = latest_timestamp
+            with open(output_file, 'w') as handle:
+                json.dump(data, handle)
         return ids_added
 
     def _create_archive(self):
@@ -301,12 +307,31 @@ def _prepare_dump_entity(dump_type, entity_raw, file_number):
     else:
         entity_id = entity.get('id')
         if source_id:
-            file_name = pathlib.Path(source_id)
+            file_name = pathlib.Path(f'{source_id}.json')
         else:
             file_name = pathlib.Path(f'{file_number}.json')
             limit_entities_per_file = True
 
     return entity_id, entity, str(file_name), limit_entities_per_file
+
+
+def _extract_latest_timestamp(entity: dict[str, Any], dump_type: str,
+                              latest_timestamp: str | None) -> str | None:
+    if dump_type == 'events':
+        timestamp = entity['timestamp']
+    elif dump_type == 'plugins':
+        timestamp = entity['uploaded_at']
+    else:
+        timestamp = entity.get('created_at')
+
+    if not timestamp:
+        return latest_timestamp
+
+    if not latest_timestamp:
+        latest_timestamp = timestamp
+    else:
+        latest_timestamp = max(latest_timestamp, timestamp)
+    return latest_timestamp
 
 
 def _write_dump_archive(
