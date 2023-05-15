@@ -74,3 +74,69 @@ class TestScaleGroup(TestScaleBase):
                         self.assertEqual(target_id, invocation['target'])
 
         self._clear_operation_invocations(self.deployment_id)
+
+    def test_get_attribute_instance_context(self):
+        # a blueprint that contains a single node template which contains a
+        # get_attribute call in its properties, however that get_attribute
+        # would need to resolve a runtime property! to resolve that,
+        # resolving node properties would need to know what instance
+        # to fetch runtime properties from, which is non-obvious when
+        # there's more than one instance
+        bp = """
+tosca_definitions_version: cloudify_dsl_1_5
+imports:
+  - cloudify/types/types.yaml
+node_types:
+  t1:
+    derived_from: cloudify.nodes.Root
+    properties:
+      prop1: {}
+node_templates:
+  node1:
+    type: t1
+    properties:
+      prop1: {get_attribute: [node1, x]}
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create: |
+            from cloudify import ctx
+            ctx.instance.runtime_properties['x'] = ctx.instance.id
+        configure: |
+          from cloudify import ctx
+          ctx.instance.runtime_properties['result'] = \
+            ctx.node.properties["prop1"]
+"""
+        self.upload_blueprint_resource(
+            self.make_yaml_file(bp),
+            blueprint_id='bp',
+        )
+        self.deploy_application(
+            dsl_path=None,
+            deployment_id='dep1',
+            blueprint_id='bp',
+        )
+
+        # there's only one instance, and it had its id stored in the result
+        # property, which was fetched from node properties in the configure
+        # operation, where the node property was evaluated to resolve to the
+        # other runtime property
+        instances = self.client.node_instances.list(deployment_id='dep1')
+        assert len(instances) == 1
+        assert {ni.runtime_properties['result'] for ni in instances} == {
+            instances[0].id
+        }
+
+        self.execute_workflow(
+            'scale',
+            'dep1',
+            parameters={
+                'scalable_entity_name': 'node1',
+                'delta': 1,
+            },
+        )
+        # now there's two node instances, and they still have the correct
+        # runtime properties set!
+        instances = self.client.node_instances.list(deployment_id='dep1')
+        assert len(instances) == 2
+        for ni in instances:
+            assert ni.runtime_properties['result'] == ni.id
