@@ -195,54 +195,61 @@ class SnapshotCreate:
             }
         return {}
 
-    def _prepare_output_dir(self, tenant_name: str, dump_type: str):
-        if tenant_name:
-            if dump_type == 'events':
-                output_dir = self._temp_dir / 'tenants' / tenant_name
-            else:
-                output_dir = self._temp_dir / 'tenants' / \
-                             tenant_name / dump_type
-        else:
-            output_dir = self._temp_dir / 'mgmt' / dump_type
-        return output_dir
-
     def _write_files(self, tenant_name, dump_type, data):
         """Dumps all data of dump_type into JSON files inside output_dir."""
-        file_number = 0
+        data_buckets = {}
+        output_dir = self._prepare_output_dir(tenant_name)
+        os.makedirs(output_dir, exist_ok=True)
         ids_added = []
-        output_dir = self._prepare_output_dir(tenant_name, dump_type)
-        data_buckets = defaultdict(list)
         latest_timestamp = None
+
+        # Prepare data for dumping and create archives
         for entity_raw in data:
-            entity_id, entity, file_name, limit_entities_per_file = \
-                _prepare_dump_entity(dump_type, entity_raw, file_number)
-            data_buckets[file_name].append(entity)
+            source, source_id, entity_id, entity = _prepare_dump_entity(
+                    dump_type, entity_raw)
+            if (source, source_id) not in data_buckets:
+                data_buckets[(source, source_id)] = []
+            data_buckets[(source, source_id)].append(entity)
             latest_timestamp = _extract_latest_timestamp(entity, dump_type,
                                                          latest_timestamp)
             if dump_type in ['blueprints', 'deployments', 'plugins']:
                 _write_dump_archive(
                         dump_type,
                         entity_id,
-                        output_dir / '..',
-                        self._tenant_clients[tenant_name] if tenant_name
-                        else self._client,
+                        output_dir,
+                        self._tenant_clients[tenant_name]
                 )
             if entity_id:
                 ids_added.append(entity_id)
                 self._auditlog_listener.append_entity(tenant_name, dump_type,
                                                       entity_id)
-            if (limit_entities_per_file and
-                    len(data_buckets[file_name]) == DUMP_ENTITIES_PER_FILE):
-                file_number += 1
-        for file_name, items in data_buckets.items():
-            output_file = output_dir / file_name
-            os.makedirs(output_file.parent, exist_ok=True)
-            data = {'type': dump_type, 'items': items}
+        # Dump the data as JSON files
+        filenum = _get_max_filenum_in_dir(output_dir) or 0
+        for (source, source_id), items in data_buckets.items():
+            data = {'type': dump_type}
+            if source:
+                data['source'] = source
+            if source_id:
+                data['source_id'] = source_id
             if latest_timestamp:
                 data['latest_timestamp'] = latest_timestamp
-            with open(output_file, 'w') as handle:
-                json.dump(data, handle)
+            remainder = len(items) % DUMP_ENTITIES_PER_FILE
+            file_count = len(items) // DUMP_ENTITIES_PER_FILE
+            if remainder:
+                file_count += 1
+            for i in range(file_count):
+                filenum += 1
+                output_file = output_dir / f'{filenum:08d}.json'
+                start = i * DUMP_ENTITIES_PER_FILE
+                finish = (i + 1) * DUMP_ENTITIES_PER_FILE
+                data['items'] = items[start:finish]
+                with open(output_file, 'w') as handle:
+                    json.dump(data, handle)
         return ids_added
+
+    def _prepare_output_dir(self, tenant_name: str):
+        return self._temp_dir / 'tenants' / tenant_name if tenant_name \
+            else self._temp_dir / 'mgmt'
 
     def _create_archive(self):
         ctx.logger.debug('Creating snapshot archive')
@@ -289,8 +296,7 @@ def _prepare_snapshot_dir(file_server_root: str, snapshot_id: str) -> Path:
     return Path(snapshot_dir)
 
 
-def _prepare_dump_entity(dump_type, entity_raw, file_number):
-    limit_entities_per_file = False
+def _prepare_dump_entity(dump_type, entity_raw):
     if '__entity' in entity_raw:
         entity = entity_raw['__entity']
         source = entity_raw.get('__source')
@@ -302,17 +308,10 @@ def _prepare_dump_entity(dump_type, entity_raw, file_number):
 
     if dump_type == 'events':
         entity_id = entity.pop('_storage_id')
-        file_name = pathlib.Path(f'{source}_events') \
-            / pathlib.Path(f'{source_id}.json')
     else:
         entity_id = entity.get('id')
-        if source_id:
-            file_name = pathlib.Path(f'{source_id}.json')
-        else:
-            file_name = pathlib.Path(f'{file_number}.json')
-            limit_entities_per_file = True
 
-    return entity_id, entity, str(file_name), limit_entities_per_file
+    return source, source_id, entity_id, entity
 
 
 def _extract_latest_timestamp(entity: dict[str, Any], dump_type: str,
@@ -340,7 +339,7 @@ def _write_dump_archive(
         output_dir: pathlib.Path,
         api: CloudifyClient
 ):
-    dest_dir = (output_dir / f'{dump_type}_archives').resolve()
+    dest_dir = (output_dir / f'{dump_type}').resolve()
     os.makedirs(dest_dir, exist_ok=True)
     suffix = {
         'plugins': '.zip',
@@ -363,6 +362,19 @@ def _write_dump_archive(
         client.download(entity_id, entity_dest, full_archive=True)
     else:
         client.download(entity_id, entity_dest)
+
+
+def _get_max_filenum_in_dir(dirname: pathlib.Path):
+    try:
+        max_file_name = max(
+                f for f in dirname.iterdir()
+                if f.is_file and f.name.endswith('.json')
+        )
+        if max_file_name:
+            return int(max_file_name.stem)
+    except (FileNotFoundError, ValueError):
+        pass
+    return None
 
 
 def get_all(method, kwargs=None):
