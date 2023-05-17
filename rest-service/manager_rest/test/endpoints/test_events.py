@@ -769,7 +769,7 @@ class BuildSelectQueryTest(TestCase):
 
     """Event retrieval query."""
 
-    # Parameters passed ot the _build_select_query_method
+    # Parameters passed on the _build_select_query_method
     # Each tests overwrites different fields as needed.
     DEFAULT_PARAMS = {
         'filters': {
@@ -1020,6 +1020,56 @@ class EventsTest(base_test.BaseServerTestCase):
         assert events[0].execution_group == eg
         assert len(logs) == 1
         assert logs[0].execution_group == eg
+
+    def test_dump(self):
+        def get_entities(data):
+            return [(d['__source_id'], d['__entity']) for d in data]
+        eg = ExecutionGroup(
+            id='eg1',
+            workflow_id='wf',
+            tenant=self.tenant,
+            creator=self.user,
+        )
+        self.client.events.create(
+                events=[{
+                    'message': {'text': 'hello'},
+                    'event_type': 'type1',
+                    'context': {},
+                }],
+                execution_group_id=eg.id,
+        )
+        ex = Execution(
+            id='ex1',
+            workflow_id='wf',
+            tenant=self.tenant,
+            creator=self.user,
+        )
+        self.client.events.create(
+                events=[{
+                    'message': {'text': 'hello'},
+                    'event_type': 'type2',
+                    'context': {},
+                }],
+                logs=[{
+                    'message': {'text': 'world'},
+                    'logger': 'root',
+                    'level': 'info',
+                    'context': {},
+                }],
+                execution_id=ex.id,
+        )
+        events = get_entities(self.client.events.dump())
+        assert len(events) == 2
+        assert set(e[0] for e in events) == {'ex1', 'eg1'}
+        execution_event_storage_id = [
+            event['_storage_id']
+            for src, event in events
+            if src == 'ex1' and event['type'] == 'cloudify_event'
+        ][0]
+        events = get_entities(self.client.events.dump())
+        assert len(events) == 1
+        assert events[0][1]['_storage_id'] == execution_event_storage_id
+        assert events[0][1]['message'] == 'hello'
 
 
 class MapEventToDictTestV3(TestCase):

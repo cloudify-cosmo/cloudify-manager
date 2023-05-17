@@ -507,3 +507,21 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
             self.client.blueprints.set_visibility(
                 bp.id, VisibilityState.TENANT)
         assert bp.visibility == VisibilityState.GLOBAL
+
+    def test_dump(self):
+        models.Blueprint(
+                id='bp1',
+                creator=self.user,
+                tenant=self.tenant,
+        )
+        models.Blueprint(
+                id='bp2',
+                creator=self.user,
+                tenant=self.tenant,
+        )
+
+        blueprints = self.client.blueprints.dump()
+        assert set(b['id'] for b in blueprints) == {'bp1', 'bp2'}
+
+        blueprints = self.client.blueprints.dump()
+        assert set(b['id'] for b in blueprints) == {'bp1'}

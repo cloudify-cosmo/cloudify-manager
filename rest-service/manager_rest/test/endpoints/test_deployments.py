@@ -114,7 +114,7 @@ class TestCheckDeploymentDelete(base_test.BaseServerTestCase):
             creator=self.user,
             tenant=self.tenant,
         )
-        self.rm.check_deployment_delete(dep1)  # doesnt throw
+        self.rm.check_deployment_delete(dep1)  # doesn't throw
         with self.assertRaises(manager_exceptions.DependentExistsError):
             # you can't just delete a component, dep1 uses it; it must be
             # deleted by deleting dep1 as well
@@ -139,7 +139,7 @@ class TestCheckDeploymentDelete(base_test.BaseServerTestCase):
             creator=self.user,
             tenant=self.tenant,
         )
-        self.rm.check_deployment_delete(dep2)  # doesnt throw
+        self.rm.check_deployment_delete(dep2)  # doesn't throw
 
     def test_parent_child(self):
         # dep2 is dep1's parent
@@ -151,7 +151,7 @@ class TestCheckDeploymentDelete(base_test.BaseServerTestCase):
             creator=self.user,
             tenant=self.tenant,
         )
-        self.rm.check_deployment_delete(dep1)  # doesnt throw
+        self.rm.check_deployment_delete(dep1)  # doesn't throw
         with self.assertRaises(manager_exceptions.DependentExistsError):
             # you can't delete parents whose children still exist
             self.rm.check_deployment_delete(dep2)
@@ -188,7 +188,7 @@ class TestCheckDeploymentDelete(base_test.BaseServerTestCase):
             tenant=self.tenant,
         )
 
-        self.rm.check_deployment_delete(dep1)  # doesnt throw
+        self.rm.check_deployment_delete(dep1)  # doesn't throw
         with self.assertRaises(manager_exceptions.DependentExistsError):
             # you can't delete parents whose children still exist
             self.rm.check_deployment_delete(dep2)
@@ -239,7 +239,7 @@ class TestCheckDeploymentDelete(base_test.BaseServerTestCase):
             creator=self.user,
             tenant=self.tenant,
         )
-        self.rm.check_deployment_delete(dep1)  # doesnt throw
+        self.rm.check_deployment_delete(dep1)  # doesn't throw
 
     def test_external_dependency_source(self):
         dep1 = self._deployment(id='dep1')
@@ -262,7 +262,7 @@ class TestCheckDeploymentDelete(base_test.BaseServerTestCase):
             creator=self.user,
             tenant=self.tenant,
         )
-        self.rm.check_deployment_delete(dep1)  # doesnt throw
+        self.rm.check_deployment_delete(dep1)  # doesn't throw
 
     def test_external_component_creator(self):
         dep1 = self._deployment(id='dep1')
@@ -273,7 +273,7 @@ class TestCheckDeploymentDelete(base_test.BaseServerTestCase):
             creator=self.user,
             tenant=self.tenant,
         )
-        self.rm.check_deployment_delete(dep1)  # doesnt throw
+        self.rm.check_deployment_delete(dep1)  # doesn't throw
 
 
 class TestValidateExecutionDependencies(base_test.BaseServerTestCase):
@@ -396,7 +396,7 @@ class TestValidateExecutionDependencies(base_test.BaseServerTestCase):
             creator=self.user,
             tenant=self.tenant,
         )
-        self.rm._verify_dependencies_not_affected(exc, False)  # doesnt throw
+        self.rm._verify_dependencies_not_affected(exc, False)  # doesn't throw
 
     def test_uninstall_parent_component(self):
         # dep2 is dep1's parent AND dep1 is a component used inside of dep2
@@ -422,7 +422,7 @@ class TestValidateExecutionDependencies(base_test.BaseServerTestCase):
             creator=self.user,
             tenant=self.tenant,
         )
-        self.rm._verify_dependencies_not_affected(exc, False)  # doesnt throw
+        self.rm._verify_dependencies_not_affected(exc, False)  # doesn't throw
 
     def test_uninstall_capability_dependency(self):
         # dep2 is using a capability of dep1
@@ -456,7 +456,7 @@ class TestValidateExecutionDependencies(base_test.BaseServerTestCase):
             creator=self.user,
             tenant=self.tenant,
         )
-        self.rm._verify_dependencies_not_affected(exc2, False)  # doesnt throw
+        self.rm._verify_dependencies_not_affected(exc2, False)  # doesn't throw
 
     def test_external_dependency_source(self):
         dep1 = self._deployment(id='dep1')
@@ -493,7 +493,7 @@ class TestValidateExecutionDependencies(base_test.BaseServerTestCase):
             creator=self.user,
             tenant=self.tenant,
         )
-        self.rm._verify_dependencies_not_affected(exc, False)  # doesnt throw
+        self.rm._verify_dependencies_not_affected(exc, False)  # doesn't throw
 
 
 class TestLicensedEnvironments(base_test.BaseServerTestCase):
@@ -1757,6 +1757,30 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             exc.total_operations
         assert retrieved.latest_execution_finished_operations == \
             exc.finished_operations
+
+    def test_dump(self):
+        bp = models.Blueprint(
+            id='bp',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        models.Deployment(
+            id='dep1',
+            blueprint=bp,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        models.Deployment(
+            id='dep2',
+            blueprint=bp,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        deployments = self.client.deployments.dump()
+        assert set(d['id'] for d in deployments) == {'dep1', 'dep2'}
+
+        deployments = self.client.deployments.dump()
+        assert set(d['id'] for d in deployments) == {'dep2'}
 
 
 class DeploymentsDeleteTest(base_test.BaseServerTestCase):
