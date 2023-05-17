@@ -86,7 +86,11 @@ class Agents(object):
         }
 
     def get_broker_conf(self, node_instance):
-        agent = node_instance.runtime_properties.get('cloudify_agent', {})
+        agent = (
+            node_instance
+            .get('runtime_properties', {})
+            .get('cloudify_agent', {})
+        )
         return {
             'broker_ip': agent.get('broker_ip', broker_config.broker_hostname),
             'broker_ssl_cert': self._broker_ssl_cert,
