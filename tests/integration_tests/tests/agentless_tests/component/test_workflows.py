@@ -4,6 +4,11 @@ from time import sleep
 import pytest
 
 from integration_tests import AgentlessTestCase
+from integration_tests.tests.utils import (
+    get_resource as resource,
+    wait_for_deployment_creation_to_complete
+)
+from cloudify_rest_client.executions import Execution
 
 pytestmark = pytest.mark.group_service_composition
 
@@ -214,6 +219,37 @@ node_templates:
             'reinstall-uninstall',
             'reinstall-install',
         ]
+
+    def test_install_failure_resume(self):
+        """ A blueprint with a component. The component is going to fail
+            installation which will also fail its parent's installation,
+            and then we'll resume the parent to succeed
+        """
+        component_path = resource('dsl/idd/destructive_component.yaml')
+        parent_path = resource('dsl/idd/destructive_component_parent.yaml')
+        self.client.blueprints.upload(component_path, entity_id="component")
+        deployment_id = "parent"
+        self.client.blueprints.upload(parent_path, entity_id=deployment_id)
+        self.client.deployments.create(blueprint_id=deployment_id,
+                                       deployment_id=deployment_id)
+        wait_for_deployment_creation_to_complete(
+            self.env, deployment_id, self.client)
+
+        # install should fail due to error in child
+        execution = self.client.executions.start(deployment_id=deployment_id,
+                                                 workflow_id='install')
+        self.wait_for_execution_status(execution, Execution.FAILED)
+        assert "fail_once.sh, exit_code: 1" in execution.error
+        deployments = self.client.deployments.list()
+        assert len(deployments) == 2
+        for dep in deployments:
+            assert dep['installation_status'] == 'inactive'
+
+        # now let's resume the installation. This should succeed
+        self.client.executions.resume(execution.id)
+        self.wait_for_execution_to_end(execution)
+        for dep in self.client.deployments.list():
+            assert dep['installation_status'] == 'active'
 
 
 class DeploymentUpdateTest(AgentlessTestCase):
