@@ -2547,6 +2547,26 @@ class ResourceManager(object):
         deployment = execution.deployment
         idds = self._get_blocking_dependencies(
             deployment, skip_component_children=True)
+        # allow uninstall of a component if its creator is in the middle of a
+        # resumed installation
+        if execution.workflow_id == 'uninstall':
+            filtered_idds = []
+            for idd in idds:
+                if idd.dependency_creator.startswith('component.'):
+                    creator_execs = self.sm.list(
+                        models.Execution,
+                        filters={
+                            'deployment_id': idd.source_deployment.id,
+                            'workflow_id': 'install',
+                            'status': ExecutionState.STARTED
+                        },
+                        all_tenants=True,
+                        get_all_results=True
+                    )
+                    if creator_execs and creator_execs[0].resume:
+                        continue
+                filtered_idds.append[idd]
+            idds = filtered_idds
         # allow uninstall of get-capability dependencies
         # if the dependent deployment is inactive
         if execution.workflow_id == 'uninstall':
