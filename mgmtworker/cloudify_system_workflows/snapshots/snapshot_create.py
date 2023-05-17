@@ -164,8 +164,7 @@ class SnapshotCreate:
             ctx.logger.debug(f'Dumping {dump_type} of {tenant_name}')
             api = getattr(self._tenant_clients[tenant_name], dump_type)
             entities = api.dump(
-                    **self._dump_call_extra_args(tenant_name, dump_type)
-            )
+                **self._dump_call_extra_args(tenant_name, dump_type))
             self._ids_dumped[dump_type] = \
                 self._write_files(tenant_name, dump_type, entities)
 

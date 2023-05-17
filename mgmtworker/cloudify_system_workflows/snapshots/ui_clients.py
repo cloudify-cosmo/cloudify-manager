@@ -67,7 +67,7 @@ class UIBaseSnapshotClient:
         with requests.session() as session:
             resp = session.get(self._url(), headers=headers, stream=True)
         handle_response(f'getting {self._ui_service_name} snapshot '
-                        f'of {self._entity_name}',
+                        f'of {self._entity_name} from {self._url()}',
                         expected_status_code, resp)
         return resp.content
 
