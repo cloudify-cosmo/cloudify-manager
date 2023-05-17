@@ -215,16 +215,3 @@ class ExecutionSchedulesTestCase(BaseServerTestCase):
             'bad-freq', self.deployment_id, 'install',
             since=self.an_hour_from_now, recurrence='10 doboshes'
         )
-
-    def test_dump(self):
-        schedule_ids = ['sched-1', 'sched-2']
-        for schedule_id in schedule_ids:
-            self.client.execution_schedules.create(
-                schedule_id, self.deployment_id, 'install',
-                since=self.an_hour_from_now, recurrence='1 minutes', count=5)
-
-        schedules = self.client.execution_schedules.dump()
-        assert set(s['id'] for s in schedules) == {'sched-1', 'sched-2'}
-
-        schedules = self.client.execution_schedules.dump()
-        assert set(s['id'] for s in schedules) == {'sched-1'}

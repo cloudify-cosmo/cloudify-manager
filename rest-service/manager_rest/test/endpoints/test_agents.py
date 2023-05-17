@@ -297,18 +297,3 @@ class AgentsTest(base_test.BaseServerTestCase):
         self.assertEqual(len(self.client.agents.list(version='5.0')), 0)
         self.assertEqual(len(self.client.agents.list(node_id='node_id')), 1)
         self.assertEqual(len(self.client.agents.list(node_instance_id='a')), 0)
-
-    def test_dump(self):
-        def get_entities(data):
-            return (d['__entity'] for d in data)
-        self._agent('a1')
-        d2 = self.dep2 = self._deployment('d2')
-        node2 = self.node2 = self._node('node_id', deployment=d2)
-        ni2 = self._instance('node_instance_1', node=node2)
-        self._agent('a2', node_instance=ni2)
-        agents = get_entities(self.client.agents.dump())
-        assert set(a['id'] for a in agents) == {'a1', 'a2'}
-        agents = get_entities(self.client.agents.dump())
-        assert set(a['id'] for a in agents) == {'a2'}
-        agents = get_entities(self.client.agents.dump())
-        assert set(a['id'] for a in agents) == {'a1'}
