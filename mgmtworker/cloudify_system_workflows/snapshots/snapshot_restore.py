@@ -237,11 +237,11 @@ class SnapshotRestore(object):
                 tenant_name, get_rest_client(tenant=tenant_name))
         else:
             client = self._client
+        ctx.logger.info('Restoring %s', dump_type)
         api = getattr(client, dump_type)
         extra_args = _new_restore_entities_extra_args(
-                dump_type, source_type, source_id, entities, api,
+                dump_type, source_type, source_id,
                 partial(self._get_associated_archive, zipfile, tenant_name))
-        ctx.logger.info('Restoring %s', dump_type)
         postprocess_data = api.restore(entities, **extra_args)
         if postprocess_data:
             self._new_restore_entities_postprocess(dump_type, client,
@@ -277,7 +277,11 @@ class SnapshotRestore(object):
             data
     ):
         for record in data:
-            if entity_type == 'users':
+            if entity_type == 'secrets':
+                if errors := record.get('errors'):
+                    raise NonRecoverableError(
+                            'Error restoring secrets: %s', errors)
+            elif entity_type == 'users':
                 for username, tenant_roles in record.items():
                     direct_roles = tenant_roles['direct']
                     for user_tenant, role in direct_roles.items():
@@ -1256,23 +1260,11 @@ def _new_restore_entities_extra_args(
         dump_type: str,
         source_type: str | None,
         source_id: str | None,
-        entities: list[dict[str, Any]],
-        api,
         get_associated_archive_partial,
 ):
 
     # dump_type, source_type, source_id, entities, api,
-    if dump_type == 'secrets':
-        response = api.import_secrets(secrets_list=entities)
-        collisions = response.get('colliding_secrets')
-        if collisions:
-            ctx.logger.warn('The following secrets existed: %s',
-                            collisions)
-        errors = response.get('secrets_errors')
-        if errors:
-            raise NonRecoverableError(f'Error restoring secrets: {errors}')
-        return {}
-    if dump_type in ['tenants', 'users', 'permissions']:
+    if dump_type in ['tenants', 'users', 'permissions', 'secrets']:
         return {
             'logger': ctx.logger,
         }

@@ -122,7 +122,7 @@ class SnapshotCreate:
             json.dump(metadata, f)
 
     def _dump_management(self):
-        for dump_type in ['user_groups', 'tenants', 'users', 'permissions']:
+        for dump_type in ['tenants', 'permissions', 'user_groups', 'users']:
             ctx.logger.debug(f'Dumping {dump_type}')
             client = getattr(self._client, dump_type)
             entities = client.dump()
