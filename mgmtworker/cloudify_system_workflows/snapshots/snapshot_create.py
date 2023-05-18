@@ -22,7 +22,7 @@ from cloudify_system_workflows.snapshots.utils import (DictToAttributes,
                                                        get_composer_client,
                                                        get_stage_client)
 
-DUMP_ENTITIES_PER_FILE = 500
+DUMP_ENTITIES_BATCH_SIZE = 500
 EMPTY_B64_ZIP = 'UEsFBgAAAAAAAAAAAAAAAAAAAAAAAA=='
 
 
@@ -38,7 +38,7 @@ class SnapshotCreate:
     _stage_client: StageClient
     _archive_dest: Path
     _temp_dir: Path
-    _ids_dumped: dict[str, list[str]]
+    _ids_dumped: dict[str, set[str]]
 
     def __init__(
             self,
@@ -76,7 +76,7 @@ class SnapshotCreate:
         self._auditlog_queue = queue.Queue()
         self._auditlog_listener = AuditLogListener(self._client,
                                                    self._auditlog_queue)
-        self._ids_dumped = {}
+        self._ids_dumped = defaultdict(set)
 
     def create(self, timeout=10):
         """Dumps manager's data and some metadata into a single zip file"""
@@ -150,56 +150,82 @@ class SnapshotCreate:
             else:
                 dump_client.dump(output_dir)
 
-    def _dump_tenant(self, tenant_name):
-        for dump_type in ['sites', 'plugins', 'secrets_providers', 'secrets',
+    def _dump_tenant(
+            self,
+            tenant_name: str,
+            dump_type_ids_map: dict[str, set] | None = None
+    ):
+        if dump_type_ids_map:
+            dump_types = dump_type_ids_map.keys()
+        else:
+            dump_types = ['sites', 'plugins', 'secrets_providers', 'secrets',
                           'blueprints', 'deployments', 'deployment_groups',
                           'nodes', 'node_instances', 'agents',
                           'inter_deployment_dependencies',
                           'executions', 'execution_groups', 'events',
                           'deployment_updates', 'plugins_update',
                           'deployments_filters', 'blueprints_filters',
-                          'tasks_graphs', 'execution_schedules']:
+                          'tasks_graphs', 'execution_schedules']
+        for dump_type in dump_types:
             if dump_type == 'events' and not self._include_events:
                 continue
             ctx.logger.debug(f'Dumping {dump_type} of {tenant_name}')
             api = getattr(self._tenant_clients[tenant_name], dump_type)
+            ids = dump_type_ids_map.get(dump_type) if dump_type_ids_map else {}
             entities = api.dump(
-                **self._dump_call_extra_args(tenant_name, dump_type))
-            self._ids_dumped[dump_type] = \
+                **self._dump_call_extra_kwargs(tenant_name, dump_type, ids)
+            )
+            self._ids_dumped[dump_type].update(
                 self._write_files(tenant_name, dump_type, entities)
+            )
 
-    def _dump_call_extra_args(self, tenant_name: str, dump_type: str):
+    def _dump_call_extra_kwargs(
+            self,
+            tenant_name: str,
+            dump_type: str,
+            only_these_ids: set | None,
+    ):
+        kwargs = {}
         if dump_type in ['agents', 'nodes']:
-            return {'deployment_ids': self._ids_dumped['deployments']}
+            kwargs.update({'deployment_ids': self._ids_dumped['deployments']})
         if dump_type == 'node_instances':
-            return {
+            kwargs.update({
                 'deployment_ids': self._ids_dumped['deployments'],
                 'get_broker_conf': self._agents_handler.get_broker_conf
-            }
+            })
         if dump_type == 'events':
-            return {
+            kwargs.update({
                 'execution_ids': self._ids_dumped['executions'],
                 'execution_group_ids': self._ids_dumped['execution_groups'],
                 'include_logs': self._include_logs,
-            }
+            })
         if dump_type == 'tasks_graphs':
             execution_ids = self._ids_dumped['executions']
             operations = defaultdict(list)
             for op in self._tenant_clients[tenant_name].operations\
                     .dump(execution_ids=execution_ids):
                 operations[op['__source_id']].append(op['__entity'])
-            return {
+            kwargs.update({
                 'execution_ids': execution_ids,
                 'operations': operations,
-            }
-        return {}
+            })
 
-    def _write_files(self, tenant_name, dump_type, data):
+        if dump_type in constants.DUMP_TYPE_IDS and only_these_ids:
+            kwargs.update({constants.DUMP_TYPE_IDS[dump_type]: only_these_ids})
+
+        return kwargs
+
+    def _write_files(
+            self,
+            tenant_name: str,
+            dump_type: str,
+            data
+    ) -> set[str]:
         """Dumps all data of dump_type into JSON files inside output_dir."""
         data_buckets = {}
         output_dir = self._prepare_output_dir(tenant_name)
         os.makedirs(output_dir, exist_ok=True)
-        ids_added = []
+        ids_added = set()
         latest_timestamp = None
 
         # Prepare data for dumping and create archives
@@ -219,9 +245,9 @@ class SnapshotCreate:
                         self._tenant_clients[tenant_name]
                 )
             if entity_id:
-                ids_added.append(entity_id)
-                self._auditlog_listener.append_entity(tenant_name, dump_type,
-                                                      entity_id)
+                ids_added.add(entity_id)
+                self._auditlog_listener.append_entity(
+                        tenant_name, dump_type, entity_id)
         # Dump the data as JSON files
         filenum = _get_max_filenum_in_dir(output_dir) or 0
         for (source, source_id), items in data_buckets.items():
@@ -232,15 +258,15 @@ class SnapshotCreate:
                 data['source_id'] = source_id
             if latest_timestamp:
                 data['latest_timestamp'] = latest_timestamp
-            remainder = len(items) % DUMP_ENTITIES_PER_FILE
-            file_count = len(items) // DUMP_ENTITIES_PER_FILE
+            remainder = len(items) % DUMP_ENTITIES_BATCH_SIZE
+            file_count = len(items) // DUMP_ENTITIES_BATCH_SIZE
             if remainder:
                 file_count += 1
             for i in range(file_count):
                 filenum += 1
                 output_file = output_dir / f'{filenum:08d}.json'
-                start = i * DUMP_ENTITIES_PER_FILE
-                finish = (i + 1) * DUMP_ENTITIES_PER_FILE
+                start = i * DUMP_ENTITIES_BATCH_SIZE
+                finish = (i + 1) * DUMP_ENTITIES_BATCH_SIZE
                 data['items'] = items[start:finish]
                 with open(output_file, 'w') as handle:
                     json.dump(data, handle)
@@ -255,18 +281,38 @@ class SnapshotCreate:
         shutil.make_archive(self._archive_dest, 'zip', self._temp_dir)
 
     def _append_from_auditlog(self, timeout):
+        """Fetch all the remaining items in a queue
+
+        :param timeout: Wait that long for new objects coming from audit log
+         in case the queue is empty [in seconds].
+        """
+        tenant_table_identifiers_map = defaultdict(lambda: defaultdict(set))
+        records_counter = 0
         try:
-            # Fetch all the remaining items in a queue, don't wait longer
-            # than `timeout` seconds in case queue is empty.
             while audit_log := self._auditlog_queue.get(timeout=timeout):
-                self._append_new_object_from_auditlog(audit_log)
+                ref_identifier = audit_log['ref_identifier']
+                tenant_name = ref_identifier['tenant_name']
+                dump_type = audit_log['ref_table']
+                tenant_table_identifiers_map[tenant_name][dump_type].add(
+                        ref_identifier.get('id') or
+                        ref_identifier.get('_storage_id')
+                )
+
+                records_counter += 1
+                if records_counter >= DUMP_ENTITIES_BATCH_SIZE:
+                    self._dump_from_auditlog(tenant_table_identifiers_map)
+                    tenant_table_identifiers_map \
+                        = defaultdict(lambda: defaultdict(set))
+                    records_counter = 0
+
         except queue.Empty:
             self._auditlog_listener.stop()
             self._auditlog_listener.join(timeout=timeout)
+        self._dump_from_auditlog(tenant_table_identifiers_map)
 
-    def _append_new_object_from_auditlog(self, audit_log):
-        # to be implemented in RND-309
-        pass
+    def _dump_from_auditlog(self, data: dict[str, dict[str, set]]):
+        for tenant_name, dump_type_ids_map in data.items():
+            self._dump_tenant(tenant_name, dump_type_ids_map)
 
     def _update_snapshot_status(self, status, error=None):
         self._client.snapshots.update_status(

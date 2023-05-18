@@ -5,12 +5,10 @@ from unittest import mock
 
 import pytest
 
-from cloudify_system_workflows.snapshots.snapshot_create import (
-    DUMP_ENTITIES_PER_FILE,
-    EMPTY_B64_ZIP,
-)
-from cloudify_system_workflows.tests.snapshots.mocks import (
+from cloudify_system_workflows.snapshots.snapshot_create import EMPTY_B64_ZIP
+from cloudify_system_workflows.tests.snapshots.utils import (
     AuditLogResponse,
+    load_snapshot_to_dict,
     prepare_snapshot_create_with_mocks,
     FAKE_EXECUTION_ID,
     FAKE_MANAGER_VERSION,
@@ -134,16 +132,16 @@ def test_dump_tenants():
             method.assert_called_once_with()
         for dump_type in ['nodes', 'agents']:
             method = getattr(cli, dump_type).dump
-            method.assert_called_once_with(deployment_ids=['d1', 'd2'])
+            method.assert_called_once_with(deployment_ids={'d1', 'd2'})
         cli.node_instances.dump.assert_called_once_with(
-            deployment_ids=['d1', 'd2'],
+            deployment_ids={'d1', 'd2'},
             get_broker_conf=sc._agents_handler.get_broker_conf
         )
         cli.events.dump.assert_called_once_with(
-            execution_ids=['e1', 'e2'],
-            execution_group_ids=['eg1', 'eg2'],
+            execution_ids={'e1', 'e2'},
+            execution_group_ids={'eg1', 'eg2'},
             include_logs=False)
-        cli.operations.dump.assert_called_once_with(execution_ids=['e1', 'e2'])
+        cli.operations.dump.assert_called_once_with(execution_ids={'e1', 'e2'})
 
 
 def test_create_success():
@@ -173,8 +171,8 @@ def test_create_success():
         sc.create(timeout=0.2)
         sc._tenant_clients['tenant1'].executions.dump.assert_called_once_with()
         sc._tenant_clients['tenant1'].events.dump.assert_called_once_with(
-            execution_ids=['e1', 'e2'],
-            execution_group_ids=['eg1', 'eg2'],
+            execution_ids={'e1', 'e2'},
+            execution_group_ids={'eg1', 'eg2'},
             include_logs=True)
         sc._client.snapshots.update_status.assert_called_once_with(
             sc._snapshot_id, status='created', error=None)
@@ -272,14 +270,14 @@ def test_create_skip_events():
         sc._tenant_clients['tenant1'].events.dump.assert_not_called()
 
 
-@pytest.mark.skip(reason='snapshot structure changed [WIP]')
 def test_create_with_events():
     timestamp_seconds = '2023-05-09T08:28:46'
     events_dump_se = [[
         {
             '__entity': {
                 '_storage_id': 1,
-                'timestamp': f'{timestamp_seconds}.001Z'
+                'timestamp': f'{timestamp_seconds}.001Z',
+                'message': 'message #1',
             },
             '__source': 'executions',
             '__source_id': 'e1'
@@ -287,7 +285,8 @@ def test_create_with_events():
         {
             '__entity': {
                 '_storage_id': 2,
-                'timestamp': f'{timestamp_seconds}.002Z'
+                'timestamp': f'{timestamp_seconds}.002Z',
+                'message': 'message #2',
             },
             '__source': 'executions',
             '__source_id': 'e1'
@@ -295,7 +294,8 @@ def test_create_with_events():
         {
             '__entity': {
                 '_storage_id': 3,
-                'timestamp': f'{timestamp_seconds}.003Z'
+                'timestamp': f'{timestamp_seconds}.003Z',
+                'message': 'message #1',
             },
             '__source': 'executions',
             '__source_id': 'e2'
@@ -329,23 +329,23 @@ def test_create_with_events():
     ) as sc:
         sc.create(timeout=0.2)
         sc._tenant_clients['tenant1'].events.dump.assert_called_once_with(
-            execution_ids=['e1', 'e2'],
-            execution_group_ids=[],
+            execution_ids={'e1', 'e2'},
+            execution_group_ids=set(),
             include_logs=True
         )
-        with zipfile.ZipFile(sc._archive_dest.with_suffix('.zip'), 'r') as zf:
-            e1_events = json.loads(
-                    zf.read('tenants/tenant1/executions_events/e1.json'))
-            e2_events = json.loads(
-                    zf.read('tenants/tenant1/executions_events/e2.json'))
-            assert e1_events['type'] == 'events'
-            assert e1_events['latest_timestamp'] == f'{timestamp_seconds}.003Z'
-            assert len(e1_events['items']) == 2
-            assert e2_events['latest_timestamp'] == f'{timestamp_seconds}.003Z'
-            assert len(e2_events['items']) == 1
+
+        snapshot = load_snapshot_to_dict(sc._archive_dest.with_suffix('.zip'))
+        e1_key = ('events', 'executions', 'e1')
+        e2_key = ('events', 'executions', 'e2')
+        e1_events = snapshot['tenants']['tenant1'][e1_key]
+        e2_events = snapshot['tenants']['tenant1'][e2_key]
+
+        assert e1_events['latest_timestamp'] == f'{timestamp_seconds}.003Z'
+        assert len(e1_events['items']) == 2
+        assert e2_events['latest_timestamp'] == f'{timestamp_seconds}.003Z'
+        assert len(e2_events['items']) == 1
 
 
-@pytest.mark.skip(reason='snapshot structure changed [WIP]')
 def test_create_many_blueprints():
     timestamp_seconds = '2023-05-09T08:28:47'
     many_blueprints_dump_se = [[{
@@ -375,18 +375,14 @@ def test_create_many_blueprints():
     ) as sc:
         sc.create(timeout=0.2)
         sc._tenant_clients['tenant1'].blueprints.dump.assert_called_once_with()
-        with zipfile.ZipFile(sc._archive_dest.with_suffix('.zip'), 'r') as zf:
-            filenames = [file.filename for file in zf.filelist]
-            assert 'tenants/tenant1/blueprints/0.json' in filenames
-            one = json.loads(zf.read('tenants/tenant1/blueprints/1.json'))
-            assert 'tenants/tenant1/blueprints/2.json' in filenames
-            assert 'tenants/tenant1/blueprints/3.json' not in filenames
-            assert one['type'] == 'blueprints'
-            assert len(one['items']) == DUMP_ENTITIES_PER_FILE
-            assert one['latest_timestamp'] == f'{timestamp_seconds}.999Z'
+
+        snapshot = load_snapshot_to_dict(sc._archive_dest.with_suffix('.zip'))
+        blueprints = snapshot['tenants']['tenant1'][('blueprints', None, None)]
+
+        assert len(blueprints['items']) == 1002
+        assert blueprints['latest_timestamp'] == f'{timestamp_seconds}.999Z'
 
 
-@pytest.mark.skip(reason='snapshot structure changed [WIP]')
 def test_create_with_plugins():
     timestamp_seconds = '2023-05-09T08:28:48'
     many_plugins_dump_se = [[{
@@ -416,14 +412,14 @@ def test_create_with_plugins():
     ) as sc:
         sc.create(timeout=0.2)
         sc._tenant_clients['tenant1'].plugins.dump.assert_called_once_with()
-        with zipfile.ZipFile(sc._archive_dest.with_suffix('.zip'), 'r') as zf:
-            plugins = json.loads(zf.read('tenants/tenant1/plugins/0.json'))
-            assert plugins['type'] == 'plugins'
-            assert plugins['latest_timestamp'] == f'{timestamp_seconds}.999Z'
-            assert len(plugins['items']) == 10
+
+        snapshot = load_snapshot_to_dict(sc._archive_dest.with_suffix('.zip'))
+        plugins = snapshot['tenants']['tenant1'][('plugins', None, None)]
+
+        assert plugins['latest_timestamp'] == f'{timestamp_seconds}.999Z'
+        assert len(plugins['items']) == 10
 
 
-@pytest.mark.skip(reason='snapshot structure changed [WIP]')
 def test_create_with_agents():
     timestamp_seconds = '2023-05-09T08:28:49'
     many_agents_dump_se = [[{
@@ -459,15 +455,18 @@ def test_create_with_agents():
     ) as sc:
         sc.create(timeout=0.2)
         sc._tenant_clients['tenant1'].agents.dump.assert_called_once_with(
-                deployment_ids=['d1', 'd2'])
-        with zipfile.ZipFile(sc._archive_dest.with_suffix('.zip'), 'r') as zf:
-            agents = json.loads(zf.read('tenants/tenant1/agents/d1.json'))
-            assert agents['type'] == 'agents'
-            assert agents['latest_timestamp'] == f'{timestamp_seconds}.999Z'
-            assert len(agents['items']) == 10
+                deployment_ids={'d1', 'd2'})
+
+        snapshot = load_snapshot_to_dict(sc._archive_dest.with_suffix('.zip'))
+        d1_agents = snapshot['tenants']['tenant1'][('agents', None, 'd1')]
+        d2_agents = snapshot['tenants']['tenant1'][('agents', None, 'd2')]
+
+        assert d1_agents['latest_timestamp'] == f'{timestamp_seconds}.999Z'
+        assert len(d1_agents['items']) == 10
+
+        assert d2_agents == {'items': {}, 'latest_timestamp': None}
 
 
-@pytest.mark.skip(reason='snapshot structure changed [WIP]')
 def test_create_deployment_workdir():
     with prepare_snapshot_create_with_mocks(
         'test-create-deployment-workdir',
@@ -493,11 +492,10 @@ def test_create_deployment_workdir():
         sc.create(timeout=0.2)
         with zipfile.ZipFile(sc._archive_dest.with_suffix('.zip'), 'r') as zf:
             d1_archive = zf.read(
-                    'tenants/tenant1/deployments_archives/d1.b64zip')
+                    'tenants/tenant1/deployments/d1.b64zip')
             assert d1_archive == b'non-empty-workdir-content'
 
 
-@pytest.mark.skip(reason='snapshot structure changed [WIP]')
 def test_create_tasks_graphs():
     with prepare_snapshot_create_with_mocks(
         'test-create-tasks-graphs',
@@ -546,9 +544,9 @@ def test_create_tasks_graphs():
     ) as sc:
         sc.create(timeout=0.2)
         cli = sc._tenant_clients['tenant1']
-        cli.operations.dump.assert_called_once_with(execution_ids=['e1'])
+        cli.operations.dump.assert_called_once_with(execution_ids={'e1'})
         cli.tasks_graphs.dump.assert_called_once_with(
-            execution_ids=['e1'],
+            execution_ids={'e1'},
             operations={
                 'e1': [
                     {'id': 'op1', 'tasks_graph_id': 'tg1'},
@@ -559,8 +557,8 @@ def test_create_tasks_graphs():
                 ]
             }
         )
-        with zipfile.ZipFile(sc._archive_dest.with_suffix('.zip'), 'r') as zf:
-            tasks_graphs = json.loads(
-                    zf.read('tenants/tenant1/tasks_graphs/e1.json'))
-            assert tasks_graphs['type'] == 'tasks_graphs'
-            assert len(tasks_graphs['items']) == 1
+        snapshot = load_snapshot_to_dict(sc._archive_dest.with_suffix('.zip'))
+        e1_key = ('tasks_graphs', None, 'e1')
+        e1_tasks_graphs = snapshot['tenants']['tenant1'][e1_key]
+
+        assert len(e1_tasks_graphs['items']) == 1
