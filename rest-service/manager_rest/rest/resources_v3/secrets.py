@@ -398,12 +398,15 @@ class SecretsExport(SecuredResource):
             if secret.is_hidden_value and not \
                     rest_utils.is_hidden_value_permitted(secret):
                 continue
+            provider_name = secret.provider.name if secret.provider else None
             new_secret = {'key': secret.key,
                           'value': decrypt(secret.value),
                           'visibility': secret.visibility,
                           'tenant_name': secret.tenant_name,
                           'is_hidden_value': secret.is_hidden_value,
-                          'encrypted': False}
+                          'encrypted': False,
+                          'provider': provider_name,
+                          'provider_options': secret.provider_options}
             if include_metadata:
                 new_secret['creator'] = secret.created_by
                 new_secret['created_at'] = secret.created_at
@@ -476,6 +479,7 @@ class SecretsImport(SecuredResource):
             self._handle_secret_tenant(secret, tenant_map, existing_tenants,
                                        missing_fields, secret_errors)
             self._check_timestamp_and_owner(secret, secret_errors)
+            self._handle_provider(secret, secret_errors)
             self._handle_encryption(secret, encryption_key, missing_fields,
                                     secret_errors)
             if missing_fields:
@@ -556,12 +560,29 @@ class SecretsImport(SecuredResource):
             except manager_exceptions.ForbiddenError as err:
                 secret_errors['tenant_name'] = str(err)
 
+    def _handle_provider(self, secret, secret_errors):
+        """Update `provider` with a valid database record representation."""
+        if provider_name := secret.get('provider'):
+            try:
+                provider = get_storage_manager().get(
+                        models.SecretsProvider,
+                        provider_name,
+                )
+                secret['provider'] = provider
+            except (manager_exceptions.NotFoundError,
+                    manager_exceptions.AmbiguousName) as err:
+                secret_errors['provider'] = str(err)
+
     def _handle_encryption(self, secret, encryption_key,
                            missing_fields, secret_errors):
         """
         Asserts 'encrypted' field is boolean, and decrypts the secrets' value
-        when encrypted == True
+        when encrypted == True unless `provider` is set, in which case
+        does nothing.
         """
+
+        if secret.get('provider'):
+            return
         invalid_value = self._is_missing_field(secret, 'value', missing_fields)
         if self._is_missing_field(secret, 'encrypted', missing_fields):
             return
