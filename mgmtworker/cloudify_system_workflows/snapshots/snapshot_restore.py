@@ -207,7 +207,7 @@ class SnapshotRestore(object):
                 if f.endswith('.json')
             ]
 
-        for filename in dump_files:
+        for filename in sorted(dump_files):
             ctx.logger.debug('Checking for data to restore in %s',
                              filename)
 
