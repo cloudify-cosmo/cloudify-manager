@@ -1,7 +1,10 @@
 import json
+import pathlib
 import shutil
 import tempfile
-from collections import namedtuple
+import uuid
+import zipfile
+from collections import defaultdict, namedtuple
 from contextlib import contextmanager
 from typing import Type
 from unittest import mock
@@ -218,3 +221,51 @@ def prepare_snapshot_create_with_mocks(
                             shutil.rmtree(snapshot_create._temp_dir,
                                           ignore_errors=True)
                             shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+def load_snapshot_to_dict(
+        snapshot_file_name: str,
+        in_path: str | None = None
+):
+    result = {}
+    with zipfile.ZipFile(snapshot_file_name, 'r') as zip_file:
+        files = [
+            zi.filename for zi in zip_file.filelist
+            if (not in_path or (in_path and zi.filename.startswith(in_path)))
+            and zi.filename.endswith('.json')
+        ]
+        for file_name in sorted(files):
+            if file_name == 'metadata.json':
+                result['metadata'] = json.loads(zip_file.read(file_name))
+            else:
+                _snapshot_part_store(
+                        result,
+                        pathlib.Path(file_name).parts[:-1],
+                        json.loads(zip_file.read(file_name))
+                )
+    return result
+
+
+def _snapshot_part_store(data: dict, keys: tuple[str], content):
+    d = data
+    for key in keys[:-1]:
+        if key not in d:
+            d[key] = {}
+        d = d[key]
+    last_key = keys[-1]
+    if last_key not in d:
+        d[last_key] = defaultdict(
+                lambda: {'items': {}, 'latest_timestamp': None}
+        )
+    content_key = (
+        content.get('type'),
+        content.get('source'),
+        content.get('source_id'),
+    )
+    d[last_key][content_key]['items'].update({
+        item.get('id') or item.get('_storage_id') or uuid.uuid4(): item
+        for item in content['items']
+    })
+    d[last_key][content_key]['latest_timestamp'] =\
+        content.get('latest_timestamp')
+    return data
