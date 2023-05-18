@@ -238,8 +238,11 @@ node_templates:
         # install should fail due to error in child
         execution = self.client.executions.start(deployment_id=deployment_id,
                                                  workflow_id='install')
-        self.wait_for_execution_status(execution, Execution.FAILED)
-        assert "fail_once.sh, exit_code: 1" in execution.error
+        self.wait_for_execution_status(
+            execution.id, Execution.FAILED, timeout=120)
+        execution = self.client.executions.get(execution.id)
+        assert "Task failed: cloudify_types.component.execute_start" \
+               in execution.error
         deployments = self.client.deployments.list()
         assert len(deployments) == 2
         for dep in deployments:
@@ -247,7 +250,8 @@ node_templates:
 
         # now let's resume the installation. This should succeed
         self.client.executions.resume(execution.id)
-        self.wait_for_execution_to_end(execution)
+        self.wait_for_execution_status(
+            execution.id, Execution.TERMINATED, timeout=120)
         for dep in self.client.deployments.list():
             assert dep['installation_status'] == 'active'
 
