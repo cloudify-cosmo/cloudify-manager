@@ -76,6 +76,28 @@ V_7_0_0 = ManagerVersion('7.0.0')
 V_7_1_0 = ManagerVersion('7.1.0')
 
 
+DUMP_TYPE_IDS = {
+    'agents': 'agent_ids',
+    'blueprints': 'blueprint_ids',
+    'deployment_updates': 'deployment_update_ids',
+    'deployments': 'deployment_ids',
+    'events': 'event_storage_ids',
+    'execution_schedules': 'execution_schedule_ids',
+    'execution_groups': 'execution_group_ids',
+    'executions': 'execution_ids',
+    'blueprints_filters': 'filter_ids',
+    'deployments_filters': 'filter_ids',
+    'inter_deployment_dependencies': 'inter_deployment_dependency_ids',
+    'node_instances': 'node_instance_ids',
+    'nodes': 'node_ids',
+    'tasks_graphs': 'tasks_graph_ids',
+    'plugins': 'plugin_ids',
+    'plugins_updates': 'plugins_update_ids',
+    'secrets_providers': 'secrets_provider_ids',
+    'sites': 'sites_ids',
+}
+
+
 class VisibilityState(object):
     PRIVATE = 'private'
     TENANT = 'tenant'
