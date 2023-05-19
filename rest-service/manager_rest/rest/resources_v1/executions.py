@@ -99,6 +99,7 @@ class Executions(SecuredResource):
         queue = verify_and_convert_bool(
             'queue',
             request_dict.get('queue', False))
+        is_system_workflow = request_dict.get('is_system_workflow')
 
         deployment_id = request_dict['deployment_id']
         workflow_id = request_dict['workflow_id']
@@ -126,7 +127,8 @@ class Executions(SecuredResource):
             if ended_at:
                 ended_at = parse_datetime_string(ended_at)
 
-        if error or force_status or execution_id or not deployment_id:
+        if error or force_status or execution_id or is_system_workflow \
+                or not deployment_id:
             check_user_action_allowed('set_execution_details', None, True)
 
         if force_status and scheduled_time:
@@ -200,6 +202,8 @@ class Executions(SecuredResource):
                 execution.ended_at = ended_at
             if execution_id:
                 execution.id = execution_id
+            if is_system_workflow:
+                execution.is_system_workflow = is_system_workflow
             sm.put(execution)
             messages = []
             if (
