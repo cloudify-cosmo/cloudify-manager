@@ -1129,8 +1129,9 @@ class ResourceManager(object):
             execution.deployment_id)
         for exec_id in components_executions:
             execution = self.sm.get(models.Execution, exec_id)
-            if execution.status in [ExecutionState.CANCELLED,
-                                    ExecutionState.FAILED]:
+            if (execution.status in [ExecutionState.CANCELLED,
+                                     ExecutionState.FAILED]
+                    and execution.workflow_id != 'install'):
                 self.resume_execution(exec_id, force)
 
         return execution
