@@ -242,7 +242,7 @@ class SnapshotRestore(object):
         extra_args = _new_restore_entities_extra_args(
                 dump_type, source_type, source_id,
                 partial(self._get_associated_archive, zipfile, tenant_name))
-        postprocess_data = api.restore(entities, **extra_args)
+        postprocess_data = api.restore(entities, ctx.logger, **extra_args)
         if postprocess_data:
             self._new_restore_entities_postprocess(dump_type, client,
                                                    postprocess_data)
@@ -1263,11 +1263,6 @@ def _new_restore_entities_extra_args(
         get_associated_archive_partial,
 ):
 
-    # dump_type, source_type, source_id, entities, api,
-    if dump_type in ['tenants', 'users', 'permissions', 'secrets']:
-        return {
-            'logger': ctx.logger,
-        }
     if dump_type in ['blueprints', 'deployments', 'plugins']:
         return {
             'path_func': partial(get_associated_archive_partial, dump_type),
@@ -1276,7 +1271,6 @@ def _new_restore_entities_extra_args(
         return {
             'source_type': source_type,
             'source_id': source_id,
-            'logger': ctx.logger,
         }
     if dump_type == 'nodes':
         return {
