@@ -393,6 +393,7 @@ def _write_dump_archive(
     }[dump_type]
 
     entity_dest = dest_dir / f'{entity_id}{suffix}'
+    entity_dest.unlink(missing_ok=True)
     client = getattr(api, dump_type)
     if dump_type == 'deployments':
         data = client.get(
