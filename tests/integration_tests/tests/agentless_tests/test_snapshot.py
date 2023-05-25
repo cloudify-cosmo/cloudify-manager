@@ -314,6 +314,75 @@ class TestSnapshot(AgentlessTestCase):
         assert exc.status not in (Execution.PENDING, Execution.QUEUED)
         self.wait_for_execution_to_end(exc)
 
+    def test_append_referenced_blueprint(self):
+        blueprint, _ = self._create_auditlog_test_env(deployment_id=None)
+        self.client.blueprints.set_visibility(blueprint.id, 'tenant')
+        snapshot_id = "test_append_referenced_blueprint"
+        snapshot_create_execution = self.client.snapshots.create(
+            snapshot_id, False)
+        time.sleep(10)  # 10s is the default auditlog listener's timeout
+        self.client.blueprints.set_visibility(blueprint.id, 'global')
+        self.wait_for_execution_to_end(snapshot_create_execution)
+
+        downloaded_snapshot = os.path.join(self.workdir, 'snapshot.zip')
+        self.client.snapshots.download(
+            snapshot_id,
+            output_file=downloaded_snapshot,
+        )
+        self.env.reset_storage()
+        self.client.snapshots.upload(downloaded_snapshot, snapshot_id)
+        self.client.snapshots.restore(snapshot_id)
+        self.wait_for_snapshot_restore_to_end()
+
+        restored_blueprint = self.client.blueprints.get(blueprint.id)
+
+        assert restored_blueprint.get('visibility') == 'global'
+
+    def test_append_referenced_deployment(self):
+        _, deployment = self._create_auditlog_test_env()
+        self.client.deployments.set_attributes(deployment.id,
+                                               display_name='Norrgården')
+        snapshot_id = "test_append_referenced_deployment"
+        snapshot_create_execution = self.client.snapshots.create(
+            snapshot_id, False)
+        time.sleep(10)  # 10s is the default auditlog listener's timeout
+        self.client.deployments.set_attributes(deployment.id,
+                                               display_name='Mellangården')
+        time.sleep(5)  # 10s is the default auditlog listener's timeout
+        self.client.deployments.set_attributes(deployment.id,
+                                               display_name='Sörgården')
+        self.wait_for_execution_to_end(snapshot_create_execution)
+
+        downloaded_snapshot = os.path.join(self.workdir, 'snapshot.zip')
+        self.client.snapshots.download(
+            snapshot_id,
+            output_file=downloaded_snapshot,
+        )
+        self.env.reset_storage()
+        self.client.snapshots.upload(downloaded_snapshot, snapshot_id)
+        self.client.snapshots.restore(snapshot_id)
+        self.wait_for_snapshot_restore_to_end()
+
+        restored_deployment = self.client.deployments.get(deployment.id)
+
+        assert restored_deployment.get('display_name') == 'Sörgården'
+
+    def _create_auditlog_test_env(
+            self,
+            blueprint_id='bp',
+            blueprint_filename='empty_blueprint.yaml',
+            deployment_id='dep',
+    ):
+        bp = self.client.blueprints.upload(
+            resource('dsl/{}'.format(blueprint_filename)),
+            entity_id=blueprint_id
+        )
+        if deployment_id:
+            dep = self.client.deployments.create(blueprint_id, deployment_id)
+        else:
+            dep = None
+        return bp, dep
+
     def _assert_snapshot_restore_status(self, is_running):
         status_msg = STATES.RUNNING if is_running else STATES.NOT_RUNNING
         restore_status = self.client.snapshots.get_status()
