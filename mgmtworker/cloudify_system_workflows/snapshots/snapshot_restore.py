@@ -187,15 +187,15 @@ class SnapshotRestore(object):
         self._snapshot_files = {}
         self._legacy = None
 
-    def _new_restore(self, zipfile):
-        self._new_restore_parse_and_restore(zipfile)
-        self._new_restore_composer(zipfile)
-        self._new_restore_stage(zipfile)
+    def _new_restore(self, zip_file):
+        self._new_restore_parse_and_restore(zip_file)
+        self._new_restore_composer(zip_file)
+        self._new_restore_stage(zip_file)
         for tenant in self._new_tenants:
-            self._new_restore_parse_and_restore(zipfile, tenant=tenant)
+            self._new_restore_parse_and_restore(zip_file, tenant=tenant)
         self._new_restore_update_execution_status()
 
-    def _new_restore_parse_and_restore(self, zipfile, tenant=None):
+    def _new_restore_parse_and_restore(self, zip_file, tenant=None):
         if tenant:
             dump_files = [
                 f for f in self._snapshot_files['tenants'].get(tenant)
@@ -207,21 +207,34 @@ class SnapshotRestore(object):
                 if f.endswith('.json')
             ]
 
+        entities: dict[tuple, dict[str, dict]] = {}
+
         for filename in sorted(dump_files):
             ctx.logger.debug('Checking for data to restore in %s',
                              filename)
-
             extract_path = os.path.join(self._tempdir, filename)
-
-            zipfile.extract(filename, self._tempdir)
-
+            zip_file.extract(filename, self._tempdir)
             with open(extract_path) as data_handle:
                 data = json.load(data_handle)
+                _new_restore_update_entities(entities, data)
             os.unlink(extract_path)
 
-            self._new_restore_entities(
-                    tenant, data['type'], data.get('source'),
-                    data.get('source_id'), data['items'], zipfile)
+        # It is important to restore the entities in order
+        for dump_type in [
+            'tenants', 'permissions', 'user_groups', 'users', 'sites',
+            'plugins', 'secrets_providers', 'secrets', 'blueprints',
+            'deployments', 'deployment_groups', 'nodes', 'node_instances',
+            'agents', 'inter_deployment_dependencies', 'executions',
+            'execution_groups', 'events', 'deployment_updates',
+            'plugins_update', 'deployments_filters', 'blueprints_filters',
+            'tasks_graphs', 'execution_schedules'
+        ]:
+            for (_type, _source, _source_id), data in entities.items():
+                if _type != dump_type:
+                    continue
+                self._new_restore_entities(
+                    tenant, _type, _source, _source_id,
+                    list(data.values()), zip_file)
 
     def _new_restore_entities(
             self,
@@ -230,7 +243,7 @@ class SnapshotRestore(object):
             source_type: str | None,
             source_id: str | None,
             entities: list[dict[str, Any]],
-            zipfile,
+            zip_file,
     ):
         if tenant_name:
             client = self._tenant_clients.setdefault(
@@ -241,15 +254,15 @@ class SnapshotRestore(object):
         api = getattr(client, dump_type)
         extra_args = _new_restore_entities_extra_args(
                 dump_type, source_type, source_id,
-                partial(self._get_associated_archive, zipfile, tenant_name))
-        postprocess_data = api.restore(entities, ctx.logger, **extra_args)
-        if postprocess_data:
-            self._new_restore_entities_postprocess(dump_type, client,
-                                                   postprocess_data)
+                partial(self._get_associated_archive, zip_file, tenant_name))
+        post_restore_data = api.restore(entities, ctx.logger, **extra_args)
+        if post_restore_data:
+            self._new_restore_entities_post_process(dump_type, client,
+                                                    post_restore_data)
 
     def _get_associated_archive(
             self,
-            zipfile,
+            zip_file,
             tenant_name: str,
             entity_type: str,
             entity_id: str,
@@ -267,10 +280,10 @@ class SnapshotRestore(object):
         for dump_file in dump_files:
             if dump_file.endswith('/' + entity_id + suffix):
                 extract_path = os.path.join(self._tempdir, dump_file)
-                zipfile.extract(dump_file, self._tempdir)
+                zip_file.extract(dump_file, self._tempdir)
                 return extract_path
 
-    def _new_restore_entities_postprocess(
+    def _new_restore_entities_post_process(
             self,
             entity_type: str,
             client,
@@ -280,7 +293,7 @@ class SnapshotRestore(object):
             if entity_type == 'secrets':
                 if errors := record.get('errors'):
                     raise NonRecoverableError(
-                            'Error restoring secrets: %s', errors)
+                            f'Error restoring secrets: {errors}')
             elif entity_type == 'users':
                 for username, tenant_roles in record.items():
                     direct_roles = tenant_roles['direct']
@@ -1254,6 +1267,26 @@ class SnapshotRestoreValidator(object):
                          .format(', '.join(broker_networks)))
         msg += ' and '.join(parts)
         raise NonRecoverableError(msg)
+
+
+def _new_restore_update_entities(
+        entities: dict[tuple, dict[str, dict]],
+        data: dict[str, Any]):
+    data_key = (data['type'], data.get('source'), data.get('source_id'))
+    if data_key not in entities:
+        entities[data_key] = {}
+    for entity in data['items']:
+        if data['type'] in ['sites', 'tenants', 'user_groups']:
+            unique_id = entity['name']
+        elif data['type'] == 'permissions':
+            unique_id = f"{entity['role']}:{entity['permission']}"
+        elif data['type'] == 'events':
+            unique_id = f"{entity['timestamp']}:{hash(entity['message'])}"
+        elif data['type'] == 'users':
+            unique_id = entity['username']
+        else:
+            unique_id = entity['id']
+        entities[data_key][unique_id] = entity
 
 
 def _new_restore_entities_extra_args(
