@@ -207,19 +207,34 @@ class SnapshotRestore(object):
                 if f.endswith('.json')
             ]
 
+        entities: dict[tuple, dict[str, dict]] = {}
+
         for filename in sorted(dump_files):
             ctx.logger.debug('Checking for data to restore in %s',
                              filename)
-
             extract_path = os.path.join(self._tempdir, filename)
             zip_file.extract(filename, self._tempdir)
             with open(extract_path) as data_handle:
                 data = json.load(data_handle)
+                _new_restore_update_entities(entities, data)
             os.unlink(extract_path)
 
-            self._new_restore_entities(
-                    tenant, data['type'], data.get('source'),
-                    data.get('source_id'), data['items'], zipfile)
+        # It is important to restore the entities in order
+        for dump_type in [
+            'tenants', 'permissions', 'user_groups', 'users', 'sites',
+            'plugins', 'secrets_providers', 'secrets', 'blueprints',
+            'deployments', 'deployment_groups', 'nodes', 'node_instances',
+            'agents', 'inter_deployment_dependencies', 'executions',
+            'execution_groups', 'events', 'deployment_updates',
+            'plugins_update', 'deployments_filters', 'blueprints_filters',
+            'tasks_graphs', 'execution_schedules'
+        ]:
+            for (_type, _source, _source_id), data in entities.items():
+                if _type != dump_type:
+                    continue
+                self._new_restore_entities(
+                    tenant, _type, _source, _source_id,
+                    list(data.values()), zip_file)
 
     def _new_restore_entities(
             self,
@@ -1252,6 +1267,26 @@ class SnapshotRestoreValidator(object):
                          .format(', '.join(broker_networks)))
         msg += ' and '.join(parts)
         raise NonRecoverableError(msg)
+
+
+def _new_restore_update_entities(
+        entities: dict[tuple, dict[str, dict]],
+        data: dict[str, Any]):
+    data_key = (data['type'], data.get('source'), data.get('source_id'))
+    if data_key not in entities:
+        entities[data_key] = {}
+    for entity in data['items']:
+        if data['type'] in ['sites', 'tenants', 'user_groups']:
+            unique_id = entity['name']
+        elif data['type'] == 'permissions':
+            unique_id = f"{entity['role']}:{entity['permission']}"
+        elif data['type'] == 'events':
+            unique_id = f"{entity['timestamp']}:{hash(entity['message'])}"
+        elif data['type'] == 'users':
+            unique_id = entity['username']
+        else:
+            unique_id = entity['id']
+        entities[data_key][unique_id] = entity
 
 
 def _new_restore_entities_extra_args(
