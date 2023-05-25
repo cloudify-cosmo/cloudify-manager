@@ -187,15 +187,15 @@ class SnapshotRestore(object):
         self._snapshot_files = {}
         self._legacy = None
 
-    def _new_restore(self, zipfile):
-        self._new_restore_parse_and_restore(zipfile)
-        self._new_restore_composer(zipfile)
-        self._new_restore_stage(zipfile)
+    def _new_restore(self, zip_file):
+        self._new_restore_parse_and_restore(zip_file)
+        self._new_restore_composer(zip_file)
+        self._new_restore_stage(zip_file)
         for tenant in self._new_tenants:
-            self._new_restore_parse_and_restore(zipfile, tenant=tenant)
+            self._new_restore_parse_and_restore(zip_file, tenant=tenant)
         self._new_restore_update_execution_status()
 
-    def _new_restore_parse_and_restore(self, zipfile, tenant=None):
+    def _new_restore_parse_and_restore(self, zip_file, tenant=None):
         if tenant:
             dump_files = [
                 f for f in self._snapshot_files['tenants'].get(tenant)
@@ -212,9 +212,7 @@ class SnapshotRestore(object):
                              filename)
 
             extract_path = os.path.join(self._tempdir, filename)
-
-            zipfile.extract(filename, self._tempdir)
-
+            zip_file.extract(filename, self._tempdir)
             with open(extract_path) as data_handle:
                 data = json.load(data_handle)
             os.unlink(extract_path)
@@ -230,7 +228,7 @@ class SnapshotRestore(object):
             source_type: str | None,
             source_id: str | None,
             entities: list[dict[str, Any]],
-            zipfile,
+            zip_file,
     ):
         if tenant_name:
             client = self._tenant_clients.setdefault(
@@ -241,15 +239,15 @@ class SnapshotRestore(object):
         api = getattr(client, dump_type)
         extra_args = _new_restore_entities_extra_args(
                 dump_type, source_type, source_id,
-                partial(self._get_associated_archive, zipfile, tenant_name))
-        postprocess_data = api.restore(entities, ctx.logger, **extra_args)
-        if postprocess_data:
-            self._new_restore_entities_postprocess(dump_type, client,
-                                                   postprocess_data)
+                partial(self._get_associated_archive, zip_file, tenant_name))
+        post_restore_data = api.restore(entities, ctx.logger, **extra_args)
+        if post_restore_data:
+            self._new_restore_entities_post_process(dump_type, client,
+                                                    post_restore_data)
 
     def _get_associated_archive(
             self,
-            zipfile,
+            zip_file,
             tenant_name: str,
             entity_type: str,
             entity_id: str,
@@ -267,10 +265,10 @@ class SnapshotRestore(object):
         for dump_file in dump_files:
             if dump_file.endswith('/' + entity_id + suffix):
                 extract_path = os.path.join(self._tempdir, dump_file)
-                zipfile.extract(dump_file, self._tempdir)
+                zip_file.extract(dump_file, self._tempdir)
                 return extract_path
 
-    def _new_restore_entities_postprocess(
+    def _new_restore_entities_post_process(
             self,
             entity_type: str,
             client,
@@ -280,7 +278,7 @@ class SnapshotRestore(object):
             if entity_type == 'secrets':
                 if errors := record.get('errors'):
                     raise NonRecoverableError(
-                            'Error restoring secrets: %s', errors)
+                            f'Error restoring secrets: {errors}')
             elif entity_type == 'users':
                 for username, tenant_roles in record.items():
                     direct_roles = tenant_roles['direct']
