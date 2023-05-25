@@ -348,7 +348,7 @@ class TestSnapshot(AgentlessTestCase):
         time.sleep(10)  # 10s is the default auditlog listener's timeout
         self.client.deployments.set_attributes(deployment.id,
                                                display_name='Mellangården')
-        time.sleep(5)  # 10s is the default auditlog listener's timeout
+        time.sleep(5)
         self.client.deployments.set_attributes(deployment.id,
                                                display_name='Sörgården')
         self.wait_for_execution_to_end(snapshot_create_execution)
@@ -366,6 +366,44 @@ class TestSnapshot(AgentlessTestCase):
         restored_deployment = self.client.deployments.get(deployment.id)
 
         assert restored_deployment.get('display_name') == 'Sörgården'
+
+    def test_append_related_execution(self):
+        _, deployment = self._create_auditlog_test_env(
+            blueprint_filename='blueprint_with_param_sleep_workflow.yaml'
+        )
+        snapshot_id = "test_append_execution"
+        snapshot_create_execution = self.client.snapshots.create(
+            snapshot_id, False, queue=True)
+        time.sleep(10)  # 10s is the default auditlog listener's timeout
+        _ = [
+            self.execute_workflow(
+                workflow_name='sleep',
+                deployment_id=deployment.id,
+                parameters={'seconds': sleep_seconds},
+                queue=True,
+                wait_for_execution=False
+            )
+            for sleep_seconds in range(3, 12, 3)
+        ]
+        self.wait_for_execution_to_end(snapshot_create_execution)
+        downloaded_snapshot = os.path.join(self.workdir, 'snapshot.zip')
+        self.client.snapshots.download(
+            snapshot_id,
+            output_file=downloaded_snapshot,
+        )
+        self.env.reset_storage()
+        self.client.snapshots.upload(downloaded_snapshot, snapshot_id)
+        self.client.snapshots.restore(snapshot_id)
+        self.wait_for_snapshot_restore_to_end()
+
+        for execution in self.client.executions.list(deployment_id='dep',
+                                                     workflow_id='sleep'):
+            self.wait_for_execution_to_end(execution)
+
+        restored_executions = self.client.executions.list(deployment_id='dep',
+                                                          workflow_id='sleep')
+
+        assert set(e.status for e in restored_executions) == {'terminated'}
 
     def _create_auditlog_test_env(
             self,
