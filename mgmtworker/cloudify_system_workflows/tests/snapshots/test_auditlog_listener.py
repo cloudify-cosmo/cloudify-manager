@@ -142,6 +142,7 @@ def test_append_related_executions():
     executions_get_se = ExecutionResponse(id='exec2', deployment_id='d1')
     execution_groups_get_se = ExecutionGroupResponse(id='execgr2',
                                                      deployment_group_id='g1')
+    events_list_se = [[{'_storage_id': 1}], [{'_storage_id': 2}]]
     with prepare_snapshot_create_with_mocks(
         'test-snapshot-append-related-executions',
         rest_mocks=[
@@ -165,6 +166,7 @@ def test_append_related_executions():
             (mock.Mock, ('executions', 'get'), executions_get_se),
             (mock.Mock, ('execution_groups', 'dump'), [[{'id': 'execgr1'}]]),
             (mock.Mock, ('execution_groups', 'get'), execution_groups_get_se),
+            (mock.Mock, ('events', 'list'), events_list_se),
         ],
     ) as snap_cre:
         snap_cre._dump_from_auditlog = mock.Mock()
@@ -173,6 +175,7 @@ def test_append_related_executions():
             'tenant1': {
                 'executions': {'exec2'},
                 'execution_groups': {'execgr2'},
+                'events': {1, 2}
             }
         })
 
