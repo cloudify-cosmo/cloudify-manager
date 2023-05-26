@@ -308,11 +308,35 @@ class SnapshotCreate:
         except queue.Empty:
             self._auditlog_listener.stop()
             self._auditlog_listener.join(timeout=timeout)
+        self._append_execution_events(tenant_table_identifiers_map)
         self._dump_from_auditlog(tenant_table_identifiers_map)
 
     def _dump_from_auditlog(self, data: dict[str, dict[str, set]]):
         for tenant_name, dump_type_ids_map in data.items():
             self._dump_tenant(tenant_name, dump_type_ids_map)
+
+    def _append_execution_events(self, data: dict[str, dict[str, set]]):
+        for tenant_name, dump_type_ids_map in data.items():
+            extra_events = set()
+            for dump_type, identifiers in dump_type_ids_map.items():
+                if dump_type not in ['executions', 'execution_groups']:
+                    continue
+                for identifier in identifiers:
+                    kwargs = {
+                        '_include': ['_storage_id'],
+                        'include_logs': self._include_logs,
+                    }
+                    if dump_type == 'executions':
+                        kwargs['execution_id'] = identifier
+                    elif dump_type == 'execution_groups':
+                        kwargs['execution_group_id'] = identifier
+                    events = self._tenant_clients[tenant_name].events.\
+                        list(**kwargs)
+                    extra_events.update(
+                        event['_storage_id'] for event in events
+                    )
+            if extra_events:
+                data[tenant_name]['events'].update(extra_events)
 
     def _update_snapshot_status(self, status, error=None):
         self._client.snapshots.update_status(
