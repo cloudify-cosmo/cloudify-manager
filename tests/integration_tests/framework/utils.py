@@ -457,6 +457,9 @@ validations:
     skip_validations: true
 sanity:
     skip_sanity: true
+nginx:
+    rate_limit:
+        enabled: false
 restservice:
     gunicorn:
         max_worker_count: 4
