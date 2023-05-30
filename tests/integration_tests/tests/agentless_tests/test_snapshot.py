@@ -383,7 +383,7 @@ class TestSnapshot(AgentlessTestCase):
                 queue=True,
                 wait_for_execution=False
             )
-            for sleep_seconds in range(3, 12, 3)
+            for sleep_seconds in range(0, 12, 3)
         ]
         self.wait_for_execution_to_end(snapshot_create_execution)
         downloaded_snapshot = os.path.join(self.workdir, 'snapshot.zip')
