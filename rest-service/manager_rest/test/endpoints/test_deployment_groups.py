@@ -1431,6 +1431,7 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
                     tenant=self.tenant,
                     creator=self.user,
                 )
+                db.session.add(exc_group)
                 for exc_status in execution_statuses:
                     exc = models.Execution(
                         workflow_id='',
@@ -1440,6 +1441,13 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
                     )
                     exc_group.executions.append(exc)
                 assert exc_group.status == expected_group_status
+                eg = self.client.execution_groups.get(
+                    exc_group.id,
+                    _include=['id', 'status']
+                )
+                assert eg.status == expected_group_status
+                db.session.delete(exc_group)
+                db.session.commit()
 
     @mock.patch('manager_rest.workflow_executor.execute_workflow', mock.Mock())
     def test_success_group(self):
