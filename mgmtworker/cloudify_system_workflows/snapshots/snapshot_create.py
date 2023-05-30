@@ -76,7 +76,6 @@ class SnapshotCreate:
         self._auditlog_queue = queue.Queue()
         self._auditlog_listener = AuditLogListener(self._client,
                                                    self._auditlog_queue)
-        self._ids_dumped = defaultdict(set)
 
     def create(self, timeout=10):
         """Dumps manager's data and some metadata into a single zip file"""
@@ -155,6 +154,7 @@ class SnapshotCreate:
             tenant_name: str,
             dump_type_ids_map: dict[str, set] | None = None
     ):
+        self._ids_dumped = defaultdict(set)
         if dump_type_ids_map:
             dump_types = dump_type_ids_map.keys()
         else:
