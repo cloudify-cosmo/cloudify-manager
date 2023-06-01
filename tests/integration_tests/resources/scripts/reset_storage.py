@@ -46,7 +46,7 @@ def safe_drop_all(keep_tables):
     db.session.commit()
 
 
-def _reset_config(app, script_config):
+def _reset_config(script_config):
     for scope, configs in script_config['manager_config'].items():
         for name, value in configs.items():
             item = (
@@ -85,7 +85,7 @@ def close_session(app):
     db.get_engine(app).dispose()
 
 
-def reset_storage(app, script_config):
+def reset_storage(script_config):
     # Rebuild the DB
     safe_drop_all(keep_tables=['roles', 'config', 'rabbitmq_brokers',
                                'certificates', 'managers', 'db_nodes',
@@ -94,7 +94,7 @@ def reset_storage(app, script_config):
                                'users', 'tenants', 'tokens', 'users_tenants',
                                'users_roles'])
     _delete_users()
-    _reset_config(app, script_config)
+    _reset_config(script_config)
     _reset_admin_user(script_config)
 
 
@@ -130,6 +130,6 @@ if __name__ == '__main__':
     config.instance.load_configuration()
 
     app = setup_flask_app()
-    reset_storage(app, script_config)
+    reset_storage(script_config)
     clean_dirs()
     close_session(app)
