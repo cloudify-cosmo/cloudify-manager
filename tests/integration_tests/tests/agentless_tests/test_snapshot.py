@@ -596,7 +596,11 @@ class TestSnapshot(AgentlessTestCase):
         self.env.copy_file_to_manager(source=tmp_config_path,
                                       target=self.REST_SEC_CONFIG_PATH,
                                       owner='cfyuser:')
+        self.env.execute_on_manager([
+            '/opt/cloudify/mgmtworker/create-admin-token.py'
+        ])
         self.restart_service('cloudify-restservice')
+        self.restart_service('cloudify-mgmtworker')
 
     def test_restore_snapshot_scheduled_tasks(self):
         """
