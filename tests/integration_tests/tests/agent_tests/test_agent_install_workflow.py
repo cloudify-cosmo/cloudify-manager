@@ -204,6 +204,7 @@ node_types:
         interfaces:
             cloudify.interfaces.lifecycle:
                 create: |
+                    #!/usr/bin/env bash
                     ctx instance runtime-properties create "${AGENT_NAME:-mgmtworker}"
                 start: |
                     import os
