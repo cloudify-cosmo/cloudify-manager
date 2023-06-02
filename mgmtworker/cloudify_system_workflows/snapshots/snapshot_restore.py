@@ -1286,6 +1286,11 @@ def _new_restore_update_entities(
             unique_id = entity['key']
         elif data['type'] == 'users':
             unique_id = entity['username']
+        elif 'id' not in entity:
+            raise Exception('Snapshot restore test exception: id not in '
+                            f"{entity} ({type(entity)}), "
+                            f"data[type]: {data['type']}, "
+                            f"entity.keys(): {entity.keys()}")
         else:
             unique_id = entity['id']
         entities[data_key][unique_id] = entity
