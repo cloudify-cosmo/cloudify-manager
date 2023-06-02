@@ -35,13 +35,14 @@ class TestSnapshots(AgentTestCase):
     def _deploy_with_agents(self, states):
         deployments = []
         execution_ids = []
-        for state in states:
+        for _ in states:
             deployment, execution = self.deploy_application(
                 resource("dsl/agent_tests/with_agent.yaml"),
                 wait_for_execution=False,
             )
             deployments.append(deployment)
             execution_ids.append(execution)
+            time.sleep(0.1)
 
         for execution_id in execution_ids:
             exc = self.client.executions.get(execution_id)
