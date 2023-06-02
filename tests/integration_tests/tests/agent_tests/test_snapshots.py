@@ -36,13 +36,15 @@ class TestSnapshots(AgentTestCase):
         deployments = []
         execution_ids = []
         for _ in states:
+            # All agents are going to be deployed in the same container.
+            # Because agent installation is a "messy" process (lot of global
+            # state, directory creation etc.), let's do it sequentially.
             deployment, execution = self.deploy_application(
                 resource("dsl/agent_tests/with_agent.yaml"),
-                wait_for_execution=False,
+                wait_for_execution=True,
             )
             deployments.append(deployment)
             execution_ids.append(execution)
-            time.sleep(0.1)
 
         for execution_id in execution_ids:
             exc = self.client.executions.get(execution_id)
