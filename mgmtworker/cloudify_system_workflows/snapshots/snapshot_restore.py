@@ -1282,6 +1282,8 @@ def _new_restore_update_entities(
             unique_id = f"{entity['role']}:{entity['permission']}"
         elif data['type'] == 'events':
             unique_id = f"{entity['timestamp']}:{hash(entity['message'])}"
+        elif data['type'] == 'secrets':
+            unique_id = entity['key']
         elif data['type'] == 'users':
             unique_id = entity['username']
         else:
