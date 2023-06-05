@@ -360,6 +360,40 @@ policies:
         assert {ni.runtime_properties['rel_operation'] for ni in nis} ==\
             {'value1', 'value2'}
 
+    def test_idd_no_instances(self):
+        bp_yaml = """
+tosca_definitions_version: cloudify_dsl_1_5
+imports:
+    - cloudify/types/types.yaml
+node_types:
+    t1:
+        properties:
+            prop1: {}
+node_templates:
+    n1:
+        type: t1
+        properties:
+            prop1: {get_capability: [some_dep, some_cap]}
+        instances:
+            deploy: 0
+    n2:
+        type: t1
+        properties:
+            prop1: {get_capability: [some_dep, some_cap]}
+        capabilities:
+            scalable:
+                properties:
+                    default_instances: 0
+"""
+        self.upload_blueprint_resource(
+            self.make_yaml_file(bp_yaml),
+            blueprint_id='bp1',
+        )
+        self.deploy(
+            blueprint_id='bp1',
+            deployment_id='d1',
+        )
+
     def _test_dependencies_are_updated(self, skip_uninstall):
         self._assert_dependencies_count(0)
         self._prepare_dep_update_test_resources()
