@@ -25,6 +25,7 @@ M_SCHEMA_REVISION = 'schema_revision'
 M_STAGE_SCHEMA_REVISION = 'stage_schema_revision'
 M_COMPOSER_SCHEMA_REVISION = 'composer_schema_revision'
 M_HAS_CLOUDIFY_EVENTS = 'has_cloudify_events'
+M_EXECUTION_ID = 'execution_id'
 ARCHIVE_CERT_DIR = 'ssl'
 CERT_DIR = '/etc/cloudify/ssl'
 INTERNAL_CA_CERT_FILENAME = 'cloudify_internal_ca_cert.pem'
@@ -73,6 +74,28 @@ V_5_3_0 = ManagerVersion('5.3.0')
 V_6_0_0 = ManagerVersion('6.0.0')
 V_7_0_0 = ManagerVersion('7.0.0')
 V_7_1_0 = ManagerVersion('7.1.0')
+
+
+DUMP_TYPE_IDS = {
+    'agents': 'agent_ids',
+    'blueprints': 'blueprint_ids',
+    'deployment_updates': 'deployment_update_ids',
+    'deployments': 'deployment_ids',
+    'events': 'event_storage_ids',
+    'execution_schedules': 'execution_schedule_ids',
+    'execution_groups': 'execution_group_ids',
+    'executions': 'execution_ids',
+    'blueprints_filters': 'filter_ids',
+    'deployments_filters': 'filter_ids',
+    'inter_deployment_dependencies': 'inter_deployment_dependency_ids',
+    'node_instances': 'node_instance_ids',
+    'nodes': 'node_ids',
+    'tasks_graphs': 'tasks_graph_ids',
+    'plugins': 'plugin_ids',
+    'plugins_updates': 'plugins_update_ids',
+    'secrets_providers': 'secrets_provider_ids',
+    'sites': 'sites_ids',
+}
 
 
 class VisibilityState(object):

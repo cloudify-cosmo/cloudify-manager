@@ -2,12 +2,14 @@ import glob
 import os
 import shutil
 import errno
-from datetime import datetime
+import time
 import unicodedata
+from datetime import datetime
 
 from retrying import retry
 
 from cloudify.decorators import workflow
+from cloudify.models_states import ExecutionState
 from cloudify.manager import get_rest_client, _get_workdir_path
 from cloudify.workflows import workflow_context
 
@@ -298,13 +300,72 @@ def create(ctx, labels=None, inputs=None, skip_plugins_validation=False,
 
 
 @workflow
-def delete(ctx, delete_logs, **_):
+def delete(ctx, delete_logs, recursive=False, force=False, **_):
     ctx.logger.info('Deleting deployment environment: %s', ctx.deployment.id)
+    if recursive:
+        _delete_contained_services(ctx, delete_logs=delete_logs, force=force)
     _delete_deployment_workdir(ctx)
     if delete_logs:
         ctx.logger.info("Deleting management workers' logs for deployment %s",
                         ctx.deployment.id)
         _delete_logs(ctx)
+
+
+def _delete_contained_services(ctx, delete_logs=False, force=False):
+    ctx.logger.info('Deleting service deployments recursively')
+    client = get_rest_client(tenant=ctx.tenant_name)
+
+    # create a deployment group containing the service deployments
+    # to be deleted, and then delete that group with delete_deployments=True,
+    # which will delete all the deployments contained in the group
+    group_id = f'{ctx.deployment.id}_services_delete'
+    client.deployment_groups.put(group_id)
+    client.deployment_groups.add_deployments(
+        group_id,
+        filter_rules=[{
+            'key': 'csys-obj-parent',
+            'values': [ctx.deployment.id],
+            'operator': 'any_of',
+            'type': 'label',
+        }]
+    )
+    # this call returns a dict containing the ID of the execution group
+    # that runs all the service delete_deployment_environment executions
+    delete_response = client.deployment_groups.delete(
+        group_id,
+        delete_deployments=True,
+        with_logs=delete_logs,
+        force=force,
+        recursive=True,
+    )
+    exc_group_id = delete_response['execution_group_id']
+    while True:
+        try:
+            # wait for the execution group to finish.
+            # I wish I was able to just poll excgroup.status, but that doesn't
+            # seem to work - to be fixed in RND-652.
+            # Instead, list the in-flight executions, and wait until there's
+            # none of them.
+            still_waiting = client.executions.list(
+                execution_group_id=exc_group_id,
+                status=(
+                    ExecutionState.WAITING_STATES
+                    + ExecutionState.IN_PROGRESS_STATES
+                ),
+            )
+            if len(still_waiting) == 0:
+                break
+            ctx.logger.info(
+                'Still waiting for %d service deployments to be deleted',
+                len(still_waiting),
+            )
+        except CloudifyClientError as e:
+            if e.status_code == 404:
+                # the exec-group itself was deleted, we're done!
+                break
+            else:
+                raise
+        time.sleep(1)
 
 
 def _delete_logs(ctx):

@@ -1059,8 +1059,16 @@ class DeploymentGroupsId(SecuredResource):
         return set()
 
     def _set_group_labels(self, sm, group, raw_labels):
+        labels = []
+        for raw_label in raw_labels:
+            if isinstance(raw_label, dict) \
+                    and 'key' in raw_label \
+                    and 'value' in raw_label:
+                labels.append({raw_label['key']: raw_label['value']})
+            else:
+                labels.append(raw_label)
         rm = get_resource_manager()
-        new_labels = set(rest_utils.get_labels_list(raw_labels))
+        new_labels = set(rest_utils.get_labels_list(labels))
         labels_to_create = rm.get_labels_to_create(group, new_labels)
         labels_to_delete = {
             label for label in group.labels
@@ -1414,34 +1422,41 @@ class DeploymentGroupsId(SecuredResource):
             Argument('delete_deployments', type=boolean, default=False),
             Argument('force', type=boolean, default=False),
             Argument('delete_logs', type=boolean, default=False),
+            Argument('recursive', type=boolean, default=False),
         ])
         sm = get_storage_manager()
         rm = get_resource_manager()
 
         group = sm.get(models.DeploymentGroup, group_id)
+        response = None, 204
         if args.delete_deployments:
             with sm.transaction():
                 delete_exc_group = models.ExecutionGroup(
                     id=str(uuid.uuid4()),
                     workflow_id='delete_deployment_environment',
-                    deployment_group=group,
                 )
                 sm.put(delete_exc_group)
                 for dep in group.deployments:
-                    rm.check_deployment_delete(dep, force=args.force)
+                    rm.check_deployment_delete(
+                        dep,
+                        force=args.force,
+                        recursive=args.recursive,
+                    )
                     delete_exc = dep.make_delete_environment_execution(
                         delete_logs=args.delete_logs,
                         force=args.force,
+                        recursive=args.recursive,
                     )
                     delete_exc_group.executions.append(delete_exc)
                 messages = delete_exc_group.start_executions(sm, rm)
+            response = {'execution_group_id': delete_exc_group.id}, 200
 
         sm.delete(group)
 
         if args.delete_deployments:
             workflow_executor.execute_workflow(messages)
 
-        return None, 204
+        return response
 
 
 def _create_inter_deployment_dependency(

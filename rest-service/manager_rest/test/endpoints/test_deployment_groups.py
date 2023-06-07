@@ -385,15 +385,19 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             'group1',
             deployment_ids=['dep1']
         )
-        self.client.deployment_groups.delete(
+        response = self.client.deployment_groups.delete(
             'group1', delete_deployments=True)
         assert len(self.client.deployment_groups.list()) == 0
+        assert 'execution_group_id' in response
 
         # dep hasn't been deleted _yet_, but check that delete-dep-env for it
         # was run
         dep = self.sm.get(models.Deployment, 'dep1')
         assert any(exc.workflow_id == 'delete_deployment_environment'
                    for exc in dep.executions)
+        exc_group = self.sm.get(
+            models.ExecutionGroup, response['execution_group_id'])
+        assert len(exc_group.executions) == 1
 
     def test_create_filters(self):
         """Create a group with filter_id to set the deployments"""
@@ -1427,6 +1431,7 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
                     tenant=self.tenant,
                     creator=self.user,
                 )
+                db.session.add(exc_group)
                 for exc_status in execution_statuses:
                     exc = models.Execution(
                         workflow_id='',
@@ -1436,6 +1441,13 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
                     )
                     exc_group.executions.append(exc)
                 assert exc_group.status == expected_group_status
+                eg = self.client.execution_groups.get(
+                    exc_group.id,
+                    _include=['id', 'status']
+                )
+                assert eg.status == expected_group_status
+                db.session.delete(exc_group)
+                db.session.commit()
 
     @mock.patch('manager_rest.workflow_executor.execute_workflow', mock.Mock())
     def test_success_group(self):
