@@ -113,7 +113,7 @@ class SnapshotsId(SecuredResource):
         tempdir_path = request_dict.get('tempdir_path')
         legacy = rest_utils.verify_and_convert_bool(
             'legacy',
-            request_dict.get('legacy', True)
+            request_dict.get('legacy', False)
         )
         if tempdir_path and not os.access(tempdir_path, os.W_OK):
             raise manager_exceptions.ForbiddenError(
