@@ -44,3 +44,47 @@ class TestRuntimeProperties(AgentlessTestCase):
             node_instance_id).runtime_properties
         self.assertEqual('property_value', node_runtime_props['property_name'])
         return node_instance_id, node_runtime_props, deployment.id
+
+    def test_get_attribute_from_runtime_property(self):
+        bp = """
+tosca_definitions_version: cloudify_dsl_1_5
+imports:
+    - cloudify/types/types.yaml
+node_types:
+    t1:
+        derived_from: cloudify.nodes.Root
+        properties:
+            prop1: {}
+node_templates:
+    n1:
+        type: t1
+        properties:
+            prop1: 1
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                create: |
+                    from cloudify import ctx
+                    ctx.instance.runtime_properties['prop1'] = 2
+    n2:
+        type: t1
+        properties:
+            prop1:
+                - {get_attribute: [n1, prop1]}
+        relationships:
+            - target: n1
+              type: cloudify.relationships.depends_on
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                create: |
+                    from cloudify import ctx
+                    ctx.instance.runtime_properties['result'] = \
+                        ctx.node.properties['prop1']
+
+"""
+        dep, _ = self.deploy_application(self.make_yaml_file(bp))
+        instances = self.client.node_instances.list(
+            deployment_id=dep.id,
+            node_id='n2',
+        )
+        assert len(instances) == 1
+        assert instances[0].runtime_properties.get('result') == [2]
