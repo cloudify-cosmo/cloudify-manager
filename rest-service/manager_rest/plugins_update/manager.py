@@ -1,6 +1,7 @@
 import os
 import uuid
 import shutil
+import tempfile
 from collections import defaultdict
 from datetime import datetime
 
@@ -34,6 +35,7 @@ from manager_rest.manager_exceptions import (ConflictError,
                                              IllegalActionError)
 from manager_rest.constants import (FILE_SERVER_BLUEPRINTS_FOLDER,
                                     FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER)
+from manager_rest.persistent_storage import get_storage_handler
 
 
 PLUGIN_VERSION_CONSTRAINTS = 'plugin_version_constraints'
@@ -305,14 +307,21 @@ class PluginsUpdateManager(object):
 
     def get_reevaluated_plan(self, blueprint, resolver_parameters):
         blueprint_dir = os.path.join(
-            config.instance.file_server_root,
             FILE_SERVER_BLUEPRINTS_FOLDER,
             blueprint.tenant.name,
             blueprint.id)
-        temp_plan = self.rm.parse_plan(blueprint_dir,
-                                       blueprint.main_file_name,
-                                       config.instance.file_server_root,
-                                       resolver_parameters=resolver_parameters)
+        sh = get_storage_handler()
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            for filename in sh.list(blueprint_dir):
+                with sh.get(filename.filepath) as ff:
+                    shutil.copy(ff, tmpdirname)
+
+            temp_plan = self.rm.parse_plan(
+                tmpdirname,
+                blueprint.main_file_name,
+                config.instance.file_server_root,
+                resolver_parameters=resolver_parameters,
+            )
         return temp_plan
 
 

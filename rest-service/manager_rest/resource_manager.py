@@ -819,22 +819,6 @@ class ResourceManager(object):
         messages = self.prepare_executions([execution])
         return execution, messages
 
-    def publish_blueprint(self,
-                          application_dir,
-                          application_file_name,
-                          resources_base,
-                          blueprint_id,
-                          private_resource,
-                          visibility):
-        plan = self.parse_plan(
-            application_dir, application_file_name, resources_base)
-
-        return self.publish_blueprint_from_plan(application_file_name,
-                                                blueprint_id,
-                                                plan,
-                                                private_resource,
-                                                visibility)
-
     def publish_blueprint_from_plan(self,
                                     application_file_name,
                                     blueprint_id,
@@ -858,12 +842,6 @@ class ResourceManager(object):
             state=state
         )
         return self.sm.put(new_blueprint)
-
-    def validate_blueprint(self,
-                           application_dir,
-                           application_file_name,
-                           resources_base):
-        self.parse_plan(application_dir, application_file_name, resources_base)
 
     @staticmethod
     def parse_plan(application_dir, application_file_name, resources_base,
