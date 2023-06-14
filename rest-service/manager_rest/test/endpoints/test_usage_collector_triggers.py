@@ -10,20 +10,51 @@ class TestUsageCollectorTriggers(base_test.BaseServerTestCase):
             manager_id=123456, hours_interval=4, days_interval=1))
 
     def test_max_total_deployments(self):
-        self.put_blueprint()
-        self.client.deployments.create('blueprint', 'd1')
-        self.client.deployments.create('blueprint', 'd2')
+        bp = models.Blueprint(
+            id='blueprint',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        models.Deployment(
+            id='d1',
+            blueprint=bp,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        models.Deployment(
+            id='d2',
+            blueprint=bp,
+            creator=self.user,
+            tenant=self.tenant,
+        )
         self.delete_deployment('d2')
-        self.client.deployments.create('blueprint', 'd3')
+        models.Deployment(
+            id='d3',
+            blueprint=bp,
+            creator=self.user,
+            tenant=self.tenant,
+        )
         usage_metrics = models.UsageCollector.query.first()
         assert usage_metrics.max_deployments == 2
         assert usage_metrics.total_deployments == 3
 
     def test_max_total_blueprints(self):
-        self.put_blueprint(blueprint_id='bp1')
-        self.client.blueprints.delete('bp1')
-        self.put_blueprint(blueprint_id='bp2')
-        self.put_blueprint(blueprint_id='bp3')
+        bp = models.Blueprint(
+            id='bp1',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        self.client.blueprints.delete(bp.id)
+        models.Blueprint(
+            id='bp2',
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        models.Blueprint(
+            id='bp3',
+            creator=self.user,
+            tenant=self.tenant,
+        )
         usage_metrics = models.UsageCollector.query.first()
         assert usage_metrics.max_blueprints == 2
         assert usage_metrics.total_blueprints == 3

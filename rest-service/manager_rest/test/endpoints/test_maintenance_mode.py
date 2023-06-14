@@ -13,10 +13,11 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import uuid
 from unittest.mock import patch
 
 from cloudify_rest_client import exceptions
-from cloudify.models_states import ExecutionState
+from cloudify.models_states import BlueprintUploadState, ExecutionState
 
 from manager_rest.storage import models
 from manager_rest.test.base_test import BaseServerTestCase
@@ -117,7 +118,6 @@ class MaintenanceModeTest(BaseServerTestCase):
                           deployment_id='d1')
 
     def test_deployment_modification_denial_maintenance_transition_mode(self):
-        self.put_deployment('d1', blueprint_id='b2')
         self._start_maintenance_transition_mode()
         self.assertRaises(exceptions.MaintenanceModeActivatingError,
                           self.client.deployment_modifications.start,
@@ -139,7 +139,6 @@ class MaintenanceModeTest(BaseServerTestCase):
 
     def test_executions_denial_in_maintenance_transition_mode(self):
         self._start_maintenance_transition_mode()
-        self.put_blueprint(blueprint_id='b1')
         self.assertRaises(exceptions.MaintenanceModeActivatingError,
                           self.client.executions.start,
                           deployment_id='d1',
@@ -201,8 +200,14 @@ class MaintenanceModeTest(BaseServerTestCase):
 
     def test_request_approval_after_maintenance_mode_deactivation(self):
         self._activate_and_deactivate_maintenance_mode()
-        self.put_blueprint(blueprint_id='b1')
-        self.client.deployments.create('b1', 'd1')
+        bp = models.Blueprint(
+            id='b1',
+            creator=self.user,
+            state=BlueprintUploadState.UPLOADED,
+            plan={},
+            tenant=self.tenant,
+        )
+        self.client.deployments.create(bp.id, 'd1')
 
     def test_multiple_maintenance_mode_deactivations(self):
         self._activate_and_deactivate_maintenance_mode()
@@ -234,12 +239,18 @@ class MaintenanceModeTest(BaseServerTestCase):
     def _test_different_execution_status_in_activating_mode(
             self,
             execution_status=ExecutionState.STARTED):
-        self.put_blueprint(blueprint_id='b1')
+        bp = models.Blueprint(
+            id='b1',
+            creator=self.user,
+            state=BlueprintUploadState.UPLOADED,
+            plan={},
+            tenant=self.tenant,
+        )
         self._start_maintenance_transition_mode(
             execution_status=execution_status)
         self.assertRaises(exceptions.MaintenanceModeActivatingError,
                           self.client.deployments.create,
-                          blueprint_id='b1',
+                          blueprint_id=bp.id,
                           deployment_id='d1')
 
     def _activate_maintenance_mode(self):
@@ -251,20 +262,30 @@ class MaintenanceModeTest(BaseServerTestCase):
             bp_id='transition_blueprint',
             dep_id='transition_deployment',
             execution_status=ExecutionState.STARTED):
-        (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_deployment(
-            blueprint_id=bp_id,
-            deployment_id=dep_id)
-        execution = self.client.executions.start(deployment_id, 'install')
-        execution = self.client.executions.get(execution.id)
-        self.assertEqual('terminated', execution.status)
-        self._update_execution_status(execution.id, execution_status)
-
+        bp = models.Blueprint(
+            id=bp_id,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        dep = models.Deployment(
+            id=dep_id,
+            blueprint=bp,
+            creator=self.user,
+            tenant=self.tenant,
+        )
+        exc = models.Execution(
+            id=str(uuid.uuid4()),
+            deployment=dep,
+            workflow_id='install',
+            status=execution_status,
+            creator=self.user,
+            tenant=self.tenant,
+        )
         self.client.maintenance_mode.activate()
         response = self.client.maintenance_mode.status()
         self.assertEqual(MAINTENANCE_MODE_ACTIVATING, response.status)
 
-        return execution
+        return exc
 
     def _update_execution_status(self, execution_id, new_status, error=''):
         execution = self.sm.get(models.Execution, execution_id)
