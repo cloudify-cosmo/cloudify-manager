@@ -1,0 +1,20 @@
+tosca_definitions_version: cloudify_dsl_1_5
+
+imports:
+  - cloudify/types/types.yaml
+
+node_templates:
+  test_node:
+    type: cloudify.nodes.Root
+
+workflows:
+  sleep:
+    mapping: |
+      from cloudify.state import workflow_parameters as parameters, workflow_ctx as ctx
+      from time import sleep
+      ctx.logger.info('Sleeping for %s', parameters['seconds'])
+      sleep(parameters['seconds'])
+      ctx.logger.info('Woken up')
+    parameters:
+      seconds:
+        default: 23
