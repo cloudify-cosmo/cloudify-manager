@@ -548,6 +548,56 @@ class TestBlueprintRequirements(SnapshotUtilsTestBase):
         set_blueprint_requirements()
         assert bp.requirements == {'parent_capabilities': [], 'secrets': ['a']}
 
+    def test_requires_function_secret(self):
+        bp = models.Blueprint(
+            id='bp1',
+            plan={
+                'nodes': [{
+                    'name': 'n1',
+                    'properties': {
+                        'a': {'default':
+                                  {'get_secret':
+                                      {'get_sys': ['deployment', 'id']}
+                                   }
+                              }
+                    },
+                    'operations': {},
+                }],
+            },
+            creator=self._user,
+            tenant=self._tenant,
+        )
+        db.session.add(bp)
+        db.session.flush()
+        assert bp.requirements is None
+        set_blueprint_requirements()
+        assert bp.requirements == {'parent_capabilities': [],
+                                   'secrets': [
+                                       {'get_sys': ['deployment', 'id']}
+                                   ]}
+
+    def test_requires_malformed_secret(self):
+        bp = models.Blueprint(
+            id='bp1',
+            plan={
+                'nodes': [{
+                    'name': 'n1',
+                    'properties': {
+                        'a': {'default': {'get_secret': 'a'}},
+                        'b': {'default': {'get_secret': {'a': 'b'}}}
+                    },
+                    'operations': {},
+                }],
+            },
+            creator=self._user,
+            tenant=self._tenant,
+        )
+        db.session.add(bp)
+        db.session.flush()
+        assert bp.requirements is None
+        set_blueprint_requirements()
+        assert bp.requirements == {}
+
     def test_requires_parent_capabilities(self):
         bp = models.Blueprint(
             id='bp1',
@@ -575,3 +625,29 @@ class TestBlueprintRequirements(SnapshotUtilsTestBase):
             'parent_capabilities': [['a', 'b']],
             'secrets': [],
         }
+
+    def test_malformed_parent_capabilities(self):
+        bp = models.Blueprint(
+            id='bp1',
+            plan={
+                'nodes': [{
+                    'name': 'n1',
+                    'properties': {
+                        'a': {
+                            'default': {
+                                'get_environment_capability': ['a', {'b': 'c'}]
+                            },
+                        },
+                        'b': {'default': {'get_secret': 'a'}}
+                    },
+                    'operations': {},
+                }],
+            },
+            creator=self._user,
+            tenant=self._tenant,
+        )
+        db.session.add(bp)
+        db.session.flush()
+        assert bp.requirements is None
+        set_blueprint_requirements()
+        assert bp.requirements == {}
