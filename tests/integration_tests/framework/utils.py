@@ -463,6 +463,8 @@ nginx:
 restservice:
     gunicorn:
         max_worker_count: 4
+prometheus:
+    scrape_interval: 5s
 """
     if lightweight:
         manager_config += """
