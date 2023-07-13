@@ -38,7 +38,7 @@ install_requires = [
     'cachetools>=3,<4',
     'email-validator>1,<2',
     'retrying',
-    'pydantic',
+    'pydantic<2',
     'distro',
 ]
 
