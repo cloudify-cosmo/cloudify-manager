@@ -16,8 +16,8 @@
 from setuptools import setup, find_packages
 
 install_requires = [
-    'cloudify-common==7.0.2',
-    'cloudify-agent==7.0.2',
+    'cloudify-common==7.0.2-build',
+    'cloudify-agent==7.0.2-build',
     'packaging==17.1',
     'retrying>1,<2',
     'psycopg2==2.9.3',
@@ -29,7 +29,7 @@ install_requires = [
 
 setup(
     name='cloudify-mgmtworker',
-    version='7.0.2',
+    version='7.0.2-build',
     author='Cloudify',
     author_email='cosmo-admin@cloudify.co',
     packages=find_packages(),
