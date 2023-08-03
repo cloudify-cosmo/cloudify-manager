@@ -566,3 +566,64 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
 
         deployment = self.client.deployments.get(deployment.id)
         assert deployment['description'] == 'new description'
+
+    def test_update_set_properties(self):
+        # test setting runtime properties in multiple operations, to see
+        # if a "node instance version conflict" error is thrown, which it
+        # shouldn't be, because the operations are sequential for every
+        # instance
+        bp = """
+tosca_definitions_version: cloudify_dsl_1_5
+imports:
+  - cloudify/types/types.yaml
+
+node_types:
+  t1:
+    derived_from: cloudify.nodes.Root
+    interfaces:
+        cloudify.interfaces.validation:
+            check_status: |
+                from cloudify import ctx
+                ctx.logger.info('check status')
+                ctx.instance.runtime_properties['a'] = 1
+        cloudify.interfaces.lifecycle:
+            check_drift: |
+                from cloudify import ctx
+                ctx.logger.info('check drift')
+                ctx.instance.runtime_properties['b'] = 1
+                ctx.returns({'drift': True})
+            update: |
+                from cloudify import ctx
+                ctx.logger.info('update')
+                ctx.instance.runtime_properties['c'] = 1
+node_templates:
+    n1:
+        type: t1
+    n2:
+        type: t1
+        relationships:
+            - type: cloudify.relationships.depends_on
+              target: n1
+        instances:
+            deploy: 2
+    n3:
+        type: t1
+        relationships:
+            - type: cloudify.relationships.depends_on
+              target: n1
+"""
+        self.upload_blueprint_resource(
+            self.make_yaml_file(bp),
+            blueprint_id='bp1',
+        )
+        dep1 = self.deploy(
+            blueprint_id='bp1',
+            deployment_id='d1',
+        )
+        self.execute_workflow('install', dep1.id)
+        # update with no new settings - only look at drift/status
+        self._do_update(dep1.id)
+        instances = self.client.node_instances.list(deployment_id=dep1.id)
+        assert len(instances) == 4
+        for instance in instances:
+            assert instance.runtime_properties == {'a': 1, 'b': 1, 'c': 1}
