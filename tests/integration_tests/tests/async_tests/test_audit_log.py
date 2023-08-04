@@ -67,7 +67,7 @@ async def test_audit_log_stream_timeout(
                     response.close()
                     break
     except Exception as ex:
-        assert type(ex) == asyncio.TimeoutError
+        assert isinstance(ex, asyncio.TimeoutError)
     else:
         assert False
 
