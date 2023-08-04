@@ -56,8 +56,7 @@ cloudify-common @ https://github.com/cloudify-cosmo/cloudify-common/archive/7.0.
     # via
     #   -r requirements.in
     #   cloudify-rest-service
-cloudify-rest-service @ https://github.com/cloudify-cosmo/cloudify-manager/archive/flake-2023-08-03-702.zip#subdirectory=rest-service
-    # TODO revert this back to 7.0.2-build when possible, in the next PR
+cloudify-rest-service @ https://github.com/cloudify-cosmo/cloudify-manager/archive/7.0.2-build.zip#subdirectory=rest-service
     # via
     #   -r requirements.in
     #   cloudify-api (setup.py)
