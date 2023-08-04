@@ -21,7 +21,6 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 
 from manager_rest.storage import db, models
 from manager_rest.test import base_test
-from manager_rest import manager_exceptions
 
 
 class _NodeSetupMixin(object):
@@ -298,23 +297,38 @@ class NodesTest(_NodeSetupMixin, base_test.BaseServerTestCase):
     def test_patch_node_conflict(self):
         """A conflict inside the storage manager propagates to the client."""
         node_instance_id = '1234'
-        self._instance(
+        inst = self._instance(
             node_instance_id,
             runtime_properties={'key': 'value'},
         )
+        db.session.commit()
+        inst.state = 'uninitialized'
+        db.session.commit()
 
-        with mock.patch(
-            'manager_rest.storage.storage_manager.SQLStorageManager.update',
-            side_effect=manager_exceptions.ConflictError
-        ):
-            with self.assertRaises(CloudifyClientError) as cm:
-                self.client.node_instances.update(
-                    node_instance_id,
-                    runtime_properties={'key': 'new_value'},
-                    version=2
-                )
-
+        with self.assertRaises(CloudifyClientError) as cm:
+            self.client.node_instances.update(
+                node_instance_id,
+                runtime_properties={'key': 'new_value'},
+                version=inst.version - 1,
+            )
         assert cm.exception.status_code == 409
+
+    def test_patch_instance_lower_version_unchanged(self):
+        """A conflict inside the storage manager propagates to the client."""
+        node_instance_id = '1234'
+        inst = self._instance(
+            node_instance_id,
+            runtime_properties={'key': 'value'},
+        )
+        db.session.commit()
+        inst.state = 'uninitialized'
+        db.session.commit()
+
+        self.client.node_instances.update(
+            node_instance_id,
+            runtime_properties=inst.runtime_properties,
+            version=inst.version - 1,
+        )
 
     def test_list_node_instances_multiple_value_filter(self):
         dep2 = self._deployment('d2')
