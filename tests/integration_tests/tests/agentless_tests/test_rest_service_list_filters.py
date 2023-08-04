@@ -42,7 +42,7 @@ class TestRestServiceListFilters(AgentlessTestCase):
         dsl_path = resource("dsl/deployment_modification_operations.yaml")
         first_deployment, _ = self.deploy_application(dsl_path)
         sec_deployment, _ = self.deploy_application(dsl_path)
-        return first_deployment.id, first_deployment.blueprint_id,\
+        return first_deployment.id, first_deployment.blueprint_id, \
             sec_deployment.id, sec_deployment.blueprint_id
 
     def test_nodes_list_with_filters(self):

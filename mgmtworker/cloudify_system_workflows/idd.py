@@ -175,7 +175,7 @@ def _get_external_clients(manager_ips: List,
     if client_config:
         internal_hosts = ({'127.0.0.1', 'localhost'} | set(manager_ips))
         host = client_config['host']
-        host = {host} if type(host) == str else set(host)
+        host = {host} if isinstance(host, str) else set(host)
         if not (host & internal_hosts):
             external_client = CloudifyClient(**client_config)
 
