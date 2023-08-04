@@ -16,8 +16,8 @@
 from setuptools import setup, find_packages
 
 install_requires = [
-    'cloudify-common==7.0.2.dev1',
-    'cloudify-agent==7.0.2.dev1',
+    'cloudify-common',
+    'cloudify-agent',
     'packaging==17.1',
     'retrying>1,<2',
     'psycopg2==2.9.3',
