@@ -482,7 +482,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                     force_status=state,
                     started_at="2122-11-25T15:13:17.930Z",
                 )
-                assert deployment.latest_execution is None,\
+                assert deployment.latest_execution is None, \
                     f'Latest execution should not be set for {state}'
 
     def test_restore_set_latest_from_none(self):
@@ -499,7 +499,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                     force_status=state,
                     started_at=timestamp,
                 )
-                assert deployment.latest_execution.started_at == timestamp,\
+                assert deployment.latest_execution.started_at == timestamp, \
                     f'Latest execution should be set for {state}'
 
     def test_restore_not_set_latest_with_older_not_running(self):
@@ -526,7 +526,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                     started_at=timestamp,
                 )
 
-                assert deployment.latest_execution.id == old_execution_id,\
+                assert deployment.latest_execution.id == old_execution_id, \
                     f'Latest execution should not be changed for {state}'
 
     def test_restore_set_latest_with_older(self):
@@ -553,7 +553,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                     started_at=timestamp,
                 )
 
-                assert deployment.latest_execution.id == new_execution_id,\
+                assert deployment.latest_execution.id == new_execution_id, \
                     f'Latest execution should be changed for {state}'
 
     def test_restore_not_set_latest_with_newer(self):
@@ -578,7 +578,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                     started_at=timestamp,
                 )
 
-                assert deployment.latest_execution.id == old_execution_id,\
+                assert deployment.latest_execution.id == old_execution_id, \
                     f'Latest execution should not be changed for {state}'
 
     def test_restore_not_set_create_exec_from_none(self):
@@ -597,7 +597,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                     started_at=timestamp,
                 )
 
-                assert deployment.create_execution is None,\
+                assert deployment.create_execution is None, \
                     f'Create execution should not be set for {state}'
 
     def test_restore_set_create_exec_from_none(self):
@@ -616,7 +616,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                     started_at=timestamp,
                 )
 
-                assert deployment.create_execution.id == execution_id,\
+                assert deployment.create_execution.id == execution_id, \
                     f'Create execution should be set for {state}'
 
     def test_restore_not_set_create_with_older_not_running(self):
@@ -644,7 +644,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                     started_at=timestamp,
                 )
 
-                assert deployment.create_execution.id == old_execution_id,\
+                assert deployment.create_execution.id == old_execution_id, \
                     f'Create execution should not be changed for {state}'
 
     def test_restore_set_create_with_older(self):
@@ -672,7 +672,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                     started_at=timestamp,
                 )
 
-                assert deployment.create_execution.id == new_execution_id,\
+                assert deployment.create_execution.id == new_execution_id, \
                     f'Create execution should be changed for {state}'
 
     def test_restore_not_set_create_with_newer(self):
@@ -698,7 +698,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                     started_at=timestamp,
                 )
 
-                assert deployment.create_execution.id == old_execution_id,\
+                assert deployment.create_execution.id == old_execution_id, \
                     f'Create execution should not be changed for {state}'
 
     def test_restore_not_set_upload_from_none(self):
@@ -725,9 +725,9 @@ class ExecutionsTestCase(BaseServerTestCase):
                     force_status=state,
                 )
 
-                assert bp1.upload_execution is None,\
+                assert bp1.upload_execution is None, \
                     f'Upload execution should not be set for {state}'
-                assert bp2.upload_execution is None,\
+                assert bp2.upload_execution is None, \
                     f'Upload exec should not be set for other bp for {state}'
 
     def test_restore_set_upload_from_none(self):
@@ -754,9 +754,9 @@ class ExecutionsTestCase(BaseServerTestCase):
                     force_status=state,
                 )
 
-                assert bp1.upload_execution.id == exec_id,\
+                assert bp1.upload_execution.id == exec_id, \
                     f'Upload execution should be set for {state}'
-                assert bp2.upload_execution is None,\
+                assert bp2.upload_execution is None, \
                     f'Upload exec should not be set for other bp for {state}'
 
     def test_restore_not_set_upload_with_newer(self):
@@ -794,9 +794,9 @@ class ExecutionsTestCase(BaseServerTestCase):
                     started_at=timestamp,
                 )
 
-                assert bp1.upload_execution.id == old_exec_id,\
+                assert bp1.upload_execution.id == old_exec_id, \
                     f'Upload execution should not be updated for {state}'
-                assert bp2.upload_execution is None,\
+                assert bp2.upload_execution is None, \
                     f'Upload exec should not be set for other bp for {state}'
 
     def test_restore_set_upload_with_older(self):
@@ -834,9 +834,9 @@ class ExecutionsTestCase(BaseServerTestCase):
                     started_at=timestamp,
                 )
 
-                assert bp1.upload_execution.id == exec_id,\
+                assert bp1.upload_execution.id == exec_id, \
                     f'Upload execution should not be updated for {state}'
-                assert bp2.upload_execution is None,\
+                assert bp2.upload_execution is None, \
                     f'Upload exec should not be set for other bp for {state}'
 
     def test_restore_not_set_upload_with_older(self):
@@ -874,9 +874,9 @@ class ExecutionsTestCase(BaseServerTestCase):
                     started_at=timestamp,
                 )
 
-                assert bp1.upload_execution.id == old_exec_id,\
+                assert bp1.upload_execution.id == old_exec_id, \
                     f'Upload execution should not be updated for {state}'
-                assert bp2.upload_execution is None,\
+                assert bp2.upload_execution is None, \
                     f'Upload exec should not be set for other bp for {state}'
 
     def test_get_non_existent_execution(self):
