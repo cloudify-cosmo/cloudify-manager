@@ -565,6 +565,9 @@ def _generate_db_config_entries(cfg):
             'credentials', {}).get('password'),
         default_agent_port=internal_rest_port,
         prometheus_url=manager_cfg.get('prometheus_url'),
+        s3_server_url=manager_cfg.get('s3_server_url'),
+        s3_resources_bucket=manager_cfg.get('s3_resources_bucket'),
+        s3_client_timeout=manager_cfg.get('s3_client_timeout'),
     )
     mgmtworker_cfg = build_dict(
         max_workers=mgmtworker_cfg.get('max_workers'),
