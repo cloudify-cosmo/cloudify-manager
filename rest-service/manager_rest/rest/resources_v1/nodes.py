@@ -217,7 +217,18 @@ class NodeInstancesId(SecuredResource):
                 node_instance_id,
                 locking=True,
             )
-            changed = False
+
+            # optimistic concurrency control: each update request must include
+            # a version field, and if the version has changed since the client
+            # last fetched the instance, the update will be denied with a 409,
+            # forcing the client to re-fetch the instance and do the update
+            # again.
+            if instance.version > req_body.version and not force:
+                raise manager_exceptions.ConflictError(
+                    'Node instance update conflict [current version='
+                    f'{instance.version}, update version={req_body.version}]'
+                )
+
             for attr in [
                 'state',
                 'runtime_properties',
@@ -226,10 +237,7 @@ class NodeInstancesId(SecuredResource):
             ]:
                 original = getattr(instance, attr)
                 request_value = getattr(req_body, attr)
-                # only actually do anything if the new value is different.
-                # updating to the same value is a no-op
                 if request_value is not None and request_value != original:
-                    changed = True
                     setattr(instance, attr, request_value)
                     # specialcase relationships: that's a dep-update-only
                     # change, users normally don't want to change this internal
@@ -239,23 +247,6 @@ class NodeInstancesId(SecuredResource):
                     # specialcase system_properties:
                     if attr == 'system_properties':
                         self._process_system_properties(instance, original)
-
-            # optimistic concurrency control: each update request must include
-            # a version field, and if the version has changed since the client
-            # last fetched the instance, the update will be denied with a 409,
-            # forcing the client to re-fetch the instance and do the update
-            # again.
-            # However, only do that check if something was actually changed in
-            # the request, so that if multiple requests at the same time
-            # attempt to set the same values, none are declined: one takes
-            # effect, and the others are a successful no-op.
-            if not changed:
-                return instance
-            if instance.version > req_body.version and not force:
-                raise manager_exceptions.ConflictError(
-                    'Node instance update conflict [current version='
-                    f'{instance.version}, update version={req_body.version}]'
-                )
             return sm.update(instance)
 
     def _process_system_properties(self, instance, old_properties):
