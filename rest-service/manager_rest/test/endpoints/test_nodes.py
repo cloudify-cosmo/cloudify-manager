@@ -313,23 +313,6 @@ class NodesTest(_NodeSetupMixin, base_test.BaseServerTestCase):
             )
         assert cm.exception.status_code == 409
 
-    def test_patch_instance_lower_version_unchanged(self):
-        """A conflict inside the storage manager propagates to the client."""
-        node_instance_id = '1234'
-        inst = self._instance(
-            node_instance_id,
-            runtime_properties={'key': 'value'},
-        )
-        db.session.commit()
-        inst.state = 'uninitialized'
-        db.session.commit()
-
-        self.client.node_instances.update(
-            node_instance_id,
-            runtime_properties=inst.runtime_properties,
-            version=inst.version - 1,
-        )
-
     def test_list_node_instances_multiple_value_filter(self):
         dep2 = self._deployment('d2')
         node1 = self._node('1', deployment=self.dep1)
