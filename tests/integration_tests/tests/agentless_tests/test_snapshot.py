@@ -257,7 +257,7 @@ class TestSnapshot(AgentlessTestCase):
 
         snapshot_id = "test_snapshot_id"
         snapshot_create_execution = self.client.snapshots.create(
-            snapshot_id, False)
+            snapshot_id, False, legacy=False)
         self.wait_for_execution_to_end(snapshot_create_execution)
 
         downloaded_snapshot = os.path.join(self.workdir, 'snapshot.zip')
@@ -288,7 +288,7 @@ class TestSnapshot(AgentlessTestCase):
             deployment.id, 'install', force_status=Execution.QUEUED)
 
         snapshot_create_execution = self.client.snapshots.create(
-            snapshot_id, False)
+            snapshot_id, False, legacy=False)
         self.wait_for_execution_to_end(snapshot_create_execution)
         self.wait_for_execution_to_end(exc)
 
@@ -319,7 +319,7 @@ class TestSnapshot(AgentlessTestCase):
         self.client.blueprints.set_visibility(blueprint.id, 'tenant')
         snapshot_id = "test_append_referenced_blueprint"
         snapshot_create_execution = self.client.snapshots.create(
-            snapshot_id, False)
+            snapshot_id, False, legacy=False)
         time.sleep(10)  # 10s is the default auditlog listener's timeout
         self.client.blueprints.set_visibility(blueprint.id, 'global')
         self.wait_for_execution_to_end(snapshot_create_execution)
@@ -344,7 +344,7 @@ class TestSnapshot(AgentlessTestCase):
                                                display_name='Norrgården')
         snapshot_id = "test_append_referenced_deployment"
         snapshot_create_execution = self.client.snapshots.create(
-            snapshot_id, False)
+            snapshot_id, False, legacy=False)
         time.sleep(10)  # 10s is the default auditlog listener's timeout
         self.client.deployments.set_attributes(deployment.id,
                                                display_name='Mellangården')
@@ -373,7 +373,7 @@ class TestSnapshot(AgentlessTestCase):
         )
         snapshot_id = "test_append_execution"
         snapshot_create_execution = self.client.snapshots.create(
-            snapshot_id, False, queue=True)
+            snapshot_id, False, queue=True, legacy=False)
         time.sleep(10)  # 10s is the default auditlog listener's timeout
         _ = [
             self.execute_workflow(
