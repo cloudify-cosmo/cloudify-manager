@@ -209,6 +209,18 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
             if parsed_version in specifier_set and yaml_urls and wagon_url:
                 matching_versions.append((
                     parsed_version, yaml_urls, wagon_url))
+        # if no matching version for the distro, default to the first
+        # available wagon of the most recent version
+        if not matching_versions:
+            for version in plugin_versions.json().get('items'):
+                parsed_version = parse_version(version.get('version'))
+                yaml_urls = version.get('yaml_urls')
+                if version.get('wagon_urls'):
+                    wagon_url = version['wagon_urls'][0]['url']
+                if parsed_version in specifier_set and yaml_urls and wagon_url:
+                    matching_versions.append((
+                        parsed_version, yaml_urls, wagon_url))
+        # if *still* no match:
         if not matching_versions:
             raise FileNotFoundError()
 
