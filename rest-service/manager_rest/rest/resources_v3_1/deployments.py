@@ -1099,7 +1099,7 @@ class DeploymentGroupsId(SecuredResource):
         if deleted_parents:
             changed_deps |= deleted_parents
         rm.create_resource_labels(
-            models.DeploymentGroupLabel, group, labels_to_create)
+            models.DeploymentGroupLabel, group._storage_id, labels_to_create)
         for label in labels_to_delete:
             sm.delete(label)
         return changed_deps
@@ -1134,7 +1134,7 @@ class DeploymentGroupsId(SecuredResource):
         """Bulk create the labels for the given deployments"""
         for dep in deployments:
             rm.create_resource_labels(
-                models.DeploymentLabel, dep, created_labels)
+                models.DeploymentLabel, dep._storage_id, created_labels)
 
     def _delete_deployments_labels(self, sm, deployments, labels_to_delete):
         """Bulk delete the labels for the given deployments."""
