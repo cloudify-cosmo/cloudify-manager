@@ -1185,6 +1185,8 @@ class DeploymentGroupsId(SecuredResource):
         if filter_id is not None:
             deployments_to_add |= set(sm.list(
                 models.Deployment,
+                include=['_storage_id', 'id'],
+                get_all_results=True,
                 filter_rules=get_filter_rules_from_filter_id(
                     sm, filter_id, models.DeploymentsFilter)
             ).items)
@@ -1193,6 +1195,8 @@ class DeploymentGroupsId(SecuredResource):
         if filter_rules:
             deployments_to_add |= set(sm.list(
                 models.Deployment,
+                include=['_storage_id', 'id'],
+                get_all_results=True,
                 filter_rules=filter_rules).items)
 
         add_group = request_dict.get('deployments_from_group')
