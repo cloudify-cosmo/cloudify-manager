@@ -1724,7 +1724,8 @@ class ResourceManager(object):
 
         if labels:
             db.session.flush()
-        self.insert_labels(models.DeploymentLabel, deployment, labels)
+        self.insert_labels(
+            models.DeploymentLabel, deployment._storage_id, labels)
 
         return new_deployment
 
@@ -1738,20 +1739,7 @@ class ResourceManager(object):
         return parents
 
     def get_object_types_from_labels(self, labels: list[Label]):
-        obj_types = set()
-        for label in labels:
-            if label.key == 'csys-obj-type' and label.value:
-                obj_types.add(label.value)
-        return obj_types
-
-    def get_deployment_object_types_from_labels(self,
-                                                resource: SQLResourceBase,
-                                                labels: list[Label]):
-        labels_to_add = self.get_labels_to_create(resource, labels)
-        labels_to_delete = self.get_labels_to_delete(resource, labels)
-        created_types = self.get_object_types_from_labels(labels_to_add)
-        delete_types = self.get_object_types_from_labels(labels_to_delete)
-        return created_types, delete_types
+        return {lbl.value for lbl in labels if lbl.key == 'csys-obj-type'}
 
     def add_deployment_to_labels_graph(self, deployments, parent_ids):
         if not deployments or not parent_ids:
@@ -2673,7 +2661,7 @@ class ResourceManager(object):
                 resource.labels.remove(label)
 
         self.create_resource_labels(labels_resource_model,
-                                    resource,
+                                    resource._storage_id,
                                     labels_to_create,
                                     creator=creator,
                                     created_at=created_at)
@@ -2743,10 +2731,7 @@ class ResourceManager(object):
 
         self.insert_labels(labels_resource_model, resource, new_labels)
 
-    def insert_labels(self,
-                      labels_resource_model,
-                      resource,
-                      labels):
+    def insert_labels(self, labels_resource_model, target_storage_id, labels):
         if not labels:
             return
 
@@ -2760,7 +2745,7 @@ class ResourceManager(object):
         user_cache = {current_user.username: current_user.id}
 
         for label in labels:
-            label['_labeled_model_fk'] = resource._storage_id
+            label['_labeled_model_fk'] = target_storage_id
             if label.get('created_by'):
                 creator_id = lookup_user(label.pop('created_by'),
                                          user_cache, self.sm)
