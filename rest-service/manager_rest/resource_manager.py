@@ -1717,12 +1717,7 @@ class ResourceManager(object):
         return parents
 
     def get_object_types_from_labels(self, labels: list[Label]):
-        obj_types = set()
-        for label in labels:
-            if label.key == 'csys-obj-type' and label.value:
-                obj_types.add(label.value)
-        return obj_types
-
+        return {lbl.value for lbl in labels if lbl.key == 'csys-obj-type'}
 
     def add_deployment_to_labels_graph(self, deployments, parent_ids):
         if not deployments or not parent_ids:
