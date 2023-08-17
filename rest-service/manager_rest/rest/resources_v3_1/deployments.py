@@ -1099,7 +1099,7 @@ class DeploymentGroupsId(SecuredResource):
         if deleted_parents:
             changed_deps |= deleted_parents
         rm.create_resource_labels(
-            models.DeploymentGroupLabel, group, labels_to_create)
+            models.DeploymentGroupLabel, group._storage_id, labels_to_create)
         for label in labels_to_delete:
             sm.delete(label)
         return changed_deps
@@ -1134,7 +1134,7 @@ class DeploymentGroupsId(SecuredResource):
         """Bulk create the labels for the given deployments"""
         for dep in deployments:
             rm.create_resource_labels(
-                models.DeploymentLabel, dep, created_labels)
+                models.DeploymentLabel, dep._storage_id, created_labels)
 
     def _delete_deployments_labels(self, sm, deployments, labels_to_delete):
         """Bulk delete the labels for the given deployments."""
@@ -1162,13 +1162,7 @@ class DeploymentGroupsId(SecuredResource):
                 sm, deployments, [Label(label.key, label.value)
                                   for label in group.labels],
             )
-        # Update deployment conversion which could be from service to env or
-        # vice versa
-        self._handle_resource_counts_after_source_conversion(
-            _target_deployments,
-            labels_to_add,
-            []
-        )
+
         # Add new labels
         self._create_deployments_labels(rm, deployments, labels_to_add)
 
@@ -1191,6 +1185,8 @@ class DeploymentGroupsId(SecuredResource):
         if filter_id is not None:
             deployments_to_add |= set(sm.list(
                 models.Deployment,
+                include=['_storage_id', 'id'],
+                get_all_results=True,
                 filter_rules=get_filter_rules_from_filter_id(
                     sm, filter_id, models.DeploymentsFilter)
             ).items)
@@ -1199,6 +1195,8 @@ class DeploymentGroupsId(SecuredResource):
         if filter_rules:
             deployments_to_add |= set(sm.list(
                 models.Deployment,
+                include=['_storage_id', 'id'],
+                get_all_results=True,
                 filter_rules=filter_rules).items)
 
         add_group = request_dict.get('deployments_from_group')
