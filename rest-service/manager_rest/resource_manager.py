@@ -1723,14 +1723,6 @@ class ResourceManager(object):
                 obj_types.add(label.value)
         return obj_types
 
-    def get_deployment_object_types_from_labels(self,
-                                                resource: SQLResourceBase,
-                                                labels: list[Label]):
-        labels_to_add = self.get_labels_to_create(resource, labels)
-        labels_to_delete = self.get_labels_to_delete(resource, labels)
-        created_types = self.get_object_types_from_labels(labels_to_add)
-        delete_types = self.get_object_types_from_labels(labels_to_delete)
-        return created_types, delete_types
 
     def add_deployment_to_labels_graph(self, deployments, parent_ids):
         if not deployments or not parent_ids:
