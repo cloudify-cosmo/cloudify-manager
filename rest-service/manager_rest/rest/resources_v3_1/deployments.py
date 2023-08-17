@@ -1162,13 +1162,7 @@ class DeploymentGroupsId(SecuredResource):
                 sm, deployments, [Label(label.key, label.value)
                                   for label in group.labels],
             )
-        # Update deployment conversion which could be from service to env or
-        # vice versa
-        self._handle_resource_counts_after_source_conversion(
-            _target_deployments,
-            labels_to_add,
-            []
-        )
+
         # Add new labels
         self._create_deployments_labels(rm, deployments, labels_to_add)
 
