@@ -217,3 +217,5 @@ yarl==1.8.2
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools
+# ...but I'll still attempt to make snyk happy
+setuptools==65.5.1
