@@ -313,6 +313,7 @@ class BaseServerTestCase(unittest.TestCase):
 
         copy_resources(cls.server_configuration.file_server_root)
         server.app = server.CloudifyFlaskApp(False)
+        server.init_storage_handler(server.app)
         cls._handle_flask_app_and_db()
         cls.client = cls.create_client()
 
