@@ -903,7 +903,6 @@ class ResourceManager(object):
                         ','.join(dep.id for dep in blueprint.deployments)))
         if remove_files:
             # Delete blueprint resources from file server
-            sh = get_storage_handler()
             self.sh.delete(
                 os.path.join(
                     FILE_SERVER_BLUEPRINTS_FOLDER,
