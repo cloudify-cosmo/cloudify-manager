@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from dataclasses import dataclass
 from xml.etree import ElementTree
 
+import boto3
 import requests
 from flask import current_app
 
@@ -39,10 +40,9 @@ class FileInfo:
     def from_s3_file(cls,
                      filepath: ElementTree.Element,
                      last_modified: ElementTree.Element):
-        file_mtime = datetime.strptime(last_modified.text, LAST_MODIFIED_FMT)
         return FileInfo(
-            filepath=filepath.text,
-            mtime=file_mtime.isoformat(),
+            filepath=filepath,
+            mtime=last_modified.isoformat(),
         )
 
     def serialize(self, rel_path=None):
@@ -141,15 +141,15 @@ class LocalStorageHandler(FileStorageHandler):
 
 class S3StorageHandler(FileStorageHandler):
     """S3StorageHandler implements storage methods for S3-compatible storage"""
-    XML_NS = {'s3': 'http://s3.amazonaws.com/doc/2006-03-01/'}
-
     def __init__(self,
-                 base_uri: str,
+                 base_uri: str | None,
                  bucket_name: str,
                  req_timeout: float):
         super().__init__(base_uri)
+        self.s3_client = boto3.client('s3', endpoint_url=base_uri)
+        self.s3 = boto3.resource('s3', endpoint_url=base_uri)
+        self.bucket = self.s3.Bucket(bucket_name)
         self.bucket_name = bucket_name
-        self.req_timeout = req_timeout
 
     def find(self, path: str, suffixes=None):
         prefix, _, file_name = path.rpartition('/')
@@ -171,12 +171,11 @@ class S3StorageHandler(FileStorageHandler):
 
     @contextmanager
     def get(self, path: str):
-        response = requests.get(
-            os.path.join(self.server_url, path),
-            timeout=self.req_timeout
-        )
         with tempfile.NamedTemporaryFile() as temp_file:
-            temp_file.write(response.content)
+            self.bucket.download_fileobj(
+                Key=path,
+                Fileobj=temp_file,
+            )
             temp_file.seek(0)
             yield temp_file.name
 
@@ -184,18 +183,12 @@ class S3StorageHandler(FileStorageHandler):
         params = {}
         if path:
             params.update({'prefix': path})
-        response = requests.get(
-            self.server_url,
-            params=params,
-            timeout=self.req_timeout
-        )
-
-        xml_et = ElementTree.fromstring(response.content)
-
-        for contents in xml_et.findall('s3:Contents', self.XML_NS):
+        for obj in self.bucket.objects.filter(
+            Prefix=path,
+        ):
             yield FileInfo.from_s3_file(
-                contents.find('s3:Key', self.XML_NS),
-                contents.find('s3:LastModified', self.XML_NS),
+                obj.key,
+                obj.last_modified,
             )
 
     def move(self, src_path: str, dst_path: str):
@@ -225,37 +218,28 @@ class S3StorageHandler(FileStorageHandler):
             if _file_is_empty(src_path):
                 data = b''
 
-            res = requests.put(
-                f'{self.server_url}/{dst_path}',
-                data=data,
-                timeout=self.req_timeout,
-            )
-
-        if not res.ok:
-            raise manager_exceptions.FileServerException(
-                f'Error uploading {src_path} to {dst_path}: '
-                f'HTTP status code {res.status_code}'
+            self.bucket.put_object(
+                Key=dst_path,
+                Body=data,
             )
 
     def delete(self, path: str):
-        res = requests.delete(
-            f'{self.server_url}/{path}',
-            timeout=self.req_timeout,
-        )
-        if not res.ok:
-            raise manager_exceptions.FileServerException(
-                f'Error deleting: {path}: '
-                f'HTTP status code {res.status_code}'
-            )
+        self.bucket.objects.filter(Prefix=path).delete()
 
     def proxy(self, path: str):
-        # the /resources-s3/ prefix in here, must match the location
-        # of the s3 fileserver in nginx
-        return make_streaming_response(f'/resources-s3/{path}')
-
-    @property
-    def server_url(self):
-        return f'{self.base_uri}/{self.bucket_name}'.rstrip('/')
+        # to proxy to a s3 resource, generate a pre-signed url, and pass that
+        # in a header to nginx; nginx will then use proxy_pass to proxy
+        # that resource back to the user
+        presigned_url = self.s3_client.generate_presigned_url(
+            'get_object', Params={
+                'Bucket': self.bucket_name,
+                'Key': path
+            },
+            ExpiresIn=60,
+        )
+        resp = make_streaming_response(f'/resources-s3/{path}')
+        resp.headers['X-S3-URI'] = presigned_url
+        return resp
 
 
 def _file_is_empty(file_name):
@@ -271,7 +255,7 @@ def init_storage_handler(config):
             )
         case 's3':
             return S3StorageHandler(
-                config.s3_server_url,
+                config.s3_server_url or None,
                 config.s3_resources_bucket,
                 config.s3_client_timeout,
             )
