@@ -40,6 +40,7 @@ install_requires = [
     'retrying',
     'pydantic<2',
     'distro',
+    'boto3>1,<2',
 ]
 
 

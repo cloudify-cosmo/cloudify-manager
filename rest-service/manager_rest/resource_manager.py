@@ -38,11 +38,13 @@ from manager_rest.maintenance import get_maintenance_state
 from manager_rest.constants import (
     COMPONENT_TYPE,
     DEFAULT_TENANT_NAME,
+    FILE_SERVER_PLUGINS_FOLDER,
     FILE_SERVER_BLUEPRINTS_FOLDER,
     FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
     FILE_SERVER_DEPLOYMENTS_FOLDER,
     DEPLOYMENT_UPDATE_STATES as UpdateStates,
 )
+from manager_rest.persistent_storage import get_storage_handler
 from manager_rest.utils import (get_formatted_timestamp,
                                 is_create_global_permitted,
                                 validate_global_modification,
@@ -77,8 +79,9 @@ _ExecGroupStats = namedtuple('_ExecGroupStats', ['active', 'concurrency'])
 
 class ResourceManager(object):
 
-    def __init__(self, sm=None):
+    def __init__(self, sm=None, sh=None):
         self.sm = sm or get_storage_manager()
+        self.sh = sh or get_storage_handler()
         self._cached_queued_execs_query = None
 
     def list_executions(
@@ -789,9 +792,13 @@ class ResourceManager(object):
         self.sm.delete(plugin)
 
         # Remove from file system
-        archive_path = utils.get_plugin_archive_path(plugin_id,
-                                                     plugin.archive_name)
-        shutil.rmtree(os.path.dirname(archive_path), ignore_errors=True)
+        self.sh.delete(
+            os.path.join(
+                FILE_SERVER_PLUGINS_FOLDER,
+                plugin_id,
+                ''
+            )
+        )
 
     @staticmethod
     def _blueprint_plugins(blueprint):
@@ -883,17 +890,6 @@ class ResourceManager(object):
         except Exception as ex:
             raise manager_exceptions.DslParseException(str(ex))
 
-    @staticmethod
-    def _remove_folder(folder_name, blueprints_location):
-        blueprint_folder = os.path.join(
-            config.instance.file_server_root,
-            blueprints_location,
-            utils.current_tenant.name,
-            folder_name.id)
-        # Don't cry if the blueprint folder never got created
-        if os.path.exists(blueprint_folder):
-            shutil.rmtree(blueprint_folder)
-
     def delete_blueprint(self, blueprint_id, force, remove_files=True):
         blueprint = self.sm.get(models.Blueprint, blueprint_id)
         validate_global_modification(blueprint)
@@ -930,13 +926,22 @@ class ResourceManager(object):
                         ','.join(dep.id for dep in blueprint.deployments)))
         if remove_files:
             # Delete blueprint resources from file server
-            self._remove_folder(
-                folder_name=blueprint,
-                blueprints_location=FILE_SERVER_BLUEPRINTS_FOLDER)
-            self._remove_folder(
-                folder_name=blueprint,
-                blueprints_location=FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER)
-
+            self.sh.delete(
+                os.path.join(
+                    FILE_SERVER_BLUEPRINTS_FOLDER,
+                    blueprint.tenant.name,
+                    blueprint.id,
+                    '',
+                )
+            )
+            self.sh.delete(
+                os.path.join(
+                    FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
+                    blueprint.tenant.name,
+                    blueprint.id,
+                    '',
+                )
+            )
         return self.sm.delete(blueprint)
 
     def check_deployment_delete(
