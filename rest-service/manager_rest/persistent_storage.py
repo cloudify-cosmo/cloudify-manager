@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from xml.etree import ElementTree
 
 import boto3
-import requests
 from flask import current_app
 
 from manager_rest import manager_exceptions
