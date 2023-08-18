@@ -127,6 +127,9 @@ class LocalStorageHandler(FileStorageHandler):
 
     def delete(self, path: str):
         full_path = os.path.join(self.base_uri, path)
+        if not os.path.exists(path):
+            # already gone
+            return
         if os.path.isdir(full_path):
             shutil.rmtree(full_path)
         else:
