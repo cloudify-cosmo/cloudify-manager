@@ -38,6 +38,7 @@ from manager_rest.maintenance import get_maintenance_state
 from manager_rest.constants import (
     COMPONENT_TYPE,
     DEFAULT_TENANT_NAME,
+    FILE_SERVER_PLUGINS_FOLDER,
     FILE_SERVER_BLUEPRINTS_FOLDER,
     FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
     FILE_SERVER_DEPLOYMENTS_FOLDER,
@@ -793,7 +794,7 @@ class ResourceManager(object):
         # Remove from file system
         self.sh.delete(
             os.path.join(
-                constants.FILE_SERVER_PLUGINS_FOLDER,
+                FILE_SERVER_PLUGINS_FOLDER,
                 plugin_id,
                 ''
             )
