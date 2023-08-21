@@ -81,8 +81,14 @@ class ResourceManager(object):
 
     def __init__(self, sm=None, sh=None):
         self.sm = sm or get_storage_manager()
-        self.sh = sh or get_storage_handler()
+        self._sh = sh
         self._cached_queued_execs_query = None
+
+    @property
+    def sh(self):
+        if self._sh is None:
+            self._sh = get_storage_handler()
+        return self._sh
 
     def list_executions(
         self,
