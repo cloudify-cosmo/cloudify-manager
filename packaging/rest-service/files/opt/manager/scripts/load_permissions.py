@@ -12,10 +12,14 @@ from manager_rest.storage.models_base import db
 
 
 def load_permissions(authorization_file_path, debug=False):
-
-    with open(authorization_file_path) as f:
-        auth_data = yaml.safe_load(f)
-
+    try:
+        with open(authorization_file_path) as f:
+            auth_data = yaml.safe_load(f)
+    except IOError as e:
+        sys.stderr.write(
+            'Could not open the permissions file: {0}'.format(e)
+        )
+        return
     with setup_flask_app().app_context():
         existing_roles = db.session.query(models.Role)
         existing_role_names = [
