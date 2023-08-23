@@ -44,9 +44,11 @@ RUN --mount=type=cache,target=/root/.cache \
     pip install mgmtworker/
 
 RUN groupadd $groupname && useradd -u 1000 -g $groupname $username
+RUN mkdir -p /usr/local/plugins
 
 RUN chown -R $username:$groupname \
-    /opt
+    /opt \
+    /usr/local/plugins
 
 USER 1000
 
