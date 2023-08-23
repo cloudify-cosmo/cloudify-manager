@@ -110,10 +110,12 @@ def cope_with_db_failover():
             db.session.rollback()
 
 
-def init_storage_handler():
+def init_storage_handler(app=None):
     """Set up a storage handler used by upload_manager."""
-    if 'storage_handler' not in current_app.extensions:
-        current_app.extensions['storage_handler'] = \
+    if app is None:
+        app = current_app
+    if 'storage_handler' not in app.extensions:
+        app.extensions['storage_handler'] = \
             persistent_storage.init_storage_handler(config.instance)
 
 
