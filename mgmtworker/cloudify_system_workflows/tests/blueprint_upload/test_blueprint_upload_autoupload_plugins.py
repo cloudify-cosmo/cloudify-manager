@@ -93,17 +93,33 @@ def mock_requests_get(*args, **kwargs):
     return MockResponse(None, 404)
 
 
+def mock_get_managers(distro):
+    return lambda: [{
+        'version': '6.4.0',
+        'edition': 'premium',
+        'distribution': distro,
+        'distro_release': 'core',
+    }]
+
+
 @pytest.fixture
 def mock_client():
     client = mock.Mock()
     client.plugins.list = lambda package_name: \
         plugins_versions.get(package_name, [])
-    client.manager.get_managers = lambda: [{
-        'version': '6.4.0',
-        'edition': 'premium',
-        'distribution': 'Centos',
-        'distro_release': 'core',
-    }]
+    client.manager.get_managers = mock_get_managers('Centos')
+    with mock.patch('cloudify_system_workflows.dsl_import_resolver'
+                    '.resolver_with_catalog_support.ResolverWithCatalogSupport'
+                    '._download_file', side_effect=local_download_file):
+        yield client
+
+
+@pytest.fixture
+def mock_client_debian():
+    client = mock.Mock()
+    client.plugins.list = lambda package_name: \
+        plugins_versions.get(package_name, [])
+    client.manager.get_managers = mock_get_managers('debian')
     with mock.patch('cloudify_system_workflows.dsl_import_resolver'
                     '.resolver_with_catalog_support.ResolverWithCatalogSupport'
                     '._download_file', side_effect=local_download_file):
@@ -187,6 +203,18 @@ class TestPluginAutoupload:
             self._parse_plugin_import(
                 mock_client,
                 'plugin:my-custom-plugin')
+
+    def test_autoupload_unsupported_distro(self, mock_client_debian):
+        plugin = self._parse_plugin_import(
+            mock_client_debian,
+            'plugin:cloudify-openstack-plugin?version= >=2.14.24')
+        assert plugin.package_name == 'cloudify-openstack-plugin'
+        assert plugin.package_version == '3.2.22'
+        plugin = self._parse_plugin_import(
+            mock_client_debian,
+            'plugin:cloudify-openstack-plugin?version= <3.2.22')
+        assert plugin.package_name == 'cloudify-openstack-plugin'
+        assert plugin.package_version == '3.2.21'
 
     def test_autoupload_plugins_old_after_new(self, mock_client):
         plugin = self._parse_plugin_import(
