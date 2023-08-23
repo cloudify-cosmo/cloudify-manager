@@ -181,27 +181,31 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
         plugins_marketplace = self.marketplace_api_url + "/plugins"
 
         # Get plugin data from marketplace
-        plugin = requests.get(f'{plugins_marketplace}?name={name}')
+        url = f'{plugins_marketplace}?name={name}'
+        plugin = requests.get(url)
         if not plugin.ok:
             raise InvalidBlueprintImport(download_error_msg.format(
                 name, f"plugins catalog unreachable at "
                       f"{plugins_marketplace}: {plugin.text}"))
 
-        if not plugin.json() or not plugin.json().get('items'):
+        plugins_response = plugin.json()
+        if not plugins_response or not plugins_response.get('items'):
             raise FileNotFoundError()
-
-        plugin_id = plugin.json()['items'][0].get('id')
-        logo_url = plugin.json()['items'][0].get('logo_url')
+        plugin_id = plugins_response['items'][0].get('id')
+        logo_url = plugins_response['items'][0].get('logo_url')
 
         plugin_versions = requests.get(
             f'{plugins_marketplace}/{plugin_id}/versions')
-        if not plugin_versions.ok or not plugin_versions.json() \
-                or not plugin_versions.json().get('items'):
+        versions_response = plugin_versions.json()
+        if not plugin_versions.ok or not versions_response \
+                or not versions_response.get('items'):
             raise FileNotFoundError()
+
+        available_versions = versions_response['items']
 
         # Find maximal matching version
         matching_versions = []
-        for version in plugin_versions.json().get('items'):
+        for version in available_versions:
             parsed_version = parse_version(version.get('version'))
             yaml_urls = version.get('yaml_urls')
             wagon_url = self.matching_distro_wagon(version.get('wagon_urls'),
@@ -212,12 +216,16 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
         # if no matching version for the distro, default to the first
         # available wagon of the most recent version
         if not matching_versions:
-            for version in plugin_versions.json().get('items'):
+            for version in available_versions:
                 parsed_version = parse_version(version.get('version'))
                 yaml_urls = version.get('yaml_urls')
+                if not yaml_urls:
+                    continue
                 if version.get('wagon_urls'):
                     wagon_url = version['wagon_urls'][0]['url']
-                if parsed_version in specifier_set and yaml_urls and wagon_url:
+                else:
+                    continue
+                if parsed_version in specifier_set or not specifier_set:
                     matching_versions.append((
                         parsed_version, yaml_urls, wagon_url))
         # if *still* no match:
