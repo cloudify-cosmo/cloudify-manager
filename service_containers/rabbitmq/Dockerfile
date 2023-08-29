@@ -17,6 +17,8 @@ COPY ./config /etc/cloudify/rabbitmq
 COPY ./script /opt/rabbitmq/script
 COPY ./docker /opt/rabbitmq/docker
 
+RUN chown -R rabbitmq:rabbitmq /etc/cloudify/rabbitmq
+
 RUN mkdir -p /var/log/cloudify/rabbitmq
 RUN chmod 777 -R /var/log/cloudify/rabbitmq
 
