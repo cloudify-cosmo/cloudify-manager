@@ -512,6 +512,22 @@ class TestPickleToJSON(SnapshotUtilsTestBase):
         assert silly_deployments_to_update == pu1.deployments_to_update \
                == pu2.deployments_to_update
 
+    def test_invalid_parameters(self):
+        dep1 = self._make_deployment(
+            id='dep',
+            workflows={'test': {'mapping': 'a.b.c'}},
+        )
+        # this execution's parameters aren't valid, because this dep doesn't
+        # have a capability named 'cap1', so if the migration tries to
+        # set .parameters via ORM, the re-evaluation will fail.
+        # This test can only pass, if the ORM level isn't used
+        exc = self._make_execution(
+            deployment=dep1,
+            parameters_p={'param1': {'get_capability': ['dep', 'cap1']}},
+        )
+        migrate_pickle_to_json(batch_size=1)
+        assert exc.parameters == exc.parameters_p
+
 
 class TestBlueprintRequirements(SnapshotUtilsTestBase):
     def test_no_requirements(self):
