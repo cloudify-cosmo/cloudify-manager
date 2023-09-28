@@ -46,9 +46,12 @@ RUN --mount=type=cache,target=/root/.cache \
 RUN groupadd $groupname && useradd -u 1000 -g $groupname $username
 RUN mkdir -p /usr/local/plugins
 
+RUN mkdir -p /run/cloudify
+
 RUN chown -R $username:$groupname \
     /opt \
-    /usr/local/plugins
+    /usr/local/plugins \
+    /run/cloudify
 
 USER 1000
 
