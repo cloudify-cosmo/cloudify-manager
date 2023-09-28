@@ -46,7 +46,7 @@ install_requires = [
 
 setup(
     name='cloudify-rest-service',
-    version='7.0.2',
+    version='7.0.3.dev1',
     author='Cloudify',
     author_email='cosmo-admin@cloudify.co',
     packages=find_packages(
