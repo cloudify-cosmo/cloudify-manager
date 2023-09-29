@@ -54,7 +54,8 @@ COPY docker/cloudify.pth /usr/local/lib/python3.11/site-packages/cloudify.pth
 RUN mkdir -p \
       /var/log/cloudify/rest \
       /opt/manager \
-      /run/cloudify-restservice
+      /run/cloudify-restservice \
+      /run/cloudify
 
 ADD https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager-install/master/cfy_manager/components/restservice/config/license_key.pem.pub /opt/manager/license_key.pem.pub
 
@@ -66,9 +67,10 @@ RUN --mount=type=cache,target=/root/.cache \
 RUN groupadd $groupname && useradd -u 1000 -g $groupname $username
 
 RUN chown -R $username:$groupname \
+    /var/log/cloudify \
     /opt \
     /run/cloudify-restservice \
-    /var/log/cloudify
+    /run/cloudify
 
 USER 1000
 

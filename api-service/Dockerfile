@@ -33,6 +33,7 @@ COPY docker/cloudify.pth /usr/local/lib/python3.11/site-packages/cloudify.pth
 
 RUN mkdir -p \
     /opt/manager \
+    /run/cloudify \
     /run/cloudify-api \
     /var/log/cloudify/rest
 
@@ -45,6 +46,7 @@ RUN groupadd $groupname && useradd -u 1000 -g $groupname $username
 
 RUN chown -R $username:$groupname \
     /opt \
+    /run/cloudify \
     /run/cloudify-api \
     /var/log/cloudify
 
