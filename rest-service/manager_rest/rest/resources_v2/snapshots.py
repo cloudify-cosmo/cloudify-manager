@@ -18,6 +18,7 @@ import os
 import shutil
 
 from cloudify.models_states import SnapshotState, ExecutionState
+from flask import current_app
 
 from manager_rest import config, manager_exceptions, workflow_executor
 from manager_rest.security import SecuredResource
@@ -205,10 +206,17 @@ class SnapshotsIdArchive(SecuredResource):
     @rest_decorators.marshal_with(models.Snapshot)
     def put(self, snapshot_id):
         upload_snapshot(snapshot_id)
-        return get_resource_manager().create_snapshot_model(
-            snapshot_id,
-            status=SnapshotState.UPLOADED,
-        ), 201
+        snapshot = {}
+        try:
+            snapshot = get_resource_manager().create_snapshot_model(
+                snapshot_id,
+                status=SnapshotState.UPLOADED,
+            )
+        except manager_exceptions.ConflictError:
+            current_app.logger.info('Snapshot %s already exists, only '
+                                    'snapshot archive has been uploaded',
+                                    snapshot_id)
+        return snapshot, 201
 
     @swagger.operation(
         nickname='downloadSnapshot',
