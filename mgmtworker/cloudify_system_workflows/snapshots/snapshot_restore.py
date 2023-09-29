@@ -487,6 +487,7 @@ class SnapshotRestore(object):
         self._mark_manager_restoring()
         self._tempdir = tempfile.mkdtemp('-snapshot-data')
         snapshot_path = self._get_snapshot_path()
+        self._download_archive(snapshot_path)
         ctx.logger.debug('Going to restore snapshot, '
                          'snapshot_path: {0}'.format(snapshot_path))
         try:
@@ -1064,11 +1065,18 @@ class SnapshotRestore(object):
     def _get_snapshot_dir(self):
         """Get the snapshot base path (the directory it is put in)."""
         file_server_root = self._config.file_server_root
-        return os.path.join(
+        snapshot_dir = os.path.join(
             file_server_root,
             FILE_SERVER_SNAPSHOTS_FOLDER,
             self._snapshot_id,
         )
+        if not os.path.exists(snapshot_dir):
+            os.makedirs(snapshot_dir)
+        return snapshot_dir
+
+    def _download_archive(self, archive_path: str):
+        ctx.logger.info('Fetching snapshot archive')
+        self._client.snapshots.download(self._snapshot_id, archive_path)
 
     def _restore_credentials(self, postgres):
         ctx.logger.info('Restoring credentials')
