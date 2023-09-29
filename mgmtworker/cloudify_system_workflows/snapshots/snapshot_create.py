@@ -90,6 +90,7 @@ class SnapshotCreate:
                 self._dump_tenant(tenant_name)
             self._append_from_auditlog(timeout)
             self._create_archive()
+            self._upload_archive(tenant_name)
             self._update_snapshot_status(self._config.created_status)
             ctx.logger.info('Snapshot created successfully')
         except BaseException as exc:
@@ -279,6 +280,14 @@ class SnapshotCreate:
     def _create_archive(self):
         ctx.logger.debug('Creating snapshot archive')
         shutil.make_archive(self._archive_dest, 'zip', self._temp_dir)
+
+    def _upload_archive(self, tenant_name: str):
+        ctx.logger.debug('Uploading archive to manager')
+        client = get_rest_client(tenant=tenant_name)
+        client.snapshots.upload(
+            str(self._archive_dest.with_suffix('.zip')),
+            self._snapshot_id,
+        )
 
     def _append_from_auditlog(self, timeout):
         """Fetch all the remaining items in a queue
