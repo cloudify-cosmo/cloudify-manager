@@ -30,6 +30,7 @@ RUN --mount=type=cache,target=/root/.cache \
 RUN mkdir -p \
     /opt/manager \
     /var/log/cloudify/execution-scheduler \
+    /run/cloudify \
     /src
 
 COPY docker/cloudify.pth /usr/local/lib/python3.11/site-packages/cloudify.pth
@@ -43,8 +44,9 @@ RUN groupadd $groupname && useradd -u 1000 -g $groupname $username
 
 RUN chown -R $username:$groupname \
     /opt \
-    /src \
-    /var/log/cloudify
+    /var/log/cloudify \
+    /run/cloudify \
+    /src
 
 USER 1000
 
