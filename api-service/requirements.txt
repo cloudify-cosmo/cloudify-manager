@@ -164,7 +164,7 @@ psycopg2==2.9.5
     # via cloudify-rest-service
 pycparser==2.21
     # via cffi
-pydantic==1.10.5
+pydantic==1.10.13
     # via
     #   cloudify-rest-service
     #   fastapi
