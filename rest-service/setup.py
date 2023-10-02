@@ -41,6 +41,7 @@ install_requires = [
     'pydantic<2',
     'distro',
     'boto3>1,<2',
+    'werkzeug>2,<3',
 ]
 
 
