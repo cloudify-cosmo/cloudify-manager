@@ -366,8 +366,10 @@ class SecretsSetVisibility(SecuredResource):
         Set the secret's visibility
         """
         visibility = rest_utils.get_visibility_parameter()
-        secret = get_storage_manager().get(models.Secret, key)
-        return get_resource_manager().set_visibility(secret, visibility)
+        sm = get_storage_manager()
+        with sm.transaction():
+            secret = sm.get(models.Secret, key)
+            return get_resource_manager().set_visibility(secret, visibility)
 
 
 class SecretsExport(SecuredResource):

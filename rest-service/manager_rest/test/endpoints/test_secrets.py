@@ -1,6 +1,6 @@
 import json
 
-from manager_rest.storage import models
+from manager_rest.storage import db, models
 from manager_rest.test import base_test
 
 from cloudify.cryptography_utils import (
@@ -160,3 +160,26 @@ class TestSecrets(base_test.BaseServerTestCase):
             # already has wider visibility, can't move back from global!
             self.client.secrets.set_visibility(key, VisibilityState.TENANT)
         assert sec.visibility == VisibilityState.GLOBAL
+
+    def test_update_secret_set_visibility_already_exists(self):
+        other_tenant = models.Tenant(name='other')
+        db.session.add(other_tenant)
+        sec = models.Secret(
+            id='sec1',
+            visibility=VisibilityState.PRIVATE,
+            tenant=self.tenant,
+            creator=self.user,
+        )
+        models.Secret(
+            id=sec.id,
+            visibility=VisibilityState.PRIVATE,
+            tenant=other_tenant,
+            creator=self.user,
+        )
+        with self.assertRaisesRegex(CloudifyClientError, 'visibility'):
+            # secret with this id already exists in another tenant,
+            # can't set global
+            self.client.secrets.set_visibility(
+                sec.id, VisibilityState.GLOBAL)
+        secs = models.Secret.query.all()
+        assert len(secs) == 2
