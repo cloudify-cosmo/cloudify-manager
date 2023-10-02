@@ -136,6 +136,7 @@ def execute_workflow(schedule):
     messages = rm.prepare_executions([execution], **start_arguments)
     db.session.commit()
     workflow_executor.execute_workflow(messages)
+    return execution
 
 
 def main():
