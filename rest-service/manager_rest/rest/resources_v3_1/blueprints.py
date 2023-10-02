@@ -50,8 +50,10 @@ class BlueprintsSetVisibility(SecuredResource):
         Set the blueprint's visibility
         """
         visibility = rest_utils.get_visibility_parameter()
-        blueprint = get_storage_manager().get(models.Blueprint, blueprint_id)
-        return get_resource_manager().set_visibility(blueprint, visibility)
+        sm = get_storage_manager()
+        with sm.transaction():
+            blueprint = sm.get(models.Blueprint, blueprint_id)
+            return get_resource_manager().set_visibility(blueprint, visibility)
 
 
 class BlueprintsIcon(SecuredResource):
