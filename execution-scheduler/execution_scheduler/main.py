@@ -112,7 +112,7 @@ def should_run(schedule):
     slip = timedelta(minutes=schedule.slip, seconds=60)
     next_occurrence = dateutil.parser.parse(schedule.next_occurrence,
                                             ignoretz=True)
-    return datetime.utcnow() - next_occurrence < slip
+    return datetime.utcnow() - next_occurrence <= slip
 
 
 def execute_workflow(schedule):
