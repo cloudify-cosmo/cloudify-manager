@@ -5,6 +5,7 @@ ARG groupname=cfyuser
 
 # For rest-service
 ENV SECRET_KEY=abcdefgh-secret-1234
+ENV HASH_SALT=abcdefgh-salt-1234
 ENV POSTGRES_DB=cloudify_db
 ENV POSTGRES_HOST=postgresql
 ENV POSTGRES_USER=cloudify
