@@ -1713,7 +1713,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         )
         dep = models.Deployment(
             id='d1',
-            blueprint_id=bp1.id,
+            blueprint=bp1,
             visibility=VisibilityState.PRIVATE,
             tenant=self.tenant,
             creator=self.user,
@@ -1725,7 +1725,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         )
         models.Deployment(
             id=dep.id,
-            blueprint_id=bp2.id,
+            blueprint=bp2,
             visibility=VisibilityState.PRIVATE,
             tenant=other_tenant,
             creator=self.user,
