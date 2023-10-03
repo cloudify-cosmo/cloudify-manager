@@ -72,3 +72,21 @@ outputs:
         assert ['sec2', 'attr'] in required_secrets
         assert 'sec3' in required_secrets
         assert {'get_secret': 'sec3'} in required_secrets
+
+    def test_non_required_no_default_input(self):
+        bp = """
+tosca_definitions_version: cloudify_dsl_1_5
+imports:
+  - cloudify/types/types.yaml
+inputs:
+    inp1:
+        required: false
+outputs:
+    out1:
+        value: {get_input: inp1}
+"""
+        dep = self.deploy(
+            dsl_path=self.make_yaml_file(bp),
+        )
+        response = self.client.deployments.outputs.get(dep.id)
+        assert response['outputs'] == {'out1': None}

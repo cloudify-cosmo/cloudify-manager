@@ -847,7 +847,12 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         allowed_inputs = set(blueprint_inputs)
         required_inputs = {
             name for name, input_spec in blueprint_inputs.items()
-            if 'default' not in input_spec
+            # an input is required if it has no default...
+            if 'default' not in input_spec and \
+            # ...and doesn't explicitly say that it's not required
+            not ('required' in input_spec and not input_spec['required'])
+            # (if it's not required but has no default, it'll have the default
+            # of None)
         }
         provided_inputs = set(inputs)
         missing_inputs = required_inputs - provided_inputs
