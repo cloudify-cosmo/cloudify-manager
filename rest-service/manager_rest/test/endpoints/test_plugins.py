@@ -516,3 +516,24 @@ plugins:
                 plug.id, VisibilityState.GLOBAL)
         plugs = models.Plugin.query.all()
         assert len(plugs) == 2
+
+    def test_plugin_yaml_path_version(self):
+        for available, version, expected in (
+            ([], None, ''),
+            (['xxx.yaml'], None, 'xxx.yaml'),
+            (['xxx.yaml'], '1_5', 'xxx.yaml'),
+            (['plugin.yaml'], None, 'plugin.yaml'),
+            (['plugin.yaml'], '1_5', 'plugin.yaml'),
+            (['plugin_1_5.yaml'], '1_5', 'plugin_1_5.yaml'),
+            (['plugin_1_4.yaml', 'plugin_1_5.yaml'], '1_5', 'plugin_1_5.yaml'),
+            (['plugin_1_4.yaml', 'plugin_1_5.yaml'], '1_4', 'plugin_1_4.yaml'),
+            (['plugin_1_4.yaml'], '1_5', 'plugin_1_4.yaml'),
+            (['plugin_1_4.yaml', 'plugin_1_5.yaml'], None, 'plugin_1_5.yaml'),
+            (['plugin_1_4.yaml', 'plugin_1_5.yaml'], '1_3', ''),
+            (['plugin_1_4.yaml', 'plugin_1_5.yaml', 'plugin.yaml'], '1_3',
+             'plugin.yaml'),
+        ):
+            with mock.patch.object(
+                models.Plugin, 'yaml_files_paths', available,
+            ):
+                assert models.Plugin().yaml_file_path(version) == expected
