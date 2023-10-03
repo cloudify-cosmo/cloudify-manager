@@ -218,16 +218,33 @@ class Plugin(SQLResourceBase):
 
     def yaml_file_path(self, dsl_version=None):
         unknown_dsl_version_yaml_files_paths = []
+        versions = {}
+
         for yaml_file_path in self.yaml_files_paths:
-            if not dsl_version:
+            if dsl_version and yaml_file_path.endswith(f'{dsl_version}.yaml'):
+                # direct hit!
                 return yaml_file_path
 
-            if yaml_file_path.endswith(f'{dsl_version}.yaml'):
-                return yaml_file_path
-            if not re.search(r"_\d_\d+.yaml$", yaml_file_path):
-                unknown_dsl_version_yaml_files_paths += [yaml_file_path]
+            if m := re.search(r"_(\d_\d+)\.yaml$", yaml_file_path):
+                version = m.group(1)
+                versions[version] = yaml_file_path
+            else:
+                unknown_dsl_version_yaml_files_paths.append(yaml_file_path)
+
+        if dsl_version:
+            # if the user did specify a version, we will only consider
+            # yamls for versions lower or equal than the requested version
+            versions = {
+                ver: path for ver, path in versions.items()
+                if ver <= dsl_version
+            }
+
+        if versions:
+            # multiple matches? get the highest available!
+            return max(versions.items())[1]
 
         if unknown_dsl_version_yaml_files_paths:
+            # no match yet? just try to return any yaml at all
             return unknown_dsl_version_yaml_files_paths[0]
 
         return ''
