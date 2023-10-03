@@ -12,7 +12,7 @@ from typing import Dict, List
 from cloudify.models_states import DeploymentState
 from dsl_parser.functions import find_requirements
 from dsl_parser.models import Plan
-from sqlalchemy import select, exists, and_, or_
+from sqlalchemy import select, exists, and_, or_, update
 from sqlalchemy.sql.expression import text as sql_text
 from sqlalchemy.orm import Session
 from manager_rest.storage import models, db
@@ -186,6 +186,9 @@ def _column_migrate_condition(model_cls, attr):
 
 
 def migrate_model(session: Session, model_cls, attributes, batch_size: int):
+    id_colname = model_cls.unique_id()
+    id_column = getattr(model_cls, id_colname)
+
     any_column_needs_migrating = functools.reduce(
         operator.or_,
         (_column_migrate_condition(model_cls, attr) for attr in attributes)
@@ -200,17 +203,25 @@ def migrate_model(session: Session, model_cls, attributes, batch_size: int):
     while True:
         results = session.execute(stmt).scalars().all()
         for inst in results:
+            changed_attrs = {}
             if isinstance(inst, models.Execution):
-                inst.allow_custom_parameters = True
+                changed_attrs['allow_custom_parameters'] = True
             for attr in attributes:
                 # only set the attribute if it's not already set
                 pickle_attr = getattr(inst, f'{attr}_p')
                 json_attr = getattr(inst, attr)
                 if pickle_attr is not None and not json_attr:
-                    setattr(inst, attr, pickle_attr)
+                    changed_attrs[attr] = pickle_attr
 
-            session.add(inst)
-        session.flush()
+            if not changed_attrs:
+                continue
+
+            update_stmt = (
+                update(model_cls)
+                .where(id_column == getattr(inst, id_colname))
+                .values(**changed_attrs)
+            )
+            session.execute(update_stmt)
 
         if len(results) < batch_size:
             break
