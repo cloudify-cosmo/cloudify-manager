@@ -8,7 +8,8 @@ from datetime import datetime, timedelta
 
 from cloudify.models_states import ExecutionState
 
-from manager_rest import config, workflow_executor
+from flask import current_app
+from manager_rest import config, workflow_executor, components
 from manager_rest.storage import models
 from manager_rest.flask_utils import setup_flask_app, query_service_settings
 from manager_rest.maintenance import get_maintenance_state
@@ -111,7 +112,7 @@ def should_run(schedule):
     slip = timedelta(minutes=schedule.slip, seconds=60)
     next_occurrence = dateutil.parser.parse(schedule.next_occurrence,
                                             ignoretz=True)
-    return datetime.utcnow() - next_occurrence < slip
+    return datetime.utcnow() - next_occurrence <= slip
 
 
 def execute_workflow(schedule):
@@ -136,6 +137,7 @@ def execute_workflow(schedule):
     messages = rm.prepare_executions([execution], **start_arguments)
     db.session.commit()
     workflow_executor.execute_workflow(messages)
+    return execution
 
 
 def main():
@@ -148,6 +150,8 @@ def main():
 def cli():
     with setup_flask_app().app_context():
         config.instance.load_configuration()
+
+        components.setup_components(current_app)
     parser = argparse.ArgumentParser()
     parser.add_argument('--logfile', default=DEFAULT_LOG_PATH,
                         help='Path to the log file')
@@ -159,6 +163,7 @@ def cli():
                         format="%(asctime)s %(message)s")
     logging.getLogger('pika').setLevel(logging.WARNING)
     with setup_flask_app().app_context():
+        components.setup_components(current_app)
         main()
 
 
