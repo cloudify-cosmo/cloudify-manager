@@ -27,7 +27,7 @@ from dsl_parser import exceptions as dsl_exceptions
 
 from manager_rest.test import base_test
 from manager_rest import manager_exceptions
-from manager_rest.storage import models
+from manager_rest.storage import db, models
 from manager_rest.constants import (DEFAULT_TENANT_NAME,
                                     FILE_SERVER_DEPLOYMENTS_FOLDER)
 from manager_rest.rest.filters_utils import FilterRule
@@ -1702,6 +1702,41 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         assert dep.visibility == VisibilityState.GLOBAL
         for node in self.sm.list(models.Node, filters={'deployment_id': 'd'}):
             assert node.visibility == VisibilityState.GLOBAL
+
+    def test_set_visibility_already_exists(self):
+        other_tenant = models.Tenant(name='other')
+        db.session.add(other_tenant)
+        bp1 = models.Blueprint(
+            id='bp1',
+            tenant=self.tenant,
+            creator=self.user,
+        )
+        dep = models.Deployment(
+            id='d1',
+            blueprint=bp1,
+            visibility=VisibilityState.PRIVATE,
+            tenant=self.tenant,
+            creator=self.user,
+        )
+        bp2 = models.Blueprint(
+            id='bp1',
+            tenant=other_tenant,
+            creator=self.user,
+        )
+        models.Deployment(
+            id=dep.id,
+            blueprint=bp2,
+            visibility=VisibilityState.PRIVATE,
+            tenant=other_tenant,
+            creator=self.user,
+        )
+        with self.assertRaisesRegex(CloudifyClientError, 'visibility'):
+            # deployment with this id already exists in another tenant,
+            # can't set global
+            self.client.deployments.set_visibility(
+                dep.id, VisibilityState.GLOBAL)
+        deps = models.Deployment.query.all()
+        assert len(deps) == 2
 
     def test_set_visibility_same_node_ids_succeed(self):
         self.put_deployment(

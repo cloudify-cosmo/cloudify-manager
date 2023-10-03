@@ -508,6 +508,29 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
                 bp.id, VisibilityState.TENANT)
         assert bp.visibility == VisibilityState.GLOBAL
 
+    def test_update_blueprint_set_visibility_already_exists(self):
+        other_tenant = models.Tenant(name='other')
+        db.session.add(other_tenant)
+        bp = models.Blueprint(
+            id='bp',
+            visibility=VisibilityState.PRIVATE,
+            tenant=self.tenant,
+            creator=self.user,
+        )
+        models.Blueprint(
+            id='bp',
+            visibility=VisibilityState.PRIVATE,
+            tenant=other_tenant,
+            creator=self.user,
+        )
+        with self.assertRaisesRegex(CloudifyClientError, 'visibility'):
+            # blueprint with this id already exists in another tenant,
+            # can't set global
+            self.client.blueprints.set_visibility(
+                bp.id, VisibilityState.GLOBAL)
+        bps = models.Blueprint.query.all()
+        assert len(bps) == 2
+
     def test_dump(self):
         models.Blueprint(
                 id='bp1',
