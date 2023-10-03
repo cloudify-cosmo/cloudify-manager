@@ -232,6 +232,8 @@ class S3StorageHandler(FileStorageHandler):
         # to proxy to a s3 resource, generate a pre-signed url, and pass that
         # in a header to nginx; nginx will then use proxy_pass to proxy
         # that resource back to the user
+        if not path:
+            raise manager_exceptions.NotFoundError(path)
         presigned_url = self.s3_client.generate_presigned_url(
             'get_object', Params={
                 'Bucket': self.bucket_name,
