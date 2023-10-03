@@ -295,7 +295,7 @@ class Config(object):
             engine.dispose()
 
         self.last_updated = max((dt for dt in last_changed if dt),
-                                default=None)
+                                default=datetime.utcnow().isoformat())
         # disallow implicit loading
         self.can_load_from_db = False
 
