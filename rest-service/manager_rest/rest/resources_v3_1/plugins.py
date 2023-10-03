@@ -37,9 +37,11 @@ class PluginsSetVisibility(SecuredResource):
         """
         Set the plugin's visibility
         """
+        sm = get_storage_manager()
         visibility = rest_utils.get_visibility_parameter()
-        plugin = get_storage_manager().get(models.Plugin, plugin_id)
-        return get_resource_manager().set_visibility(plugin, visibility)
+        with sm.transaction():
+            plugin = sm.get(models.Plugin, plugin_id)
+            return get_resource_manager().set_visibility(plugin, visibility)
 
 
 class Plugins(resources_v2.Plugins):

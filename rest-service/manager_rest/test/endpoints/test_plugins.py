@@ -488,6 +488,35 @@ plugins:
             self.client.plugins.set_visibility(plug.id, VisibilityState.TENANT)
         assert plug.visibility == VisibilityState.GLOBAL
 
+    def test_update_plugin_set_visibility_already_exists(self):
+        other_tenant = models.Tenant(name='other')
+        db.session.add(other_tenant)
+        plug = models.Plugin(
+            id='plug1',
+            archive_name='',
+            package_name='',
+            uploaded_at=datetime.utcnow(),
+            visibility=VisibilityState.PRIVATE,
+            tenant=self.tenant,
+            creator=self.user,
+        )
+        models.Plugin(
+            id=plug.id,
+            archive_name='',
+            package_name='',
+            uploaded_at=datetime.utcnow(),
+            visibility=VisibilityState.PRIVATE,
+            tenant=other_tenant,
+            creator=self.user,
+        )
+        with self.assertRaisesRegex(CloudifyClientError, 'visibility'):
+            # plugin with this id already exists in another tenant,
+            # can't set global
+            self.client.plugins.set_visibility(
+                plug.id, VisibilityState.GLOBAL)
+        plugs = models.Plugin.query.all()
+        assert len(plugs) == 2
+
     def test_plugin_yaml_path_version(self):
         for available, version, expected in (
             ([], None, ''),
