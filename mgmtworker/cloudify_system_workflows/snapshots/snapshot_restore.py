@@ -1,3 +1,4 @@
+import errno
 import re
 import os
 import json
@@ -1076,7 +1077,14 @@ class SnapshotRestore(object):
 
     def _download_archive(self, archive_path: str):
         ctx.logger.info('Fetching snapshot archive')
-        self._client.snapshots.download(self._snapshot_id, archive_path)
+        try:
+            self._client.snapshots.download(self._snapshot_id, archive_path)
+        except OSError as exc:
+            if exc.errno == errno.EEXIST:
+                ctx.logger.debug(
+                    'Archive already exists, no need to download it: %s',
+                    archive_path,
+                )
 
     def _restore_credentials(self, postgres):
         ctx.logger.info('Restoring credentials')
