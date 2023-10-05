@@ -155,14 +155,14 @@ class DeploymentsId(SecuredResource):
         bypass_maintenance = is_bypass_maintenance_mode()
         sm = get_storage_manager()
         dep = sm.get(models.Deployment, deployment_id)
-        dep.deployment_status = DeploymentState.IN_PROGRESS
-        sm.update(dep, modified_attrs=('deployment_status',))
         rm = get_resource_manager()
         rm.check_deployment_delete(
             dep,
             force=args.force,
             recursive=args.recursive,
         )
+        dep.deployment_status = DeploymentState.IN_PROGRESS
+        sm.update(dep, modified_attrs=('deployment_status',))
         delete_execution = dep.make_delete_environment_execution(
             delete_logs=args.delete_logs,
             force=args.force,
