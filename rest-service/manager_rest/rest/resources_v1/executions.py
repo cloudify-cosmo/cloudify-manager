@@ -232,7 +232,7 @@ class Executions(SecuredResource):
                 return True
             else:
                 target_time = parse_datetime_string(attr.started_at)
-                if target_time < execution.started_at:
+                if execution.started_at and target_time < execution.started_at:
                     return True
             return False
 
