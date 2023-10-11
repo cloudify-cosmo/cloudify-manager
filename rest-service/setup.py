@@ -33,7 +33,7 @@ install_requires = [
     'psycopg2',
     'pytz',
     'packaging',
-    'jsonschema>=3,<4',
+    'jsonschema',
     'SQLAlchemy>=1.4,<2',
     'cachetools>=3,<4',
     'email-validator>1,<2',

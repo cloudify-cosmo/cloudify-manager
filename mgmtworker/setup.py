@@ -20,7 +20,7 @@ install_requires = [
     'cloudify-agent',
     'packaging==17.1',
     'retrying>1,<2',
-    'psycopg2==2.9.3',
+    'psycopg2==2.9.9',
     'cryptography>=37,<40',
     'python-dateutil==2.8.2',
     'pytz',
