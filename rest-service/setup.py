@@ -16,7 +16,7 @@
 from setuptools import setup, find_packages
 
 install_requires = [
-    'Flask==2.2.5',
+    'Flask>2,<2.3',
     'PyYAML',
     'SQLAlchemy>=1.4,<2',
     'boto3>1,<2',
