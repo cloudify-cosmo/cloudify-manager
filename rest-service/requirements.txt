@@ -18,6 +18,7 @@ attrs==22.2.0
     # via
     #   aiohttp
     #   jsonschema
+    #   referencing
 babel==2.12.1
     # via flask-babelex
 blinker==1.5
@@ -46,7 +47,7 @@ charset-normalizer==3.0.1
     #   requests
 click==8.1.3
     # via flask
-cloudify-common @ https://github.com/cloudify-cosmo/cloudify-common/archive/7.0.3-build.zip
+cloudify-common[dispatcher] @ https://github.com/cloudify-cosmo/cloudify-common/archive/7.0.3-build.zip
     # via
     #   -r requirements.in
     #   cloudify-rest-service (setup.py)
@@ -119,8 +120,10 @@ jmespath==1.0.1
     # via
     #   boto3
     #   botocore
-jsonschema==3.2.0
+jsonschema==4.19.1
     # via cloudify-rest-service (setup.py)
+jsonschema-specifications==2023.7.1
+    # via jsonschema
 mako==1.2.4
     # via alembic
 markupsafe==2.1.2
@@ -143,6 +146,8 @@ pika==1.3.0
     # via
     #   cloudify-common
     #   cloudify-rest-service (setup.py)
+pkginfo==1.9.6
+    # via wagon
 proxy-tools==0.1.0
     # via cloudify-common
 psutil==5.9.4
@@ -153,8 +158,6 @@ pycparser==2.21
     # via cffi
 pydantic==1.10.11
     # via cloudify-rest-service (setup.py)
-pyrsistent==0.19.3
-    # via jsonschema
 python-dateutil==2.8.2
     # via
     #   botocore
@@ -164,10 +167,14 @@ pytz==2022.2.1
     #   cloudify-common
     #   cloudify-rest-service (setup.py)
     #   flask-restful
-pyyaml==6.0
+pyyaml==6.0.1
     # via
     #   cloudify-common
     #   cloudify-rest-service (setup.py)
+referencing==0.30.2
+    # via
+    #   jsonschema
+    #   jsonschema-specifications
 requests==2.28.2
     # via
     #   cloudify-common
@@ -177,12 +184,15 @@ requests-toolbelt==1.0.0
     # via cloudify-common
 retrying==1.3.4
     # via cloudify-rest-service (setup.py)
+rpds-py==0.10.6
+    # via
+    #   jsonschema
+    #   referencing
 s3transfer==0.6.2
     # via boto3
 six==1.16.0
     # via
     #   flask-restful
-    #   jsonschema
     #   python-dateutil
     #   retrying
 speaklater==1.3
@@ -206,6 +216,7 @@ wagon==1.0.0
     #   cloudify-rest-service (setup.py)
 werkzeug==2.2.3
     # via
+    #   cloudify-rest-service (setup.py)
     #   flask
     #   flask-login
 wheel==0.38.4
@@ -214,8 +225,3 @@ wtforms==3.0.1
     # via flask-wtf
 yarl==1.8.2
     # via aiohttp
-
-# The following packages are considered to be unsafe in a requirements file:
-# setuptools
-# ...but I'll still attempt to make snyk happy
-setuptools==65.5.1
