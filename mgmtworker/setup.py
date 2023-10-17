@@ -16,14 +16,14 @@
 from setuptools import setup, find_packages
 
 install_requires = [
-    'cloudify-common',
     'cloudify-agent',
-    'packaging==17.1',
-    'retrying>1,<2',
-    'psycopg2==2.9.3',
+    'cloudify-common',
     'cryptography>=37,<40',
+    'packaging==17.1',
+    'psycopg2==2.9.3',
     'python-dateutil==2.8.2',
     'pytz',
+    'retrying>1,<2',
 ]
 
 
