@@ -30,7 +30,7 @@ install_requires = [
     'flask-restful',
     'flask-security',
     'flask-sqlalchemy>=2.5,<2.6',
-    'jsonschema>=3,<4',
+    'jsonschema',
     'packaging',
     'pika',
     'psutil>5,<6',
