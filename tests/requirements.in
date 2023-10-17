@@ -1,2 +1,2 @@
-https://github.com/cloudify-cosmo/cloudify-common/archive/7.0.3-build.zip#egg=cloudify-common
+cloudify-common @ https://github.com/cloudify-cosmo/cloudify-common/archive/7.0.3-build.zip
 urllib3

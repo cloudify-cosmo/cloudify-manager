@@ -1,2 +1,2 @@
-https://github.com/cloudify-cosmo/cloudify-common/archive/7.0.3-build.zip#egg=cloudify-common[dispatcher]
-https://github.com/cloudify-cosmo/cloudify-manager/archive/7.0.3-build.zip#egg=cloudify-rest-service&subdirectory=rest-service
+cloudify-common[dispatcher] @ https://github.com/cloudify-cosmo/cloudify-common/archive/7.0.3-build.zip
+cloudify-rest-service @ https://github.com/cloudify-cosmo/cloudify-manager/archive/7.0.3-build.zip#subdirectory=rest-service

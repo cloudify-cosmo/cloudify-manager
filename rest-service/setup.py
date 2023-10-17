@@ -22,7 +22,7 @@ install_requires = [
     'boto3>1,<2',
     'cachetools>=3,<4',
     'cffi>=1.14,<1.15',
-    'cloudify-common',
+    'cloudify-common[dispatcher]',
     'cryptography',
     'distro',
     'email-validator>1,<2',
