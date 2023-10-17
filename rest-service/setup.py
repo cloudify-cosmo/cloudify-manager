@@ -16,14 +16,14 @@
 from setuptools import setup, find_packages
 
 install_requires = [
-    'Flask>2,<2.3',
+    'Flask==2.2.5',
     'PyYAML',
     'SQLAlchemy>=1.4,<2',
     'boto3>1,<2',
     'cachetools>=3,<4',
     'cffi>=1.14,<1.15',
     'cloudify-common',
-    'cryptography>=37,<40',
+    'cryptography',
     'distro',
     'email-validator>1,<2',
     'flask-migrate>3',
@@ -38,7 +38,7 @@ install_requires = [
     'pydantic<2',
     'python-dateutil>=2.8.1,<3',
     'pytz',
-    'requests>=2.27.1,<3',
+    'requests',
     'retrying',
     'wagon>=0.12',
     'werkzeug>2,<3',
