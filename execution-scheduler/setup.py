@@ -12,6 +12,6 @@ setup(
         ]
     },
     install_requires=[
-        'cloudify-rest-service==7.0.3.dev1',
+        'cloudify-rest-service',
     ],
 )
