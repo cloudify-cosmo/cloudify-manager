@@ -25,12 +25,12 @@ setup(
     install_requires=[
         'PyYAML',
         'aiohttp',
-        'cryptography>=37,<40',
+        'cryptography',
         'fasteners',
         'pytest',
         'pytest-asyncio',
         'python-dateutil',
         'requests',
         'retrying',
-    ]
+    ],
 )
