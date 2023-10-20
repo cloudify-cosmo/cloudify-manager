@@ -1,3 +1,2 @@
-https://github.com/cloudify-cosmo/cloudify-common/archive/master.zip
-# Pin urllib3 to the version which does not depend on appengine
-urllib3<1.27,>=1.21.1
+cloudify-common @ https://github.com/cloudify-cosmo/cloudify-common/archive/7.0.3-build.zip
+urllib3
