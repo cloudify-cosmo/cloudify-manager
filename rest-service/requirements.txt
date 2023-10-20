@@ -180,7 +180,7 @@ requests==2.31.0
     #   cloudify-common
     #   cloudify-rest-service (setup.py)
     #   requests-toolbelt
-requests-toolbelt==0.9.1
+requests-toolbelt==1.0.0
     # via cloudify-common
 retrying==1.3.4
     # via cloudify-rest-service (setup.py)
