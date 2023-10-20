@@ -1,5 +1,1 @@
-<<<<<<< HEAD
-https://github.com/cloudify-cosmo/cloudify-common/archive/master.zip#egg=cloudify-common[dispatcher]
-=======
-cloudify-common[dispatcher] @ https://github.com/cloudify-cosmo/cloudify-common/archive/7.0.3-build.zip
->>>>>>> 79e94c607 (NE-7622 - Upgrade dependencies for subdirs)
+cloudify-common[dispatcher] @ https://github.com/cloudify-cosmo/cloudify-common/archive/master.zip
