@@ -16,8 +16,8 @@
 from setuptools import setup, find_packages
 
 install_requires = [
-    'cloudify-agent[celery,kerberos,fabric]',
-    'cloudify-common[dispatcher,snmp]',
+    'cloudify-agent',
+    'cloudify-common',
     'cryptography',
     'packaging',
     'psycopg2',
