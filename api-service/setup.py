@@ -10,14 +10,14 @@ setup(
     ),
     description='Cloudify API',
     install_requires=[
-        'fastapi',
+        'SQLAlchemy',
         'async-exit-stack',
         'async-generator',
-        'SQLAlchemy',
         'asyncpg',
-        'uvicorn[standard]',
         'cloudify-rest-service',
-        ],
+        'fastapi',
+        'uvicorn[standard]',
+    ],
     test_requires=[
         'mock',
         'pytest',
