@@ -168,7 +168,7 @@ pyyaml==6.0
     # via
     #   cloudify-common
     #   cloudify-rest-service (setup.py)
-requests==2.28.2
+requests==2.31.0
     # via
     #   cloudify-common
     #   cloudify-rest-service (setup.py)
