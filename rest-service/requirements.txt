@@ -34,7 +34,7 @@ bottle==0.12.23
     # via cloudify-common
 cachetools==3.1.1
     # via cloudify-rest-service (setup.py)
-certifi==2022.12.7
+certifi==2023.7.22
     # via requests
 cffi==1.14.6
     # via
