@@ -23,14 +23,14 @@ setup(
     description='Cloudify Integration Tests',
     zip_safe=False,
     install_requires=[
+        'PyYAML',
         'aiohttp',
+        'cryptography',
         'fasteners',
         'pytest',
         'pytest-asyncio',
         'python-dateutil',
         'requests',
         'retrying',
-        'PyYAML',
-        'cryptography>=37,<40',
-    ]
+    ],
 )

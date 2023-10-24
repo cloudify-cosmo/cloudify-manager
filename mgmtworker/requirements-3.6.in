@@ -1,0 +1,6 @@
+git+https://github.com/cloudify-cosmo/cloudify-common@master#egg=cloudify-common[dispatcher,snmp]
+git+https://github.com/cloudify-cosmo/cloudify-agent@master#egg=cloudify-agent[fabric,kerberos]
+
+paramiko
+
+psycopg2 --no-binary psycopg2
