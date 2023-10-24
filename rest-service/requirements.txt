@@ -50,7 +50,7 @@ cloudify-common @ https://github.com/cloudify-cosmo/cloudify-common/archive/mast
     # via
     #   -r requirements.in
     #   cloudify-rest-service (setup.py)
-cryptography==39.0.2
+cryptography==41.0.2
     # via cloudify-rest-service (setup.py)
 distro==1.8.0
     # via
