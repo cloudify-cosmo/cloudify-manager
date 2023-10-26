@@ -1,5 +1,5 @@
-git+https://github.com/cloudify-cosmo/cloudify-common@master#egg=cloudify-common[dispatcher,snmp]
-git+https://github.com/cloudify-cosmo/cloudify-agent@master#egg=cloudify-agent[fabric,kerberos]
+cloudify-common[dispatcher,snmp] @ https://github.com/cloudify-cosmo/cloudify-common/archive/master.zip
+cloudify-agent[fabric,kerberos] @ https://github.com/cloudify-cosmo/cloudify-agent/archive/master.zip
 
 paramiko
 
