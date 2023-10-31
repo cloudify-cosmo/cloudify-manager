@@ -30,7 +30,6 @@ from cloudify.exceptions import InvalidBlueprintImport
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from dsl_parser import parser
-from dsl_parser.version import DSL_VERSION_PREFIX
 from dsl_parser.import_resolver.default_import_resolver import (
     DefaultImportResolver)
 
@@ -237,15 +236,8 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
         # Download plugin files
         try:
             yaml_url = None
-            if dsl_version:
-                dsl_version = DSL_VERSION_PREFIX + dsl_version
-                for p_yaml in yaml_urls:
-                    if p_yaml['dsl_version'] == dsl_version:
-                        yaml_url = p_yaml['url']
-                        break
-            if not dsl_version or not yaml_url:
-                yaml_url = yaml_urls[0]['url']
-            self._download_file(yaml_url, plugin_target_path)
+            for yaml_url in yaml_urls:
+                self._download_file(yaml_url['url'], plugin_target_path)
             self._download_file(wagon_url, plugin_target_path)
             if logo_url:
                 self._download_file(logo_url, plugin_target_path, 'icon.png')
