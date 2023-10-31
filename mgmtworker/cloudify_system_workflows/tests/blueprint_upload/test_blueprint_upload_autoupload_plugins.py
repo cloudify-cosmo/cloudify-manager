@@ -173,20 +173,20 @@ class TestPluginAutoupload:
         assert plugin.package_name == 'cloudify-openstack-plugin'
         assert plugin.package_version == '3.2.21'
 
-    def test_autoupload_plugins_picks_correct_dsl_yaml(self, mock_client):
+    def test_autoupload_fetches_all(self, mock_client):
         plugin = self._parse_plugin_import(
             mock_client,
             'plugin:cloudify-openstack-plugin', dsl_version='1_3')
         assert plugin.package_name == 'cloudify-openstack-plugin'
         assert plugin.package_version == '3.2.21'
-        assert plugin_yamls == ['plugin.yaml']
+        assert set(plugin_yamls) == {'v2_plugin.yaml', 'plugin.yaml'}
 
         plugin = self._parse_plugin_import(
             mock_client,
             'plugin:cloudify-openstack-plugin', dsl_version='1_4')
         assert plugin.package_name == 'cloudify-openstack-plugin'
         assert plugin.package_version == '3.2.21'
-        assert plugin_yamls == ['v2_plugin.yaml']
+        assert set(plugin_yamls) == {'v2_plugin.yaml', 'plugin.yaml'}
 
     def test_autoupload_plugins_bad_version(self, mock_client):
         with pytest.raises(
