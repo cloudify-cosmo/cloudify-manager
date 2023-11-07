@@ -1,5 +1,3 @@
-#! /usr/local/bin/python
-
 from tempfile import NamedTemporaryFile
 
 from cloudify.zip_utils import make_zip64_archive

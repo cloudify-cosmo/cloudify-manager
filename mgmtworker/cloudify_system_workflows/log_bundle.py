@@ -1,6 +1,6 @@
 import os
-import pathlib
 import subprocess
+import sys
 
 from cloudify.manager import get_rest_client
 from cloudify.workflows import ctx
@@ -32,7 +32,7 @@ def create(log_bundle_id, **kwargs):
 
 
 def installation_method():
-    match python_cmd():
+    match sys.executable:
         case "/opt/mgmtworker/env/bin/python3":
             return "rpm"
         case "/usr/local/bin/python":
@@ -61,10 +61,14 @@ def prepare_script(client: CloudifyClient) -> (list[str], dict[str, str]):
 
     match installed_from:
         case "helm":
-            script_cmd = ["/opt/mgmtworker/scripts/fetch-logs-local"]
+            script_cmd = [
+                sys.executable,
+                "/opt/mgmtworker/scripts/fetch-logs-local",
+            ]
             script_env = {}
         case "rpm":
             script_cmd = [
+                sys.executable,
                 "/opt/mgmtworker/scripts/fetch-logs-cluster",
                 "-a",
                 ",".join(addresses),
@@ -82,12 +86,3 @@ def prepare_script(client: CloudifyClient) -> (list[str], dict[str, str]):
                 f"Unsupported installation method: {installed_from}"
             )
     return script_cmd, script_env
-
-
-def python_cmd() -> str:
-    for location in [
-        "/opt/mgmtworker/env/bin/python3",
-        "/usr/local/bin/python",
-    ]:
-        if pathlib.Path(location).is_file():
-            return location
