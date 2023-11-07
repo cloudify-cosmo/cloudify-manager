@@ -1,0 +1,22 @@
+#! /usr/local/bin/python
+
+from tempfile import NamedTemporaryFile
+
+from cloudify.zip_utils import make_zip64_archive
+
+
+def get_logs():
+    zip_file = NamedTemporaryFile(
+        prefix='cfylogs', suffix='.zip', delete=False
+    )
+    zip_file.close()
+    zip_path = zip_file.name
+
+    make_zip64_archive(zip_path, "/opt/logs")
+
+    return zip_path
+
+
+if __name__ == "__main__":
+    zip_file_name = get_logs()
+    print(zip_file_name)
