@@ -53,10 +53,6 @@ RUN chown -R $username:$groupname \
     /usr/local/plugins \
     /run/cloudify
 
-RUN chmod 0750 \
-    /opt/mgmtworker/scripts/fetch-logs-cluster \
-    /opt/mgmtworker/scripts/fetch-logs-local
-
 USER 1000
 
 ENTRYPOINT /opt/mgmtworker/docker/entrypoint.sh
