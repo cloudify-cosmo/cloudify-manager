@@ -1,4 +1,7 @@
 import os
+import tempfile
+
+from flask import request
 
 from cloudify.models_states import LogBundleState, ExecutionState
 
@@ -145,3 +148,31 @@ class LogBundlesIdArchive(SecuredResource):
                          f'/{log_bundle_id}.zip'
 
         return get_storage_handler().proxy(log_bundle_uri)
+
+    @swagger.operation(
+        nickname='uploadLogBundle',
+        notes='Upload a log bundle archive.',
+    )
+    @authorize('log_bundle_create')
+    def put(
+        self,
+        log_bundle_id,
+    ):
+        if not request.data:
+            raise manager_exceptions.BadParametersError(
+                "Log bundle archive should be encoded as request body"
+            )
+
+        bundle = get_storage_manager().get(models.LogBundle, log_bundle_id)
+        if bundle.status == LogBundleState.FAILED:
+            raise manager_exceptions.LogBundleActionError(
+                'Failed log bundle cannot be uploaded'
+            )
+
+        with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
+            tmp_file.write(request.data)
+        get_storage_handler().move(
+            tmp_file.name,
+            f"{FILE_SERVER_LOG_BUNDLES_FOLDER}/{log_bundle_id}.zip",
+        )
+        return None, 201
