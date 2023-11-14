@@ -2,6 +2,7 @@ import argparse
 import datetime
 import logging
 import os
+import platform
 import socket
 import sys
 import time
@@ -647,7 +648,7 @@ def _load_user_config(paths):
 
 
 def _create_admin_token(target):
-    description = 'csys-mgmtworker'
+    description = f'csys-{platform.node()}'
     # Don't leak existing Mgmtworker tokens
     db.session.execute(
         models.Token.__table__
