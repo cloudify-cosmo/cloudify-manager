@@ -2,7 +2,7 @@
 
 /opt/rest-service/docker/prepare_secrets.sh
 
-python -m manager_rest.configure_manager --db-wait postgresql
+python -m manager_rest.configure_manager --db-wait $POSTGRES_HOST
 python -m manager_rest.configure_manager --rabbitmq-wait rabbitmq
 
 exec gunicorn \
