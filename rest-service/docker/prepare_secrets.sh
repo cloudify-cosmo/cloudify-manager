@@ -14,12 +14,11 @@ file_server_type: ${FILE_SERVER_TYPE}
 fi
 
 if [ ! -e "/opt/manager/rest-security.conf" ]; then
-    # TODO: generate the encryption key, don't just hardcode it
     echo "
 {
     \"secret_key\": \"${SECRET_KEY}\",
     \"hash_salt\": \"${HASH_SALT}\",
-    \"encryption_key\": \"Fm89X7nuj-FvNB21jf5znIJylGXunva-RvK30756UPEBj0Bns0u-XY3XVGs6H8CAnGsiAI0tzcM0CbfbLcTk8Q==\"
+    \"encryption_key\": \"${ENCRYPTION_KEY}\"
 }
 " > /opt/manager/rest-security.conf
 fi
