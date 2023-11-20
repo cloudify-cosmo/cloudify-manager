@@ -536,6 +536,9 @@ class ResourceManager(object):
         return None, None
 
     def _validate_execution_update(self, current_status, future_status):
+        if current_status == future_status:
+            return True
+
         if current_status in ExecutionState.END_STATES:
             return False
 
