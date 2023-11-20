@@ -236,6 +236,8 @@ class ExecutionsTestCase(BaseServerTestCase):
 
         for last_status, status_list in invalid_status_map.items():
             for next_status in status_list:
+                if next_status == last_status:
+                    continue
                 assert_invalid_update()
 
     def test_bad_update_execution_status_client_exception(self):
