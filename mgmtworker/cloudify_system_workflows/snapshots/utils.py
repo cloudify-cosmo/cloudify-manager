@@ -394,3 +394,14 @@ def get_stage_client(base_url: str | None = None) -> StageClient:
         stage_port = os.environ.get('STAGE_BACKEND_SERVICE_PORT') or 8088
         base_url = f'http://{stage_host}:{stage_port}/console'
     return StageClient(base_url)
+
+
+def is_split_services_environment():
+    """Are we running in a split-services / k8s environment?
+
+    In the k8s deployment, we can only use the "new" snapshot format.
+    """
+    return os.environ.get('RUNTIME_ENVIRONMENT', 'legacy').lower() in [
+        'k8s',
+        'kubernetes',
+    ]
