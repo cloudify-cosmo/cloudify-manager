@@ -15,6 +15,9 @@
 
 from cloudify.decorators import workflow
 from cloudify.workflows import ctx
+from cloudify_system_workflows.snapshots.utils import (
+    is_split_services_environment,
+)
 from cloudify_system_workflows.snapshots.snapshot_create import SnapshotCreate
 from cloudify_system_workflows.snapshots.snapshot_create_legacy import \
     LegacySnapshotCreate
@@ -31,6 +34,12 @@ def create(snapshot_id, config, **kwargs):
     include_events = kwargs.get('include_events', True)
     tempdir_path = kwargs.get('tempdir_path')
     legacy = kwargs.get('legacy', True)
+
+    if is_split_services_environment():
+        # in k8s, we cannot create a legacy snapshot at all, because we have
+        # no direct access to pg_dump and the postgres pod in general
+        legacy = False
+
     if legacy:
         create_snapshot = LegacySnapshotCreate(
                 snapshot_id,
