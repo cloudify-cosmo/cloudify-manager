@@ -493,14 +493,19 @@ class SnapshotRestore(object):
                          'snapshot_path: {0}'.format(snapshot_path))
         try:
             with ZipFile(snapshot_path, 'r') as zipf:
-                if not self._is_legacy_snapshot(zipf):
+                if self._is_legacy_snapshot(zipf):
+                    if utils.is_split_services_environment():
+                        raise NonRecoverableError(
+                            "legacy snapshots cannot be restored on a "
+                            "distributed manager")
+
+                    ctx.logger.debug('Using `legacy` snapshot format')
+                    zipf.extractall(self._tempdir)
+                else:
                     ctx.logger.debug('Using `new` snapshot format')
                     self.scan_snapshot(zipf)
                     self._new_restore(zipf)
                     return
-
-                ctx.logger.debug('Using `legacy` snapshot format')
-                zipf.extractall(self._tempdir)
 
             schema_revision = self._metadata.get(
                 M_SCHEMA_REVISION,
