@@ -17,20 +17,22 @@ QUERY_STRINGS = {
 
 SERVICE_ASSIGNMENTS = {
     CloudifyNodeType.DB: [
-        "postgresql-14",
+        "postgresql",
     ],
     CloudifyNodeType.BROKER: [
-        "cloudify-rabbitmq",
+        "rabbitmq",
     ],
     CloudifyNodeType.MANAGER: [
-        "cloudify-composer",
-        "cloudify-mgmtworker",
-        "cloudify-restservice",
-        "cloudify-stage",
-        "cloudify-api",
-        "cloudify-execution-scheduler",
+        "api-service",
+        "rest-service",
+        "execution-scheduler",
+        "mgmtworker",
+        "composer-backend",
+        "composer-frontend",
+        "stage-backend",
+        "stage-frontend",
         "nginx",
-        "prometheus",
+        "prometheus-server",
     ],
 }
 
@@ -152,10 +154,12 @@ def get_cluster_status() -> dict[str, Any]:
         logger=current_app.logger,
         timeout=config.monitoring_timeout,
     )
-    status = ClusterStatus()\
-        .populate_prometheus_metrics(prometheus_results)\
-        .fill_missing_services(SERVICE_ASSIGNMENTS)\
+    status = (
+        ClusterStatus()
+        .populate_prometheus_metrics(prometheus_results)
+        .fill_missing_services(SERVICE_ASSIGNMENTS)
         .calc_status()
+    )
     return status.dict(exclude_none=True)
 
 
@@ -167,8 +171,8 @@ def service_node_type(service_name: str) -> str | None:
 
 def parse_metrics(result: dict) -> (str | None, str | None, Node | None):
     raw_metric = result.get("metric", {})
-    instance = raw_metric.get("instance")
-    service_name = raw_metric.get("name")
+    instance = raw_metric.get("deployment") or raw_metric.get("statefulset")
+    service_name = instance
 
     service_assignment = service_node_type(service_name)
     if not service_assignment:
@@ -176,6 +180,9 @@ def parse_metrics(result: dict) -> (str | None, str | None, Node | None):
 
     timestamp, healthy = result.get("value", [0, ""])
     healthy = bool(int(healthy)) if healthy else False
+    metric_type = raw_metric.get('__name__')
+    if job := raw_metric.get('job'):
+        metric_type = f"{job} {metric_type}"
     return (
         service_assignment,
         instance,
@@ -187,8 +194,7 @@ def parse_metrics(result: dict) -> (str | None, str | None, Node | None):
                     healthy=healthy,
                     last_check=last_check_from_timestamp(timestamp),
                     metric_name=service_name,
-                    metric_type=raw_metric.get('job') + " "
-                    + raw_metric.get('__name__'),
+                    metric_type=metric_type,
                 )
             ],
             failures=(
