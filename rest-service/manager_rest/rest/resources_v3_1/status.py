@@ -1,3 +1,4 @@
+import os
 from typing import Dict
 
 from flask import request
@@ -22,24 +23,47 @@ except ImportError:
     ha_utils = None
 
 
-BASE_SERVICES = {
-    'nginx': 'Webserver',
-    'cloudify-mgmtworker': 'Management Worker',
-    'cloudify-restservice': 'Manager Rest-Service',
-    'cloudify-api': 'Cloudify API',
-    'cloudify-execution-scheduler': 'Cloudify Execution Scheduler',
-}
-OPTIONAL_SERVICES = {
-    'cloudify-stage': 'Cloudify Console',
-    'cloudify-amqp-postgres': 'AMQP-Postgres',
-    'haproxy': 'Haproxy for DB HA',
-    'patroni': 'Patroni HA Postgres',
-    'postgresql-14': 'PostgreSQL',
-    'cloudify-rabbitmq': 'RabbitMQ',
-    'cloudify-composer': 'Cloudify Composer',
-    'cloudify-syncthing': 'File Sync Service',
-    'prometheus': 'Monitoring Service',
-}
+if os.environ.get('RUNTIME_ENVIRONMENT', 'legacy').lower() in [
+    'k8s',
+    'kubernetes',
+]:
+    BASE_SERVICES = {
+        'nginx': 'Webserver',
+        'mgmtworker': 'Management Worker',
+        'rest-service': 'Manager Rest-Service',
+        'api-service': 'Cloudify API',
+        'execution-scheduler': 'Cloudify Execution Scheduler',
+    }
+    OPTIONAL_SERVICES = {
+        'postgresql': 'PostgreSQL',
+        'rabbitmq': 'RabbitMQ',
+        'prometheus-server': 'Monitoring Service',
+        'kube-state-metrics': 'Kubernetes State Metrics',
+        'seaweedfs-master': 'SeaweedFS Master',
+        'stage-backend': 'Cloudify Console Backend',
+        'stage-frontend': 'Cloudify Console Frontend',
+        'composer-backend': 'Cloudify Composer Backend',
+        'composer-frontend': 'Cloudify Composer Frontend',
+    }
+else:
+    BASE_SERVICES = {
+        'nginx': 'Webserver',
+        'cloudify-mgmtworker': 'Management Worker',
+        'cloudify-restservice': 'Manager Rest-Service',
+        'cloudify-api': 'Cloudify API',
+        'cloudify-execution-scheduler': 'Cloudify Execution Scheduler',
+    }
+    OPTIONAL_SERVICES = {
+        'cloudify-stage': 'Cloudify Console',
+        'cloudify-amqp-postgres': 'AMQP-Postgres',
+        'haproxy': 'Haproxy for DB HA',
+        'patroni': 'Patroni HA Postgres',
+        'postgresql-14': 'PostgreSQL',
+        'cloudify-rabbitmq': 'RabbitMQ',
+        'cloudify-composer': 'Cloudify Composer',
+        'cloudify-syncthing': 'File Sync Service',
+        'prometheus': 'Monitoring Service',
+    }
 
 
 class OK(Resource):
@@ -124,9 +148,24 @@ def _check_service_statuses(services):
         'manager_service',
         current_app.logger,
     )
-    metrics = {
-        m['metric']['name']: m['value'] for m in prometheus_services
-    }
+    if os.environ.get('RUNTIME_ENVIRONMENT', 'legacy').lower() in [
+        'k8s',
+        'kubernetes',
+    ]:
+        metrics = {
+            m['metric']['deployment']: m['value']
+            for m in prometheus_services
+            if 'deployment' in m['metric']
+        }
+        metrics.update({
+            m['metric']['statefulset']: m['value']
+            for m in prometheus_services
+            if 'statefulset' in m['metric']
+        })
+    else:
+        metrics = {
+            m['metric']['name']: m['value'] for m in prometheus_services
+        }
     for name, display_name in system_manager_services.items():
         status = NodeServiceStatus.INACTIVE
 
