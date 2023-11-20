@@ -12,12 +12,11 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
+import sys
 
 from setuptools import setup, find_packages
 
 install_requires = [
-    'cloudify-agent[celery,kerberos,fabric]',
-    'cloudify-common[dispatcher,snmp]',
     'cryptography',
     'packaging',
     'psycopg2',
@@ -26,6 +25,16 @@ install_requires = [
     'retrying',
 ]
 
+if sys.version_info.major == 3 and sys.version_info.minor == 6:
+    install_requires += [
+        'cloudify-agent[fabric,kerberos]',  # Exclude celery for python 3.6
+        'cloudify-common[dispatcher,snmp]',
+    ]
+else:
+    install_requires += [
+        'cloudify-agent[celery,fabric,kerberos]',
+        'cloudify-common[dispatcher,snmp]',
+    ]
 
 setup(
     name='cloudify-mgmtworker',

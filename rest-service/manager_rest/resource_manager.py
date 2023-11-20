@@ -2,7 +2,6 @@ import os
 import uuid
 import yaml
 import json
-import shutil
 import itertools
 from collections import defaultdict, namedtuple
 from copy import deepcopy
@@ -537,6 +536,9 @@ class ResourceManager(object):
         return None, None
 
     def _validate_execution_update(self, current_status, future_status):
+        if current_status == future_status:
+            return True
+
         if current_status in ExecutionState.END_STATES:
             return False
 
@@ -1032,14 +1034,13 @@ class ResourceManager(object):
             self.delete_deployment_from_labels_graph([deployment], parents)
             parent_storage_ids = {p._storage_id for p in parents}
 
-        deployment_folder = os.path.join(
-            config.instance.file_server_root,
-            FILE_SERVER_DEPLOYMENTS_FOLDER,
-            utils.current_tenant.name,
-            deployment.id)
-        if os.path.exists(deployment_folder):
-            shutil.rmtree(deployment_folder)
-
+        self.sh.delete(
+            os.path.join(
+                FILE_SERVER_DEPLOYMENTS_FOLDER,
+                utils.current_tenant.name,
+                deployment.id,
+            )
+        )
         self.sm.delete(deployment)
         return parent_storage_ids
 

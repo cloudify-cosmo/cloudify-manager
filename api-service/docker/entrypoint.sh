@@ -2,7 +2,7 @@
 
 /opt/api-service/docker/prepare_secrets.sh
 
-python -m manager_rest.configure_manager --db-wait postgresql
+python -m manager_rest.configure_manager --db-wait $POSTGRES_HOST
 
 exec gunicorn \
   --worker-class uvicorn.workers.UvicornWorker \
