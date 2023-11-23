@@ -68,7 +68,6 @@ cp -R "${RPM_SOURCE_DIR}/rest-service/migrations" "%{buildroot}/opt/manager/reso
 mkdir -p %{buildroot}/var/log/cloudify/rest
 mkdir -p %{buildroot}/var/log/cloudify/amqp-postgres
 mkdir -p %{buildroot}/var/log/cloudify/execution-scheduler
-mkdir -p %{buildroot}/run/cloudify
 
 # Dir for snapshot restore marker files (CY-1821)
 mkdir -p %{buildroot}/opt/manager/snapshot_status
@@ -189,5 +188,4 @@ exit 0
 %attr(750,cfyuser,cfylogs) /var/log/cloudify/rest
 %attr(750,cfyuser,cfylogs) /var/log/cloudify/amqp-postgres
 %attr(750,cfyuser,cfylogs) /var/log/cloudify/execution-scheduler
-%attr(750,cfyuser,cfyuser) /run/cloudify
 %attr(550,root,cfyuser) /opt/cloudify/encryption/update-encryption-key
