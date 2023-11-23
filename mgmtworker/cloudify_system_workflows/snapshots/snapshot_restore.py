@@ -1190,6 +1190,7 @@ class SnapshotRestore(object):
 
     @staticmethod
     def _mark_manager_restoring():
+        os.makedirs(os.path.dirname(SNAPSHOT_RESTORE_FLAG_FILE), exist_ok=True)
         with open(SNAPSHOT_RESTORE_FLAG_FILE, 'a'):
             os.utime(SNAPSHOT_RESTORE_FLAG_FILE, None)
         ctx.logger.debug('Marked manager snapshot restoring with file:'
