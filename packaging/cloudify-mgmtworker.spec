@@ -48,7 +48,7 @@ sudo tar xf %{S:1} -C /
 # Create the venv with the custom Python symlinked in
 /opt/python3.11/bin/python3.11 -m venv /opt/mgmtworker/env
 
-%{PIP_INSTALL} --upgrade pip "setuptools<=63.2"
+%{PIP_INSTALL} --upgrade pip setuptools
 %{PIP_INSTALL} -r "${RPM_SOURCE_DIR}/mgmtworker/requirements.txt"
 %{PIP_INSTALL} --upgrade "${RPM_SOURCE_DIR}/mgmtworker"
 
@@ -57,13 +57,14 @@ sudo tar xf %{S:1} -C /
 # create a python3.6 venv with common & requirements preinstalled, to be used
 # as a base virtualenv for python3.6 plugins
 python3.6 -m venv /opt/plugins-common-3.6
-/opt/plugins-common-3.6/bin/pip install --upgrade pip "setuptools<=63.2"
+/opt/plugins-common-3.6/bin/pip install --upgrade pip setuptools
 /opt/plugins-common-3.6/bin/pip install -r "${RPM_SOURCE_DIR}/mgmtworker/requirements-3.6.txt"
 
 # create a python3.10 venv with common & requirements preinstalled, to be used
 # as a base virtualenv for python3.10 plugins
+/opt/python3.10/bin/python3.10 -m pip install --upgrade setuptools
 /opt/python3.10/bin/python3.10 -m venv /opt/plugins-common-3.10
-/opt/plugins-common-3.10/bin/pip install --upgrade pip "setuptools<=63.2"
+/opt/plugins-common-3.10/bin/pip install --upgrade pip setuptools
 /opt/plugins-common-3.10/bin/pip install -r "${RPM_SOURCE_DIR}/mgmtworker/requirements.txt"
 
 
