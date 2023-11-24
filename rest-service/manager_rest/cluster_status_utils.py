@@ -42,6 +42,7 @@ STATUS = "status"
 class Status(StrEnum):
     FAIL = "Fail"
     OK = "OK"
+    UNKNOWN = "Unknown"
 
 
 class Metric(BaseModel):
@@ -138,13 +139,25 @@ class ClusterStatus(BaseModel):
                         if found:
                             break
                     if not found:
-                        if self.services[service_assignment].failures is None:
-                            self.services[service_assignment].failures = []
-                        self.services[service_assignment].failures.append(
-                            f"Missing metrics for service {service_name}"
+                        self.mark_service_not_found(
+                            service_assignment, service_name
                         )
-                        self.services[service_assignment].status = Status.FAIL
         return self
+
+    def mark_service_not_found(self, node_type: str, service_name: str):
+        if node_type in {
+            CloudifyNodeType.BROKER,
+            CloudifyNodeType.DB,
+        }:
+            self.services[node_type].is_external = True
+            self.services[node_type].status = Status.UNKNOWN
+        else:
+            if self.services[node_type].failures is None:
+                self.services[node_type].failures = []
+            self.services[node_type].failures.append(
+                f"Missing metrics for service {service_name}"
+            )
+            self.services[node_type].status = Status.FAIL
 
 
 def get_cluster_status() -> dict[str, Any]:
