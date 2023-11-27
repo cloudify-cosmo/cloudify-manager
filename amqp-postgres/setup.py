@@ -19,7 +19,7 @@ from setuptools import setup
 
 setup(
     name='cloudify-amqp-postgres',
-    version='7.0.3.dev1',
+    version='7.0.3',
     author='Cloudify',
     author_email='cosmo-admin@cloudify.co',
     packages=['amqp_postgres'],
