@@ -6,7 +6,7 @@
 This repository contains the following Cloudify components:
 
 * Cloudify's manager REST service.
-* Cloudify system-workflows
+* Cloudify system-workflows.
 * Integration tests.
 
 # REST API Reference
