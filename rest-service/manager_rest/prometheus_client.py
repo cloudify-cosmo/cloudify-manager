@@ -33,6 +33,7 @@ def query(query_string: str, logger, timeout=None) -> typing.List[dict]:
                 url_with_query_string,
                 r.status_code,
             )
+    logger.debug('Prometheus results: %s', result)
     return result
 
 
