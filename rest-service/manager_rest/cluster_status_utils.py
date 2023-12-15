@@ -105,7 +105,7 @@ class ClusterStatus(BaseModel):
                 self.services[service_name].calc_status(in_depth)
         self.status = (
             Status.OK
-            if all(s.status for s in self.services.values())
+            if all(s.status == Status.OK for s in self.services.values())
             else Status.FAIL
         )
         return self
@@ -137,6 +137,26 @@ class ClusterStatus(BaseModel):
                         for service_name in service_names
                     ],
                 )
+                self.services[service_assignment].nodes.update(
+                    {
+                        service_name: Node(
+                            private_ip=None,
+                            public_ip=None,
+                            metrics=[
+                                Metric(
+                                    healthy=False,
+                                    last_check=None,
+                                    metric_name=None,
+                                    metric_type=None,
+                                    service_name=service_name,
+                                )
+                            ],
+                            failures=(["Missing metrics"]),
+                            status=Status.FAIL,
+                        )
+                        for service_name in service_names
+                    }
+                )
             else:
                 nodes = self.services[service_assignment].nodes
                 for service_name in service_names:
@@ -166,6 +186,25 @@ class ClusterStatus(BaseModel):
                 self.services[node_type].failures = []
             self.services[node_type].failures.append(
                 f"Missing metrics for service {service_name}"
+            )
+            self.services[node_type].nodes.update(
+                {
+                    service_name: Node(
+                        private_ip=None,
+                        public_ip=None,
+                        metrics=[
+                            Metric(
+                                healthy=False,
+                                last_check=None,
+                                metric_name=None,
+                                metric_type=None,
+                                service_name=service_name,
+                            )
+                        ],
+                        failures=(["Missing metrics"]),
+                        status=Status.FAIL,
+                    )
+                }
             )
             self.services[node_type].status = Status.FAIL
 
