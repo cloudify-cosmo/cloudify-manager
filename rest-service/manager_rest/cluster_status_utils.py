@@ -15,6 +15,15 @@ QUERY_STRINGS = {
     CloudifyNodeType.MANAGER: "(manager_healthy) or (manager_service)",
 }
 
+JOB_ASSIGNMENTS = {
+    CloudifyNodeType.DB: [
+        "postgresql-metrics",
+    ],
+    CloudifyNodeType.BROKER: [
+        "rabbitmq-metrics",
+    ],
+}
+
 SERVICE_ASSIGNMENTS = {
     CloudifyNodeType.DB: [
         "postgresql",
@@ -50,6 +59,7 @@ class Metric(BaseModel):
     last_check: str | None
     metric_name: str | None
     metric_type: str | None
+    service_name: str | None
 
 
 class Node(BaseModel):
@@ -111,7 +121,7 @@ class ClusterStatus(BaseModel):
                     nodes={instance: node},
                     status=Status.OK,
                 )
-            else:
+            elif instance not in self.services[service_assignment].nodes:
                 self.services[service_assignment].nodes[instance] = node
         return self
 
@@ -133,7 +143,7 @@ class ClusterStatus(BaseModel):
                     found = False
                     for node_name, node in nodes.items():
                         for metric in node.metrics:
-                            if metric.metric_name == service_name:
+                            if metric.service_name == service_name:
                                 found = True
                                 break
                         if found:
@@ -176,38 +186,57 @@ def get_cluster_status() -> dict[str, Any]:
     return status.dict(exclude_none=True)
 
 
-def service_node_type(service_name: str) -> str | None:
+def service_node_type(
+    service_name: str | None,
+    job_name: str | None,
+) -> str | None:
     for node_type, service_names in SERVICE_ASSIGNMENTS.items():
         if service_name in service_names:
+            return node_type
+    for node_type, job_names in JOB_ASSIGNMENTS.items():
+        if job_name in job_names:
             return node_type
 
 
 def parse_metrics(result: dict) -> (str | None, str | None, Node | None):
     raw_metric = result.get("metric", {})
-    instance = raw_metric.get("deployment") or raw_metric.get("statefulset")
-    service_name = instance
+    host = raw_metric.get("host")
+    instance = raw_metric.get("instance")
+    job = raw_metric.get('job', '')
+    if (
+        not (
+            service_name := raw_metric.get("deployment")
+            or raw_metric.get("statefulset")
+        )
+        and instance
+        and (namespace := raw_metric.get("namespace"))
+    ):
+        service_name, _, _ = instance.partition(f".{namespace}.")
+        if service_name.endswith("-metrics"):
+            service_name = service_name[:-8]
 
-    service_assignment = service_node_type(service_name)
+    service_assignment = service_node_type(service_name, job)
     if not service_assignment:
         return None, None, None
 
     timestamp, healthy = result.get("value", [0, ""])
     healthy = bool(int(healthy)) if healthy else False
-    metric_type = raw_metric.get('__name__')
-    if job := raw_metric.get('job'):
-        metric_type = f"{job} {metric_type}"
+    metric_name = raw_metric.get("__name__")
+    if instance:
+        metric_name += f" ({instance})"
     return (
         service_assignment,
-        instance,
+        service_name,
         Node(
-            private_ip=instance,
-            public_ip=instance,
+            private_ip=host or service_name,
+            public_ip=service_name,
             metrics=[
                 Metric(
                     healthy=healthy,
                     last_check=last_check_from_timestamp(timestamp),
-                    metric_name=service_name,
-                    metric_type=metric_type,
+                    metric_name=metric_name,
+                    metric_type=job,
+                    service_name=service_name,
                 )
             ],
             failures=(
