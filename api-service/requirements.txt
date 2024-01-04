@@ -257,7 +257,7 @@ watchfiles==0.21.0
     # via uvicorn
 websockets==11.0.3
     # via uvicorn
-werkzeug==2.3.7
+werkzeug==2.3.8
     # via
     #   cloudify-rest-service
     #   flask
