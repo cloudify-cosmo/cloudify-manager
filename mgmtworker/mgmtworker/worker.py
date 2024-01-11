@@ -44,6 +44,7 @@ except ImportError:
     syncthing_utils = None
 
 DEFAULT_MAX_WORKERS = 10
+DEFAULT_OPERATION_WORKERS = 20
 logger = logging.getLogger('mgmtworker')
 
 
@@ -335,14 +336,28 @@ def make_amqp_worker(args):
     operation_registry = ProcessRegistry()
     workflow_registry = ProcessRegistry()
     handlers = [
-        MgmtworkerOperationConsumer(args.queue, args.max_workers,
-                                    registry=operation_registry),
-        CloudifyWorkflowConsumer(args.queue, args.max_workers,
-                                 registry=workflow_registry),
-        MgmtworkerServiceTaskConsumer(args.max_workers,
-                                      operation_registry=operation_registry,
-                                      workflow_registry=workflow_registry),
+        MgmtworkerOperationConsumer(
+            args.queue,
+            args.max_operation_workers,
+            registry=operation_registry,
+        ),
+        CloudifyWorkflowConsumer(
+            args.queue,
+            args.max_workers,
+            registry=workflow_registry,
+        ),
+        MgmtworkerServiceTaskConsumer(
+            args.max_workers,
+            operation_registry=operation_registry,
+            workflow_registry=workflow_registry,
+        ),
     ]
+    logger.info(
+        'Listening on %s with %d workflow workers and %d operation workers',
+        args.queue,
+        args.max_workers,
+        args.max_operation_workers,
+    )
 
     if args.hooks_queue:
         handlers.append(HookConsumer(args.hooks_queue,
@@ -377,11 +392,40 @@ def prepare_broker_config():
     broker_config.load_broker_config()
 
 
+def _get_default_max_workers():
+    env_value = os.environ.get('MGMTWORKER_MAX_WORKERS')
+    if env_value:
+        return int(env_value)
+    return DEFAULT_MAX_WORKERS
+
+
+def _get_default_operation_workers():
+    env_value = os.environ.get('MGMTWORKER_OPERATION_WORKERS')
+    if env_value:
+        return int(env_value)
+    return DEFAULT_OPERATION_WORKERS
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--queue')
-    parser.add_argument('--max-workers', default=DEFAULT_MAX_WORKERS, type=int)
-    parser.add_argument('--hooks-queue')
+    parser.add_argument(
+        '--queue',
+        default=os.environ.get('MGMTWORKER_QUEUE'),
+    )
+    parser.add_argument(
+        '--max-workers',
+        type=int,
+        default=_get_default_max_workers(),
+    )
+    parser.add_argument(
+        '--max-operation-workers',
+        type=int,
+        default=_get_default_operation_workers(),
+    )
+    parser.add_argument(
+        '--hooks-queue',
+        default=os.environ.get('MGMTWORKER_HOOKS_QUEUE')
+    )
     args = parser.parse_args()
 
     setup_agent_logger('mgmtworker')
