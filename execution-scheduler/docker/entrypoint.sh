@@ -18,7 +18,7 @@ if [ ! -e "/opt/manager/rest-security.conf" ]; then
 fi
 set -x
 
-python -m manager_rest.configure_manager --db-wait postgresql
+python -m manager_rest.configure_manager --db-wait $POSTGRES_HOST
 python -m manager_rest.configure_manager --rabbitmq-wait rabbitmq
 
 exec cloudify-execution-scheduler
