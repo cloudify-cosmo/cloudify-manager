@@ -146,23 +146,6 @@ def _create_steps(nodes, deployment, new_plan):
             entity_id=[WORKFLOWS, key],
         )
     for action, key in _diff_dicts(
-                new_plan[POLICY_TYPES], deployment.policy_types):
-        yield DeploymentUpdateStep(
-            action=action,
-            entity_type=POLICY_TYPE,
-            entity_id=[POLICY_TYPES, key],
-            supported=False
-        )
-    for action, key in _diff_dicts(
-                new_plan[POLICY_TRIGGERS],
-                deployment.policy_triggers):
-        yield DeploymentUpdateStep(
-            action=action,
-            entity_type=POLICY_TRIGGER,
-            entity_id=[POLICY_TRIGGERS, key],
-            supported=False
-        )
-    for action, key in _diff_dicts(
             new_plan[GROUPS], deployment.groups,
             compare=_compare_groups):
         yield DeploymentUpdateStep(
