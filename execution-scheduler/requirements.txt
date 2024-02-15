@@ -47,11 +47,11 @@ charset-normalizer==3.3.0
     #   requests
 click==8.1.7
     # via flask
-cloudify-common[dispatcher] @ https://github.com/cloudify-cosmo/cloudify-common/archive/7.0.3-build.zip
+cloudify-common[dispatcher] @ https://github.com/cloudify-cosmo/cloudify-common/archive/7.0.4-build.zip
     # via
     #   -r requirements.in
     #   cloudify-rest-service
-cloudify-rest-service @ https://github.com/cloudify-cosmo/cloudify-manager/archive/7.0.3-build.zip#subdirectory=rest-service
+cloudify-rest-service @ https://github.com/cloudify-cosmo/cloudify-manager/archive/7.0.4-build.zip#subdirectory=rest-service
     # via
     #   -r requirements.in
     #   cloudify-execution-scheduler (setup.py)
