@@ -22,6 +22,9 @@ from cloudify_system_workflows.snapshots.utils import (DictToAttributes,
                                                        get_composer_client,
                                                        get_stage_client)
 
+# DUMP_ENTITIES_BATCH_SIZE determines the limit of entities will be put into
+# one dump file.  It should be reasonably high (500 is a good compromise).
+# If set to a value < 2 expect the unexpected.
 DUMP_ENTITIES_BATCH_SIZE = 500
 EMPTY_B64_ZIP = 'UEsFBgAAAAAAAAAAAAAAAAAAAAAAAA=='
 
@@ -90,7 +93,7 @@ class SnapshotCreate:
                 self._dump_tenant(tenant_name)
             self._append_from_auditlog(timeout)
             self._create_archive()
-            self._upload_archive(tenant_name)
+            self._upload_archive()
             self._update_snapshot_status(self._config.created_status)
             ctx.logger.info('Snapshot created successfully')
         except BaseException as exc:
@@ -218,7 +221,7 @@ class SnapshotCreate:
 
     def _write_files(
             self,
-            tenant_name: str,
+            tenant_name: str | None,
             dump_type: str,
             data
     ) -> set[str]:
@@ -236,7 +239,7 @@ class SnapshotCreate:
             if (source, source_id) not in data_buckets:
                 data_buckets[(source, source_id)] = []
             data_buckets[(source, source_id)].append(entity)
-            latest_timestamp = _extract_latest_timestamp(entity, dump_type,
+            latest_timestamp = _extract_latest_timestamp(dump_type, entity,
                                                          latest_timestamp)
             if dump_type in ['blueprints', 'deployments', 'plugins']:
                 _write_dump_archive(
@@ -247,7 +250,7 @@ class SnapshotCreate:
                 )
             if entity_id:
                 ids_added.add(entity_id)
-                self._auditlog_listener.append_entity(
+                self._auditlog_listener.added_snapshot_entity(
                         tenant_name, dump_type, entity_id)
         # Dump the data as JSON files
         filenum = _get_max_filenum_in_dir(output_dir) or 0
@@ -281,10 +284,9 @@ class SnapshotCreate:
         ctx.logger.debug('Creating snapshot archive')
         shutil.make_archive(self._archive_dest, 'zip', self._temp_dir)
 
-    def _upload_archive(self, tenant_name: str):
+    def _upload_archive(self):
         ctx.logger.debug('Uploading archive to manager')
-        client = get_rest_client(tenant=tenant_name)
-        client.snapshots.upload(
+        self._client.snapshots.upload(
             str(self._archive_dest.with_suffix('.zip')),
             self._snapshot_id,
         )
@@ -310,8 +312,7 @@ class SnapshotCreate:
                 records_counter += 1
                 if records_counter >= DUMP_ENTITIES_BATCH_SIZE:
                     self._dump_from_auditlog(tenant_table_identifiers_map)
-                    tenant_table_identifiers_map \
-                        = defaultdict(lambda: defaultdict(set))
+                    tenant_table_identifiers_map.clear()
                     records_counter = 0
 
         except queue.Empty:
@@ -392,7 +393,7 @@ def _prepare_dump_entity(dump_type, entity_raw):
     return source, source_id, entity_id, entity
 
 
-def _extract_latest_timestamp(entity: dict[str, Any], dump_type: str,
+def _extract_latest_timestamp(dump_type: str, entity: dict[str, Any],
                               latest_timestamp: str | None) -> str | None:
     if dump_type == 'events':
         timestamp = entity['timestamp']

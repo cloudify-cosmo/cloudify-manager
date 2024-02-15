@@ -47,12 +47,13 @@ class AuditLogListener(Thread):
         self._loop.call_soon_threadsafe(self._loop.stop)
         self._loop.call_soon_threadsafe(self._loop.close)
 
-    def append_entity(
+    def added_snapshot_entity(
             self,
             tenant_name: str | None,
             entity_type: str,
             identifier: str,
     ):
+        """Save identifier of the entity added to the snapshot."""
         key = (tenant_name, entity_type)
         if (key not in self.__snapshot_entities or
                 not self.__snapshot_entities[key]):
