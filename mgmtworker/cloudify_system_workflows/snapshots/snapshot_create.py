@@ -10,6 +10,7 @@ from typing import Any
 
 from cloudify.constants import FILE_SERVER_SNAPSHOTS_FOLDER
 from cloudify.manager import get_rest_client
+from cloudify.models_states import ExecutionState
 from cloudify.workflows import ctx
 from cloudify_rest_client import CloudifyClient
 from cloudify_system_workflows.snapshots import constants
@@ -252,6 +253,9 @@ class SnapshotCreate:
                 ids_added.add(entity_id)
                 self._auditlog_listener.added_snapshot_entity(
                         tenant_name, dump_type, entity_id)
+                if _should_append_entity(dump_type, entity):
+                    self._auditlog_listener.append_entity(
+                        tenant_name, dump_type, entity)
         # Dump the data as JSON files
         filenum = _get_max_filenum_in_dir(output_dir) or 0
         for (source, source_id), items in data_buckets.items():
@@ -410,6 +414,16 @@ def _extract_latest_timestamp(dump_type: str, entity: dict[str, Any],
     else:
         latest_timestamp = max(latest_timestamp, timestamp)
     return latest_timestamp
+
+
+def _should_append_entity(dump_type: str, entity: dict[str, Any]) -> bool:
+    if dump_type != 'executions':
+        return False
+    if entity.get('id') == ctx.execution_id:
+        return False
+    if entity.get('status') in ExecutionState.IN_PROGRESS_STATES:
+        return True
+    return False
 
 
 def _write_dump_archive(

@@ -4,6 +4,7 @@ from datetime import datetime
 from queue import Queue
 from threading import Event, Thread
 from time import sleep
+from typing import Any
 
 from cloudify.exceptions import NonRecoverableError
 from cloudify_rest_client import CloudifyClient
@@ -60,6 +61,24 @@ class AuditLogListener(Thread):
             self.__snapshot_entities[key] = {identifier}
         else:
             self.__snapshot_entities[key].add(identifier)
+
+    def append_entity(
+        self,
+        tenant_name: str,
+        entity_type: str,
+        entity: dict[str, Any],
+    ):
+        """Put entity on a list of items to watch for a change."""
+        entity_id = entity.get('id')
+        data = {
+            'ref_table': entity_type,
+            'ref_id': entity_id,
+            'ref_identifier': {'id': entity_id, 'tenant_name': tenant_name},
+            'operation': 'update',
+            'creator_name': entity.get('created_by'),
+            'execution_id': entity_id
+        }
+        self._queue.put(data)
 
     async def _stream_logs(self):
         """Keep putting logs in a queue, reconnect in case of any errors."""
