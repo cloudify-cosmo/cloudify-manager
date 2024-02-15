@@ -86,8 +86,9 @@ class Executions(resources_v2.Executions):
                     sm.delete(execution)
                     deleted_count += 1
         else:
+            max_to_delete = len(executions)
             if request_dict.get('keep_last'):
-                max_to_delete = len(executions) - request_dict['keep_last']
+                max_to_delete -= request_dict['keep_last']
             for execution in executions:
                 if self._can_delete_execution(execution, dep_creation_execs):
                     sm.delete(execution)
