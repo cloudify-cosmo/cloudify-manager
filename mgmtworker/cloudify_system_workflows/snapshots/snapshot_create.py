@@ -24,6 +24,7 @@ from cloudify_system_workflows.snapshots.utils import (DictToAttributes,
 
 DUMP_ENTITIES_BATCH_SIZE = 500
 EMPTY_B64_ZIP = 'UEsFBgAAAAAAAAAAAAAAAAAAAAAAAA=='
+DEFAULT_LISTENER_TIMEOUT = 10.0
 
 
 class SnapshotCreate:
@@ -46,11 +47,13 @@ class SnapshotCreate:
             config: dict[str, Any],
             include_logs=True,
             include_events=True,
+            listener_timeout: int | None = None,
     ):
         self._snapshot_id = snapshot_id
         self._config = DictToAttributes(config)
         self._include_logs = include_logs
         self._include_events = include_events
+        self._listener_timeout = listener_timeout
 
         # Initialize clients
         self._client = get_rest_client()
@@ -77,9 +80,12 @@ class SnapshotCreate:
         self._auditlog_listener = AuditLogListener(self._client,
                                                    self._auditlog_queue)
 
-    def create(self, timeout=10):
+    def create(self, timeout: float | None = None):
         """Dumps manager's data and some metadata into a single zip file"""
-        ctx.logger.debug('Using `new` snapshot format')
+        if timeout is None:
+            timeout = self._listener_timeout or DEFAULT_LISTENER_TIMEOUT
+        ctx.logger.debug('Using `new` snapshot format with listener '
+                         'timeout %.1f seconds', timeout)
         self._auditlog_listener.start(self._tenant_clients)
         try:
             self._dump_metadata()
