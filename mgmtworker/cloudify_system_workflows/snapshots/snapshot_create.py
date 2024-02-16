@@ -10,6 +10,7 @@ from typing import Any
 
 from cloudify.constants import FILE_SERVER_SNAPSHOTS_FOLDER
 from cloudify.manager import get_rest_client
+from cloudify.models_states import ExecutionState
 from cloudify.workflows import ctx
 from cloudify_rest_client import CloudifyClient
 from cloudify_system_workflows.snapshots import constants
@@ -22,8 +23,12 @@ from cloudify_system_workflows.snapshots.utils import (DictToAttributes,
                                                        get_composer_client,
                                                        get_stage_client)
 
+# DUMP_ENTITIES_BATCH_SIZE determines the limit of entities will be put into
+# one dump file.  It should be reasonably high (500 is a good compromise).
+# If set to a value < 2 expect the unexpected.
 DUMP_ENTITIES_BATCH_SIZE = 500
 EMPTY_B64_ZIP = 'UEsFBgAAAAAAAAAAAAAAAAAAAAAAAA=='
+DEFAULT_LISTENER_TIMEOUT = 10.0
 
 
 class SnapshotCreate:
@@ -46,11 +51,13 @@ class SnapshotCreate:
             config: dict[str, Any],
             include_logs=True,
             include_events=True,
+            listener_timeout: int | None = None,
     ):
         self._snapshot_id = snapshot_id
         self._config = DictToAttributes(config)
         self._include_logs = include_logs
         self._include_events = include_events
+        self._listener_timeout = listener_timeout
 
         # Initialize clients
         self._client = get_rest_client()
@@ -77,9 +84,12 @@ class SnapshotCreate:
         self._auditlog_listener = AuditLogListener(self._client,
                                                    self._auditlog_queue)
 
-    def create(self, timeout=10):
+    def create(self, timeout: float | None = None):
         """Dumps manager's data and some metadata into a single zip file"""
-        ctx.logger.debug('Using `new` snapshot format')
+        if timeout is None:
+            timeout = self._listener_timeout or DEFAULT_LISTENER_TIMEOUT
+        ctx.logger.debug('Using `new` snapshot format with listener '
+                         'timeout %.1f seconds', timeout)
         self._auditlog_listener.start(self._tenant_clients)
         try:
             self._dump_metadata()
@@ -90,7 +100,7 @@ class SnapshotCreate:
                 self._dump_tenant(tenant_name)
             self._append_from_auditlog(timeout)
             self._create_archive()
-            self._upload_archive(tenant_name)
+            self._upload_archive()
             self._update_snapshot_status(self._config.created_status)
             ctx.logger.info('Snapshot created successfully')
         except BaseException as exc:
@@ -218,7 +228,7 @@ class SnapshotCreate:
 
     def _write_files(
             self,
-            tenant_name: str,
+            tenant_name: str | None,
             dump_type: str,
             data
     ) -> set[str]:
@@ -236,7 +246,7 @@ class SnapshotCreate:
             if (source, source_id) not in data_buckets:
                 data_buckets[(source, source_id)] = []
             data_buckets[(source, source_id)].append(entity)
-            latest_timestamp = _extract_latest_timestamp(entity, dump_type,
+            latest_timestamp = _extract_latest_timestamp(dump_type, entity,
                                                          latest_timestamp)
             if dump_type in ['blueprints', 'deployments', 'plugins']:
                 _write_dump_archive(
@@ -247,8 +257,11 @@ class SnapshotCreate:
                 )
             if entity_id:
                 ids_added.add(entity_id)
-                self._auditlog_listener.append_entity(
+                self._auditlog_listener.added_snapshot_entity(
                         tenant_name, dump_type, entity_id)
+                if _should_append_entity(dump_type, entity):
+                    self._auditlog_listener.append_entity(
+                        tenant_name, dump_type, entity)
         # Dump the data as JSON files
         filenum = _get_max_filenum_in_dir(output_dir) or 0
         for (source, source_id), items in data_buckets.items():
@@ -281,10 +294,9 @@ class SnapshotCreate:
         ctx.logger.debug('Creating snapshot archive')
         shutil.make_archive(self._archive_dest, 'zip', self._temp_dir)
 
-    def _upload_archive(self, tenant_name: str):
+    def _upload_archive(self):
         ctx.logger.debug('Uploading archive to manager')
-        client = get_rest_client(tenant=tenant_name)
-        client.snapshots.upload(
+        self._client.snapshots.upload(
             str(self._archive_dest.with_suffix('.zip')),
             self._snapshot_id,
         )
@@ -310,8 +322,7 @@ class SnapshotCreate:
                 records_counter += 1
                 if records_counter >= DUMP_ENTITIES_BATCH_SIZE:
                     self._dump_from_auditlog(tenant_table_identifiers_map)
-                    tenant_table_identifiers_map \
-                        = defaultdict(lambda: defaultdict(set))
+                    tenant_table_identifiers_map.clear()
                     records_counter = 0
 
         except queue.Empty:
@@ -392,7 +403,7 @@ def _prepare_dump_entity(dump_type, entity_raw):
     return source, source_id, entity_id, entity
 
 
-def _extract_latest_timestamp(entity: dict[str, Any], dump_type: str,
+def _extract_latest_timestamp(dump_type: str, entity: dict[str, Any],
                               latest_timestamp: str | None) -> str | None:
     if dump_type == 'events':
         timestamp = entity['timestamp']
@@ -409,6 +420,16 @@ def _extract_latest_timestamp(entity: dict[str, Any], dump_type: str,
     else:
         latest_timestamp = max(latest_timestamp, timestamp)
     return latest_timestamp
+
+
+def _should_append_entity(dump_type: str, entity: dict[str, Any]) -> bool:
+    if dump_type != 'executions':
+        return False
+    if entity.get('id') == ctx.execution_id:
+        return False
+    if entity.get('status') in ExecutionState.IN_PROGRESS_STATES:
+        return True
+    return False
 
 
 def _write_dump_archive(
