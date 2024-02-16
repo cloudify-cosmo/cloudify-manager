@@ -34,6 +34,9 @@ def create(snapshot_id, config, **kwargs):
     include_events = kwargs.get('include_events', True)
     tempdir_path = kwargs.get('tempdir_path')
     legacy = kwargs.get('legacy', True)
+    listener_timeout = kwargs.get('listener_timeout')
+    if listener_timeout:
+        listener_timeout = float(listener_timeout)
 
     if is_split_services_environment():
         # in k8s, we cannot create a legacy snapshot at all, because we have
@@ -54,7 +57,8 @@ def create(snapshot_id, config, **kwargs):
                 snapshot_id,
                 config,
                 include_logs,
-                include_events
+                include_events,
+                listener_timeout,
         )
     create_snapshot.create()
 
