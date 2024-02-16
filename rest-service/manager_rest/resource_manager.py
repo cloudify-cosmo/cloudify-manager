@@ -623,7 +623,8 @@ class ResourceManager(object):
                         bypass_maintenance,
                         queue,
                         tempdir_path,
-                        legacy):
+                        legacy,
+                        listener_timeout):
 
         self.create_snapshot_model(snapshot_id)
         try:
@@ -637,6 +638,7 @@ class ResourceManager(object):
                     'config': self._get_conf_for_snapshots_wf(),
                     'tempdir_path': tempdir_path,
                     'legacy': legacy,
+                    'listener_timeout': listener_timeout,
                 },
                 is_system_workflow=True,
                 status=ExecutionState.PENDING,

@@ -116,6 +116,14 @@ class SnapshotsId(SecuredResource):
             'legacy',
             request_dict.get('legacy', False)
         )
+        listener_timeout = request_dict.get('listener_timeout')
+        if listener_timeout:
+            try:
+                listener_timeout = float(listener_timeout)
+            except ValueError:
+                raise manager_exceptions.BadParametersError(
+                    'listener_timeout must a valid floating point number'
+                )
         if tempdir_path and not os.access(tempdir_path, os.W_OK):
             raise manager_exceptions.ForbiddenError(
                 f'Temp dir cannot be created inside unwriteable location '
@@ -131,6 +139,7 @@ class SnapshotsId(SecuredResource):
             queue,
             tempdir_path,
             legacy,
+            listener_timeout
         )
         workflow_executor.execute_workflow(messages)
         return execution, 201
