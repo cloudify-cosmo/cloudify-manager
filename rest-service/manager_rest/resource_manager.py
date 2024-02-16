@@ -1182,17 +1182,18 @@ class ResourceManager(object):
                 continue
 
             should_queue = queue
-            if exc.is_system_workflow \
-                    and exc.deployment is None \
-                    and not allow_overlapping_running_wf:
-                should_queue = self._check_for_running_executions(
-                    self._any_active_executions_filter(exc), queue)
-            elif not allow_overlapping_running_wf:
-                should_queue = self.check_for_executions(
-                    exc, force, queue)
-            if should_queue:
-                self._workflow_queued(exc)
-                continue
+            if is_blocking_execution(exc) or should_queue:
+                if exc.is_system_workflow \
+                        and exc.deployment is None \
+                        and not allow_overlapping_running_wf:
+                    should_queue = self._check_for_running_executions(
+                        self._any_active_executions_filter(exc), queue)
+                elif not allow_overlapping_running_wf:
+                    should_queue = self.check_for_executions(
+                        exc, force, queue)
+                if should_queue:
+                    self._workflow_queued(exc)
+                    continue
 
             if exc.deployment \
                     and exc.workflow_id != 'create_deployment_environment':
@@ -2968,3 +2969,19 @@ def add_to_dict_values(dictionary, key, value):
         dictionary[key].append(value)
         return
     dictionary[key] = [value]
+
+
+def is_blocking_execution(execution):
+    """This function checks if the `workflow_id` attribute of the passed
+     `execution` indicates a blocking workflow.  Blocking workflows are
+     required to run separately.
+
+     :param execution: An object which represents an Execution (i.e. is
+                       expected to have attributes named `workflow_id` and
+                       `parameters`).
+     :returns: A boolean value indicating if the execution is blocking.
+    """
+    return (
+        execution.workflow_id != 'create_snapshot' or
+        execution.parameters.get('legacy')
+    )
