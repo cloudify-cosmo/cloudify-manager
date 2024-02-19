@@ -1,5 +1,4 @@
 from datetime import datetime
-from enum import StrEnum
 from typing import Any
 
 from cloudify.cluster_status import CloudifyNodeType
@@ -7,6 +6,7 @@ from flask import current_app
 from pydantic import BaseModel
 
 from manager_rest.config import instance as config
+from manager_rest.constants import StrEnum
 from manager_rest.prometheus_client import query as prometheus_query
 
 QUERY_STRINGS = {

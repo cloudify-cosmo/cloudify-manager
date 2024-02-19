@@ -241,6 +241,32 @@ class TestConfigureManager(base_test.BaseServerTestCase):
         assert {p.role_name for p in user_get_permissions} == \
             {'user', 'sys_admin'}
 
+        # call it again with modified permissions
+        configure({
+            'permissions': {
+                'user_get': ['manager'],
+                'new_permission': ['sys_admin'],
+            },
+        })
+        created_permissions = models.Permission.query.all()
+        assert len(created_permissions) == len(
+            [y for _, x in permissions.PERMISSIONS.items() for y in x]
+        ) + 2
+        user_get_permissions = (
+            models.Permission.query
+            .filter_by(name='user_get')
+            .all()
+        )
+        assert len(user_get_permissions) == 2
+        assert {p.role_name for p in user_get_permissions} == \
+               {'manager', 'sys_admin'}
+        new_permissions = (
+            models.Permission.query
+            .filter_by(name='new_permission')
+            .all()
+        )
+        assert len(new_permissions) == 1
+
     def test_create_permissions_nonexistent_role(self):
         with self.assertRaisesRegex(ValueError, 'something.*nonexistent'):
             configure({
