@@ -4,51 +4,47 @@
 #
 #    pip-compile --output-file=requirements.txt requirements.in setup.py
 #
-aiohttp==3.8.6
+aiohttp==3.9.3
     # via
     #   cloudify-common
     #   cloudify-integration-tests (setup.py)
 aiosignal==1.3.1
     # via aiohttp
-async-timeout==4.0.3
-    # via aiohttp
-attrs==23.1.0
+attrs==23.2.0
     # via aiohttp
 bottle==0.12.25
     # via cloudify-common
-certifi==2023.7.22
+certifi==2024.2.2
     # via requests
 cffi==1.16.0
     # via cryptography
-charset-normalizer==3.3.0
-    # via
-    #   aiohttp
-    #   requests
+charset-normalizer==3.3.2
+    # via requests
 cloudify-common @ https://github.com/cloudify-cosmo/cloudify-common/archive/7.0.4-build.zip
     # via -r requirements.in
-cryptography==41.0.4
+cryptography==42.0.3
     # via cloudify-integration-tests (setup.py)
-distro==1.8.0
+distro==1.9.0
     # via cloudify-common
 fasteners==0.19
     # via
     #   cloudify-common
     #   cloudify-integration-tests (setup.py)
-frozenlist==1.4.0
+frozenlist==1.4.1
     # via
     #   aiohttp
     #   aiosignal
-idna==3.4
+idna==3.6
     # via
     #   requests
     #   yarl
 iniconfig==2.0.0
     # via pytest
-jinja2==3.1.2
+jinja2==3.1.3
     # via cloudify-common
-markupsafe==2.1.3
+markupsafe==2.1.5
     # via jinja2
-multidict==6.0.4
+multidict==6.0.5
     # via
     #   aiohttp
     #   yarl
@@ -58,21 +54,21 @@ pika==1.3.2
     # via cloudify-common
 pkginfo==1.9.6
     # via wagon
-pluggy==1.3.0
+pluggy==1.4.0
     # via pytest
 proxy-tools==0.1.0
     # via cloudify-common
 pycparser==2.21
     # via cffi
-pytest==7.4.2
+pytest==8.0.1
     # via
     #   cloudify-integration-tests (setup.py)
     #   pytest-asyncio
-pytest-asyncio==0.21.1
+pytest-asyncio==0.23.5
     # via cloudify-integration-tests (setup.py)
 python-dateutil==2.8.2
     # via cloudify-integration-tests (setup.py)
-pytz==2023.3.post1
+pytz==2024.1
     # via cloudify-common
 pyyaml==6.0.1
     # via cloudify-integration-tests (setup.py)
@@ -89,13 +85,13 @@ six==1.16.0
     # via
     #   python-dateutil
     #   retrying
-urllib3==2.0.6
+urllib3==2.2.1
     # via
     #   -r requirements.in
     #   requests
 wagon==1.0.1
     # via cloudify-common
-wheel==0.41.2
+wheel==0.42.0
     # via wagon
-yarl==1.9.2
+yarl==1.9.4
     # via aiohttp
