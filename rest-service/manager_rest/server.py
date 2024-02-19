@@ -29,6 +29,7 @@ from manager_rest.flask_utils import (
     set_flask_security_config,
     query_service_settings,
 )
+from manager_rest.configure_manager import _create_permissions
 from manager_rest.manager_exceptions import INTERNAL_SERVER_ERROR_CODE
 from manager_rest.app_logging import (setup_logger,
                                       log_request,
@@ -158,6 +159,12 @@ class CloudifyFlaskApp(Flask):
                 for role in roles:
                     user_datastore.find_or_create_role(name=role['name'])
                 user_datastore.commit()
+
+            if not config.instance.test_mode:
+                with db.session.begin():
+                    db.session.connection(
+                        execution_options={'isolation_level': 'SERIALIZABLE'})
+                    _create_permissions(self.config)
 
         with self._prevent_flask_restful_error_handling():
             setup_resources(Api(self))
