@@ -6,27 +6,25 @@
 #
 --no-binary psycopg2
 
-aiohttp==3.8.6
+aiohttp==3.9.3
     # via cloudify-common
 aiosignal==1.3.1
     # via aiohttp
-amqp==5.1.1
+amqp==5.2.0
     # via kombu
 appdirs==1.4.4
     # via cloudify-agent
-async-timeout==4.0.3
+attrs==23.2.0
     # via aiohttp
-attrs==23.1.0
-    # via aiohttp
-bcrypt==4.0.1
+bcrypt==4.1.2
     # via paramiko
-billiard==4.1.0
+billiard==4.2.0
     # via celery
 bottle==0.12.25
     # via cloudify-common
-celery==5.3.4
+celery==5.3.6
     # via cloudify-agent
-certifi==2023.7.22
+certifi==2024.2.2
     # via requests
 cffi==1.14.6
     # via
@@ -34,10 +32,8 @@ cffi==1.14.6
     #   cryptography
     #   pynacl
     #   python-gssapi
-charset-normalizer==3.3.1
-    # via
-    #   aiohttp
-    #   requests
+charset-normalizer==3.3.2
+    # via requests
 click==8.1.7
     # via
     #   celery
@@ -60,37 +56,37 @@ cloudify-common[dispatcher,snmp] @ https://github.com/cloudify-cosmo/cloudify-co
     #   -r requirements.in
     #   cloudify-agent
     #   cloudify-mgmtworker (setup.py)
-cryptography==41.0.4
+cryptography==42.0.3
     # via
     #   cloudify-mgmtworker (setup.py)
     #   paramiko
     #   pyspnego
     #   requests-ntlm
-distro==1.8.0
+distro==1.9.0
     # via cloudify-common
 fabric==2.7.1
     # via cloudify-agent
 fasteners==0.19
     # via cloudify-common
-frozenlist==1.4.0
+frozenlist==1.4.1
     # via
     #   aiohttp
     #   aiosignal
-idna==3.4
+idna==3.6
     # via
     #   requests
     #   yarl
 invoke==1.7.3
     # via fabric
-jinja2==3.1.2
+jinja2==3.1.3
     # via
     #   cloudify-agent
     #   cloudify-common
-kombu==5.3.2
+kombu==5.3.5
     # via celery
-markupsafe==2.1.3
+markupsafe==2.1.5
     # via jinja2
-multidict==6.0.4
+multidict==6.0.5
     # via
     #   aiohttp
     #   yarl
@@ -100,7 +96,7 @@ packaging==23.2
     # via
     #   cloudify-agent
     #   cloudify-mgmtworker (setup.py)
-paramiko==3.3.1
+paramiko==3.4.0
     # via
     #   -r requirements.in
     #   fabric
@@ -112,7 +108,7 @@ pkginfo==1.9.6
     # via wagon
 ply==3.11
     # via pysmi
-prompt-toolkit==3.0.39
+prompt-toolkit==3.0.43
     # via click-repl
 proxy-tools==0.1.0
     # via cloudify-common
@@ -120,13 +116,13 @@ psycopg2==2.9.9
     # via
     #   -r requirements.in
     #   cloudify-mgmtworker (setup.py)
-pyasn1==0.5.0
+pyasn1==0.5.1
     # via
     #   pysnmp
     #   python-gssapi
 pycparser==2.21
     # via cffi
-pycryptodomex==3.19.0
+pycryptodomex==3.20.0
     # via pysnmp
 pykerberos==1.2.4
     # via pywinrm
@@ -146,14 +142,12 @@ python-dateutil==2.8.2
     #   cloudify-mgmtworker (setup.py)
 python-gssapi==0.6.4
     # via cloudify-agent
-pytz==2023.3.post1
+pytz==2024.1
     # via
     #   cloudify-common
     #   cloudify-mgmtworker (setup.py)
-pywinrm[kerberos]==0.4.3
-    # via
-    #   cloudify-agent
-    #   pywinrm
+pywinrm[Kerberos,kerberos]==0.4.3
+    # via cloudify-agent
 pyyaml==6.0.1
     # via cloudify-common
 requests==2.31.0
@@ -176,22 +170,22 @@ six==1.16.0
     #   python-gssapi
     #   pywinrm
     #   retrying
-tzdata==2023.3
+tzdata==2024.1
     # via celery
-urllib3==2.0.7
+urllib3==2.2.1
     # via requests
-vine==5.0.0
+vine==5.1.0
     # via
     #   amqp
     #   celery
     #   kombu
 wagon==1.0.1
     # via cloudify-common
-wcwidth==0.2.8
+wcwidth==0.2.13
     # via prompt-toolkit
-wheel==0.41.2
+wheel==0.42.0
     # via wagon
 xmltodict==0.13.0
     # via pywinrm
-yarl==1.9.2
+yarl==1.9.4
     # via aiohttp
