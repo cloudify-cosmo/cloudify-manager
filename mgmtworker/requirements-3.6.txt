@@ -22,7 +22,7 @@ bcrypt==4.0.1
     # via paramiko
 bottle==0.12.25
     # via cloudify-common
-certifi==2023.7.22
+certifi==2024.2.2
     # via requests
 cffi==1.14.6
     # via
@@ -52,7 +52,7 @@ cryptography==40.0.2
     #   requests-ntlm
 decorator==4.4.2
     # via networkx
-distro==1.8.0
+distro==1.9.0
     # via cloudify-common
 fabric==2.7.1
     # via cloudify-agent
@@ -62,7 +62,7 @@ frozenlist==1.2.0
     # via
     #   aiohttp
     #   aiosignal
-idna==3.4
+idna==3.6
     # via
     #   idna-ssl
     #   requests
@@ -91,7 +91,7 @@ packaging==21.3
     # via
     #   cloudify-agent
     #   cloudify-mgmtworker (setup.py)
-paramiko==3.3.1
+paramiko==3.4.0
     # via
     #   -r requirements-3.6.in
     #   fabric
@@ -109,13 +109,13 @@ psycopg2==2.9.8
     # via
     #   -r requirements-3.6.in
     #   cloudify-mgmtworker (setup.py)
-pyasn1==0.5.0
+pyasn1==0.5.1
     # via
     #   pysnmp
     #   python-gssapi
 pycparser==2.21
     # via cffi
-pycryptodomex==3.19.0
+pycryptodomex==3.20.0
     # via pysnmp
 pykerberos==1.2.4
     # via pywinrm
@@ -133,7 +133,7 @@ python-dateutil==2.8.2
     # via cloudify-mgmtworker (setup.py)
 python-gssapi==0.6.4
     # via cloudify-agent
-pytz==2023.3.post1
+pytz==2024.1
     # via
     #   cloudify-common
     #   cloudify-mgmtworker (setup.py)
