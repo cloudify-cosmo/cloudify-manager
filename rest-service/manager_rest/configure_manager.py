@@ -348,17 +348,24 @@ def _create_permissions(user_config):
             permissions_to_make[default_permission] = set(
                 default_permissions[default_permission]
             )
+        elif 'sys_admin' not in permissions_to_make[default_permission]:
+            permissions_to_make[default_permission].append('sys_admin')
 
     existing_permissions = {}
     for p in models.Permission.query.all():
-        existing_permissions.setdefault(p.name, set()).add(p.role_name)
+        existing_permissions.setdefault(p.name, set()).add(p)
 
     roles = {r.name: r for r in models.Role.query.all()}
 
     for permission_name, role_names in permissions_to_make.items():
-        already_assigned = existing_permissions.get(permission_name, set())
-        missing_roles = set(role_names) | {'sys_admin'} - already_assigned
 
+        already_assigned = existing_permissions.get(permission_name, set())
+        already_assigned_roles = {x.role_name for x in already_assigned}
+
+        if already_assigned_roles == set(role_names):
+            continue
+
+        missing_roles = set(role_names) - already_assigned_roles
         for role_name in missing_roles:
             try:
                 role = roles[role_name]
@@ -372,6 +379,10 @@ def _create_permissions(user_config):
                 role=role,
             )
             db.session.add(perm)
+
+        for perm in already_assigned:
+            if perm.role_name not in role_names:
+                db.session.delete(perm)
 
 
 def _update_manager_ca_cert(manager, ca_cert):
