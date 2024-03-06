@@ -8,5 +8,5 @@ echo "Found admin token!"
 
 exec python -m mgmtworker.worker \
     --queue cloudify.management \
-    --max-workers 10 \
+    --max-workers $MAX_WORKERS \
     --hooks-queue cloudify-hooks
