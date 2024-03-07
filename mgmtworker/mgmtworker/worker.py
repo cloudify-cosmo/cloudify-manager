@@ -393,14 +393,14 @@ def prepare_broker_config():
 
 
 def _get_default_max_workers():
-    env_value = os.environ.get('MGMTWORKER_MAX_WORKERS')
+    env_value = os.environ.get('MAX_WORKERS')
     if env_value:
         return int(env_value)
     return DEFAULT_MAX_WORKERS
 
 
 def _get_default_operation_workers():
-    env_value = os.environ.get('MGMTWORKER_OPERATION_WORKERS')
+    env_value = os.environ.get('MAX_OPERATION_WORKERS')
     if env_value:
         return int(env_value)
     return DEFAULT_OPERATION_WORKERS
