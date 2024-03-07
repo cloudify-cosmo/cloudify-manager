@@ -9,6 +9,7 @@ ENV LOCAL_REST_CERT_FILE=/etc/cloudify/ssl/cloudify_internal_ca_cert.pem
 ENV AGENT_WORK_DIR=/opt/mgmtworker
 ENV MANAGER_NAME=cloudify-manager
 ENV MAX_WORKERS=10
+ENV MAX_OPERATION_WORKERS=20
 
 RUN --mount=type=cache,target=/root/.cache \
     apt-get update \
