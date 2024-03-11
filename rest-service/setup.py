@@ -26,7 +26,7 @@ install_requires = [
     'cryptography',
     'distro',
     'email-validator>1,<2',
-    'flask-migrate>3',
+    'flask-migrate>3,<4.0.6',
     'flask-restful',
     'flask-security',
     'flask-sqlalchemy>=2.5,<2.6',
