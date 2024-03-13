@@ -1244,7 +1244,11 @@ class ResourceManager(object):
             and this is set, queue the execution. Otherwise, throw.
         """
         system_exec_running = self._check_for_running_executions(
-            self._active_system_wide_execution_filter(), queue)
+            self._active_system_wide_execution_filter(),
+            # even if we didn't want to queue, if there's a system execution
+            # running - too bad, we'll have to queue that either way
+            queue=True,
+        )
         if system_exec_running:
             return True
         if force:
