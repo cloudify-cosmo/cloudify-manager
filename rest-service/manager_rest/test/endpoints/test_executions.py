@@ -1585,11 +1585,9 @@ class ExecutionQueueingTests(BaseServerTestCase):
         )
         self.sm.put(exc1)
         exc2 = self._make_execution(status=ExecutionState.PENDING)
-        with self.assertRaises(
-                manager_exceptions.ExistingRunningExecutionError):
-            self.rm.prepare_executions([exc2])
-
-        self.rm.prepare_executions([exc2], queue=True)
+        # queue not passed, but this is still queued, because a system wf
+        # is running
+        self.rm.prepare_executions([exc2])
         assert exc2.status == ExecutionState.QUEUED
 
     @mock.patch('manager_rest.workflow_executor.send_hook', mock.Mock())
