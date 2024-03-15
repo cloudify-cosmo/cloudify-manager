@@ -309,15 +309,11 @@ class DeploymentsId(resources_v1.DeploymentsId):
                         labels=labels,
                         display_name=request_dict.get('display_name'),
                     )
-                try:
-                    messages = rm.prepare_executions(
-                        [create_execution],
-                        bypass_maintenance=bypass_maintenance,
-                        commit=False
-                    )
-                except manager_exceptions.ExistingRunningExecutionError:
-                    rm.delete_deployment(deployment)
-                    raise
+                messages = rm.prepare_executions(
+                    [create_execution],
+                    bypass_maintenance=bypass_maintenance,
+                    commit=False
+                )
         except ValueError as e:
             raise manager_exceptions.BadParametersError(e)
         workflow_executor.execute_workflow(messages)
