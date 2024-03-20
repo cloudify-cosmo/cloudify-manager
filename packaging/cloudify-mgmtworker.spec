@@ -29,9 +29,6 @@ BuildRequires:  postgresql-devel
 Requires:       postgresql-libs
 Requires(pre):  shadow-utils
 
-Requires:       python3 >= 3.6
-BuildRequires:  python3 >= 3.6
-
 
 Source0:        https://cloudify-cicd.s3.amazonaws.com/python-build-packages/cfy-python3.10-%{ARCHITECTURE}.tgz
 Source1:        https://cloudify-cicd.s3.amazonaws.com/python-build-packages/cfy-python3.11-%{ARCHITECTURE}.tgz
@@ -54,12 +51,6 @@ sudo tar xf %{S:1} -C /
 
 %{PIP_INSTALL} --upgrade kerberos==1.3.1
 
-# create a python3.6 venv with common & requirements preinstalled, to be used
-# as a base virtualenv for python3.6 plugins
-python3.6 -m venv /opt/plugins-common-3.6
-/opt/plugins-common-3.6/bin/pip install --upgrade pip setuptools
-/opt/plugins-common-3.6/bin/pip install -r "${RPM_SOURCE_DIR}/mgmtworker/requirements-3.6.txt"
-
 # create a python3.10 venv with common & requirements preinstalled, to be used
 # as a base virtualenv for python3.10 plugins
 /opt/python3.10/bin/python3.10 -m pip install --upgrade setuptools
@@ -72,7 +63,6 @@ python3.6 -m venv /opt/plugins-common-3.6
 
 mkdir -p %{buildroot}/opt/mgmtworker
 mv /opt/mgmtworker/env %{buildroot}/opt/mgmtworker
-mv /opt/plugins-common-3.6 %{buildroot}/opt/plugins-common-3.6
 mv /opt/plugins-common-3.10 %{buildroot}/opt/plugins-common-3.10
 mv /opt/python3.10 %{buildroot}/opt/python3.10
 
@@ -103,7 +93,6 @@ groupadd -fr cfylogs
 %attr(750,cfyuser,cfyuser) /opt/mgmtworker/env/plugins
 %attr(750,cfyuser,cfyuser) /opt/mgmtworker/env/source_plugins
 /opt/mgmtworker
-/opt/plugins-common-3.6
 /opt/plugins-common-3.10
 /opt/python3.10
 %attr(750,cfyuser,cfylogs) /var/log/cloudify/mgmtworker
