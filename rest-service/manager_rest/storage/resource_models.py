@@ -652,7 +652,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         return dep_dict
 
     def _list_workflows(self):
-        if self.workflows is None:
+        if not self.workflows or not isinstance(self.workflows, dict):
             return []
 
         return [Workflow(name=wf_name,
