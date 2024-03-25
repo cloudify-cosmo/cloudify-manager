@@ -283,8 +283,8 @@ class DeploymentsId(resources_v1.DeploymentsId):
                 if skip_create_dep_env:
                     tmpdir_path = mkdtemp()
                     try:
-                        workdir_path = _get_workdir_path(
-                            deployment_id, deployment.tenant_name)
+                        workdir_path = os.path.abspath(_get_workdir_path(
+                            deployment_id, deployment.tenant_name))
                         os.makedirs(workdir_path)
                         zip_path = os.path.join(tmpdir_path, 'dep.zip')
                         with open(zip_path, 'wb') as zip_handle:
@@ -415,8 +415,8 @@ class DeploymentsId(resources_v1.DeploymentsId):
         if args.include_workdir:
             tmpdir_path = mkdtemp()
             try:
-                workdir_path = _get_workdir_path(deployment_id,
-                                                 deployment.tenant_name)
+                workdir_path = os.path.abspath(
+                    _get_workdir_path(deployment_id, deployment.tenant_name))
                 zip_path = os.path.join(tmpdir_path, 'dep.zip')
                 make_zip64_archive(zip_path, workdir_path)
                 with open(zip_path, 'rb') as zip_handle:
