@@ -251,7 +251,8 @@ class SnapshotRestore(object):
                 tenant_name, get_rest_client(tenant=tenant_name))
         else:
             client = self._client
-        ctx.logger.info('Restoring %s', dump_type)
+        ctx.logger.info(
+            'Restoring %s on %s from %s', dump_type, tenant_name, source_id)
         api = getattr(client, dump_type)
         extra_args = _new_restore_entities_extra_args(
                 dump_type, source_type, source_id,
