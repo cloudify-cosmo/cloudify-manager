@@ -370,7 +370,7 @@ def _delete_contained_services(ctx, delete_logs=False, force=False):
 
 def _delete_logs(ctx):
     log_dir = os.environ.get('AGENT_LOG_DIR')
-    if log_dir:
+    if log_dir and os.path.exists(log_dir):
         log_file_path = os.path.join(log_dir, 'logs',
                                      '{0}.log'.format(ctx.deployment.id))
         if os.path.exists(log_file_path):

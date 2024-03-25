@@ -366,12 +366,15 @@ def _do_upload_plugin(data_id, plugin_dir):
 def upload_plugin(data_id=None, **_):
     data_id = data_id or request.args.get('id') or str(uuid.uuid4())
 
+    root = config.instance.file_server_root
     upload_path = os.path.join(
-        config.instance.file_server_root,
+        root,
         FILE_SERVER_PLUGINS_FOLDER,
         UPLOADING_FOLDER_NAME,
         data_id,
     )
+    if not os.path.abspath(upload_path).startswith(root):
+        raise manager_exceptions.ForbiddenError(f'invalid ID: {data_id}')
     os.makedirs(upload_path, exist_ok=True)
     try:
         return _do_upload_plugin(data_id, upload_path)
