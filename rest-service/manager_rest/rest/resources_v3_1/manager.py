@@ -31,6 +31,7 @@ from manager_rest.manager_exceptions import (
     UploadFileMissing,
     NoAuthProvided,
     MultipleFilesUploadException,
+    BadParametersError,
 )
 from manager_rest.security import SecuredResource, premium_only
 from manager_rest.security.user_handler import get_token_status
@@ -45,6 +46,7 @@ from manager_rest.rest.rest_decorators import (
     paginate
 )
 from manager_rest.persistent_storage import get_storage_handler
+from manager_rest.constants import MAX_ITER_FOR_USER_INPUT_LOOPS
 try:
     from cloudify_premium import manager as manager_premium
 except ImportError:
@@ -322,6 +324,8 @@ class FileServerProxy(SecuredResource):
         if not request.files:
             raise UploadFileMissing('File upload error: no files provided')
 
+        if len(request.files) > MAX_ITER_FOR_USER_INPUT_LOOPS:
+            raise BadParametersError()
         for _, file in request.files.items():
             _, tmp_file_name = tempfile.mkstemp()
             with open(tmp_file_name, 'wb') as tmp_file:
