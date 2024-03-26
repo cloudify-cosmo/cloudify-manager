@@ -21,6 +21,7 @@ from manager_rest.rest.rest_utils import (
     request_use_all_tenants,
     is_deployment_update,
 )
+from manager_rest.constants import MAX_ITER_FOR_USER_INPUT_LOOPS
 
 from .responses_v2 import ListResponse
 from .validation_models import (
@@ -245,6 +246,8 @@ def rangeable(func):
         ranges = RangesList.parse_obj(request.args.to_dict(flat=False)).ranges
         range_filters: Dict[str, Dict[datetime, datetime]] = {}
 
+        if len(ranges) > MAX_ITER_FOR_USER_INPUT_LOOPS:  # DoS prevention
+            raise manager_exceptions.BadParametersError()
         for range_param in ranges:
             key = range_param.key
             range_filters[key] = {}

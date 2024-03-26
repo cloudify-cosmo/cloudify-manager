@@ -38,7 +38,8 @@ from manager_rest.manager_exceptions import (ConflictError,
                                              BadParametersError,
                                              ImportedBlueprintNotFound)
 from manager_rest import config
-from manager_rest.constants import FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER
+from manager_rest.constants import (FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
+                                    MAX_ITER_FOR_USER_INPUT_LOOPS)
 
 
 class BlueprintsSetVisibility(SecuredResource):
@@ -128,6 +129,8 @@ class BlueprintsId(resources_v2.BlueprintsId):
                 visibility, valid_values=VisibilityState.STATES)
 
         unique_labels_check = []
+        if len(labels) > MAX_ITER_FOR_USER_INPUT_LOOPS:  # DoS prevention
+            raise BadParametersError()
         for label in labels:
             parsed_key, parsed_value = rest_utils.parse_label(label['key'],
                                                               label['value'])

@@ -214,3 +214,4 @@ DEPLOYMENT_UPDATE_ACTION_TYPES = DeploymentUpdateActionTypes(
     MODIFY='modify',
 )
 COMPONENT_TYPE = 'cloudify.nodes.Component'
+MAX_ITER_FOR_USER_INPUT_LOOPS = 1000000
