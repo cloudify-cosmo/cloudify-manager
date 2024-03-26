@@ -1,6 +1,7 @@
 #!/opt/manager/env/bin/python
 
 import os
+import re
 import sys
 import socket
 import logging
@@ -15,6 +16,10 @@ logger = logging.getLogger(__name__)
 
 def update_managers_version(version):
     logger.debug('Updating Cloudify managers version in DB...')
+
+    pattern = r'^(\d+\.)?(\d+\.)?(\*|\d+)$'
+    if not re.match(pattern, version):
+        raise RuntimeError(f'Invalid manager version {version}')
 
     hostname = socket.gethostname()
     if hasattr(config.instance, 'manager_hostname'):
