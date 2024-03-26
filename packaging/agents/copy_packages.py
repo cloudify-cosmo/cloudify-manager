@@ -24,6 +24,8 @@ def normalize_agent_name(filename):
 
 def normalize_names(directory, target_dir):
     previous_targets = set()
+    if not os.path.exists(directory) or not os.path.exists(target_dir):
+        raise RuntimeError(f'paths must exist: {directory}, {target_dir}')
     for fn in os.listdir(directory):
         try:
             fn, extension = splitext(fn)
