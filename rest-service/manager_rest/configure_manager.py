@@ -193,11 +193,6 @@ def _create_admin_user(user_config):
         password=hash_password(admin_password),
         roles=[admin_role]
     )
-
-    logging.critical('####################################')
-    logging.critical('USERNAME: %s', admin_username)
-    logging.critical('PASSWORD: %s', admin_password)
-    logging.critical('####################################')
     return admin_user
 
 
