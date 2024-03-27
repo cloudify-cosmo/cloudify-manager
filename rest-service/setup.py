@@ -21,11 +21,11 @@ install_requires = [
     'SQLAlchemy>=1.4,<2',
     'boto3>1,<2',
     'cachetools>=3,<4',
-    'cffi>=1.14,<1.15',
+    'cffi>=1,<2',
     'cloudify-common[dispatcher]',
     'cryptography',
     'distro',
-    'email-validator>1,<2',
+    'email-validator>2',
     'flask-migrate>3,<4.0.6',
     'flask-restful',
     'flask-security',
@@ -41,7 +41,7 @@ install_requires = [
     'requests',
     'retrying',
     'wagon>=0.12',
-    'werkzeug>2,<3',
+    'werkzeug>=3.0.1,<4',
 ]
 
 
