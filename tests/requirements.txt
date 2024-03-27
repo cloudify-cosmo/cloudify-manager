@@ -22,7 +22,7 @@ charset-normalizer==3.3.2
     # via requests
 cloudify-common @ https://github.com/cloudify-cosmo/cloudify-common/archive/master.zip
     # via -r requirements.in
-cryptography==42.0.3
+cryptography==42.0.5
     # via cloudify-integration-tests (setup.py)
 distro==1.9.0
     # via cloudify-common
@@ -91,7 +91,7 @@ urllib3==2.2.1
     #   requests
 wagon==1.0.1
     # via cloudify-common
-wheel==0.42.0
+wheel==0.43.0
     # via wagon
 yarl==1.9.4
     # via aiohttp
