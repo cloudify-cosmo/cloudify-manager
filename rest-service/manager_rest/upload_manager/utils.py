@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import shutil
 import tarfile
 import tempfile
@@ -78,6 +79,11 @@ def save_file_from_url(archive_target_path, url, data_type):
             "Can pass {0} as only one of: URL via query parameters, "
             "request body, multi-form or chunked.".format(data_type))
     try:
+        # Pattern-match URL to mitigate SSRF
+        pattern = r'^(https?|ftp)://[^\s/$.?#].[^\s]*$'
+        if not re.match(pattern, url):
+            raise manager_exceptions.BadParametersError(f'Invalid URL {url}')
+
         with requests.get(url, stream=True, timeout=(5, None)) as resp:
             resp.raise_for_status()
             with open(archive_target_path, 'wb') as f:
