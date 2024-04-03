@@ -1194,8 +1194,11 @@ class ResourceManager(object):
         executions = list(executions)
         messages = []
         errors = []
+        deployment_ids_processed = set()
         while executions:
             exc = executions.pop()
+            if exc.deployment_id in deployment_ids_processed:
+                continue
             exc.ensure_defaults()
             try:
                 if exc.is_system_workflow:
@@ -1244,6 +1247,7 @@ class ResourceManager(object):
                 continue
             component_executions = self.get_component_executions(exc)
             executions.extend(component_executions)
+            deployment_ids_processed.add(exc.deployment_id)
         if commit:
             db.session.commit()
         if errors:
