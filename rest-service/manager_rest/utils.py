@@ -268,6 +268,9 @@ def extract_host_agent_plugins_from_plan(plan):
 
 def get_amqp_client(tenant=None, connect_timeout=None):
     vhost = '/' if tenant is None else tenant.rabbitmq_vhost
+    kwargs = {}
+    if connect_timeout is not None:
+        kwargs['connect_timeout'] = connect_timeout
     return get_client(
         amqp_host=config.instance.amqp_host,
         amqp_user=config.instance.amqp_username,
@@ -276,7 +279,7 @@ def get_amqp_client(tenant=None, connect_timeout=None):
         amqp_vhost=vhost,
         ssl_enabled=True,
         ssl_cert_data=config.instance.amqp_ca,
-        connect_timeout=connect_timeout,
+        **kwargs,
     )
 
 

@@ -539,9 +539,10 @@ class ResourceManager(object):
         if current_status == future_status:
             return True
 
-        if current_status in ExecutionState.END_STATES:
-            return False
-
+        if (
+            current_status in ExecutionState.END_STATES and
+            workflow_id != 'create_snapshot'
+        ):
         invalid_cancel_statuses = ExecutionState.ACTIVE_STATES + [
             ExecutionState.TERMINATED]
         if all((current_status == ExecutionState.CANCELLING,
@@ -1314,16 +1315,16 @@ class ResourceManager(object):
         execution_ids = [
             e.id
             for e in self.list_executions(is_include_system_workflows=True,
+                                          include=['id'],
                                           filters=filters,
-                                          all_tenants=True,
-                                          get_all_results=True).items
+                                          all_tenants=True).items
         ]
         if execution_ids and queue:
             return True
         elif execution_ids:
             raise manager_exceptions.ExistingRunningExecutionError(
                 f'Cannot start execution because there are other executions '
-                f'running: { ", ".join(execution_ids) }'
+                f'running e.g.: { ", ".join(execution_ids) }'
             )
         else:
             return False
@@ -1451,8 +1452,12 @@ class ResourceManager(object):
         # Prepare a dict of execution storage_id:(kill_execution, execution_id)
         # int-tuple pairs for executions to be cancelled.
         execution_storage_id_kill = {}
+        execution_include_fields = [
+            '_storage_id', 'id', 'status', 'error', 'deployment_id'
+        ]
         with self.sm.transaction():
             executions = self.sm.list(models.Execution,
+                                      include=execution_include_fields,
                                       filters={'id': lambda col:
                                                col.in_(execution_ids)},
                                       get_all_results=True)
@@ -1489,7 +1494,9 @@ class ResourceManager(object):
         # Do the cancelling for a list of DB-transaction-locked executions.
         with self.sm.transaction():
             for execution in self.sm.list(
-                    models.Execution, locking=True,
+                    models.Execution,
+                    include=execution_include_fields,
+                    locking=True,
                     filters={'_storage_id': lambda col:
                              col.in_(execution_storage_id_kill.keys())},
                     get_all_results=True):
