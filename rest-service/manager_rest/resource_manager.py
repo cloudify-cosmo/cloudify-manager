@@ -1195,10 +1195,17 @@ class ResourceManager(object):
         messages = []
         errors = []
         deployment_ids_processed = set()
+        executions_run, max_executions = 0, config.instance.default_page_size
         while executions:
             exc = executions.pop()
             if exc.deployment_id in deployment_ids_processed:
                 continue
+            executions_run += 1
+            if executions_run > max_executions:
+                raise manager_exceptions.ExecutionFailure(
+                    "Number of executions prepared in a single call exceeds "
+                    f"maximum number ({max_executions})"
+                )
             exc.ensure_defaults()
             try:
                 if exc.is_system_workflow:
