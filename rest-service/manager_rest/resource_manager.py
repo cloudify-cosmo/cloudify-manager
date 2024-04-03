@@ -1185,8 +1185,18 @@ class ResourceManager(object):
         executions = list(executions)
         messages = []
         errors = []
+        deployment_ids_processed = set()
+        executions_run, max_executions = 0, config.instance.default_page_size
         while executions:
             exc = executions.pop()
+            if exc.deployment_id in deployment_ids_processed:
+                continue
+            executions_run += 1
+            if executions_run > max_executions:
+                raise manager_exceptions.ExecutionFailure(
+                    "Number of executions prepared in a single call exceeds "
+                    f"maximum number ({max_executions})"
+                )
             exc.ensure_defaults()
             try:
                 if exc.is_system_workflow:
@@ -1234,6 +1244,7 @@ class ResourceManager(object):
                 continue
             component_executions = self.get_component_executions(exc)
             executions.extend(component_executions)
+            deployment_ids_processed.add(exc.deployment_id)
         if commit:
             db.session.commit()
         if errors:
