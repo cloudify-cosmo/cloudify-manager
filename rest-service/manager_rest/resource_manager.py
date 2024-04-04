@@ -547,7 +547,7 @@ class ResourceManager(object):
             workflow_id != 'create_snapshot'
         ):
             # A `create_snapshot` can (and should) be marked as `terminated`
-            # after it has been successfuly restored
+            # after it has been successfully restored
             return False
 
         invalid_cancel_statuses = ExecutionState.ACTIVE_STATES + [
@@ -1172,8 +1172,18 @@ class ResourceManager(object):
         executions = list(executions)
         messages = []
         errors = []
+        deployment_ids_processed = set()
+        executions_run, max_executions = 0, config.instance.default_page_size
         while executions:
             exc = executions.pop()
+            if exc.deployment_id in deployment_ids_processed:
+                continue
+            executions_run += 1
+            if executions_run > max_executions:
+                raise manager_exceptions.ExecutionFailure(
+                    "Number of executions prepared in a single call exceeds "
+                    f"maximum number ({max_executions})"
+                )
             exc.ensure_defaults()
             try:
                 if exc.is_system_workflow:
@@ -1222,6 +1232,7 @@ class ResourceManager(object):
                 continue
             component_executions = self.get_component_executions(exc)
             executions.extend(component_executions)
+            deployment_ids_processed.add(exc.deployment_id)
         if commit:
             db.session.commit()
         if errors:
@@ -1307,16 +1318,16 @@ class ResourceManager(object):
         execution_ids = [
             e.id
             for e in self.list_executions(is_include_system_workflows=True,
+                                          include=['id'],
                                           filters=filters,
-                                          all_tenants=True,
-                                          get_all_results=True).items
+                                          all_tenants=True).items
         ]
         if execution_ids and queue:
             return True
         elif execution_ids:
             raise manager_exceptions.ExistingRunningExecutionError(
                 f'Cannot start execution because there are other executions '
-                f'running: { ", ".join(execution_ids) }'
+                f'running e.g.: { ", ".join(execution_ids) }'
             )
         else:
             return False
@@ -1444,8 +1455,12 @@ class ResourceManager(object):
         # Prepare a dict of execution storage_id:(kill_execution, execution_id)
         # int-tuple pairs for executions to be cancelled.
         execution_storage_id_kill = {}
+        execution_include_fields = [
+            '_storage_id', 'id', 'status', 'error', 'deployment_id'
+        ]
         with self.sm.transaction():
             executions = self.sm.list(models.Execution,
+                                      include=execution_include_fields,
                                       filters={'id': lambda col:
                                                col.in_(execution_ids)},
                                       get_all_results=True)
@@ -1482,7 +1497,9 @@ class ResourceManager(object):
         # Do the cancelling for a list of DB-transaction-locked executions.
         with self.sm.transaction():
             for execution in self.sm.list(
-                    models.Execution, locking=True,
+                    models.Execution,
+                    include=execution_include_fields,
+                    locking=True,
                     filters={'_storage_id': lambda col:
                              col.in_(execution_storage_id_kill.keys())},
                     get_all_results=True):
