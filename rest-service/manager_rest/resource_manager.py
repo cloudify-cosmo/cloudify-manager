@@ -543,6 +543,10 @@ class ResourceManager(object):
             current_status in ExecutionState.END_STATES and
             workflow_id != 'create_snapshot'
         ):
+            # A `create_snapshot` can (and should) be marked as `terminated`
+            # after it has been successfully restored
+            return False
+
         invalid_cancel_statuses = ExecutionState.ACTIVE_STATES + [
             ExecutionState.TERMINATED]
         if all((current_status == ExecutionState.CANCELLING,
