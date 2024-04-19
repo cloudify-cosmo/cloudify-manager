@@ -132,6 +132,9 @@ pipeline {
               echo 'Build rabbitmq RPM'
               buildRpm('~/rpmbuild/SOURCES', 'cloudify-rabbitmq.spec', "${env.VERSION}", "${env.PRERELEASE}")
 
+              echo 'Build plugins common python3.6 RPM'
+              buildRpm('~/rpmbuild/SOURCES', 'cloudify-plugins-common-python36.spec', "${env.VERSION}", "${env.PRERELEASE}")
+
 
               echo 'Copy RPMs to rpm folder'
               sh("mkdir -p ${env.WORKSPACE}/rpm && cp -rf /root/rpmbuild/RPMS/x86_64/. ${env.WORKSPACE}/rpm")
