@@ -336,6 +336,7 @@ class ResourceManager(object):
             return self.prepare_executions(
                 [execution], queue=True, commit=False)
         except Exception as e:
+            self.update_deployment_latest_execution(execution, True)
             current_app.logger.warning(
                 'Could not dequeue execution %s: %s',
                 execution, e)
@@ -1243,10 +1244,18 @@ class ResourceManager(object):
                 # deployment is not persistent yet in that case
                 self.sm.refresh(exc.deployment)
 
-            message = exc.render_message(
-                wait_after_fail=wait_after_fail,
-                bypass_maintenance=bypass_maintenance
-            )
+            try:
+                message = exc.render_message(
+                    wait_after_fail=wait_after_fail,
+                    bypass_maintenance=bypass_maintenance
+                )
+            except Exception as e:
+                exc.status = ExecutionState.FAILED
+                exc.error = f'Error preparing execution: {e}'
+                errors.append(e)
+                self.sm.update(exc)
+                continue
+
             exc.status = ExecutionState.PENDING
             messages.append(message)
             workflow = exc.get_workflow()

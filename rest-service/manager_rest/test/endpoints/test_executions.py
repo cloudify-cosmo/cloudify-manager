@@ -1620,6 +1620,7 @@ class ExecutionQueueingTests(BaseServerTestCase):
         )
         dep.workflows = {
             'workflow1': {
+                'operation': 'task1',
                 'parameters': {
                     'param1': {'default': 'default1'},
                     'param2': {'default': 'default2'}
@@ -1627,8 +1628,12 @@ class ExecutionQueueingTests(BaseServerTestCase):
             }
         }
 
-        with mock.patch('manager_rest.dsl_functions.get_storage_manager',
-                        return_value=self.sm):
+        with mock.patch(
+            'manager_rest.dsl_functions.get_storage_manager',
+            return_value=self.sm
+        ), mock.patch(
+            'manager_rest.workflow_executor.execute_workflow',
+        ):
             self.rm.update_execution_status(
                 create_dep_env.id, ExecutionState.TERMINATED, None)
 

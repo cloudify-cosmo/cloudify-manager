@@ -133,7 +133,14 @@ def execute_workflow(schedule):
         **execution_arguments,
     )
     rm.sm.put(execution)
-    messages = rm.prepare_executions([execution], **start_arguments)
+    try:
+        messages = rm.prepare_executions([execution], **start_arguments)
+    except Exception as e:
+        logger.error(
+            f'{e} for execution of deployment {execution.deployment.id}'
+        )
+        db.session.rollback()
+        return
     db.session.commit()
     workflow_executor.execute_workflow(messages)
     return execution
