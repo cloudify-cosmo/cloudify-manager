@@ -1525,7 +1525,7 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             self.deployment,
             self.workflow_id
         )
-        parameters = self.parameters.copy()
+        parameters = (self.parameters or {}).copy()
         parameters['__cloudify_context'] = context
 
         session.add(self)
