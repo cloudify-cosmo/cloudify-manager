@@ -13,7 +13,7 @@ from dsl_parser import constants, tasks
 
 from .. import idd
 from ..deployment_environment import format_plan_schedule
-from ..search_utils import GetValuesWithRest, get_instance_ids_by_node_ids
+from ..search_utils import GetValuesWithRest
 
 from .step_extractor import extract_steps
 from .update_instances import update_or_reinstall_instances
@@ -72,12 +72,8 @@ def prepare_plan(*, update_id):
     if not workflow_ctx.local:
         client = get_rest_client(tenant=workflow_ctx.tenant_name)
         values_getter = GetValuesWithRest(client)
-
-        plan_node_ids = [n['id'] for n in bp.plan['nodes']]
-        existing_ni_ids = get_instance_ids_by_node_ids(client, plan_node_ids)
     else:
         values_getter = None
-        existing_ni_ids = None
 
     _update_plan_nodes(bp.plan)
 
@@ -87,7 +83,6 @@ def prepare_plan(*, update_id):
         runtime_only_evaluation=dep_up.runtime_only_evaluation,
         get_secret_method=workflow_ctx.get_secret,
         values_getter=values_getter,
-        existing_ni_ids=existing_ni_ids,
     )
     workflow_ctx.set_deployment_update_attributes(
         update_id, plan=deployment_plan)
@@ -399,24 +394,40 @@ def update_deployment_node_instances(*, update_id):
     dep_up = workflow_ctx.get_deployment_update(update_id)
 
     update_instances = dep_up['deployment_update_node_instances']
+
+    # we'll be creating node instances, but the server is free to rename them,
+    # in case we provide duplicate node instance ids.
+    # In that case, let's store the renames, so that we can also update the
+    # relationships we've created, to point to the new instance id
+    renames = {}
     if update_instances.get('added_and_related'):
         added_instances = [
             ni for ni in update_instances['added_and_related']
             if ni.get('modification') == 'added'
         ]
-        workflow_ctx.create_node_instances(
+        nis = workflow_ctx.create_node_instances(
             dep_up.deployment_id,
             added_instances,
         )
+
+        if nis:
+            for ni in nis:
+                if ni.get('_renamed_from'):
+                    renames[ni.get('_renamed_from')] = ni.id
+
     if update_instances.get('extended_and_related'):
         for ni in update_instances['extended_and_related']:
             if ni.get('modification') != 'extended':
                 continue
             old_rels = _format_instance_relationships(
                 workflow_ctx.get_node_instance(ni['id']))
+            relationships = old_rels + ni['relationships']
+            for rel in relationships:
+                if rel.get('targt_id') in renames:
+                    rel['targt_id'] = renames[rel['target_id']]
             workflow_ctx.update_node_instance(
                 ni['id'],
-                relationships=old_rels + ni['relationships'],
+                relationships=relationships,
                 force=True
             )
 

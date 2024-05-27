@@ -4,6 +4,7 @@ import glob
 import shutil
 import zipfile
 import tempfile
+import itertools
 from dateutil import rrule
 from base64 import b64encode
 from datetime import datetime
@@ -412,3 +413,12 @@ def is_expired(expiry):
     if isinstance(expiry, str):
         expiry = datetime.strptime(expiry, '%Y-%m-%dT%H:%M:%S.%fZ')
     return expiry <= datetime.utcnow()
+
+
+def batched(iterable, n):
+    # In python3.12 batched function was introduced to itertools
+    # source: https://docs.python.org/3.11/library/itertools.html
+    # For python 3.11 compat, we're reimplementing it here
+    it = iter(iterable)
+    while batch := tuple(itertools.islice(it, n)):
+        yield batch
