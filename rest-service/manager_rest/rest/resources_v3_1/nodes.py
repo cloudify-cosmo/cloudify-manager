@@ -7,6 +7,11 @@ from ..resources_v3 import (
 )
 from ..resources_v2 import NodeInstances as v2_NodeInstances
 
+from dsl_parser.rel_graph import generate_id
+
+from manager_rest import config, manager_exceptions
+
+from manager_rest.utils import batched
 from manager_rest.rest import rest_utils
 from manager_rest.rest.rest_decorators import only_deployment_update
 from manager_rest.security.authorization import (authorize,
@@ -160,6 +165,103 @@ class NodesId(SecuredResource):
         return None, 204
 
 
+def _generate_new_instance_id(old_id):
+    """Take the old instance id, and generate a new one.
+    Instance id is "{node-id}_{random-suffix}". Parse out the node id back,
+    and generate a new random id. Hopefully this one will be unique!
+    """
+    prefix = old_id.split('_', 1)[0]
+    return f'{prefix}_{generate_id()}'
+
+
+def _find_dupes(sm, instance_ids):
+    """Examine instance_ids, and return ones that already exist in the DB.
+    Note: this is using sm.list so that the duplicate finding is taking
+    multitenancy and visibility into account.
+    """
+    duplicate_ids = set()
+    for ids_batch in batched(
+        instance_ids,
+        config.instance.default_page_size,
+    ):
+        duplicate_ids.update(ni.id for ni in sm.list(
+            models.NodeInstance,
+            filters={'id': ids_batch},
+            include=['id'],
+        ))
+    return duplicate_ids
+
+
+def _find_instance_renames(
+    sm,
+    instances: list
+) -> dict[str, str]:
+    """Examine the node instances, and find ID renames to make them unique.
+    The client will send in node instances with suggested IDs, but we can
+    rewrite them, if we find that the suggested IDs conflict with ones
+    already in the db.
+    Return a dict of {id-suggested-by-client: renamed-id}
+    """
+    originals = {ni.get('id'): ni.get('id') for ni in instances}
+    ids_to_check = [ni.get('id') for ni in instances]
+    renames = {}
+    counter = 0
+
+    while True:
+        # this approach is necessarily nondeterministic, so we'll need a limit
+        # on the amount of iterations we can do. In principle, this could just
+        # never finish otherwise.
+        counter += 1
+        if counter > 1000:
+            raise manager_exceptions.ConflictError(
+                'Could not find unique node instance IDs. '
+                'Use a different node name. '
+                f'Conflicting ids: {ids_to_check}'
+            )
+
+        duplicate_ids = _find_dupes(sm, ids_to_check)
+        if not duplicate_ids:
+            # everything is unique, we're done!
+            break
+
+        for dup_id in duplicate_ids:
+            renamed = _generate_new_instance_id(dup_id)
+            # in renames, we want to store {original-id: rename-id}, so fetch
+            # out the original. ids_to_check will contain already-renamed ones
+            # (if we're on the 2nd or later iteration)
+            original_id = originals.pop(dup_id)
+
+            renames[original_id] = renamed
+            originals[renamed] = original_id
+
+        # we have our dict of renames, let's check that after the rename,
+        # it's now all unique (if not, rename again)
+        ids_to_check = list(renames.values())
+
+    return renames
+
+
+def _rename_instance(renames: dict[str, str], raw_instance: dict) -> None:
+    """Mutate the instance dict, renaming IDs to avoid conflicts.
+    If any instance ID mentioned in the renames dict is found in the instance
+    dict, rename that ID.
+    This includes:
+      - the instance ID itself
+      - the host instance ID
+      - any target instance in relationships
+    """
+    if raw_instance['id'] in renames:
+        raw_instance['_renamed_from'] = raw_instance['id']
+        raw_instance['id'] = renames[raw_instance['id']]
+    if raw_instance.get('host_id') in renames:
+        raw_instance['host_id'] = renames[raw_instance['host_id']]
+    relationships = raw_instance.get('relationships')
+    if relationships:
+        for rel in relationships:
+            if rel.get('target_id') in renames:
+                rel['target_id'] = renames[rel['target_id']]
+
+
 class NodeInstances(v2_NodeInstances):
     @authorize('node_list')
     def post(self):
@@ -171,17 +273,18 @@ class NodeInstances(v2_NodeInstances):
         raw_instances = request_dict['node_instances']
         if not raw_instances:
             return None, 204
+        renames = _find_instance_renames(sm, raw_instances)
         with sm.transaction():
             deployment_id = request_dict['deployment_id']
             deployment = sm.get(models.Deployment, deployment_id)
-            self._prepare_raw_instances(sm, deployment, raw_instances)
+            self._prepare_raw_instances(sm, deployment, raw_instances, renames)
             db.session.execute(
                 models.NodeInstance.__table__.insert(),
                 raw_instances,
             )
         return None, 201
 
-    def _prepare_raw_instances(self, sm, deployment, raw_instances):
+    def _prepare_raw_instances(self, sm, deployment, raw_instances, renames):
         if any(item.get('creator') for item in raw_instances):
             check_user_action_allowed('set_owner')
 
@@ -192,8 +295,9 @@ class NodeInstances(v2_NodeInstances):
             get_all_results=True)
         current_node_index: Dict[str, int] = defaultdict(int)
         for ni in existing_instances:
-            if ni.index > current_node_index[ni.node_id]:
-                current_node_index[ni.node_id] = ni.index
+            existing_index = ni.index or 0
+            if existing_index > current_node_index[ni.node_id]:
+                current_node_index[ni.node_id] = existing_index
 
         nodes = {node.id: node for node in deployment.nodes}
 
@@ -206,6 +310,7 @@ class NodeInstances(v2_NodeInstances):
         user_lookup_cache: Dict[str, models.User] = {}
 
         for raw_instance in raw_instances:
+            _rename_instance(renames, raw_instance)
             node_id = raw_instance.pop('node_id')
             index = raw_instance.get('index', current_node_index[node_id] + 1)
             raw_instance['index'] = current_node_index[node_id] = index
