@@ -238,8 +238,11 @@ class SQLStorageManager(object):
 
             if isinstance(field, AssociationProxyInstance):
                 jl = db
-                for _, col, _ in self._traverse_association_proxy(field):
+                for _, col, field in self._traverse_association_proxy(field):
                     jl = jl.joinedload(col, innerjoin=False)
+                    if hasattr(field, 'name'):
+                        jl = jl.load_only(field.name)
+
                 query = query.options(jl)
 
             elif not hasattr(field, 'prop'):
