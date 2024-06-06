@@ -70,7 +70,7 @@ def one_to_many_relationship(child_class,
 
 def many_to_many_relationship(current_class, other_class, table_prefix=None,
                               primary_key_tuple=False, ondelete=None,
-                              unique=False, **relationship_kwargs):
+                              unique=False, backref=None, **relationship_kwargs):
     """Return a many-to-many SQL relationship object
 
     Notes:
@@ -118,10 +118,12 @@ def many_to_many_relationship(current_class, other_class, table_prefix=None,
         unique=unique,
         ondelete=ondelete
     )
+    if not backref:
+        backref = db.backref(backref_name)
     return db.relationship(
         other_class,
         secondary=secondary_table,
-        backref=db.backref(backref_name),
+        backref=backref,
         **relationship_kwargs
     )
 

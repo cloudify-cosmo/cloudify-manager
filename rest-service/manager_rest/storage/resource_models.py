@@ -543,7 +543,8 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                                        use_alter=True,
                                        unique=True)
 
-    deployment_group_id = association_proxy('deployment_groups', 'id')
+    deployment_group_id = association_proxy('_deployment_group_objs', 'id')
+    deployment_groups = association_proxy('_deployment_group_objs', 'id')
     latest_execution_id = association_proxy(
         'latest_execution', 'id')
     latest_execution_finished_operations = association_proxy(
@@ -600,7 +601,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             fields['workflows'] = flask_fields.List(
                 flask_fields.Nested(Workflow.resource_fields)
             )
-            fields['deployment_group_id'] = \
+            fields['deployment_groups'] = \
                 flask_fields.List(flask_fields.String)
             fields['latest_execution_id'] = flask_fields.String()
             fields['create_execution_id'] = flask_fields.String()
@@ -627,9 +628,6 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             dep_dict['workflows'] = self._list_workflows()
         if 'labels' in include:
             dep_dict['labels'] = self.list_labels(self.labels)
-        if 'deployment_groups' in include:
-            dep_dict['deployment_groups'] = \
-                [g.id for g in self.deployment_groups]
         if 'latest_execution_status' in include:
             dep_dict['latest_execution_status'] = \
                 DeploymentState.EXECUTION_STATES_SUMMARY.get(
@@ -1007,7 +1005,12 @@ class DeploymentGroup(CreatedAtMixin, SQLResourceBase):
 
     @declared_attr
     def deployments(cls):
-        return many_to_many_relationship(cls, Deployment, unique=True)
+        return many_to_many_relationship(
+            cls,
+            Deployment,
+            unique=True,
+            backref=db.backref('_deployment_group_objs'),
+        )
 
     @property
     def deployment_ids(self):
