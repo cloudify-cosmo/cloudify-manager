@@ -552,6 +552,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         'latest_execution', 'total_operations')
     latest_execution_workflow_id = association_proxy(
         'latest_execution', 'workflow_id')
+    create_execution_id = association_proxy('create_execution', 'id')
 
     drifted_instances =\
         db.Column(db.Integer, server_default='0', nullable=False, default=0)
@@ -596,13 +597,13 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             fields = super(Deployment, cls).response_fields
             fields['labels'] = flask_fields.List(
                 flask_fields.Nested(Label.resource_fields))
-            fields.pop('deployment_group_id', None)
             fields['workflows'] = flask_fields.List(
                 flask_fields.Nested(Workflow.resource_fields)
             )
-            fields['deployment_groups'] = \
+            fields['deployment_group_id'] = \
                 flask_fields.List(flask_fields.String)
             fields['latest_execution_id'] = flask_fields.String()
+            fields['create_execution_id'] = flask_fields.String()
             fields['latest_execution_status'] = flask_fields.String()
             fields['latest_execution_total_operations'] = \
                 flask_fields.Integer()
@@ -610,8 +611,6 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                 flask_fields.Integer()
             fields['latest_execution_workflow_id'] = flask_fields.String()
             fields['has_sub_deployments'] = flask_fields.Boolean()
-            fields['create_execution'] = flask_fields.String()
-            fields['latest_execution'] = flask_fields.String()
             cls._cached_deployment_fields = fields
         return cls._cached_deployment_fields
 
@@ -644,10 +643,9 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         if 'latest_execution_finished_operations' in include:
             dep_dict['latest_execution_finished_operations'] = \
                 self.latest_execution_finished_operations
-        if 'create_execution' in include:
-            dep_dict['create_execution'] = \
-                self.create_execution.id if self.create_execution else None
-        if 'latest_execution' in include:
+        if 'create_execution_id' in include:
+            dep_dict['create_execution'] = self.create_execution_id
+        if 'latest_execution_id' in include:
             dep_dict['latest_execution'] = self.latest_execution_id
         return dep_dict
 
