@@ -620,11 +620,11 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         return ['id', 'blueprint_id', 'created_by', 'site_name', 'schedules',
                 'tenant_name', 'display_name', 'installation_status']
 
-    def to_response(self, include=None, **kwargs):
+    def to_response(self, include=None, get_data=False, **kwargs):
         include = include or self.response_fields
         dep_dict = super(Deployment, self).to_response(
             include=include, **kwargs)
-        if 'workflows' in include:
+        if get_data and 'workflows' in include:
             dep_dict['workflows'] = self._list_workflows()
         if 'labels' in include:
             dep_dict['labels'] = self.list_labels(self.labels)
