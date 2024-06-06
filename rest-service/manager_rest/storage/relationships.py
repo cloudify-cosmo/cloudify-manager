@@ -68,9 +68,16 @@ def one_to_many_relationship(child_class,
     )
 
 
-def many_to_many_relationship(current_class, other_class, table_prefix=None,
-                              primary_key_tuple=False, ondelete=None,
-                              unique=False, backref=None, **relationship_kwargs):
+def many_to_many_relationship(
+    current_class,
+    other_class,
+    table_prefix=None,
+    primary_key_tuple=False,
+    ondelete=None,
+    unique=False,
+    backref=None,
+    **relationship_kwargs,
+):
     """Return a many-to-many SQL relationship object
 
     Notes:

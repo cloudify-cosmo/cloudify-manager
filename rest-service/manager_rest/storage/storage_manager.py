@@ -236,12 +236,13 @@ class SQLStorageManager(object):
             if field is None:
                 continue
 
+            resolved_fields[field_name] = field
             if isinstance(field, AssociationProxyInstance):
                 jl = db
-                for _, col, proxyfield in self._traverse_association_proxy(field):
+                for _, col, pfield in self._traverse_association_proxy(field):
                     jl = jl.joinedload(col, innerjoin=False)
-                    if hasattr(proxyfield, 'name'):
-                        jl = jl.load_only(proxyfield.name)
+                    if hasattr(pfield, 'name'):
+                        jl = jl.load_only(pfield.name)
 
                 query = query.options(jl)
 
@@ -249,7 +250,6 @@ class SQLStorageManager(object):
                 continue
             elif isinstance(field.prop, RelationshipProperty):
                 rels.add(field)
-            resolved_fields[field_name] = field
 
         for rel in rels:
             query = query.options(db.joinedload(rel))
