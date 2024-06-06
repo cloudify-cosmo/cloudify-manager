@@ -144,16 +144,12 @@ class SQLStorageManager(object):
         distinct=None,
         filter_rules=None,
         default_sorting=True,
-        group_by=None,
-        with_entities=None,
     ):
         # first, default all the arguments. They're all optional.
         filters = filters or {}
         sort = sort or {}
         distinct = distinct or []
         include = include or []
-        with_entities = with_entities or []
-        group_by = group_by or []
         substr_filters = substr_filters or {}
 
         query, resolved_fields, rels = self._resolve_included_fields(
@@ -165,7 +161,7 @@ class SQLStorageManager(object):
         # are methods that modify the query, rather than returning filter
         # expressions. We might want to change that later.
         for filter_expr in itertools.chain(
-            self._resolve_value_filters(filters, resolved_fields),
+            self._resolve_value_filters(model_class, filters, resolved_fields),
             self._resolve_substr_filters(substr_filters, resolved_fields),
             self._resolve_permissions_filter(model_class),
         ):
@@ -176,18 +172,6 @@ class SQLStorageManager(object):
             query, model_class, filter_rules, joins=rels)
 
         # apply .with_entities, .group_by, and .distinct
-        entities = [
-            e for w in with_entities if (e := resolved_fields.get(w))
-        ]
-        if entities:
-            query = query.with_entities(*entities, db.func.count('*'))
-
-        group_columns = [
-            field for g in group_by if (field := resolved_fields.get(g))
-        ]
-        if group_columns:
-            query = query.group_by(*group_columns)
-
         distinct_cols = [
             field for d in distinct if (field := resolved_fields.get(d))
         ]
@@ -196,15 +180,32 @@ class SQLStorageManager(object):
 
         # finally, apply sorting. SQL requires that distinct columns MUST
         # be the first ordering.
-        for order_by in itertools.chain(
-            distinct_cols,
-            self._resolve_sort(resolved_fields, sort),
+        for order_by in distinct_cols:
+            query = query.order_by(order_by)
+
+        for joins, order_by in itertools.chain(
+            self._resolve_sort(model_class, sort),
             self._resolve_sort_labels(model_class, sort_labels),
             self._resolve_default_sort(model_class, default_sorting),
         ):
+            for join in joins:
+                query = query.outerjoin(*join)
             query = query.order_by(order_by)
 
         return query
+
+    def _traverse_association_proxy(self, field):
+        """Traverse an assocproxy
+
+        Yield trees of (target_model, column, field) for each step
+        in the assocproxy.
+        """
+        while isinstance(field, AssociationProxyInstance):
+            col_name = field.target_collection
+            col = getattr(field.owning_class, col_name)
+            target = field.target_class
+            field = getattr(target, field.value_attr)
+            yield (target, col, field)
 
     def _resolve_included_fields(
         self,
@@ -236,19 +237,10 @@ class SQLStorageManager(object):
                 continue
 
             if isinstance(field, AssociationProxyInstance):
-                # specialcase if there is an assoc proxy in includes:
-                # join the proxied-to relationship, but only load
-                # the proxied attribute.
-
-                # first, we'll need to figure out the whole join path
-                # in case of chained assoc proxies (e.g. NI->node->dep)
-                while isinstance(field, AssociationProxyInstance):
-                    col_name = field.target_collection
-                    col = getattr(field.owning_class, col_name)
-                    target = db.aliased(field.target_class)
-
-                    query = query.outerjoin(target, col)
-                    field = getattr(target, field.value_attr)
+                jl = db
+                for _, col, _ in self._traverse_association_proxy(field):
+                    jl = jl.joinedload(col, innerjoin=False)
+                query = query.options(jl)
 
             elif not hasattr(field, 'prop'):
                 continue
@@ -263,6 +255,7 @@ class SQLStorageManager(object):
 
     def _resolve_value_filters(
         self,
+        model_class,
         filters: dict[str, Any],
         resolved_fields: dict[str, InstrumentedAttribute],
     ) -> Iterable[sql.ClauseElement]:
@@ -279,7 +272,11 @@ class SQLStorageManager(object):
                         operation(field) for operation in value)
                     exp = db.and_(*operations_filter)
                 else:
-                    exp = field.in_(value)
+                    field = getattr(model_class, field_name)
+                    if not value:
+                        exp = field.is_(None)
+                    else:
+                        exp = db.or_(*[field == v for v in value])
             else:
                 exp = field == value
             yield exp
@@ -404,18 +401,25 @@ class SQLStorageManager(object):
 
     def _resolve_sort(
         self,
-        resolved_fields: dict[str, InstrumentedAttribute],
+        model_class,
         sort: dict[str, Callable | str],
     ) -> Iterable[sql.ClauseElement]:
         for field_name, order in sort.items():
-            sort_by = resolved_fields.get(field_name)
+            joins = []
+            sort_by = getattr(model_class, field_name, None)
+            for (target, col, field) in self._traverse_association_proxy(
+                sort_by,
+            ):
+                joins.append((target, col))
+                sort_by = field
+
             if sort_by is None:
                 continue
             if order == 'desc':
                 sort_by = sort_by.desc()
             elif callable(order):
                 sort_by = order(sort_by)
-            yield sort_by
+            yield joins, sort_by
 
     def _resolve_sort_labels(
         self,
@@ -439,7 +443,7 @@ class SQLStorageManager(object):
                 sort_by = db.desc(ordering)
             else:
                 sort_by = db.asc(ordering)
-            yield sort_by
+            yield (), sort_by
 
     def _resolve_default_sort(
         self,
@@ -449,7 +453,7 @@ class SQLStorageManager(object):
         if do_default_sort:
             col = model_class.default_sort_column()
             if col:
-                yield col
+                yield (), col
 
     @staticmethod
     def _paginate(
@@ -722,28 +726,36 @@ class SQLStorageManager(object):
     def summarize(self, target_field, sub_field, model_class,
                   pagination, get_all_results, all_tenants, filters):
         f = getattr(model_class, target_field, None)
-        while isinstance(f, AssociationProxyInstance):
-            # get the actual attribute to summarize on
-            f = f.remote_attr
+        if f is None:
+            raise RuntimeError()
+
+        query = model_class.query
+        query = self._add_tenant_filter(query, model_class, all_tenants)
+
+        for target, col, field in self._traverse_association_proxy(f):
+            query = query.outerjoin(target, col)
+            f = field
+
         fields = [f]
-        string_fields = [target_field]
         if sub_field:
             subfield_col = getattr(model_class, sub_field, None)
-            while isinstance(subfield_col, AssociationProxyInstance):
-                # get the actual attribute to summarize on
-                subfield_col = subfield_col.remote_attr
+            if subfield_col is not None:
+                for target, col, field in \
+                        self._traverse_association_proxy(subfield_col):
+                    query = query.outerjoin(target, col)
+                    subfield_col = field
             fields.append(subfield_col)
-            string_fields.append(sub_field)
 
-        query = self._get_query(
-            model_class,
-            all_tenants=all_tenants,
-            filters=filters,
-            sort={target_field: f.desc()},
-            include=string_fields,
-            default_sorting=False,
-            group_by=string_fields,
-            with_entities=string_fields,
+        resolved_fields = {f: getattr(model_class, f) for f in filters}
+        for filter_expr in itertools.chain(
+            self._resolve_value_filters(model_class, filters, resolved_fields),
+            self._resolve_permissions_filter(model_class),
+        ):
+            query = query.filter(filter_expr)
+        query = (
+            query
+            .with_entities(*fields, db.func.count('*'))
+            .group_by(*fields)
         )
 
         results, total, size, offset = self._paginate(
