@@ -397,7 +397,7 @@ class DeploymentsId(resources_v1.DeploymentsId):
         return deployment
 
     @authorize('deployment_get')
-    @rest_decorators.marshal_with(models.Deployment)
+    @rest_decorators.marshal_with(models.Deployment, force_get_data=True)
     def get(self, deployment_id, _include=None, **kwargs):
         args = rest_utils.get_args_and_verify_arguments([
             Argument('all_sub_deployments', type=boolean, default=True),

@@ -552,6 +552,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         'latest_execution', 'total_operations')
     latest_execution_workflow_id = association_proxy(
         'latest_execution', 'workflow_id')
+    create_execution_id = association_proxy('create_execution', 'id')
 
     drifted_instances =\
         db.Column(db.Integer, server_default='0', nullable=False, default=0)
@@ -603,6 +604,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             fields['deployment_groups'] = \
                 flask_fields.List(flask_fields.String)
             fields['latest_execution_id'] = flask_fields.String()
+            fields['create_execution_id'] = flask_fields.String()
             fields['latest_execution_status'] = flask_fields.String()
             fields['latest_execution_total_operations'] = \
                 flask_fields.Integer()
@@ -610,8 +612,6 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                 flask_fields.Integer()
             fields['latest_execution_workflow_id'] = flask_fields.String()
             fields['has_sub_deployments'] = flask_fields.Boolean()
-            fields['create_execution'] = flask_fields.String()
-            fields['latest_execution'] = flask_fields.String()
             cls._cached_deployment_fields = fields
         return cls._cached_deployment_fields
 
@@ -620,11 +620,11 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         return ['id', 'blueprint_id', 'created_by', 'site_name', 'schedules',
                 'tenant_name', 'display_name', 'installation_status']
 
-    def to_response(self, include=None, **kwargs):
+    def to_response(self, include=None, get_data=False, **kwargs):
         include = include or self.response_fields
         dep_dict = super(Deployment, self).to_response(
             include=include, **kwargs)
-        if 'workflows' in include:
+        if get_data and 'workflows' in include:
             dep_dict['workflows'] = self._list_workflows()
         if 'labels' in include:
             dep_dict['labels'] = self.list_labels(self.labels)
@@ -644,10 +644,9 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         if 'latest_execution_finished_operations' in include:
             dep_dict['latest_execution_finished_operations'] = \
                 self.latest_execution_finished_operations
-        if 'create_execution' in include:
-            dep_dict['create_execution'] = \
-                self.create_execution.id if self.create_execution else None
-        if 'latest_execution' in include:
+        if 'create_execution_id' in include:
+            dep_dict['create_execution'] = self.create_execution_id
+        if 'latest_execution_id' in include:
             dep_dict['latest_execution'] = self.latest_execution_id
         return dep_dict
 
@@ -1009,7 +1008,11 @@ class DeploymentGroup(CreatedAtMixin, SQLResourceBase):
 
     @declared_attr
     def deployments(cls):
-        return many_to_many_relationship(cls, Deployment, unique=True)
+        return many_to_many_relationship(
+            cls,
+            Deployment,
+            unique=True,
+        )
 
     @property
     def deployment_ids(self):
