@@ -210,7 +210,7 @@ wagon==1.0.1
     # via
     #   cloudify-common
     #   cloudify-rest-service (setup.py)
-werkzeug==3.0.1
+werkzeug==3.0.3
     # via
     #   cloudify-rest-service (setup.py)
     #   flask
