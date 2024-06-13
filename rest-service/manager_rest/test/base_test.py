@@ -779,22 +779,26 @@ class BaseServerTestCase(unittest.TestCase):
         m.deployment = client.deployments.get(deployment.id)
         m.blueprint = blueprint
         m.tenant_name = deployment.tenant_name
-        deployment.create_execution.status = ExecutionState.STARTED
-        sm.update(deployment.create_execution)
+        deployment.create_execution_relationship.status = \
+            ExecutionState.STARTED
+        sm.update(deployment.create_execution_relationship)
         get_rest_client_target = \
             'cloudify_system_workflows.deployment_environment.get_rest_client'
         with patch(get_rest_client_target, return_value=client), \
                 patch('cloudify_system_workflows.deployment_environment.'
                       'os.makedirs'):
             try:
-                create(m, **deployment.create_execution.parameters)
+                create(
+                    m, **deployment.create_execution_relationship.parameters)
             except Exception:
                 client.executions.update(
-                    deployment.create_execution.id, ExecutionState.FAILED)
+                    deployment.create_execution_relationship.id,
+                    ExecutionState.FAILED)
                 raise
             else:
                 client.executions.update(
-                    deployment.create_execution.id, ExecutionState.TERMINATED)
+                    deployment.create_execution_relationship.id,
+                    ExecutionState.TERMINATED)
 
     def delete_deployment(self, deployment_id):
         """Delete the deployment from the database.

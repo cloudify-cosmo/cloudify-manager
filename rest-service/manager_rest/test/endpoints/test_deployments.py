@@ -1782,7 +1782,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             creator=self.user,
             tenant=self.tenant,
         )
-        dep.latest_execution = exc
+        dep.latest_execution_relationship = exc
 
         retrieved = self.client.deployments.get(dep.id)
         assert retrieved.latest_execution_id == exc.id

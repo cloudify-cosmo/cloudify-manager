@@ -355,7 +355,7 @@ class RecalcAncestorsTest(_DependencyTestUtils, BaseServerTestCase):
         d1 = self._deployment(id='d1')
         d2 = self._deployment(id='d2')
         self._label_dependency(d1, d2)
-        d2.latest_execution = models.Execution(
+        d2.latest_execution_relationship = models.Execution(
             status='failed',
             workflow_id='',
             tenant=self.tenant,

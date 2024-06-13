@@ -211,7 +211,7 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         assert sm_group.creation_counter == 1
         deps = sm_group.deployments
         assert len(deps) == 1
-        create_exec_params = deps[0].create_execution.parameters
+        create_exec_params = deps[0].create_execution_relationship.parameters
         assert create_exec_params['inputs'] == inputs
         assert create_exec_params['labels'] == [
             {'key': 'label1', 'value': 'label-value',
@@ -575,7 +575,7 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         dep_id = group.deployment_ids[0]
         dep = self.sm.get(models.Deployment, dep_id)
         assert set((label['key'], label['value'])
-                   for label in dep.create_execution.parameters['labels']) == {
+                   for label in dep.create_execution_relationship.parameters['labels']) == {  # noqa
             # from new_deployments:
             ('label1', 'value1'),
             ('label1', 'value2'),

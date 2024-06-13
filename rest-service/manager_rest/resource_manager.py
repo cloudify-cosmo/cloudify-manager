@@ -141,7 +141,7 @@ class ResourceManager(object):
 
         dep = latest_execution.deployment
         dep.installation_status = installation_status
-        dep.latest_execution = latest_execution
+        dep.latest_execution_relationship = latest_execution
         dep.deployment_status = dep.evaluate_deployment_status()
         self.sm.update(dep)
 
@@ -186,7 +186,8 @@ class ResourceManager(object):
                 if deployment:
                     execution.deployment.deployment_status = \
                         DeploymentState.IN_PROGRESS
-                    execution.deployment.latest_execution = execution
+                    execution.deployment.latest_execution_relationship = \
+                        execution
                     self.sm.update(deployment)
 
             if status in ExecutionState.END_STATES:
@@ -301,8 +302,9 @@ class ResourceManager(object):
         self.sm.refresh(execution.deployment)
         try:
             if execution and execution.deployment and \
-                    execution.deployment.create_execution:
-                create_execution = execution.deployment.create_execution
+                    execution.deployment.create_execution_relationship:
+                create_execution = \
+                    execution.deployment.create_execution_relationship
                 delete_dep_env = 'delete_deployment_environment'
                 if (create_execution.status == ExecutionState.FAILED and
                         execution.workflow_id != delete_dep_env):
@@ -1520,7 +1522,7 @@ class ResourceManager(object):
                 execution = self.sm.update(execution)
                 if execution.deployment_id:
                     dep = execution.deployment
-                    dep.latest_execution = execution
+                    dep.latest_execution_relationship = execution
                     dep.deployment_status = \
                         dep.evaluate_deployment_status()
                     self.sm.update(dep)
@@ -2330,11 +2332,11 @@ class ResourceManager(object):
         return prepared_relationships
 
     def verify_deployment_environment_created_successfully(self, deployment):
-        if not deployment.create_execution:
+        if not deployment.create_execution_relationship:
             # the user removed the execution, let's assume they knew
             # what they were doing and allow this
             return
-        status = deployment.create_execution.status
+        status = deployment.create_execution_relationship.status
         if status == ExecutionState.TERMINATED:
             return
         elif status == ExecutionState.PENDING:
@@ -2348,7 +2350,7 @@ class ResourceManager(object):
                     'Deployment environment creation is still in progress, '
                     'try again in a minute')
         elif status == ExecutionState.FAILED:
-            error_line = deployment.create_execution.error\
+            error_line = deployment.create_execution_relationship.error\
                 .strip().split('\n')[-1]
             raise manager_exceptions.DeploymentCreationError(
                 "Can't launch executions since environment creation for "
