@@ -2,9 +2,9 @@ import difflib
 import shutil
 import typing
 from datetime import datetime, timezone
-from os import chdir, chmod, environ, listdir, stat
+from os import chdir, chmod, environ, listdir, stat, close
 from os.path import exists, isfile, join
-from tempfile import TemporaryDirectory, mktemp
+from tempfile import TemporaryDirectory, mkstemp
 
 import yaml
 
@@ -254,7 +254,8 @@ def update_archive(blueprint: models.Blueprint, updated_file_name: str):
                     join(working_dir,
                          archive_base_dir,
                          blueprint.main_file_name))
-        new_archive_base = mktemp()
+        fd, new_archive_base = mkstemp()
+        close(fd)
         new_archive_file_name = shutil.make_archive(new_archive_base,
                                                     archive_format,
                                                     root_dir=working_dir)
