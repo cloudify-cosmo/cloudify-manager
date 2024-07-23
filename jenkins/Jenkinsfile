@@ -122,7 +122,12 @@ pipeline {
                 cd ~/rpmbuild
                 git clone --single-branch --branch ${env.BRANCH} https://github.com/cloudify-cosmo/cloudify-manager.git SOURCES && cd SOURCES
               """
-
+              sh """
+                echo "Fix mirrorlist no longer available. See https://serverfault.com/questions/1161816/mirrorlist-centos-org-no-longer-resolve#answer-1161847"
+                find /etc/yum.repos.d/ -type f -name "*.repo" -print0 | xargs -0 sed -i s/mirror.centos.org/vault.centos.org/g
+                find /etc/yum.repos.d/ -type f -name "*.repo" -print0 | xargs -0 sed -i s/^#.*baseurl=http/baseurl=http/g
+                find /etc/yum.repos.d/ -type f -name "*.repo" -print0 | xargs -0 sed -i s/^mirrorlist=http/#mirrorlist=http/g
+              """
               echo 'Build Rest Service RPM'
               buildRpm('~/rpmbuild/SOURCES', 'cloudify-rest-service.spec', "${env.VERSION}", "${env.PRERELEASE}")
 
