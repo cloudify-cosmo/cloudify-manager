@@ -297,10 +297,14 @@ class ResourceManager(object):
         Re-evaluate parameters, and return if the execution can run.
         """
         execution.status = ExecutionState.PENDING
-        if not execution.deployment:
-            return True, self._prepare_execution_or_log(execution)
-        self.sm.refresh(execution.deployment)
         try:
+            if not execution.deployment:
+                return True, self.prepare_executions(
+                    [execution],
+                    queue=True,
+                    commit=False,
+                )
+            self.sm.refresh(execution.deployment)
             if execution and execution.deployment and \
                     execution.deployment.create_execution_relationship:
                 create_execution = \
@@ -322,27 +326,23 @@ class ResourceManager(object):
                 raise manager_exceptions.UnavailableWorkflowError(
                     f'Workflow not available: {execution.workflow_id}')
 
-        except Exception as e:
-            execution.status = ExecutionState.FAILED
-            execution.error = f'Error dequeueing execution: {e}'
-            return False, []
-        else:
+            messages = self.prepare_executions(
+                [execution],
+                queue=True,
+                commit=False,
+            )
             flag_modified(execution, 'parameters')
-        finally:
-            self.sm.update(execution)
-            db.session.flush([execution])
-        return True, self._prepare_execution_or_log(execution)
-
-    def _prepare_execution_or_log(self, execution: models.Execution) -> list:
-        try:
-            return self.prepare_executions(
-                [execution], queue=True, commit=False)
+            return True, messages
         except Exception as e:
-            self.update_deployment_latest_execution(execution, True)
             current_app.logger.warning(
                 'Could not dequeue execution %s: %s',
                 execution, e)
-            return []
+            execution.status = ExecutionState.FAILED
+            execution.error = f'Error dequeueing execution: {e}'
+            return False, []
+        finally:
+            self.sm.update(execution)
+            db.session.flush([execution])
 
     def _queued_executions_query(self):
         if self._cached_queued_execs_query is None:
