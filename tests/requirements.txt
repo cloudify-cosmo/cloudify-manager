@@ -20,7 +20,7 @@ cffi==1.16.0
     # via cryptography
 charset-normalizer==3.3.2
     # via requests
-cloudify-common @ https://github.com/cloudify-cosmo/cloudify-common/archive/7.0.4-build.zip
+cloudify-common @ https://github.com/cloudify-cosmo/cloudify-common/archive/7.0.5-build.zip
     # via -r requirements.in
 cryptography==42.0.5
     # via cloudify-integration-tests (setup.py)

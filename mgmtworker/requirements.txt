@@ -47,11 +47,11 @@ click-plugins==1.1.1
     # via celery
 click-repl==0.3.0
     # via celery
-cloudify-agent[celery,fabric,kerberos] @ https://github.com/cloudify-cosmo/cloudify-agent/archive/7.0.4-build.zip
+cloudify-agent[celery,fabric,kerberos] @ https://github.com/cloudify-cosmo/cloudify-agent/archive/7.0.5-build.zip
     # via
     #   -r requirements.in
     #   cloudify-mgmtworker (setup.py)
-cloudify-common[dispatcher,snmp] @ https://github.com/cloudify-cosmo/cloudify-common/archive/7.0.4-build.zip
+cloudify-common[dispatcher,snmp] @ https://github.com/cloudify-cosmo/cloudify-common/archive/7.0.5-build.zip
     # via
     #   -r requirements.in
     #   cloudify-agent

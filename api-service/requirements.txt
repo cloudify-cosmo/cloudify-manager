@@ -57,11 +57,11 @@ click==8.1.7
     # via
     #   flask
     #   uvicorn
-cloudify-common[dispatcher] @ https://github.com/cloudify-cosmo/cloudify-common/archive/7.0.4-build.zip
+cloudify-common[dispatcher] @ https://github.com/cloudify-cosmo/cloudify-common/archive/7.0.5-build.zip
     # via
     #   -r requirements.in
     #   cloudify-rest-service
-cloudify-rest-service @ https://github.com/cloudify-cosmo/cloudify-manager/archive/7.0.4-build.zip#subdirectory=rest-service
+cloudify-rest-service @ https://github.com/cloudify-cosmo/cloudify-manager/archive/7.0.5-build.zip#subdirectory=rest-service
     # via
     #   -r requirements.in
     #   cloudify-api (setup.py)
