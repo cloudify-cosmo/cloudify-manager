@@ -100,7 +100,7 @@ class BlueprintsId(resources_v2.BlueprintsId):
         created_at = args.get('created_at')
         created_by = args.get('created_by')
 
-        visibility = args.get('visibility')
+        visibility = args.get('visibility', None)
         private_resource = args.get('private_resource')
         application_file_name = args.get('application_file_name', '')
         skip_execution = args.get('skip_execution', False)
@@ -421,10 +421,10 @@ class BlueprintsIdValidate(BlueprintsId):
         if form_params:
             args = json.loads(form_params)
         if not args:
-            args = request.args.to_dict(flat=False)
+            args = request.args.to_dict()
 
         rest_utils.validate_inputs({'blueprint_id': blueprint_id})
-        visibility = args.pop('visibility')
+        visibility = args.pop('visibility', None)
         if visibility is not None:
             rest_utils.validate_visibility(
                 visibility, valid_values=VisibilityState.STATES)
