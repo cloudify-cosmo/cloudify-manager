@@ -100,7 +100,7 @@ class BlueprintsId(resources_v2.BlueprintsId):
         created_at = args.get('created_at')
         created_by = args.get('created_by')
 
-        visibility = args.get('visibility', None)
+        visibility = args.get('visibility')
         private_resource = args.get('private_resource')
         application_file_name = args.get('application_file_name', '')
         skip_execution = args.get('skip_execution', False)
