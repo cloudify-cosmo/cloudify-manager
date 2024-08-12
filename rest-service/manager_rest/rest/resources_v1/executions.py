@@ -238,14 +238,18 @@ class Executions(SecuredResource):
 
         if deployment:
             exec_relations_set = False
-            if _should_update(execution, deployment, 'latest_execution'):
-                deployment.latest_execution = execution
+            if _should_update(
+                    execution, deployment, 'latest_execution_relationship'
+            ):
+                deployment.latest_execution_relationship = execution
                 exec_relations_set = True
 
             if execution.workflow_id == \
                     'create_deployment_environment':
-                if _should_update(execution, deployment, 'create_execution'):
-                    deployment.create_execution = execution
+                if _should_update(
+                        execution, deployment, 'create_execution_relationship'
+                ):
+                    deployment.create_execution_relationship = execution
                     exec_relations_set = True
 
             if exec_relations_set:

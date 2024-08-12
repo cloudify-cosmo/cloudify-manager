@@ -30,7 +30,7 @@ PICKLE_TO_JSON_MIGRATION_BATCH_SIZE = 1000
 
 
 def _set_latest_execution():
-    """Set .latest_execution for all deployments
+    """Set .latest_execution_relationshipfor all deployments
 
     Find the latest execution based on the created_at field, and set it
     for each deployment.

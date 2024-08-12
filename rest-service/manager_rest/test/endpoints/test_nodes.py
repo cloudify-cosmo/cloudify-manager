@@ -711,6 +711,55 @@ class NodeInstancesCreateTest(_NodeSetupMixin, base_test.BaseServerTestCase):
         assert instance2.index == 2
         assert node2_instance1.index == 1
 
+    def test_create_instances_rename_conflict(self):
+        # check that if the user tries to create node instances with IDs that
+        # conflict, the IDs are renamed
+        node = self._node('n1')
+        instance_id = 'ni_1'
+        ni = self._instance(instance_id, index=0)
+
+        self.client.node_instances.create_many(self.dep1.id, [
+            {
+                'id': ni.id,
+                'node_id': node.id,
+                'index': 0,
+            },
+        ])
+        nis = models.NodeInstance.query.all()
+        assert len(nis) == 2
+        assert sum(ni.id == instance_id for ni in nis) == 1
+
+    def test_create_instances_rename_conflict_relationships(self):
+        # ...the ID rename for node-instances also affects relationship target
+        # IDs, and host instance IDs
+        node = self._node('n1')
+        instance_id = 'ni_1'
+        ni = self._instance(instance_id, index=0)
+
+        self.client.node_instances.create_many(self.dep1.id, [
+            {
+                'id': ni.id,
+                'node_id': node.id,
+                'index': 1,
+            },
+            {
+                'id': 'ni_2',
+                'node_id': node.id,
+                'host_id': ni.id,
+                'relationships': [{
+                    'type': 'nativeedge.relationships.contained_in',
+                    'target_id': ni.id,
+                }]
+            }
+        ])
+        nis = models.NodeInstance.query.all()
+        assert len(nis) == 3
+        ni1 = models.NodeInstance.query.filter_by(index=1).one()
+        ni2 = models.NodeInstance.query.filter_by(id='ni_2').one()
+        assert ni2.id == 'ni_2'
+        assert ni2.host_id == ni1.id != ni.id
+        assert ni2.relationships[0]['target_id'] == ni1.id != ni.id
+
 
 @mock.patch('manager_rest.rest.rest_decorators.is_deployment_update')
 class NodeInstancesDeleteTest(_NodeSetupMixin, base_test.BaseServerTestCase):

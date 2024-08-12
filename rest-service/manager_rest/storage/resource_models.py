@@ -544,14 +544,15 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                                        unique=True)
 
     deployment_group_id = association_proxy('deployment_groups', 'id')
-    latest_execution_id = association_proxy(
-        'latest_execution', 'id')
+    latest_execution = association_proxy(
+        'latest_execution_relationship', 'id')
     latest_execution_finished_operations = association_proxy(
-        'latest_execution', 'finished_operations')
+        'latest_execution_relationship', 'finished_operations')
     latest_execution_total_operations = association_proxy(
-        'latest_execution', 'total_operations')
+        'latest_execution_relationship', 'total_operations')
     latest_execution_workflow_id = association_proxy(
-        'latest_execution', 'workflow_id')
+        'latest_execution_relationship', 'workflow_id')
+    create_execution = association_proxy('create_execution_relationship', 'id')
 
     drifted_instances =\
         db.Column(db.Integer, server_default='0', nullable=False, default=0)
@@ -563,7 +564,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         return DeploymentLabel
 
     @declared_attr
-    def create_execution(cls):
+    def create_execution_relationship(cls):
         """The create-deployment-environment execution for this deployment"""
         return db.relationship('Execution',
                                foreign_keys=[cls._create_execution_fk],
@@ -571,7 +572,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                                post_update=True)
 
     @declared_attr
-    def latest_execution(cls):
+    def latest_execution_relationship(cls):
         return db.relationship('Execution',
                                foreign_keys=[cls._latest_execution_fk],
                                cascade='all, delete',
@@ -588,7 +589,8 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         return one_to_many_relationship(cls, Site, cls._site_fk, cascade=False)
 
     site_name = association_proxy('site', 'name')
-    latest_execution_status = association_proxy('latest_execution', 'status')
+    latest_execution_status = association_proxy(
+        'latest_execution_relationship', 'status')
 
     @classproperty
     def response_fields(cls):
@@ -602,7 +604,8 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             )
             fields['deployment_groups'] = \
                 flask_fields.List(flask_fields.String)
-            fields['latest_execution_id'] = flask_fields.String()
+            fields['latest_execution'] = flask_fields.String()
+            fields['create_execution'] = flask_fields.String()
             fields['latest_execution_status'] = flask_fields.String()
             fields['latest_execution_total_operations'] = \
                 flask_fields.Integer()
@@ -610,8 +613,6 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                 flask_fields.Integer()
             fields['latest_execution_workflow_id'] = flask_fields.String()
             fields['has_sub_deployments'] = flask_fields.Boolean()
-            fields['create_execution'] = flask_fields.String()
-            fields['latest_execution'] = flask_fields.String()
             cls._cached_deployment_fields = fields
         return cls._cached_deployment_fields
 
@@ -620,11 +621,11 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         return ['id', 'blueprint_id', 'created_by', 'site_name', 'schedules',
                 'tenant_name', 'display_name', 'installation_status']
 
-    def to_response(self, include=None, **kwargs):
+    def to_response(self, include=None, get_data=False, **kwargs):
         include = include or self.response_fields
         dep_dict = super(Deployment, self).to_response(
             include=include, **kwargs)
-        if 'workflows' in include:
+        if get_data and 'workflows' in include:
             dep_dict['workflows'] = self._list_workflows()
         if 'labels' in include:
             dep_dict['labels'] = self.list_labels(self.labels)
@@ -645,10 +646,9 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             dep_dict['latest_execution_finished_operations'] = \
                 self.latest_execution_finished_operations
         if 'create_execution' in include:
-            dep_dict['create_execution'] = \
-                self.create_execution.id if self.create_execution else None
+            dep_dict['create_execution'] = self.create_execution
         if 'latest_execution' in include:
-            dep_dict['latest_execution'] = self.latest_execution_id
+            dep_dict['latest_execution'] = self.latest_execution
         return dep_dict
 
     def _list_workflows(self):
@@ -833,14 +833,14 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         params = {'inputs': inputs, **kwargs}
         if labels:
             params['labels'] = [label.to_dict() for label in labels]
-        self.create_execution = Execution(
+        self.create_execution_relationship = Execution(
             workflow_id='create_deployment_environment',
             deployment=self,
             status=ExecutionState.PENDING,
             parameters=params,
         )
-        self.latest_execution = self.create_execution
-        return self.create_execution
+        self.latest_execution_relationship = self.create_execution_relationship
+        return self.create_execution_relationship
 
     def _validate_inputs(self, inputs):
         blueprint_inputs = self.blueprint.plan.get('inputs', {})
@@ -1009,7 +1009,11 @@ class DeploymentGroup(CreatedAtMixin, SQLResourceBase):
 
     @declared_attr
     def deployments(cls):
-        return many_to_many_relationship(cls, Deployment, unique=True)
+        return many_to_many_relationship(
+            cls,
+            Deployment,
+            unique=True,
+        )
 
     @property
     def deployment_ids(self):
@@ -1525,7 +1529,7 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             self.deployment,
             self.workflow_id
         )
-        parameters = self.parameters.copy()
+        parameters = (self.parameters or {}).copy()
         parameters['__cloudify_context'] = context
 
         session.add(self)

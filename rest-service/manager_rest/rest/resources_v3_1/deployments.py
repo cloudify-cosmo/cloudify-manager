@@ -159,7 +159,7 @@ class DeploymentsId(resources_v1.DeploymentsId):
     def _is_create_execution(self, deployment):
         """Are we running in deployment's create execution?"""
         return current_execution and \
-            current_execution == deployment.create_execution
+            current_execution == deployment.create_execution_relationship
 
     def _add_existing_labels(self, deployment, new_labels):
         """Add existing deployment labels to new_labels.
@@ -318,9 +318,12 @@ class DeploymentsId(resources_v1.DeploymentsId):
             raise manager_exceptions.BadParametersError(e)
         workflow_executor.execute_workflow(messages)
         if not args.async_create:
-            rest_utils.wait_for_execution(sm, deployment.create_execution.id)
-            if deployment.create_execution.status != ExecutionState.TERMINATED:
-                raise self._error_from_create(deployment.create_execution)
+            rest_utils.wait_for_execution(
+                sm, deployment.create_execution_relationship.id)
+            if deployment.create_execution_relationship.status != \
+                    ExecutionState.TERMINATED:
+                raise self._error_from_create(
+                    deployment.create_execution_relationship)
         return deployment, 201
 
     @authorize('deployment_update')
@@ -397,7 +400,7 @@ class DeploymentsId(resources_v1.DeploymentsId):
         return deployment
 
     @authorize('deployment_get')
-    @rest_decorators.marshal_with(models.Deployment)
+    @rest_decorators.marshal_with(models.Deployment, force_get_data=True)
     def get(self, deployment_id, _include=None, **kwargs):
         args = rest_utils.get_args_and_verify_arguments([
             Argument('all_sub_deployments', type=boolean, default=True),
@@ -1244,7 +1247,8 @@ class DeploymentGroupsId(SecuredResource):
                 dep = self._make_new_group_deployment(
                     rm, group, new_dep_spec, deployment_count, group.labels)
                 group.deployments.append(dep)
-                create_exec_group.executions.append(dep.create_execution)
+                create_exec_group.executions.append(
+                    dep.create_execution_relationship)
                 deployment_count += 1
             messages = create_exec_group.start_executions(sm, rm)
         workflow_executor.execute_workflow(messages)

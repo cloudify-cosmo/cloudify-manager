@@ -24,13 +24,13 @@ setup(
     zip_safe=False,
     install_requires=[
         'PyYAML',
-        'aiohttp',
+        'aiohttp>=3.9.5,<4',
         'cryptography',
         'fasteners',
         'pytest',
         'pytest-asyncio',
         'python-dateutil',
-        'requests',
+        'requests>=2.32.0,<3.0.0',
         'retrying',
     ],
 )

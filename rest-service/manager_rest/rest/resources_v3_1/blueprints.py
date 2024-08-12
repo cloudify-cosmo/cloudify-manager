@@ -421,10 +421,10 @@ class BlueprintsIdValidate(BlueprintsId):
         if form_params:
             args = json.loads(form_params)
         if not args:
-            args = request.args.to_dict(flat=False)
+            args = request.args.to_dict()
 
         rest_utils.validate_inputs({'blueprint_id': blueprint_id})
-        visibility = args.pop('visibility')
+        visibility = args.pop('visibility', None)
         if visibility is not None:
             rest_utils.validate_visibility(
                 visibility, valid_values=VisibilityState.STATES)

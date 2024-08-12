@@ -1,4 +1,3 @@
-from collections import defaultdict
 from copy import copy
 
 from cloudify.exceptions import NonRecoverableError
@@ -167,23 +166,6 @@ class GetValuesWithRest:
         if 'blueprint_id' not in kwargs and 'deployment_id' not in kwargs:
             params['blueprint_id'] = self.blueprint_id
         return params
-
-
-def get_instance_ids_by_node_ids(client, node_ids):
-    ni_ids = defaultdict(set)
-    offset = 0
-    ni_num = 0
-    while True:
-        nis = client.node_instances.list(
-            node_id=node_ids, _offset=offset, _include=['id', 'node_id'])
-        for ni in nis:
-            ni_ids[ni['node_id']].add(ni['id'])
-        ni_num += len(nis)
-        if ni_num < nis.metadata.pagination.total:
-            offset += nis.metadata.pagination.size
-        else:
-            break
-    return ni_ids
 
 
 def operation_name_matches(operation_name, search_value,

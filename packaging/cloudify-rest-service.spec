@@ -46,7 +46,7 @@ sudo tar xf %{S:0} -C /
 /opt/python3.11/bin/python3.11 -m venv %_manager_env
 
 %_manager_env/bin/pip install --upgrade pip setuptools
-%_manager_env/bin/pip install 'gunicorn>20,<21'
+%_manager_env/bin/pip install 'gunicorn>=22'
 %_manager_env/bin/pip install -r "${RPM_SOURCE_DIR}/rest-service/requirements.txt"
 %_manager_env/bin/pip install -r "${RPM_SOURCE_DIR}/api-service/requirements.txt"
 %_manager_env/bin/pip install "${RPM_SOURCE_DIR}/rest-service"

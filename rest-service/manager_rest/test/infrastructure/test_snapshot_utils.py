@@ -133,7 +133,7 @@ class TestSnapshotDeploymentStatus(SnapshotUtilsTestBase):
         dep = self._make_deployment()
         populate_deployment_statuses()
         dep = models.Deployment.query.get(dep._storage_id)
-        assert dep.latest_execution is None
+        assert dep.latest_execution_relationship is None
 
     def test_latest_execution_one(self):
         dep = self._make_deployment()
@@ -142,7 +142,7 @@ class TestSnapshotDeploymentStatus(SnapshotUtilsTestBase):
         db.session.flush()
         populate_deployment_statuses()
         db.session.refresh(dep)
-        assert dep.latest_execution == exc
+        assert dep.latest_execution_relationship == exc
 
     def test_latest_execution_multiple(self):
         dep1 = self._make_deployment()
@@ -157,8 +157,8 @@ class TestSnapshotDeploymentStatus(SnapshotUtilsTestBase):
         populate_deployment_statuses()
         db.session.refresh(dep1)
         db.session.refresh(dep2)
-        assert dep1.latest_execution == exc1
-        assert dep2.latest_execution == exc2
+        assert dep1.latest_execution_relationship == exc1
+        assert dep2.latest_execution_relationship == exc2
 
     def test_node_instances_empty(self):
         dep = self._make_deployment()

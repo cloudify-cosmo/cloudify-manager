@@ -476,15 +476,15 @@ class ExecutionsTestCase(BaseServerTestCase):
             with self.subTest():
                 dep_id = f'dep_{state}'
                 deployment = self._deployment(dep_id)
-                assert self.sm.get(
-                    models.Deployment, dep_id).latest_execution is None
+                assert not self.sm.get(
+                    models.Deployment, dep_id).latest_execution_relationship
                 self.client.executions.create(
                     deployment_id=dep_id,
                     workflow_id='some_workflow',
                     force_status=state,
                     started_at="2122-11-25T15:13:17.930Z",
                 )
-                assert deployment.latest_execution is None, \
+                assert deployment.latest_execution_relationship is None, \
                     f'Latest execution should not be set for {state}'
 
     def test_restore_set_latest_from_none(self):
@@ -492,8 +492,8 @@ class ExecutionsTestCase(BaseServerTestCase):
             with self.subTest():
                 dep_id = f'dep_{state}'
                 deployment = self._deployment(dep_id)
-                assert self.sm.get(
-                    models.Deployment, dep_id).latest_execution is None
+                assert not self.sm.get(
+                    models.Deployment, dep_id).latest_execution_relationship
                 timestamp = "2122-11-25T15:13:17.930Z"
                 self.client.executions.create(
                     deployment_id=dep_id,
@@ -501,8 +501,8 @@ class ExecutionsTestCase(BaseServerTestCase):
                     force_status=state,
                     started_at=timestamp,
                 )
-                assert deployment.latest_execution.started_at == timestamp, \
-                    f'Latest execution should be set for {state}'
+                assert deployment.latest_execution_relationship.started_at == \
+                       timestamp, f'Latest execution should be set for {state}'
 
     def test_restore_not_set_latest_with_older_not_running(self):
         """We should not set latest execution when provided an execution
@@ -518,7 +518,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                 deployment = self._deployment(dep_id)
                 execution = self._execution(id=old_execution_id,
                                             started_at=prev_timestamp)
-                deployment.latest_execution = execution
+                deployment.latest_execution_relationship = execution
 
                 self.client.executions.create(
                     execution_id=new_execution_id,
@@ -528,8 +528,8 @@ class ExecutionsTestCase(BaseServerTestCase):
                     started_at=timestamp,
                 )
 
-                assert deployment.latest_execution.id == old_execution_id, \
-                    f'Latest execution should not be changed for {state}'
+                assert deployment.latest_execution_relationship.id == \
+                       old_execution_id, f'Latest execution should not be changed for {state}'  # noqa
 
     def test_restore_set_latest_with_older(self):
         """We should update the latest execution if we see a create_dep_env
@@ -545,7 +545,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                 deployment = self._deployment(dep_id)
                 execution = self._execution(id=old_execution_id,
                                             started_at=prev_timestamp)
-                deployment.latest_execution = execution
+                deployment.latest_execution_relationship = execution
 
                 self.client.executions.create(
                     execution_id=new_execution_id,
@@ -555,8 +555,8 @@ class ExecutionsTestCase(BaseServerTestCase):
                     started_at=timestamp,
                 )
 
-                assert deployment.latest_execution.id == new_execution_id, \
-                    f'Latest execution should be changed for {state}'
+                assert deployment.latest_execution_relationship.id == \
+                       new_execution_id, f'Latest execution should be changed for {state}'  # noqa
 
     def test_restore_not_set_latest_with_newer(self):
         """We should never update the latest execution if it is newer than the
@@ -571,7 +571,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                 deployment = self._deployment(dep_id)
                 execution = self._execution(id=old_execution_id,
                                             started_at=prev_timestamp)
-                deployment.latest_execution = execution
+                deployment.latest_execution_relationship = execution
 
                 self.client.executions.create(
                     deployment_id=dep_id,
@@ -580,8 +580,8 @@ class ExecutionsTestCase(BaseServerTestCase):
                     started_at=timestamp,
                 )
 
-                assert deployment.latest_execution.id == old_execution_id, \
-                    f'Latest execution should not be changed for {state}'
+                assert deployment.latest_execution_relationship.id == \
+                       old_execution_id, f'Latest execution should not be changed for {state}'  # noqa
 
     def test_restore_not_set_create_exec_from_none(self):
         for state in self.EXEC_NOT_SET_STATES:
@@ -599,7 +599,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                     started_at=timestamp,
                 )
 
-                assert deployment.create_execution is None, \
+                assert deployment.create_execution_relationship is None, \
                     f'Create execution should not be set for {state}'
 
     def test_restore_set_create_exec_from_none(self):
@@ -618,8 +618,8 @@ class ExecutionsTestCase(BaseServerTestCase):
                     started_at=timestamp,
                 )
 
-                assert deployment.create_execution.id == execution_id, \
-                    f'Create execution should be set for {state}'
+                assert deployment.create_execution_relationship.id == \
+                       execution_id, f'Create execution should be set for {state}'  # noqa
 
     def test_restore_not_set_create_with_older_not_running(self):
         """We should not set create execution when provided an execution
@@ -636,7 +636,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                 execution = self._execution(id=old_execution_id,
                                             status=ExecutionState.TERMINATED,
                                             started_at=prev_timestamp)
-                deployment.create_execution = execution
+                deployment.create_execution_relationship = execution
 
                 self.client.executions.create(
                     execution_id=new_execution_id,
@@ -646,8 +646,8 @@ class ExecutionsTestCase(BaseServerTestCase):
                     started_at=timestamp,
                 )
 
-                assert deployment.create_execution.id == old_execution_id, \
-                    f'Create execution should not be changed for {state}'
+                assert deployment.create_execution_relationship.id == \
+                       old_execution_id, f'Create execution should not be changed for {state}'  # noqa
 
     def test_restore_set_create_with_older(self):
         """We should update the create execution if we see a create_dep_env
@@ -664,7 +664,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                 execution = self._execution(id=old_execution_id,
                                             status=ExecutionState.TERMINATED,
                                             started_at=prev_timestamp)
-                deployment.create_execution = execution
+                deployment.create_execution_relationship = execution
 
                 self.client.executions.create(
                     execution_id=new_execution_id,
@@ -674,8 +674,8 @@ class ExecutionsTestCase(BaseServerTestCase):
                     started_at=timestamp,
                 )
 
-                assert deployment.create_execution.id == new_execution_id, \
-                    f'Create execution should be changed for {state}'
+                assert deployment.create_execution_relationship.id == \
+                       new_execution_id, f'Create execution should be changed for {state}'  # noqa
 
     def test_restore_not_set_create_with_newer(self):
         """We should never update the create execution if it is newer than the
@@ -691,7 +691,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                 execution = self._execution(id=old_execution_id,
                                             status=ExecutionState.TERMINATED,
                                             started_at=prev_timestamp)
-                deployment.create_execution = execution
+                deployment.create_execution_relationship = execution
 
                 self.client.executions.create(
                     deployment_id=dep_id,
@@ -700,8 +700,8 @@ class ExecutionsTestCase(BaseServerTestCase):
                     started_at=timestamp,
                 )
 
-                assert deployment.create_execution.id == old_execution_id, \
-                    f'Create execution should not be changed for {state}'
+                assert deployment.create_execution_relationship.id == \
+                       old_execution_id, f'Create execution should not be changed for {state}'  # noqa
 
     def test_restore_not_set_upload_from_none(self):
         for state in self.EXEC_NOT_SET_STATES:
@@ -1620,6 +1620,7 @@ class ExecutionQueueingTests(BaseServerTestCase):
         )
         dep.workflows = {
             'workflow1': {
+                'operation': 'task1',
                 'parameters': {
                     'param1': {'default': 'default1'},
                     'param2': {'default': 'default2'}
@@ -1627,8 +1628,12 @@ class ExecutionQueueingTests(BaseServerTestCase):
             }
         }
 
-        with mock.patch('manager_rest.dsl_functions.get_storage_manager',
-                        return_value=self.sm):
+        with mock.patch(
+            'manager_rest.dsl_functions.get_storage_manager',
+            return_value=self.sm
+        ), mock.patch(
+            'manager_rest.workflow_executor.execute_workflow',
+        ):
             self.rm.update_execution_status(
                 create_dep_env.id, ExecutionState.TERMINATED, None)
 
@@ -1699,8 +1704,8 @@ class ExecutionQueueingTests(BaseServerTestCase):
             creator=self.user,
             tenant=self.tenant,
         )
-        old_dep.create_execution = create_exc
-        old_dep.latest_execution = create_exc
+        old_dep.create_execution_relationship = create_exc
+        old_dep.latest_execution_relationship = create_exc
         create_group.executions.append(create_exc)
 
         new_dep = models.Deployment(
@@ -1717,8 +1722,8 @@ class ExecutionQueueingTests(BaseServerTestCase):
             creator=self.user,
             tenant=self.tenant,
         )
-        new_dep.create_execution = create_exc
-        new_dep.latest_execution = create_exc
+        new_dep.create_execution_relationship = create_exc
+        new_dep.latest_execution_relationship = create_exc
         create_group.executions.append(create_exc)
         models.Execution(
             id=f'install_{new_dep.id}',
