@@ -99,6 +99,7 @@ class AuditLogListener(Thread):
                         since = audit_log.get('created_at')
             except BaseException:
                 pass
+            self._client.auditlog.close()
 
     def _ref_in_snapshot(self, audit_log: dict) -> bool:
         ref_identifier = audit_log.get('ref_identifier', {})
