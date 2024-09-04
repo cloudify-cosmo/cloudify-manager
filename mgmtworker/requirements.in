@@ -1,5 +1,5 @@
-cloudify-common[dispatcher,snmp] @ https://github.com/cloudify-cosmo/cloudify-common/archive/7.0.4-build.zip
-cloudify-agent[celery,fabric,kerberos] @ https://github.com/cloudify-cosmo/cloudify-agent/archive/7.0.4-build.zip
+cloudify-common[dispatcher,snmp] @ https://github.com/cloudify-cosmo/cloudify-common/archive/7.0.5-build.zip
+cloudify-agent[celery,fabric,kerberos] @ https://github.com/cloudify-cosmo/cloudify-agent/archive/7.0.5-build.zip
 
 paramiko
 
