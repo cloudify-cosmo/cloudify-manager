@@ -47,7 +47,7 @@ cloudify-common[dispatcher] @ https://github.com/cloudify-cosmo/cloudify-common/
     # via
     #   -r requirements.in
     #   cloudify-rest-service (setup.py)
-cryptography==43.0.0
+cryptography==43.0.1
     # via cloudify-rest-service (setup.py)
 distro==1.9.0
     # via
