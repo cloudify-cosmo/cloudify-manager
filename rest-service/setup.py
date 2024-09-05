@@ -23,7 +23,7 @@ install_requires = [
     'cachetools>=3,<4',
     'cffi>=1,<2',
     'cloudify-common[dispatcher]',
-    'cryptography==43.0.0',
+    'cryptography==43.0.1',
     'distro',
     'email-validator>2',
     'flask-migrate>=4.0.5,<4.0.6',

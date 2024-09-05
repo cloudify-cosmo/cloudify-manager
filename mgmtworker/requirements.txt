@@ -58,7 +58,7 @@ cloudify-common[dispatcher,snmp] @ https://github.com/cloudify-cosmo/cloudify-co
     #   -r requirements.in
     #   cloudify-agent
     #   cloudify-mgmtworker (setup.py)
-cryptography==43.0.0
+cryptography==43.0.1
     # via
     #   cloudify-mgmtworker (setup.py)
     #   paramiko

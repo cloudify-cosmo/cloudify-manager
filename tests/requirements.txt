@@ -24,7 +24,7 @@ charset-normalizer==3.3.2
     # via requests
 cloudify-common @ https://github.com/cloudify-cosmo/cloudify-common/archive/7.0.5-build.zip
     # via -r requirements.in
-cryptography==42.0.5
+cryptography==43.0.1
     # via cloudify-integration-tests (setup.py)
 distro==1.9.0
     # via cloudify-common

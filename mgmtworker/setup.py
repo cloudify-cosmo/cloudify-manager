@@ -17,7 +17,7 @@ import sys
 from setuptools import setup, find_packages
 
 install_requires = [
-    'cryptography==43.0.0',
+    'cryptography==43.0.1',
     'packaging',
     'psycopg2',
     'python-dateutil',

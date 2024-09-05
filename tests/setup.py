@@ -25,7 +25,7 @@ setup(
     install_requires=[
         'PyYAML',
         'aiohttp>=3.9.5,<4',
-        'cryptography',
+        'cryptography==43.0.1',
         'fasteners',
         'pytest',
         'pytest-asyncio',
