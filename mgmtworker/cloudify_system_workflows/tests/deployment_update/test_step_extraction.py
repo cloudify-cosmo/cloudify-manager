@@ -7,8 +7,8 @@ from cloudify_system_workflows.deployment_update.step_extractor import (
     DeploymentUpdateStep,
     PROPERTY, PROPERTIES, OUTPUT, OUTPUTS, WORKFLOW, WORKFLOWS, NODE,
     NODES, OPERATION, OPERATIONS, RELATIONSHIP, RELATIONSHIPS,
-    SOURCE_OPERATIONS, TARGET_OPERATIONS, TYPE, GROUP, GROUPS, POLICY_TYPE,
-    POLICY_TYPES, POLICY_TRIGGER, POLICY_TRIGGERS, HOST_ID, PLUGIN,
+    SOURCE_OPERATIONS, TARGET_OPERATIONS, TYPE, GROUP, GROUPS,
+    POLICY_TYPES, POLICY_TRIGGERS, HOST_ID, PLUGIN,
     DEPLOYMENT_PLUGINS_TO_INSTALL, PLUGINS_TO_INSTALL, DESCRIPTION,
     _update_topology_order_of_add_node_steps,
     _find_relationship,
@@ -57,8 +57,6 @@ class StepExtractorTestCase(unittest.TestCase):
             RELATIONSHIPS: [],
             TYPE: '',
             GROUPS: {},
-            POLICY_TYPES: {},
-            POLICY_TRIGGERS: {},
             DEPLOYMENT_PLUGINS_TO_INSTALL: {},
             OUTPUTS: {},
             WORKFLOWS: {}
@@ -1170,49 +1168,6 @@ class StepExtractorTestCase(unittest.TestCase):
         assert steps == []
         assert unsupported_steps == []
 
-    def test_policy_types_add_policy_type(self):
-        self.deployment_plan[POLICY_TYPES] = {
-            'policy_type1': 'policy_type1_value'
-        }
-
-        _, unsupported_steps = extract_steps(
-            {}, self.deployment, self.deployment_plan)
-        assert unsupported_steps == [
-            DeploymentUpdateStep(
-                action='add',
-                entity_type=POLICY_TYPE,
-                entity_id=['policy_types', 'policy_type1'],
-                supported=False)
-        ]
-
-    def test_policy_types_remove_policy_type(self):
-        self.deployment[POLICY_TYPES] = {'policy_type1': 'policy_type1_value'}
-        _, unsupported_steps = extract_steps(
-            {}, self.deployment, self.deployment_plan)
-        assert unsupported_steps == [
-            DeploymentUpdateStep(
-                action='remove',
-                entity_type=POLICY_TYPE,
-                entity_id=['policy_types', 'policy_type1'],
-                supported=False)
-        ]
-
-    def test_policy_types_modify_policy_type(self):
-        self.deployment[POLICY_TYPES] = {'policy_type1': 'policy_type1_value'}
-        self.deployment_plan[POLICY_TYPES] = {
-            'policy_type1': 'policy_type1_modified_value'
-        }
-
-        _, unsupported_steps = extract_steps(
-            {}, self.deployment, self.deployment_plan)
-        assert unsupported_steps == [
-            DeploymentUpdateStep(
-                action='modify',
-                entity_type=POLICY_TYPE,
-                entity_id=['policy_types', 'policy_type1'],
-                supported=False)
-        ]
-
     def test_extract_steps_policy_triggers_no_change(self):
         policy_triggers = {'policy_trigger1': 'policy_trigger1_value'}
         self.deployment[POLICY_TRIGGERS] = policy_triggers
@@ -1222,53 +1177,6 @@ class StepExtractorTestCase(unittest.TestCase):
             {}, self.deployment, self.deployment_plan)
         assert steps == []
         assert unsupported_steps == []
-
-    def test_policy_triggers_add_policy_trigger(self):
-        self.deployment_plan[POLICY_TRIGGERS] = {
-            'policy_trigger1': 'policy_trigger1_value'
-        }
-
-        _, unsupported_steps = extract_steps(
-            {}, self.deployment, self.deployment_plan)
-        assert unsupported_steps == [
-            DeploymentUpdateStep(
-                action='add',
-                entity_type=POLICY_TRIGGER,
-                entity_id=['policy_triggers', 'policy_trigger1'],
-                supported=False)
-        ]
-
-    def test_policy_triggers_remove_policy_trigger(self):
-        self.deployment[POLICY_TRIGGERS] = {
-            'policy_trigger1': 'policy_trigger1_value'
-        }
-        _, unsupported_steps = extract_steps(
-            {}, self.deployment, self.deployment_plan)
-        assert unsupported_steps == [
-            DeploymentUpdateStep(
-                action='remove',
-                entity_type=POLICY_TRIGGER,
-                entity_id=['policy_triggers', 'policy_trigger1'],
-                supported=False)
-        ]
-
-    def test_policy_triggers_modify_policy_trigger(self):
-        self.deployment[POLICY_TRIGGERS] = {
-            'policy_trigger1': 'policy_trigger1_value'
-        }
-        self.deployment_plan[POLICY_TRIGGERS] = {
-            'policy_trigger1': 'policy_trigger1_modified_value'
-        }
-
-        _, unsupported_steps = extract_steps(
-            {}, self.deployment, self.deployment_plan)
-        assert unsupported_steps == [
-            DeploymentUpdateStep(
-                action='modify',
-                entity_type=POLICY_TRIGGER,
-                entity_id=['policy_triggers', 'policy_trigger1'],
-                supported=False)
-        ]
 
     def test_groups_no_change(self):
         groups = {'group1': {}}
@@ -1599,42 +1507,6 @@ class StepExtractorTestCase(unittest.TestCase):
                 'modify',
                 WORKFLOW,
                 ['workflows', 'modified_workflow_new_plugin']),
-
-            'add_policy_type': DeploymentUpdateStep(
-                'add',
-                POLICY_TYPE,
-                ['policy_types', 'added_policy_type'],
-                supported=False),
-
-            'remove_policy_type': DeploymentUpdateStep(
-                'remove',
-                POLICY_TYPE,
-                ['policy_types', 'removed_policy_type'],
-                supported=False),
-
-            'modify_policy_type': DeploymentUpdateStep(
-                'modify',
-                POLICY_TYPE,
-                ['policy_types', 'modified_policy_type'],
-                supported=False),
-
-            'add_policy_trigger': DeploymentUpdateStep(
-                'add',
-                POLICY_TRIGGER,
-                ['policy_triggers', 'added_policy_trigger'],
-                supported=False),
-
-            'remove_policy_trigger': DeploymentUpdateStep(
-                'remove',
-                POLICY_TRIGGER,
-                ['policy_triggers', 'removed_policy_trigger'],
-                supported=False),
-
-            'modify_policy_trigger': DeploymentUpdateStep(
-                'modify',
-                POLICY_TRIGGER,
-                ['policy_triggers', 'modified_policy_trigger'],
-                supported=False),
 
             'add_group': DeploymentUpdateStep(
                 'add',
