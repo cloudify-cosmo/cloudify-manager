@@ -214,7 +214,6 @@ def update_db_address(restservice_config_path, commit):
     if commit:
         with open(restservice_config_path, 'w') as f:
             f.write(serialized)
-        os.chmod(restservice_config_path, 0o660)
         logging.info('Stored the new config in %s', restservice_config_path)
     else:
         logging.info('Dry-run: did not store the new config')
