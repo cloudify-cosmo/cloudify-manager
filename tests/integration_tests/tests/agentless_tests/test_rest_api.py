@@ -162,7 +162,7 @@ class RestAPITest(AgentlessTestCase):
 
     def test_deployments(self):
         self._create_basic_deployment()
-        deployments = self.client.deployments.list()
+        deployments = self.client.deployments.list(_get_data=True)
         self.assertEqual(1, len(deployments))
         deployment_id = deployments[0].id
         deployment_by_id = self.client.deployments.get(deployment_id)

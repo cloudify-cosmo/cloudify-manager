@@ -749,7 +749,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
-        get_deployments_response = self.client.deployments.list()
+        get_deployments_response = self.client.deployments.list(_get_data=True)
         self.assertEqual(1, len(get_deployments_response))
         single_deployment = get_deployments_response[0]
         self.assertEqual(deployment_id, single_deployment['id'])
@@ -761,6 +761,8 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                          single_deployment['created_at'])
         self.assertEqual(deployment_response['created_at'],
                          single_deployment['updated_at'])
+        self.assertEqual(deployment_response['workflows'],
+                         single_deployment['workflows'])
 
     def test_get_executions_of_deployment(self):
         (blueprint_id, deployment_id, blueprint_response,
