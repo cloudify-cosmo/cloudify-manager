@@ -748,13 +748,15 @@ class SQLStorageManager(object):
                     query = query.outerjoin(target, col)
                     subfield_col = field
             fields.append(subfield_col)
+        if filters:
+            resolved_fields = {f: getattr(model_class, f) for f in filters}
+            for filter_expr in itertools.chain(
+                self._resolve_value_filters(
+                    model_class, filters, resolved_fields),
+                self._resolve_permissions_filter(model_class),
+            ):
+                query = query.filter(filter_expr)
 
-        resolved_fields = {f: getattr(model_class, f) for f in filters}
-        for filter_expr in itertools.chain(
-            self._resolve_value_filters(model_class, filters, resolved_fields),
-            self._resolve_permissions_filter(model_class),
-        ):
-            query = query.filter(filter_expr)
         query = (
             query
             .with_entities(*fields, db.func.count('*'))
