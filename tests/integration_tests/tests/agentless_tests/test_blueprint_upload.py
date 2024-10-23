@@ -308,10 +308,6 @@ class BlueprintImportedTest(AgentlessTestCase):
         self.wait_for_all_executions_to_end()
         self.client.blueprints.delete('second')
 
-    @pytest.mark.skip(
-        reason="Skipped for 7.0.5."
-               "It is failing since 7.0.4 build."
-    )
     def test_blueprints_imported_upload_success(self):
         self.client.blueprints.upload(
             resource(os.path.join('dsl', 'simple_deployment.yaml')),
@@ -322,6 +318,10 @@ class BlueprintImportedTest(AgentlessTestCase):
         self.client.blueprints.delete('main')
         self.client.blueprints.delete('imported')
 
+    @pytest.mark.skip(
+        reason="Skipped for 7.0.5."
+               "It is failing since 7.0.4 build."
+    )
     def test_blueprints_imported_upload_failure(self):
         self.client.blueprints.upload(
             resource(os.path.join('dsl', 'simple_deployment.yaml')),
