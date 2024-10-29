@@ -38,7 +38,7 @@ else:
 
 setup(
     name='cloudify-mgmtworker',
-    version='7.0.5.dev1',
+    version='7.0.5',
     author='Cloudify',
     author_email='cosmo-admin@cloudify.co',
     packages=find_packages(),

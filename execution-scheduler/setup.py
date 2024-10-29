@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='cloudify-execution-scheduler',
-    version='7.0.5.dev1',
+    version='7.0.5',
     author='Cloudify',
     author_email='cosmo-admin@cloudify.co',
     packages=find_packages(),
