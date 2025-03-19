@@ -350,9 +350,21 @@ class DeploymentUpdates(SecuredResource):
             search=None,
             **kwargs):
         """List deployment updates"""
+        include: list[str] | None = None
+        if _include is None:
+            include = None
+
+        elif isinstance(_include, str):
+            include = [i.strip() for i in _include.split(",")]
+        elif isinstance(_include, list):
+            include = _include
+        else:
+            raise manager_exceptions.ValidationFailed(
+                f"Query include format missmatch, should be list of valid fields "
+                f"or string with comma separated fields: {_include}")
         return get_storage_manager().list(
             models.DeploymentUpdate,
-            include=_include,
+            include=include,
             filters=filters,
             pagination=pagination,
             sort=sort,
