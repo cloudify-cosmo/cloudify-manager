@@ -128,3 +128,23 @@ class TestDeploymentWorkflows(AgentlessTestCase):
             self.fail("Expected deployment to be deleted")
         except CloudifyClientError as e:
             self.assertEqual(404, e.status_code)
+
+    def test_deployment_workflows_update_steps(self) -> None:
+        dsl_path = resource("dsl/custom_workflow_mapping.yaml")
+        deployment, _ = self.deploy_application(dsl_path)
+        deployment_id = deployment.id
+
+        deployment = self.client.deployments.get(deployment_id)
+        deployment_updates = self.client.deployment_updates.list(
+            deployment_id=deployment_id, _include=['id', 'steps']
+        )
+
+        for step in deployment_updates.items[0].steps:
+            assert 'id' in step
+
+            assert 'action' in step and step['action'] is not None
+            assert 'entity_id' in step and step['entity_id'] is not None
+            assert 'entity_type' in step and step['entity_type'] is not None
+            assert 'topology_order' in step and step['topology_order'] is not None
+            assert 'private_resource' in step and step['private_resource'] is not None
+            assert 'visibility' in step and step['visibility'] is not None

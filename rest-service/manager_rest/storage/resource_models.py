@@ -2025,7 +2025,7 @@ class DeploymentUpdate(CreatedAtMixin, SQLResourceBase):
         dep_update_dict = super(DeploymentUpdate, self).to_response(
             include, **kwargs)
         if 'steps' in include:
-            dep_update_dict['steps'] = [step.to_dict() for step in self.steps]
+            dep_update_dict['steps'] = self.steps
         if 'recursive_dependencies' in include:
             dep_update_dict['recursive_dependencies'] = \
                 self.recursive_dependencies
@@ -2057,8 +2057,10 @@ class DeploymentUpdateStep(SQLResourceBase):
     @declared_attr
     def deployment_update(cls):
         return one_to_many_relationship(
-            cls, DeploymentUpdate, cls._deployment_update_fk,
-            backref=db.backref('steps', cascade='all'))
+            cls,
+            DeploymentUpdate,
+            cls._deployment_update_fk,
+        )
 
     deployment_update_id = association_proxy('deployment_update', 'id')
 
@@ -2089,6 +2091,43 @@ class DeploymentUpdateStep(SQLResourceBase):
             if self.entity_type == RELATIONSHIP and other.entity_type == NODE:
                 return True
         return False
+
+
+# Define the steps as a property of the DeploymentUpdate
+# It is required to define it here after DeploymentUpdateStep
+# is loaded by SQLAlchemy.
+# In big deployments with lots of steps standard JOIN causes
+# OOMKilled error on pod running by Kubernetes.
+# This declaration adds a custom property that executes lazy select query.
+# The goal of this is to mitigate memory consumption issue.
+DeploymentUpdate.steps = db.column_property(
+    db.cast(
+        db.func.array(
+
+            db.select([
+                db.func.jsonb_build_object(
+                    'id', DeploymentUpdateStep.id,
+                    'action', DeploymentUpdateStep.action,
+                    'entity_id', DeploymentUpdateStep.entity_id,
+                    'entity_type', DeploymentUpdateStep.entity_type,
+
+                    'topology_order', DeploymentUpdateStep.topology_order,
+                    'private_resource', DeploymentUpdateStep.private_resource,
+
+                    'visibility', DeploymentUpdateStep.visibility,
+
+                )
+            ])
+            .where(
+                DeploymentUpdateStep._deployment_update_fk ==
+                DeploymentUpdate._storage_id
+            )
+
+        ),
+        db.ARRAY(db.JSON),
+    ).label('steps')
+
+)
 
 
 class DeploymentModification(CreatedAtMixin, SQLResourceBase):
