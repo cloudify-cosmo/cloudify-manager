@@ -103,7 +103,7 @@ flask-principal==0.4.0
     # via flask-security
 flask-restful==0.3.10
     # via cloudify-rest-service
-flask-security==3.0.0
+flask-security==5.5.1
     # via cloudify-rest-service
 flask-sqlalchemy==2.5.1
     # via
