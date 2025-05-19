@@ -4,6 +4,7 @@ import pathlib
 import queue
 import shutil
 import tempfile
+import zipfile
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
@@ -292,7 +293,33 @@ class SnapshotCreate:
 
     def _create_archive(self):
         ctx.logger.debug('Creating snapshot archive')
-        shutil.make_archive(self._archive_dest, 'zip', self._temp_dir)
+        base_name = os.fspath(self._archive_dest)
+        root_dir = self._temp_dir
+        zip_filename = base_name + ".zip"
+        archive_dir = os.path.dirname(base_name)
+        if not os.path.exists(archive_dir):
+            ctx.logger.info("creating %s", archive_dir)
+            os.makedirs(archive_dir)
+        with zipfile.ZipFile(
+            zip_filename,
+            "w",
+            compression=zipfile.ZIP_DEFLATED,
+            compresslevel=9,
+        ) as zf:
+            base_dir = os.path.join(root_dir, os.curdir)
+            base_dir = os.path.normpath(base_dir)
+            for dirpath, dirnames, filenames in os.walk(base_dir):
+                arcdirpath = os.path.relpath(dirpath, root_dir)
+                for name in sorted(dirnames):
+                    path = os.path.join(dirpath, name)
+                    arcname = os.path.join(arcdirpath, name)
+                    zf.write(path, arcname)
+                for name in filenames:
+                    path = os.path.join(dirpath, name)
+                    path = os.path.normpath(path)
+                    if os.path.isfile(path):
+                        arcname = os.path.join(arcdirpath, name)
+                        zf.write(path, arcname)
 
     def _upload_archive(self):
         ctx.logger.debug('Uploading archive to manager')
