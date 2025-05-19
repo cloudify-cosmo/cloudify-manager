@@ -3,7 +3,6 @@ import json
 from datetime import datetime
 from queue import Queue
 from threading import Event, Thread
-from time import sleep
 from typing import Any
 
 from cloudify.exceptions import NonRecoverableError
@@ -41,12 +40,15 @@ class AuditLogListener(Thread):
         super().start()
 
     def run(self):
-        self._loop.run_until_complete(self._stream_logs())
+        asyncio.set_event_loop(self._loop)
+        try:
+            self._loop.run_until_complete(self._stream_logs())
+        finally:
+            self._loop.run_until_complete(self._loop.shutdown_asyncgens())
+            self._loop.close()
 
     def stop(self):
         self._stopped.set()
-        self._loop.call_soon_threadsafe(self._loop.stop)
-        self._loop.call_soon_threadsafe(self._loop.close)
 
     def added_snapshot_entity(
             self,
@@ -87,7 +89,7 @@ class AuditLogListener(Thread):
         while not self._stopped.is_set():
             try:
                 if not self.__snapshot_entities:
-                    sleep(WAIT_FOR_SNAPSHOT_ENTITIES_SECONDS)
+                    await asyncio.sleep(WAIT_FOR_SNAPSHOT_ENTITIES_SECONDS)
                     continue
                 response = await self._client.auditlog.stream(
                     timeout=self._stream_timeout, since=since)
@@ -99,7 +101,7 @@ class AuditLogListener(Thread):
                         since = audit_log.get('created_at')
             except BaseException:
                 pass
-            self._client.auditlog.close()
+        self._client.auditlog.close()
 
     def _ref_in_snapshot(self, audit_log: dict) -> bool:
         ref_identifier = audit_log.get('ref_identifier', {})
