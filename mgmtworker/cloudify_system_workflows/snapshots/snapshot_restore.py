@@ -6,12 +6,14 @@ import time
 import uuid
 import base64
 import shutil
+import stat
 import zipfile
 import tempfile
 import threading
 import subprocess
 from contextlib import contextmanager
 from functools import partial
+from pathlib import Path
 from typing import Any
 
 from cloudify.workflows import ctx
@@ -76,6 +78,11 @@ EMPTY_B64_ZIP = 'UEsFBgAAAAAAAAAAAAAAAAAAAAAAAA=='
 
 # Reproduced/modified from patch for https://bugs.python.org/issue15795
 class ZipFile(zipfile.ZipFile):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._all_entries = {info.filename.rstrip('/'): info for info in self.infolist()}
+    
     def _extract_member(self, member, targetpath, pwd):
         """Extract the ZipInfo object 'member' to a physical
            file on the path targetpath.
@@ -112,11 +119,18 @@ class ZipFile(zipfile.ZipFile):
                 os.mkdir(targetpath)
             return targetpath
 
-        with self.open(member, pwd=pwd) as source, \
-                open(targetpath, "wb") as target:
+        _mode = member.external_attr >> 16
+        if stat.S_ISLNK(_mode):
+            link = self.read(member.filename).decode('utf-8')
+            source_path = Path(member.filename).parent / link
+            member_to_extract = self._all_entries[os.path.normpath(source_path)]
+        else:
+            member_to_extract = member
+
+        with self.open(member_to_extract, pwd=pwd) as source, open(targetpath, "wb") as target:
             shutil.copyfileobj(source, target)
 
-        mode = member.external_attr >> 16 & 0xFFF
+        mode = member_to_extract.external_attr >> 16 & 0xFFF
         os.chmod(targetpath, mode)
         return targetpath
 
